@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { CATEGORIES } from '../constants/categories';
+import { CATEGORIES } from '../constants/Categories';
 
 const TestCustomization = () => {
   const [selectedSubcategoryPairs, setSelectedSubcategoryPairs] = useState([]);
