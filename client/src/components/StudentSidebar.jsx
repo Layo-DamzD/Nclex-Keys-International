@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { unregisterStudentFcm } from '../services/firebaseMessaging';
+import { formatStudentDisplayId } from '../utils/studentId';
 
 const StudentSidebar = ({
   activeSection,
@@ -30,7 +31,7 @@ const StudentSidebar = ({
   };
 
   // Generate a display ID from the user's _id (fallback)
-  const studentId = user._id ? `STU-${user._id.slice(-6)}` : 'NK2024-001';
+  const studentId = formatStudentDisplayId(user?._id);
   const program = user.program || 'NCLEX-RN';
 
   const navItems = [

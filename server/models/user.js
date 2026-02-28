@@ -31,6 +31,13 @@ const userSchema = new mongoose.Schema({
   // Web push tokens (Firebase Cloud Messaging) for this student across browsers/devices.
   // Keep this simple as strings so legacy records remain compatible.
   fcmTokens: [{ type: String }],
+  // Student trusted devices. New device login requires camera verification first.
+  trustedDevices: [{
+    deviceId: { type: String },
+    label: { type: String },
+    verifiedAt: { type: Date, default: Date.now },
+    lastUsedAt: { type: Date, default: Date.now }
+  }],
   lastReview: { type: Number, default: 0 }, // timestamp of last review
   // ✅ Add incorrectQuestions here (inside the schema)
   incorrectQuestions: [{ 

@@ -17,6 +17,10 @@ const hashValue = async (value) => {
 const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const exactRegex = (value = '') => new RegExp(`^${escapeRegex(String(value).trim())}$`, 'i');
 const normalizeName = (firstName = '', lastName = '') => `${firstName} ${lastName}`.replace(/\s+/g, ' ').trim();
+const normalizeDeviceId = (value = '') => String(value || '').trim().slice(0, 200);
+const normalizeDeviceLabel = (value = '') => String(value || '').trim().slice(0, 160);
+const STUDENT_SIGNUP_ACCESS_CODE = process.env.STUDENT_SIGNUP_ACCESS_CODE || 'NCKeys5832';
+const SIGNUP_ACCESS_HELP_NUMBER = '07037367480';
 
 const savePasswordResetOtp = async (user) => {
   const otp = generateOtp();
@@ -49,10 +53,27 @@ const findCandidateByPassword = async (candidates, password) => {
 // ===== STUDENT =====
 const registerStudent = async (req, res) => {
   try {
-    const { name, email, password, program, phone, examDate } = req.body;
+    const { name, email, password, program, phone, examDate, faceCapture, deviceId, deviceLabel, accessCode } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
+    }
+
+    if (String(accessCode || '').trim() !== STUDENT_SIGNUP_ACCESS_CODE) {
+      return res.status(403).json({
+        message: `Invalid access code. Message ${SIGNUP_ACCESS_HELP_NUMBER} on WhatsApp to get your access code.`
+      });
+    }
+
+    const facePayload = String(faceCapture || '');
+    const looksLikeImage = facePayload.startsWith('data:image/') && facePayload.length > 500;
+    if (!looksLikeImage) {
+      return res.status(400).json({ message: 'Face verification is required during signup.' });
+    }
+
+    const normalizedDeviceId = normalizeDeviceId(deviceId);
+    if (!normalizedDeviceId) {
+      return res.status(400).json({ message: 'Device verification failed. Refresh and try again.' });
     }
 
     const user = await User.create({
@@ -62,7 +83,13 @@ const registerStudent = async (req, res) => {
       role: 'student',
       program,
       phone,
-      examDate: examDate || null
+      examDate: examDate || null,
+      trustedDevices: [{
+        deviceId: normalizedDeviceId,
+        label: normalizeDeviceLabel(deviceLabel) || 'Signup Device',
+        verifiedAt: new Date(),
+        lastUsedAt: new Date()
+      }]
     });
 
     res.status(201).json({
@@ -81,7 +108,7 @@ const registerStudent = async (req, res) => {
 
 const loginStudent = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, deviceId, deviceLabel } = req.body;
     const user = await User.findOne({ email, role: 'student' });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid email or password' });
@@ -91,6 +118,39 @@ const loginStudent = async (req, res) => {
         message: 'Your acct has been suspended, kindly renew your subscription to continue enjoying the service. For assistance, contact support via WhatsApp below.'
       });
     }
+
+    const normalizedDeviceId = normalizeDeviceId(deviceId);
+    const trustedDevices = Array.isArray(user.trustedDevices) ? user.trustedDevices : [];
+    const trustedDevice = normalizedDeviceId
+      ? trustedDevices.find((entry) => entry && entry.deviceId === normalizedDeviceId)
+      : null;
+
+    if (normalizedDeviceId && !trustedDevice) {
+      const verificationToken = jwt.sign(
+        {
+          id: user._id,
+          purpose: 'student_device_face_verify',
+          deviceId: normalizedDeviceId
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' }
+      );
+
+      return res.status(202).json({
+        requiresFaceVerification: true,
+        verificationToken,
+        message: 'New device detected. Complete face verification to continue.'
+      });
+    }
+
+    if (trustedDevice) {
+      trustedDevice.lastUsedAt = new Date();
+      if (!trustedDevice.label && normalizeDeviceLabel(deviceLabel)) {
+        trustedDevice.label = normalizeDeviceLabel(deviceLabel);
+      }
+      await user.save();
+    }
+
     res.json({
       _id: user._id,
       name: user.name,
@@ -102,6 +162,84 @@ const loginStudent = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const verifyStudentFace = async (req, res) => {
+  try {
+    const { verificationToken, faceCapture, deviceId, deviceLabel } = req.body;
+    if (!verificationToken || !faceCapture || !deviceId) {
+      return res.status(400).json({ message: 'Verification token, device id and face capture are required.' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(String(verificationToken), process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({ message: 'Verification token is invalid or expired.' });
+    }
+
+    if (decoded?.purpose !== 'student_device_face_verify' || !decoded?.id || !decoded?.deviceId) {
+      return res.status(401).json({ message: 'Invalid verification context.' });
+    }
+
+    const normalizedDeviceId = normalizeDeviceId(deviceId);
+    if (!normalizedDeviceId || normalizedDeviceId !== decoded.deviceId) {
+      return res.status(401).json({ message: 'Device verification mismatch. Please log in again.' });
+    }
+
+    const facePayload = String(faceCapture || '');
+    const looksLikeImage = facePayload.startsWith('data:image/') && facePayload.length > 500;
+    if (!looksLikeImage) {
+      return res.status(400).json({ message: 'Invalid face capture. Please retake and try again.' });
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user || user.role !== 'student') {
+      return res.status(404).json({ message: 'Student account not found.' });
+    }
+    if (user.status !== 'active') {
+      return res.status(403).json({
+        message: 'Your acct has been suspended, kindly renew your subscription to continue enjoying the service. For assistance, contact support via WhatsApp below.'
+      });
+    }
+
+    const now = new Date();
+    const label = normalizeDeviceLabel(deviceLabel) || 'Unknown Device';
+    if (!Array.isArray(user.trustedDevices)) user.trustedDevices = [];
+
+    const existingDevice = user.trustedDevices.find((entry) => entry && entry.deviceId === normalizedDeviceId);
+    if (existingDevice) {
+      existingDevice.label = existingDevice.label || label;
+      existingDevice.verifiedAt = now;
+      existingDevice.lastUsedAt = now;
+    } else {
+      user.trustedDevices.push({
+        deviceId: normalizedDeviceId,
+        label,
+        verifiedAt: now,
+        lastUsedAt: now
+      });
+      if (user.trustedDevices.length > 25) {
+        user.trustedDevices = user.trustedDevices
+          .sort((a, b) => new Date(b.lastUsedAt || 0).getTime() - new Date(a.lastUsedAt || 0).getTime())
+          .slice(0, 25);
+      }
+    }
+
+    await user.save();
+
+    return res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      examDate: user.examDate,
+      token: generateToken(user._id)
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -497,6 +635,7 @@ const getMe = async (req, res) => {
 module.exports = {
   registerStudent,
   loginStudent,
+  verifyStudentFace,
   registerAdmin,
   loginAdmin,
   verifyAdminSignupCode,

@@ -63,7 +63,7 @@ const PwaInstallPrompt = () => {
       <div className="pwa-install-prompt__content">
         <div className="pwa-install-prompt__title">Install nclexkeysintl.com</div>
         <div className="pwa-install-prompt__text">
-          Add it to your home screen for quick access to your portal.
+          Add it to your home screen for quick access.
         </div>
       </div>
       <div className="pwa-install-prompt__actions">

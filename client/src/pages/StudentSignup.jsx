@@ -1,19 +1,111 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+
+const DEVICE_STORAGE_KEY = 'nclexkeys:student-device-id';
+const getOrCreateDeviceId = () => {
+  const existing = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (existing) return existing;
+  const generated = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+    ? crypto.randomUUID()
+    : `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  localStorage.setItem(DEVICE_STORAGE_KEY, generated);
+  return generated;
+};
+
+const getDeviceLabel = () => {
+  const platform = navigator?.platform || 'Unknown Platform';
+  const ua = navigator?.userAgent || '';
+  let browser = 'Browser';
+  if (/edg/i.test(ua)) browser = 'Edge';
+  else if (/chrome/i.test(ua)) browser = 'Chrome';
+  else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browser = 'Safari';
+  else if (/firefox/i.test(ua)) browser = 'Firefox';
+  return `${browser} on ${platform}`.slice(0, 160);
+};
 
 const StudentSignup = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [signupError, setSignupError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [capturedFace, setCapturedFace] = useState('');
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
   const navigate = useNavigate();
+  const deviceId = useMemo(() => getOrCreateDeviceId(), []);
+  const deviceLabel = useMemo(() => getDeviceLabel(), []);
 
   const password = watch('password');
+  const accessHelpNumber = '07037367480';
+  const accessHelpWaLink = `https://wa.me/${accessHelpNumber.replace(/\D/g, '')}?text=${encodeURIComponent(
+    'Hello, I need my student signup access code for NCLEX KEYS.'
+  )}`;
+  const showAccessHelp = /invalid access code/i.test(signupError);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const startCamera = async () => {
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setCameraError('Camera is not supported on this device/browser.');
+      return;
+    }
+    setCameraLoading(true);
+    setCameraError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch (error) {
+      setCameraError('Unable to access camera. Please allow camera permission and reload.');
+    } finally {
+      setCameraLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    startCamera();
+    return () => stopCamera();
+  }, []);
+
+  const captureFace = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 480;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.drawImage(video, 0, 0, width, height);
+    setCapturedFace(canvas.toDataURL('image/jpeg', 0.92));
+  };
 
   const onSubmit = async (data) => {
     setLoading(true);
     setSignupError('');
+    if (!capturedFace) {
+      setSignupError('Face verification is required before signup.');
+      setLoading(false);
+      return;
+    }
     try {
       await axios.post('/api/auth/student/register', {
         name: `${data.firstName} ${data.lastName}`,
@@ -21,7 +113,11 @@ const StudentSignup = () => {
         password: data.password,
         program: data.program,
         phone: data.phone,
-        examDate: data.examDate || null
+        examDate: data.examDate || null,
+        accessCode: data.accessCode,
+        faceCapture: capturedFace,
+        deviceId,
+        deviceLabel
       });
       navigate('/login', { state: { message: 'Registration successful! Please login.' } });
     } catch (error) {
@@ -41,7 +137,18 @@ const StudentSignup = () => {
             <p>Create your NCLEX KEYS account</p>
           </div>
           <div className="signup-clean-form-wrap">
-            {signupError && <div className="alert alert-danger">{signupError}</div>}
+            {signupError && (
+              <div className="alert alert-danger">
+                <div>{signupError}</div>
+                {showAccessHelp && (
+                  <div className="mt-2">
+                    <a href={accessHelpWaLink} target="_blank" rel="noreferrer">
+                      Message {accessHelpNumber} on WhatsApp to get your access code
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
             <form onSubmit={handleSubmit(onSubmit)} className="signup-clean-form">
               <div className="row">
               <div className="col-md-6 mb-3">
@@ -101,6 +208,17 @@ const StudentSignup = () => {
               {errors.program && <div className="invalid-feedback">{errors.program.message}</div>}
             </div>
 
+            <div className="mb-3">
+              <label className="form-label fw-bold">Access Code Given To You By Admin</label>
+              <input
+                type="text"
+                className={`form-control ${errors.accessCode ? 'is-invalid' : ''}`}
+                autoComplete="one-time-code"
+                {...register('accessCode', { required: 'Access code is required' })}
+              />
+              {errors.accessCode && <div className="invalid-feedback">{errors.accessCode.message}</div>}
+            </div>
+
               <div className="mb-3">
                 <label className="form-label fw-bold">Expected Exam Date (optional but recommended)</label>
                 <input
@@ -108,6 +226,38 @@ const StudentSignup = () => {
                   className="form-control"
                   {...register('examDate')}
                 />
+              </div>
+
+              <div className="mb-3 signup-face-block">
+                <label className="form-label fw-bold">Face Verification (required)</label>
+                <div className="signup-face-preview">
+                  {capturedFace ? (
+                    <img src={capturedFace} alt="Captured face for signup verification" />
+                  ) : (
+                    <video ref={videoRef} autoPlay muted playsInline />
+                  )}
+                </div>
+                {cameraError && <div className="text-danger mt-2 small">{cameraError}</div>}
+                <div className="d-flex gap-2 mt-2 flex-wrap">
+                  {!capturedFace ? (
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary"
+                      onClick={captureFace}
+                      disabled={cameraLoading}
+                    >
+                      {cameraLoading ? 'Starting camera...' : 'Capture Face'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setCapturedFace('')}
+                    >
+                      Retake
+                    </button>
+                  )}
+                </div>
               </div>
 
             <div className="row">

@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   registerStudent,
   loginStudent,
+  verifyStudentFace,
   registerAdmin,
   loginAdmin,
   verifyAdminSignupCode,
@@ -21,6 +22,7 @@ const { protect, superAdminOnly } = require('../middleware/authMiddleware');
 // Student routes
 router.post('/student/register', registerStudent);
 router.post('/student/login', loginStudent);
+router.post('/student/verify-face', verifyStudentFace);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 router.post('/reset-password-otp', resetPasswordWithOtp);

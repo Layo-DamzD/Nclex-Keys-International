@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { formatStudentDisplayId } from '../../utils/studentId';
 
 const AllStudents = () => {
   const navigate = useNavigate();
@@ -390,7 +391,7 @@ const AllStudents = () => {
                       />
                     </td>
                     <td className="all-students-id-cell" style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-                      {student._id.substring(0, 8)}
+                      {formatStudentDisplayId(student._id)}
                     </td>
                     <td className="all-students-name-cell"><strong>{student.name}</strong></td>
                     <td className="all-students-email-cell">{student.email}</td>

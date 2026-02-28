@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useUser } from '../context/UserContext';
+import { formatStudentDisplayId } from '../utils/studentId';
 
 const Profile = () => {
   const { user, refreshUser } = useUser();
@@ -239,7 +240,7 @@ const Profile = () => {
               <h5 className="mb-0">Account Information</h5>
             </div>
             <div className="card-body">
-              <p><strong>Student ID:</strong> {user?._id ? `STU-${user._id.slice(-6)}` : 'N/A'}</p>
+              <p><strong>Student ID:</strong> {formatStudentDisplayId(user?._id)}</p>
               <p><strong>Member Since:</strong> {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</p>
               <p><strong>Tests Taken:</strong> {/* You can add this later */}</p>
             </div>
