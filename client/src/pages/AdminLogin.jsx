@@ -1,7 +1,32 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './AdminAuth.css';
+
+const ADMIN_DEVICE_STORAGE_KEY = 'nclexkeys:admin-device-id';
+
+const createAdminDeviceId = () => {
+  if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return `adm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const getOrCreateAdminDeviceId = () => {
+  if (typeof window === 'undefined') return 'admin-server-device';
+  const existing = window.localStorage.getItem(ADMIN_DEVICE_STORAGE_KEY);
+  if (existing) return existing;
+  const generated = createAdminDeviceId();
+  window.localStorage.setItem(ADMIN_DEVICE_STORAGE_KEY, generated);
+  return generated;
+};
+
+const getAdminDeviceLabel = () => {
+  if (typeof navigator === 'undefined') return 'Unknown Device';
+  const platform = navigator.platform || 'Unknown Platform';
+  const browser = navigator.userAgentData?.brands?.[0]?.brand || navigator.userAgent || 'Browser';
+  return `${platform} / ${browser}`.slice(0, 160);
+};
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -10,6 +35,8 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const deviceId = useMemo(() => getOrCreateAdminDeviceId(), []);
+  const deviceLabel = useMemo(() => getAdminDeviceLabel(), []);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -21,7 +48,9 @@ const AdminLogin = () => {
       const response = await axios.post('/api/auth/admin/login', {
         email,
         password,
-        accessCode
+        accessCode,
+        deviceId,
+        deviceLabel
       });
 
       sessionStorage.setItem('adminToken', response.data.token);
@@ -88,7 +117,7 @@ const AdminLogin = () => {
                   onChange={(e) => setAccessCode(e.target.value)}
                   placeholder="••••••"
                 />
-                <small className="text-muted">Required for Admin accounts only (not Super Admin)</small>
+                <small className="text-muted">Required</small>
               </div>
               <button type="submit" className="btn-admin-login" disabled={loading}>
                 <i className="fas fa-sign-in-alt"></i> {loading ? 'Logging in...' : 'Login'}

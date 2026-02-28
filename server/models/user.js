@@ -41,6 +41,15 @@ const userSchema = new mongoose.Schema({
     verifiedAt: { type: Date, default: Date.now },
     lastUsedAt: { type: Date, default: Date.now }
   }],
+  // Admin and super-admin login device records for security review.
+  adminDeviceLogins: [{
+    deviceId: { type: String },
+    label: { type: String },
+    userAgent: { type: String },
+    ipAddress: { type: String },
+    firstSeenAt: { type: Date, default: Date.now },
+    lastSeenAt: { type: Date, default: Date.now }
+  }],
   lastReview: { type: Number, default: 0 }, // timestamp of last review
   // ✅ Add incorrectQuestions here (inside the schema)
   incorrectQuestions: [{ 

@@ -1195,6 +1195,127 @@ const deleteAdmin = async (req, res) => {
   }
 };
 
+// @desc    Get current admin settings
+// @route   GET /api/admin/settings
+// @access  Private (admin only)
+const getAdminSettings = async (req, res) => {
+  try {
+    const admin = await User.findById(req.user.id)
+      .select('name email role accessCode adminDeviceLogins trustedDevices');
+
+    if (!admin || !['admin', 'superadmin'].includes(admin.role)) {
+      return res.status(404).json({ message: 'Admin account not found' });
+    }
+
+    const deviceLogins = Array.isArray(admin.adminDeviceLogins)
+      ? [...admin.adminDeviceLogins].sort(
+          (a, b) => new Date(b.lastSeenAt || 0).getTime() - new Date(a.lastSeenAt || 0).getTime()
+        )
+      : [];
+
+    res.json({
+      name: admin.name,
+      email: admin.email,
+      role: admin.role,
+      canEditAccessCode: false,
+      hasAccessCode: Boolean(admin.accessCode),
+      deviceLogins
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Update current admin name
+// @route   PUT /api/admin/settings/profile
+// @access  Private (admin only)
+const updateAdminProfileSettings = async (req, res) => {
+  try {
+    const nextName = String(req.body?.name || '').replace(/\s+/g, ' ').trim();
+    if (nextName.length < 2) {
+      return res.status(400).json({ message: 'Name must be at least 2 characters long' });
+    }
+
+    const admin = await User.findById(req.user.id);
+    if (!admin || !['admin', 'superadmin'].includes(admin.role)) {
+      return res.status(404).json({ message: 'Admin account not found' });
+    }
+
+    admin.name = nextName;
+    await admin.save();
+
+    res.json({
+      message: 'Name updated successfully',
+      name: admin.name
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Update current admin password
+// @route   PUT /api/admin/settings/password
+// @access  Private (admin only)
+const updateAdminPasswordSettings = async (req, res) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current and new password are required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters long' });
+    }
+
+    const admin = await User.findById(req.user.id);
+    if (!admin || !['admin', 'superadmin'].includes(admin.role)) {
+      return res.status(404).json({ message: 'Admin account not found' });
+    }
+
+    const currentMatches = await admin.comparePassword(currentPassword);
+    if (!currentMatches) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    const sameAsCurrent = await admin.comparePassword(newPassword);
+    if (sameAsCurrent) {
+      return res.status(400).json({ message: 'New password must be different from current password' });
+    }
+
+    admin.password = newPassword;
+    await admin.save();
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Clear current admin device login records
+// @route   DELETE /api/admin/settings/devices
+// @access  Private (admin only)
+const clearAdminDeviceSettings = async (req, res) => {
+  try {
+    const admin = await User.findById(req.user.id);
+    if (!admin || !['admin', 'superadmin'].includes(admin.role)) {
+      return res.status(404).json({ message: 'Admin account not found' });
+    }
+
+    admin.adminDeviceLogins = [];
+    await admin.save();
+
+    res.json({ message: 'Device login records cleared successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getAdminStats,
   exportQuestions,
@@ -1231,5 +1352,9 @@ module.exports = {
   sendExamSupportMessageAdmin,
   approveAdmin,
   getAllAdmins,
-  deleteAdmin
+  deleteAdmin,
+  getAdminSettings,
+  updateAdminProfileSettings,
+  updateAdminPasswordSettings,
+  clearAdminDeviceSettings
 };

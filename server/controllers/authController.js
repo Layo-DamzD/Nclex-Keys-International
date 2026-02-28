@@ -1,6 +1,7 @@
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const {
   sendPasswordResetOtpEmail,
   sendAdminSignupVerificationEmail,
@@ -9,6 +10,7 @@ const {
 const {
   createPersonFromFace,
   searchFaceMatches,
+  detectLiveness,
   evaluateFaceMatch,
   isLuxandConfigured
 } = require('../services/luxandService');
@@ -25,12 +27,16 @@ const exactRegex = (value = '') => new RegExp(`^${escapeRegex(String(value).trim
 const normalizeName = (firstName = '', lastName = '') => `${firstName} ${lastName}`.replace(/\s+/g, ' ').trim();
 const normalizeDeviceId = (value = '') => String(value || '').trim().slice(0, 200);
 const normalizeDeviceLabel = (value = '') => String(value || '').trim().slice(0, 160);
+const normalizeIpAddress = (value = '') => String(value || '').trim().slice(0, 80);
 const STUDENT_SIGNUP_ACCESS_CODE = process.env.STUDENT_SIGNUP_ACCESS_CODE || 'NCKeys5832';
 const SIGNUP_ACCESS_HELP_NUMBER = '07037367480';
 const LUXAND_STUDENT_COLLECTION = process.env.LUXAND_STUDENT_COLLECTION || 'students';
 const FACE_MATCH_MIN_SCORE = Number.isFinite(Number(process.env.LUXAND_FACE_MATCH_MIN_SCORE))
   ? Number(process.env.LUXAND_FACE_MATCH_MIN_SCORE)
   : 0.78;
+const LIVENESS_MIN_SCORE = Number.isFinite(Number(process.env.LUXAND_LIVENESS_MIN_SCORE))
+  ? Number(process.env.LUXAND_LIVENESS_MIN_SCORE)
+  : 0.75;
 
 const savePasswordResetOtp = async (user) => {
   const otp = generateOtp();
@@ -51,6 +57,82 @@ const saveAdminVerificationCode = async (user) => {
 const clearPasswordResetState = (user) => {
   user.resetPasswordToken = undefined;
   user.resetPasswordExpire = undefined;
+};
+
+const resolveClientIp = (req) => {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').trim();
+  if (forwarded) {
+    return normalizeIpAddress(forwarded.split(',')[0]);
+  }
+  return normalizeIpAddress(req.ip || req.socket?.remoteAddress || '');
+};
+
+const inferAdminDeviceLabel = (userAgent = '') => {
+  const ua = String(userAgent || '').toLowerCase();
+  const os = ua.includes('windows')
+    ? 'Windows'
+    : ua.includes('android')
+      ? 'Android'
+      : ua.includes('iphone') || ua.includes('ipad') || ua.includes('ios')
+        ? 'iOS'
+        : ua.includes('mac os') || ua.includes('macintosh')
+          ? 'macOS'
+          : ua.includes('linux')
+            ? 'Linux'
+            : 'Unknown OS';
+
+  const browser = ua.includes('edg/')
+    ? 'Edge'
+    : ua.includes('chrome/')
+      ? 'Chrome'
+      : ua.includes('firefox/')
+        ? 'Firefox'
+        : ua.includes('safari/') && !ua.includes('chrome/')
+          ? 'Safari'
+          : 'Browser';
+
+  return `${os} - ${browser}`;
+};
+
+const upsertAdminDeviceLogin = (user, req, suppliedDeviceId = '', suppliedLabel = '') => {
+  const userAgent = String(req.get('user-agent') || '').trim().slice(0, 500);
+  const ipAddress = resolveClientIp(req);
+  const fallbackSeed = `${userAgent}::${ipAddress}`;
+  const fallbackDeviceId = crypto
+    .createHash('sha256')
+    .update(fallbackSeed)
+    .digest('hex')
+    .slice(0, 32);
+
+  const normalizedDeviceId = normalizeDeviceId(suppliedDeviceId) || fallbackDeviceId;
+  const normalizedLabel = normalizeDeviceLabel(suppliedLabel) || inferAdminDeviceLabel(userAgent);
+  const now = new Date();
+
+  if (!Array.isArray(user.adminDeviceLogins)) user.adminDeviceLogins = [];
+
+  const existing = user.adminDeviceLogins.find((entry) => entry?.deviceId === normalizedDeviceId);
+
+  if (existing) {
+    existing.label = normalizedLabel || existing.label;
+    existing.userAgent = userAgent || existing.userAgent;
+    existing.ipAddress = ipAddress || existing.ipAddress;
+    existing.lastSeenAt = now;
+  } else {
+    user.adminDeviceLogins.push({
+      deviceId: normalizedDeviceId,
+      label: normalizedLabel,
+      userAgent,
+      ipAddress,
+      firstSeenAt: now,
+      lastSeenAt: now
+    });
+  }
+
+  if (user.adminDeviceLogins.length > 50) {
+    user.adminDeviceLogins = user.adminDeviceLogins
+      .sort((a, b) => new Date(b.lastSeenAt || 0).getTime() - new Date(a.lastSeenAt || 0).getTime())
+      .slice(0, 50);
+  }
 };
 
 const findCandidateByPassword = async (candidates, password) => {
@@ -94,6 +176,16 @@ const registerStudent = async (req, res) => {
 
     let luxandPersonId = '';
     try {
+      const liveness = await detectLiveness({ faceCapture: facePayload });
+      const livenessScore = Number.isFinite(Number(liveness.score)) ? Number(liveness.score) : null;
+      const livenessThreshold = LIVENESS_MIN_SCORE <= 1 ? LIVENESS_MIN_SCORE : LIVENESS_MIN_SCORE / 100;
+      const livenessPassed = liveness.isLive && (livenessScore == null || livenessScore >= livenessThreshold);
+      if (!livenessPassed) {
+        return res.status(401).json({
+          message: 'Liveness check failed. Please capture a live selfie and try again.'
+        });
+      }
+
       const enrollment = await createPersonFromFace({
         name,
         faceCapture: facePayload,
@@ -252,6 +344,16 @@ const verifyStudentFace = async (req, res) => {
 
     let verification = { matched: false, score: null, reason: 'unknown' };
     try {
+      const liveness = await detectLiveness({ faceCapture: facePayload });
+      const livenessScore = Number.isFinite(Number(liveness.score)) ? Number(liveness.score) : null;
+      const livenessThreshold = LIVENESS_MIN_SCORE <= 1 ? LIVENESS_MIN_SCORE : LIVENESS_MIN_SCORE / 100;
+      const livenessPassed = liveness.isLive && (livenessScore == null || livenessScore >= livenessThreshold);
+      if (!livenessPassed) {
+        return res.status(401).json({
+          message: 'Liveness check failed. Please use a live selfie to verify this device.'
+        });
+      }
+
       const search = await searchFaceMatches({ faceCapture: facePayload, limit: 5 });
       verification = evaluateFaceMatch({
         expectedPersonId: user.luxandPersonId,
@@ -316,6 +418,48 @@ const registerAdmin = async (req, res) => {
     const { name, email, password } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      const isExistingAdmin = ['admin', 'superadmin'].includes(existingUser.role);
+      const canResendVerification =
+        isExistingAdmin &&
+        existingUser.role === 'admin' &&
+        !existingUser.adminEmailVerified;
+
+      if (canResendVerification) {
+        if (!isEmailConfigured()) {
+          return res.status(503).json({
+            message: 'Email service is not configured. Cannot resend admin verification code.'
+          });
+        }
+
+        if (!existingUser.accessCode) {
+          existingUser.accessCode = Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        const verificationCode = await saveAdminVerificationCode(existingUser);
+        const emailResult = await sendAdminSignupVerificationEmail({
+          to: existingUser.email,
+          name: existingUser.name,
+          verificationCode,
+          accessCode: existingUser.accessCode
+        });
+
+        if (!emailResult.sent) {
+          return res.status(502).json({
+            message: 'Failed to send verification code. Please check SMTP settings and try again.',
+            reason: emailResult.reason || 'unknown',
+            error: emailResult.error || undefined
+          });
+        }
+
+        return res.status(200).json({
+          email: existingUser.email,
+          accessCode: existingUser.accessCode,
+          role: existingUser.role,
+          message: 'Account already exists but not verified. New verification code sent to your email.',
+          requiresVerification: true
+        });
+      }
+
       return res.status(400).json({ message: 'Admin account with this email already exists' });
     }
 
@@ -368,8 +512,11 @@ const registerAdmin = async (req, res) => {
     });
 
     if (!emailResult.sent) {
-      await User.findByIdAndDelete(user._id);
-      return res.status(500).json({ message: 'Failed to send verification code. Please try again.' });
+      return res.status(502).json({
+        message: 'Failed to send verification code. Please check SMTP settings and try again.',
+        reason: emailResult.reason || 'unknown',
+        error: emailResult.error || undefined
+      });
     }
 
     res.status(201).json({
@@ -387,7 +534,7 @@ const registerAdmin = async (req, res) => {
 
 const loginAdmin = async (req, res) => {
   try {
-    const { email, password, accessCode } = req.body;
+    const { email, password, accessCode, deviceId, deviceLabel } = req.body;
     const user = await User.findOne({ email, role: { $in: ['admin', 'superadmin'] } });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -422,6 +569,10 @@ const loginAdmin = async (req, res) => {
         return res.status(401).json({ message: 'Invalid access code' });
       }
     }
+
+    upsertAdminDeviceLogin(user, req, deviceId, deviceLabel);
+    await user.save();
+
     res.json({
       _id: user._id,
       name: user.name,

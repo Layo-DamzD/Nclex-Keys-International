@@ -136,6 +136,53 @@ const extractMatchCandidates = (payload) => {
   return candidates;
 };
 
+const extractLiveness = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return { isLive: false, score: null, reason: 'invalid-payload', payload };
+  }
+
+  const directBoolean = payload.is_live ?? payload.live ?? payload.liveness_passed ?? null;
+  const directScoreRaw =
+    payload.liveness ??
+    payload.score ??
+    payload.probability ??
+    payload.confidence ??
+    payload.live_score ??
+    null;
+
+  const nested = payload.result && typeof payload.result === 'object' ? payload.result : null;
+  const nestedBoolean = nested
+    ? (nested.is_live ?? nested.live ?? nested.liveness_passed ?? null)
+    : null;
+  const nestedScoreRaw = nested
+    ? (nested.liveness ?? nested.score ?? nested.probability ?? nested.confidence ?? null)
+    : null;
+
+  const explicitBoolean = [directBoolean, nestedBoolean].find((value) => typeof value === 'boolean');
+  const score = toFiniteNumber(directScoreRaw ?? nestedScoreRaw);
+
+  if (typeof explicitBoolean === 'boolean') {
+    return {
+      isLive: explicitBoolean,
+      score: score == null ? null : (score > 1 ? score / 100 : score),
+      reason: 'boolean-flag',
+      payload
+    };
+  }
+
+  if (score != null) {
+    const normalized = score > 1 ? score / 100 : score;
+    return {
+      isLive: normalized >= 0.5,
+      score: normalized,
+      reason: 'score-derived',
+      payload
+    };
+  }
+
+  return { isLive: false, score: null, reason: 'no-liveness-field', payload };
+};
+
 const createPersonFromFace = async ({ name, faceCapture, collection = 'students' }) => {
   const imageBlob = dataUrlToBlob(faceCapture);
   if (!imageBlob) {
@@ -184,6 +231,19 @@ const searchFaceMatches = async ({ faceCapture, limit = 5 }) => {
   };
 };
 
+const detectLiveness = async ({ faceCapture }) => {
+  const imageBlob = dataUrlToBlob(faceCapture);
+  if (!imageBlob) {
+    throw new Error('Invalid liveness face capture format');
+  }
+
+  const payload = new FormData();
+  payload.append('photo', imageBlob, 'liveness-face.jpg');
+
+  const response = await requestLuxand('/detect/liveness', payload);
+  return extractLiveness(response);
+};
+
 const evaluateFaceMatch = ({ expectedPersonId, matches, minScore = 0.78 }) => {
   const expected = String(expectedPersonId || '').trim().toLowerCase();
   if (!expected) {
@@ -216,6 +276,7 @@ const evaluateFaceMatch = ({ expectedPersonId, matches, minScore = 0.78 }) => {
 module.exports = {
   createPersonFromFace,
   searchFaceMatches,
+  detectLiveness,
   evaluateFaceMatch,
   isLuxandConfigured
 };

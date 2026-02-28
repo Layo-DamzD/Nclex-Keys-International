@@ -37,7 +37,11 @@ const {
   sendExamSupportMessageAdmin,
   approveAdmin,
   getAllAdmins,
-  deleteAdmin
+  deleteAdmin,
+  getAdminSettings,
+  updateAdminProfileSettings,
+  updateAdminPasswordSettings,
+  clearAdminDeviceSettings
 } = require('../controllers/adminController');
 const {
   getLandingPageConfig,
@@ -102,5 +106,9 @@ router.post('/exam-support/messages', protect, adminOnly, sendExamSupportMessage
 router.put('/approve/:adminId', protect, superAdminOnly, approveAdmin);
 router.get('/users/admins', protect, superAdminOnly, getAllAdmins);
 router.delete('/users/:adminId', protect, superAdminOnly, deleteAdmin);
+router.get('/settings', protect, adminOnly, getAdminSettings);
+router.put('/settings/profile', protect, adminOnly, updateAdminProfileSettings);
+router.put('/settings/password', protect, adminOnly, updateAdminPasswordSettings);
+router.delete('/settings/devices', protect, adminOnly, clearAdminDeviceSettings);
 
 module.exports = router;

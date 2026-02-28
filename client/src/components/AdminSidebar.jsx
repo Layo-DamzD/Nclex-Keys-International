@@ -47,6 +47,7 @@ const AdminSidebar = ({
         { id: 'admin-approval', icon: 'user-check', label: 'Admin Approval' },
         { id: 'logs', icon: 'history', label: 'System Logs' },
         { id: 'student-feedback', icon: 'comment-dots', label: 'Student Feedback' },
+        { id: 'settings', icon: 'cog', label: 'Settings' },
       ]
     }
   ];
@@ -71,6 +72,12 @@ const AdminSidebar = ({
         { id: 'all-students', icon: 'users', label: 'All Students' },
         { id: 'progress-report', icon: 'chart-bar', label: 'Progress Report' },
         { id: 'exam-support', icon: 'comments', label: 'Exam Support Chat' },
+      ]
+    },
+    {
+      title: 'System',
+      items: [
+        { id: 'settings', icon: 'cog', label: 'Settings' }
       ]
     }
   ];

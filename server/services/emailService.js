@@ -238,15 +238,22 @@ const sendAdminSignupVerificationEmail = async ({
     </div>
   `;
 
-  await transporter.sendMail({
-    from: getMailFrom(),
-    to,
-    subject,
-    text,
-    html
-  });
-
-  return { sent: true };
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
 };
 
 module.exports = {

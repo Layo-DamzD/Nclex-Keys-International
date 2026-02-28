@@ -428,6 +428,9 @@
 .admin-dashboard-page .all-students .data-table-container {
   width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   background: #fff;
   border: 1px solid #dbe3ee;
   border-radius: 14px;
@@ -437,8 +440,16 @@
 .admin-dashboard-page .all-students .all-students-table {
   width: 100%;
   min-width: 1180px;
+  max-width: none;
   border-collapse: collapse;
   table-layout: fixed;
+}
+
+.admin-dashboard-page .all-students .all-students-table-hint {
+  display: none;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0 0 8px;
 }
 
 .admin-dashboard-page .all-students .all-students-table col.col-select { width: 40px; }
@@ -1097,7 +1108,8 @@ html[data-app-theme='dark'] .admin-dashboard-page .all-students .header p,
 html[data-app-theme='dark'] .admin-dashboard-page .all-students .form-label,
 html[data-app-theme='dark'] .admin-dashboard-page .all-students .text-muted,
 html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-stat-card > div:first-child,
-html[data-app-theme='dark'] .admin-dashboard-page .all-students .all-students-empty-state {
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .all-students-empty-state,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .all-students-table-hint {
   color: #94a3b8 !important;
 }
 
@@ -1116,7 +1128,8 @@ html[data-app-theme='dark'] .admin-dashboard-page .all-students .data-table-cont
   border: 1px solid #334155;
   border-radius: 14px;
   box-shadow: 0 8px 20px rgba(2, 6, 23, 0.28);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page .all-students .data-table {
@@ -1682,8 +1695,119 @@ html[data-app-theme='dark'] .admin-dashboard-page .all-students .alert-success {
     min-width: 980px;
   }
 
+  .admin-dashboard-page .all-students .all-students-table col.col-student-id { width: 90px; }
+  .admin-dashboard-page .all-students .all-students-table col.col-name { width: 145px; }
+  .admin-dashboard-page .all-students .all-students-table col.col-email { width: 210px; }
+  .admin-dashboard-page .all-students .all-students-table col.col-program { width: 120px; }
+  .admin-dashboard-page .all-students .all-students-table col.col-progress { width: 150px; }
+  .admin-dashboard-page .all-students .all-students-table col.col-status { width: 100px; }
+  .admin-dashboard-page .all-students .all-students-table col.col-actions { width: 190px; }
+
+  .admin-dashboard-page .all-students .all-students-table-hint {
+    display: block;
+  }
+
   .admin-dashboard-page .admin-analytics-table {
     min-width: 640px;
+  }
+}
+
+.admin-dashboard-page .admin-settings-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-dashboard-page .admin-settings-label {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.admin-dashboard-page .admin-settings-value {
+  font-weight: 600;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.admin-dashboard-page .admin-settings-password-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-dashboard-page .admin-settings-device-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-dashboard-page .admin-settings-device-table-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+}
+
+.admin-dashboard-page .admin-settings-device-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+}
+
+.admin-dashboard-page .admin-settings-device-table th,
+.admin-dashboard-page .admin-settings-device-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.admin-dashboard-page .admin-settings-device-table th {
+  background: #f8fbff;
+  color: #1e3a5f;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .admin-settings-device-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-dashboard-page .admin-settings-device-empty {
+  color: #64748b;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .admin-settings-label,
+html[data-app-theme='dark'] .admin-dashboard-page .admin-settings-device-empty {
+  color: #94a3b8;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .admin-settings-value {
+  color: #e5e7eb;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .admin-settings-device-table-wrap {
+  border-color: #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .admin-settings-device-table th {
+  background: #111827;
+  color: #dbeafe;
+  border-bottom-color: #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .admin-settings-device-table td {
+  border-bottom-color: #263446;
+  color: #e5e7eb;
+}
+
+@media (max-width: 991.98px) {
+  .admin-dashboard-page .admin-settings-info-grid,
+  .admin-dashboard-page .admin-settings-password-grid {
+    grid-template-columns: 1fr;
   }
 }
 

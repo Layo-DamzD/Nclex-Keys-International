@@ -341,6 +341,9 @@ const AllStudents = () => {
       </div>
 
       {/* Students Table */}
+      <div className="all-students-table-hint">
+        Swipe left/right to view all columns on mobile.
+      </div>
       <div className="data-table-container">
         <table className="data-table all-students-table">
           <colgroup>

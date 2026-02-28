@@ -18,6 +18,7 @@ import SystemLogs from '../components/admin/SystemLogs';
 import StudentFeedback from '../components/admin/StudentFeedback';
 import AdminApproval from '../components/admin/AdminApproval';
 import ExamSupportChat from '../components/admin/ExamSupportChat';
+import AdminSettings from '../components/admin/AdminSettings';
 import PwaInstallButton from '../components/PwaInstallButton';
 import { useAppTheme } from '../context/AppThemeContext';
 import './AdminDashboard.css';
@@ -267,6 +268,12 @@ const AdminDashboard = () => {
         <div className="section active">
             <StudentFeedback />
         </div>
+        )}
+
+        {activeSection === 'settings' && (
+          <div className="section active">
+            <AdminSettings />
+          </div>
         )}
       </main>
     </div>

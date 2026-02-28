@@ -9604,6 +9604,18 @@ html[data-app-theme='dark'] .student-dashboard-shell .student-notification-popup
   justify-content: flex-end;
 }
 
+.signup-face-modal-actions .btn-outline-primary {
+  color: #1d4ed8;
+  border-color: #1d4ed8;
+  background: #ffffff;
+}
+
+.signup-face-modal-actions .btn-outline-primary:hover:not(:disabled) {
+  color: #ffffff;
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
 @keyframes signupRainbowEdgeSpin {
   from {
     transform: rotate(0deg);
