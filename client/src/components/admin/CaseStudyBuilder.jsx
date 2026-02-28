@@ -1,0 +1,569 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
+import { CATEGORIES } from '../../constants/categories';
+
+const CASE_STUDY_TYPES = [
+  { value: '6-question', label: '6-Question Case Study' },
+  { value: 'bowtie', label: 'Bowtie' },
+  { value: 'trend', label: 'Trend' },
+];
+
+const QUESTION_TYPES = [
+  { value: 'multiple-choice', label: 'Multiple Choice' },
+  { value: 'sata', label: 'SATA' },
+  { value: 'fill-blank', label: 'Fill in the Blank' },
+  { value: 'highlight', label: 'Highlight' },
+  { value: 'drag-drop', label: 'Drag & Drop' },
+  { value: 'matrix', label: 'Matrix' },
+];
+
+const CaseStudyBuilder = () => {
+  const navigate = useNavigate();
+  const { id } = useParams(); // for editing
+  const isEditing = !!id;
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('details'); // details, sections, questions
+
+  // Case study data
+  const [caseStudy, setCaseStudy] = useState({
+    title: '',
+    type: '6-question',
+    scenario: '',
+    sections: [],
+    questions: [],
+    isActive: true
+  });
+
+  // For adding new sections
+  const [newSection, setNewSection] = useState({ title: '', content: '' });
+
+  // For adding new questions
+  const [currentQuestion, setCurrentQuestion] = useState({
+    type: 'multiple-choice',
+    questionText: '',
+    options: ['', '', '', ''],
+    correctAnswer: '',
+    rationale: '',
+    difficulty: 'medium',
+    highlightStart: 0,
+    highlightEnd: 0,
+  });
+
+  useEffect(() => {
+    if (isEditing) {
+      fetchCaseStudy();
+    }
+  }, [id]);
+
+  const fetchCaseStudy = async () => {
+    setLoading(true);
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.get(`/api/admin/case-studies/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCaseStudy(response.data);
+    } catch (err) {
+      setError('Failed to load case study');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCaseStudyChange = (e) => {
+    const { name, value } = e.target;
+    setCaseStudy(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Section management
+  const addSection = () => {
+    if (!newSection.title || !newSection.content) {
+      alert('Please enter both title and content');
+      return;
+    }
+    setCaseStudy(prev => ({
+      ...prev,
+      sections: [...prev.sections, newSection]
+    }));
+    setNewSection({ title: '', content: '' });
+  };
+
+  const removeSection = (index) => {
+    setCaseStudy(prev => ({
+      ...prev,
+      sections: prev.sections.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Question management
+  const handleQuestionChange = (field, value) => {
+    setCurrentQuestion(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleOptionChange = (index, value) => {
+    const newOptions = [...currentQuestion.options];
+    newOptions[index] = value;
+    setCurrentQuestion(prev => ({ ...prev, options: newOptions }));
+  };
+
+  const addOption = () => {
+    setCurrentQuestion(prev => ({
+      ...prev,
+      options: [...prev.options, '']
+    }));
+  };
+
+  const removeOption = (index) => {
+    if (currentQuestion.options.length > 2) {
+      setCurrentQuestion(prev => ({
+        ...prev,
+        options: prev.options.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const addQuestion = () => {
+    // Validate question
+    if (!currentQuestion.questionText) {
+      alert('Please enter question text');
+      return;
+    }
+
+    if (currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'sata') {
+      const validOptions = currentQuestion.options.filter(opt => opt.trim() !== '');
+      if (validOptions.length < 2) {
+        alert('Please enter at least 2 options');
+        return;
+      }
+    }
+
+    if (currentQuestion.type === 'matrix') {
+      alert('Matrix questions are disabled in Case Study Builder.');
+      return;
+    }
+
+    setCaseStudy(prev => ({
+      ...prev,
+      questions: [...prev.questions, { ...currentQuestion }]
+    }));
+
+    // Reset question form
+    setCurrentQuestion({
+      type: 'multiple-choice',
+      questionText: '',
+      options: ['', '', '', ''],
+      correctAnswer: '',
+      rationale: '',
+      difficulty: 'medium',
+      highlightStart: 0,
+      highlightEnd: 0,
+    });
+  };
+
+  const removeQuestion = (index) => {
+    setCaseStudy(prev => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate
+    if (!caseStudy.title) {
+      setError('Please enter a title');
+      return;
+    }
+    if (!caseStudy.scenario) {
+      setError('Please enter a scenario');
+      return;
+    }
+    if (caseStudy.questions.length === 0) {
+      setError('Please add at least one question');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      if (isEditing) {
+        await axios.put(`/api/admin/case-studies/${id}`, caseStudy, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        alert('Case study updated successfully');
+      } else {
+        await axios.post('/api/admin/case-studies', caseStudy, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        alert('Case study created successfully');
+      }
+      navigate('/admin/dashboard?section=case-studies');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save case study');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && isEditing) return <div>Loading case study...</div>;
+
+  return (
+    <div className="case-study-builder">
+      <h2>{isEditing ? 'Edit Case Study' : 'Create New Case Study'}</h2>
+      {error && <div className="alert alert-danger">{error}</div>}
+
+      <div className="builder-tabs">
+        <button
+          className={`tab ${activeTab === 'details' ? 'active' : ''}`}
+          onClick={() => setActiveTab('details')}
+        >
+          1. Case Details
+        </button>
+        <button
+          className={`tab ${activeTab === 'sections' ? 'active' : ''}`}
+          onClick={() => setActiveTab('sections')}
+        >
+          2. Patient Data Sections
+        </button>
+        <button
+          className={`tab ${activeTab === 'questions' ? 'active' : ''}`}
+          onClick={() => setActiveTab('questions')}
+        >
+          3. Questions
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="form-card">
+        {/* Tab 1: Case Details */}
+        {activeTab === 'details' && (
+          <div className="tab-pane">
+            <div className="form-group">
+              <label className="form-label">Case Study Title</label>
+              <input
+                type="text"
+                name="title"
+                className="form-control"
+                value={caseStudy.title}
+                onChange={handleCaseStudyChange}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Case Study Type</label>
+              <select
+                name="type"
+                className="form-control"
+                value={caseStudy.type}
+                onChange={handleCaseStudyChange}
+                required
+              >
+                {CASE_STUDY_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Scenario / Initial Presentation</label>
+              <textarea
+                name="scenario"
+                className="form-control"
+                rows="6"
+                value={caseStudy.scenario}
+                onChange={handleCaseStudyChange}
+                placeholder="Describe the patient, initial presentation, and setting..."
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  checked={caseStudy.isActive}
+                  onChange={(e) => setCaseStudy(prev => ({ ...prev, isActive: e.target.checked }))}
+                />
+                Active (visible to students)
+              </label>
+            </div>
+
+            <button type="button" className="btn btn-primary" onClick={() => setActiveTab('sections')}>
+              Next: Patient Data Sections
+            </button>
+          </div>
+        )}
+
+        {/* Tab 2: Patient Data Sections */}
+        {activeTab === 'sections' && (
+          <div className="tab-pane">
+            <h4>Additional Patient Data</h4>
+            <p className="text-muted">Add sections like Vital Signs, Lab Results, Nurses' Notes, etc.</p>
+
+            <div className="section-list mb-4">
+              {caseStudy.sections.map((section, index) => (
+                <div key={index} className="card mb-2">
+                  <div className="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6>{section.title}</h6>
+                      <p className="mb-0 small">{section.content.substring(0, 100)}...</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger"
+                      onClick={() => removeSection(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="add-section-form">
+              <h5>Add New Section</h5>
+              <div className="form-group">
+                <label className="form-label">Section Title</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={newSection.title}
+                  onChange={(e) => setNewSection({ ...newSection, title: e.target.value })}
+                  placeholder="e.g., Vital Signs, Lab Results, Nurses' Notes"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Content</label>
+                <textarea
+                  className="form-control"
+                  rows="4"
+                  value={newSection.content}
+                  onChange={(e) => setNewSection({ ...newSection, content: e.target.value })}
+                  placeholder="Enter the patient data..."
+                />
+              </div>
+              <button type="button" className="btn btn-primary" onClick={addSection}>
+                Add Section
+              </button>
+            </div>
+
+            <div className="mt-4 d-flex justify-content-between">
+              <button type="button" className="btn btn-secondary" onClick={() => setActiveTab('details')}>
+                Previous: Details
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => setActiveTab('questions')}>
+                Next: Questions
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Questions */}
+        {activeTab === 'questions' && (
+          <div className="tab-pane">
+            <h4>Case Study Questions</h4>
+            <p className="text-muted">Add questions for this case study. They will appear in order.</p>
+
+            <div className="question-list mb-4">
+              {caseStudy.questions.map((q, index) => (
+                <div key={index} className="card mb-2">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between">
+                      <h6>Question {index + 1}: {q.questionText.substring(0, 50)}...</h6>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => removeQuestion(index)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <span className="badge badge-info">{q.type}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="add-question-form">
+              <h5>Add New Question</h5>
+              
+              <div className="form-group">
+                <label className="form-label">Question Type</label>
+                <select
+                  className="form-control"
+                  value={currentQuestion.type}
+                  onChange={(e) => handleQuestionChange('type', e.target.value)}
+                >
+                  {QUESTION_TYPES.map(type => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Question Text</label>
+                <textarea
+                  className="form-control"
+                  rows="3"
+                  value={currentQuestion.questionText}
+                  onChange={(e) => handleQuestionChange('questionText', e.target.value)}
+                  placeholder="Enter the question..."
+                />
+              </div>
+
+              {/* Options for MC/SATA */}
+              {(currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'sata') && (
+                <div className="form-group">
+                  <label className="form-label">Options</label>
+                  {currentQuestion.options.map((opt, idx) => (
+                    <div key={idx} className="input-group mb-2">
+                      <span className="input-group-text">{String.fromCharCode(65 + idx)}</span>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={opt}
+                        onChange={(e) => handleOptionChange(idx, e.target.value)}
+                        placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                      />
+                      {currentQuestion.options.length > 2 && (
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          onClick={() => removeOption(idx)}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-sm btn-primary" onClick={addOption}>
+                    Add Option
+                  </button>
+                </div>
+              )}
+
+              {/* Correct Answer for MC */}
+              {currentQuestion.type === 'multiple-choice' && (
+                <div className="form-group">
+                  <label className="form-label">Correct Answer</label>
+                  <select
+                    className="form-control"
+                    value={currentQuestion.correctAnswer}
+                    onChange={(e) => handleQuestionChange('correctAnswer', e.target.value)}
+                  >
+                    <option value="">Select correct answer</option>
+                    {currentQuestion.options.map((_, idx) => (
+                      <option key={idx} value={String.fromCharCode(65 + idx)}>
+                        {String.fromCharCode(65 + idx)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* SATA correct answers */}
+              {currentQuestion.type === 'sata' && (
+                <div className="form-group">
+                  <label className="form-label">Correct Answers (check all that apply)</label>
+                  <div className="sata-options">
+                    {currentQuestion.options.map((opt, idx) => (
+                      <div key={idx} className="form-check">
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          id={`sata-${idx}`}
+                          value={String.fromCharCode(65 + idx)}
+                          checked={currentQuestion.correctAnswer?.includes(String.fromCharCode(65 + idx))}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const current = currentQuestion.correctAnswer || [];
+                            if (e.target.checked) {
+                              handleQuestionChange('correctAnswer', [...current, value]);
+                            } else {
+                              handleQuestionChange('correctAnswer', current.filter(v => v !== value));
+                            }
+                          }}
+                        />
+                        <label className="form-check-label" htmlFor={`sata-${idx}`}>
+                          {String.fromCharCode(65 + idx)}. {opt || `Option ${idx + 1}`}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fill in Blank */}
+              {currentQuestion.type === 'fill-blank' && (
+                <div className="form-group">
+                  <label className="form-label">Correct Answer</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={currentQuestion.correctAnswer}
+                    onChange={(e) => handleQuestionChange('correctAnswer', e.target.value)}
+                    placeholder="Enter the correct answer"
+                  />
+                  <small className="text-muted">For multiple answers, separate with semicolons</small>
+                </div>
+              )}
+
+              {currentQuestion.type === 'matrix' && (
+                <div className="alert alert-warning">
+                  Matrix question setup is disabled in Case Study Builder.
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label">Rationale</label>
+                <textarea
+                  className="form-control"
+                  rows="3"
+                  value={currentQuestion.rationale}
+                  onChange={(e) => handleQuestionChange('rationale', e.target.value)}
+                  placeholder="Explain the correct answer..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Difficulty</label>
+                <select
+                  className="form-control"
+                  value={currentQuestion.difficulty}
+                  onChange={(e) => handleQuestionChange('difficulty', e.target.value)}
+                >
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </div>
+
+              <button type="button" className="btn btn-primary" onClick={addQuestion}>
+                Add Question to Case Study
+              </button>
+            </div>
+
+            <div className="mt-4 d-flex justify-content-between">
+              <button type="button" className="btn btn-secondary" onClick={() => setActiveTab('sections')}>
+                Previous: Sections
+              </button>
+              <button type="submit" className="btn btn-success" disabled={loading}>
+                {loading ? 'Saving...' : (isEditing ? 'Update Case Study' : 'Create Case Study')}
+              </button>
+            </div>
+          </div>
+        )}
+      </form>
+    </div>
+  );
+};
+
+export default CaseStudyBuilder;
+

@@ -1,0 +1,176 @@
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const StudentSignup = () => {
+  const { register, handleSubmit, watch, formState: { errors } } = useForm();
+  const [signupError, setSignupError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const password = watch('password');
+
+  const onSubmit = async (data) => {
+    setLoading(true);
+    setSignupError('');
+    try {
+      await axios.post('/api/auth/student/register', {
+        name: `${data.firstName} ${data.lastName}`,
+        email: data.email,
+        password: data.password,
+        program: data.program,
+        phone: data.phone,
+        examDate: data.examDate || null
+      });
+      navigate('/login', { state: { message: 'Registration successful! Please login.' } });
+    } catch (error) {
+      setSignupError(error.response?.data?.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="signup-clean-page">
+      <div className="signup-clean-card-shell">
+        <div className="signup-clean-card">
+          <div className="signup-clean-header">
+            <i className="fas fa-user-graduate signup-clean-header-icon" aria-hidden="true" />
+            <h1>Signup</h1>
+            <p>Create your NCLEX KEYS account</p>
+          </div>
+          <div className="signup-clean-form-wrap">
+            {signupError && <div className="alert alert-danger">{signupError}</div>}
+            <form onSubmit={handleSubmit(onSubmit)} className="signup-clean-form">
+              <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label fw-bold">First Name</label>
+                <input
+                  type="text"
+                  className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
+                  autoComplete="given-name"
+                  {...register('firstName', { required: 'First name is required' })}
+                />
+                {errors.firstName && <div className="invalid-feedback">{errors.firstName.message}</div>}
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label fw-bold">Last Name</label>
+                <input
+                  type="text"
+                  className={`form-control ${errors.lastName ? 'is-invalid' : ''}`}
+                  autoComplete="family-name"
+                  {...register('lastName', { required: 'Last name is required' })}
+                />
+                {errors.lastName && <div className="invalid-feedback">{errors.lastName.message}</div>}
+              </div>
+              </div>
+
+            <div className="mb-3">
+              <label className="form-label fw-bold">Email Address</label>
+              <input
+                type="email"
+                className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+                autoComplete="email"
+                {...register('email', { required: 'Email is required', pattern: { value: /^\S+@\S+$/i, message: 'Invalid email' } })}
+              />
+              {errors.email && <div className="invalid-feedback">{errors.email.message}</div>}
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label fw-bold">Phone Number (optional)</label>
+              <input
+                type="tel"
+                className="form-control"
+                autoComplete="tel"
+                {...register('phone')}
+              />
+            </div>
+
+            {/* Program field */}
+            <div className="mb-3">
+              <label className="form-label fw-bold">Program</label>
+              <select
+                className={`form-control ${errors.program ? 'is-invalid' : ''}`}
+                {...register('program', { required: 'Program is required' })}
+              >
+                <option value="">Select program</option>
+                <option value="NCLEX-RN">NCLEX-RN</option>
+                <option value="NCLEX-PN">NCLEX-PN</option>
+              </select>
+              {errors.program && <div className="invalid-feedback">{errors.program.message}</div>}
+            </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-bold">Expected Exam Date (optional but recommended)</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  {...register('examDate')}
+                />
+              </div>
+
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label fw-bold">Password</label>
+                <input
+                  type="password"
+                  className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                  autoComplete="new-password"
+                  {...register('password', { required: 'Password is required', minLength: { value: 8, message: 'Minimum 8 characters' } })}
+                />
+                {errors.password && <div className="invalid-feedback">{errors.password.message}</div>}
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label fw-bold">Confirm Password</label>
+                <input
+                  type="password"
+                  className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                  autoComplete="new-password"
+                  {...register('confirmPassword', {
+                    required: 'Please confirm password',
+                    validate: value => value === password || 'Passwords do not match'
+                  })}
+                />
+                {errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword.message}</div>}
+              </div>
+            </div>
+
+            <div className="form-check mb-4">
+              <input
+                type="checkbox"
+                className={`form-check-input ${errors.terms ? 'is-invalid' : ''}`}
+                id="terms"
+                {...register('terms', { required: 'You must agree to the terms' })}
+              />
+              <label className="form-check-label" htmlFor="terms">
+                I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+              </label>
+              {errors.terms && <div className="invalid-feedback d-block">{errors.terms.message}</div>}
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary w-100 py-3 fw-bold signup-clean-submit"
+              disabled={loading}
+            >
+              {loading ? 'Creating Account...' : 'Create Account'}
+            </button>
+            </form>
+
+            <div className="login-link text-center mt-4 signup-clean-links">
+              Already have an account? <Link to="/login">Login here</Link>
+            </div>
+            <div className="back-home text-center mt-3 signup-clean-links">
+              <Link to="/" className="signup-clean-back-home">
+                <i className="fas fa-arrow-left me-2"></i>Back to Homepage
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default StudentSignup;

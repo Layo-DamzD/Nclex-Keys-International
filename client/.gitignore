@@ -1,0 +1,4 @@
+git init
+echo "node_modules\n.env\ndist" > .gitignore
+git add .
+git commit -m "Initial setup: backend and frontend"

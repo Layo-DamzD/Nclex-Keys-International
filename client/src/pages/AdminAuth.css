@@ -1,0 +1,317 @@
+.admin-auth-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #1a3c72 0%, #1a5fb4 100%);
+}
+
+.admin-auth-page .admin-login-container,
+.admin-auth-page .admin-signup-container {
+  width: 100%;
+}
+
+.admin-auth-page .admin-login-container {
+  max-width: 450px;
+}
+
+.admin-auth-page .admin-signup-container {
+  max-width: 500px;
+}
+
+.admin-auth-page .admin-login-card,
+.admin-auth-page .admin-signup-card {
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.admin-auth-page .admin-login-header,
+.admin-auth-page .admin-signup-header {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  text-align: center;
+  color: #fff;
+}
+
+.admin-auth-page .admin-login-header {
+  padding: 40px;
+}
+
+.admin-auth-page .admin-signup-header {
+  padding: 40px 30px;
+}
+
+.admin-auth-page .admin-login-header i {
+  font-size: 3.5rem;
+  margin-bottom: 15px;
+}
+
+.admin-auth-page .admin-signup-header i {
+  font-size: 3rem;
+  margin-bottom: 15px;
+}
+
+.admin-auth-page .admin-login-header h1 {
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+}
+
+.admin-auth-page .admin-signup-header h1 {
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.admin-auth-page .admin-signup-header p {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  margin-bottom: 15px;
+}
+
+.admin-auth-page .security-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  margin-top: 10px;
+}
+
+.admin-auth-page .admin-login-form {
+  padding: 40px 30px;
+}
+
+.admin-auth-page .admin-signup-form {
+  padding: 40px 30px;
+}
+
+.admin-auth-page .form-group {
+  margin-bottom: 20px;
+}
+
+.admin-auth-page .admin-login-form .form-group {
+  margin-bottom: 25px;
+}
+
+.admin-auth-page .form-label {
+  display: block;
+  color: #333;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.admin-auth-page .admin-login-form .form-label {
+  font-weight: 600;
+}
+
+.admin-auth-page .form-label i {
+  margin-right: 8px;
+  color: #dc3545;
+}
+
+.admin-auth-page .form-control {
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.admin-auth-page .form-control:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+
+.admin-auth-page .password-input {
+  position: relative;
+}
+
+.admin-auth-page .password-toggle {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+}
+
+.admin-auth-page .access-code-input {
+  text-align: center;
+  letter-spacing: 10px;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.admin-auth-page .btn-admin-login,
+.admin-auth-page .btn-admin-signup {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  width: 100%;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.admin-auth-page .btn-admin-login {
+  padding: 18px;
+  font-size: 1.1rem;
+}
+
+.admin-auth-page .btn-admin-signup {
+  padding: 18px;
+  font-size: 1.1rem;
+}
+
+.admin-auth-page .btn-admin-signup:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+.admin-auth-page .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.admin-auth-page .terms-checkbox {
+  margin: 25px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.admin-auth-page .terms-checkbox input[type='checkbox'] {
+  margin-right: 10px;
+}
+
+.admin-auth-page .terms-checkbox label {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.admin-auth-page .terms-checkbox a {
+  color: #dc3545;
+  text-decoration: none;
+}
+
+.admin-auth-page .terms-checkbox a:hover {
+  text-decoration: underline;
+}
+
+.admin-auth-page .login-link {
+  text-align: center;
+  margin-top: 25px;
+  color: #666;
+}
+
+.admin-auth-page .admin-signup-form .login-link {
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.admin-auth-page .login-link a {
+  color: #dc3545;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-auth-page .login-link a:hover {
+  text-decoration: underline;
+}
+
+.admin-auth-page .back-home {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.admin-auth-page .back-home a {
+  color: #666;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.admin-auth-page .back-home a:hover {
+  color: #dc3545;
+}
+
+.admin-auth-page .back-home i {
+  margin-right: 8px;
+}
+
+@media (max-width: 640px) {
+  .admin-auth-page {
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  .admin-auth-page .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-auth-page {
+    padding: 10px;
+  }
+
+  .admin-auth-page .admin-login-card,
+  .admin-auth-page .admin-signup-card {
+    border-radius: 14px;
+  }
+
+  .admin-auth-page .admin-login-header,
+  .admin-auth-page .admin-signup-header {
+    padding: 22px 16px;
+  }
+
+  .admin-auth-page .admin-login-header i,
+  .admin-auth-page .admin-signup-header i {
+    font-size: 2.1rem;
+    margin-bottom: 10px;
+  }
+
+  .admin-auth-page .admin-login-header h1,
+  .admin-auth-page .admin-signup-header h1 {
+    font-size: 1.35rem;
+    line-height: 1.15;
+  }
+
+  .admin-auth-page .admin-login-form,
+  .admin-auth-page .admin-signup-form {
+    padding: 18px 16px 20px;
+  }
+
+  .admin-auth-page .form-control {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+
+  .admin-auth-page .access-code-input {
+    letter-spacing: 4px;
+    font-size: 1.15rem;
+  }
+
+  .admin-auth-page .btn-admin-login,
+  .admin-auth-page .btn-admin-signup {
+    padding: 14px;
+    font-size: 1rem;
+  }
+
+  .admin-auth-page .terms-checkbox {
+    padding: 12px;
+    margin: 18px 0;
+  }
+
+  .admin-auth-page .terms-checkbox label {
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+}

@@ -1,0 +1,1696 @@
+.admin-dashboard-page {
+  width: 100%;
+  background: #eef6ff;
+}
+
+.admin-dashboard-page.admin-container {
+  width: 100%;
+  align-items: stretch;
+  background: #eef6ff;
+}
+
+.admin-dashboard-page .sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: linear-gradient(180deg, #1e40af, #1d4ed8);
+  color: #fff;
+  position: fixed;
+  inset: 0 auto 0 0;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-dashboard-page .sidebar.collapsed {
+  width: 76px;
+  min-width: 76px;
+}
+
+.admin-dashboard-page .sidebar-header {
+  padding: 24px 20px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+}
+
+.admin-dashboard-page .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.admin-dashboard-page .logo-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #fff;
+  color: #1e40af;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+}
+
+.admin-dashboard-page .logo-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+}
+
+.admin-dashboard-page .domain {
+  color: #c7d2fe;
+  font-size: 0.8rem;
+}
+
+.admin-dashboard-page .sidebar-nav {
+  padding: 12px 12px 16px;
+}
+
+.admin-dashboard-page .nav-group {
+  margin-bottom: 14px;
+}
+
+.admin-dashboard-page .nav-group h3 {
+  color: #bfdbfe;
+  font-size: 0.75rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  margin: 0 0 6px;
+}
+
+.admin-dashboard-page .nav-item {
+  margin-bottom: 4px;
+}
+
+.admin-dashboard-page .nav-link {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #e5edff;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 500;
+}
+
+.admin-dashboard-page .nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.admin-dashboard-page .nav-link.active {
+  background: #fff;
+  color: #1e40af;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.admin-dashboard-page .nav-link.text-danger {
+  color: #fecaca !important;
+}
+
+.admin-dashboard-page .nav-link.text-danger:hover {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fff !important;
+}
+
+.admin-dashboard-page .main-content {
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background: #eef6ff !important;
+  display: block !important;
+}
+
+.admin-dashboard-page .header {
+  background: #fff;
+  border: 1px solid #dbe3ee;
+  border-radius: 18px;
+  padding: 22px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.admin-dashboard-page .header h1 {
+  margin: 0;
+  font-weight: 800;
+  color: #111827;
+}
+
+.admin-dashboard-page .header h1 span {
+  color: #1d4ed8;
+}
+
+.admin-dashboard-page .user-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-dashboard-page .admin-header-install-btn {
+  flex-shrink: 0;
+}
+
+.admin-dashboard-page .user-profile-meta {
+  text-align: right;
+}
+
+.admin-dashboard-page .user-name {
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.admin-dashboard-page .user-role-label {
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.admin-dashboard-page .time-display {
+  text-align: right;
+}
+
+.admin-dashboard-page .time-display .time {
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.admin-dashboard-page .time-display .date {
+  color: #64748b;
+}
+
+.admin-dashboard-page .user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25);
+}
+
+.admin-dashboard-page .section.active {
+  background: transparent;
+  width: 100%;
+}
+
+.admin-dashboard-page .section.active > * + * {
+  margin-top: 24px;
+}
+
+.admin-dashboard-page .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  width: 100%;
+}
+
+.admin-dashboard-page .stat-card {
+  background: #fff;
+  border: 1px solid #dbe3ee;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  border-top: 4px solid transparent;
+}
+
+.admin-dashboard-page .stat-card h3 {
+  margin: 0 0 8px;
+  color: #64748b;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.admin-dashboard-page .stat-number {
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 2.3rem;
+  line-height: 1;
+}
+
+.admin-dashboard-page .border-top-primary {
+  border-top-color: #2563eb;
+}
+
+.admin-dashboard-page .border-top-success {
+  border-top-color: #10b981;
+}
+
+.admin-dashboard-page .border-top-warning {
+  border-top-color: #f59e0b;
+}
+
+.admin-dashboard-page .border-top-danger {
+  border-top-color: #ef4444;
+}
+
+.admin-dashboard-page .form-card {
+  background: #fff;
+  border: 1px solid #dbe3ee;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.admin-dashboard-page .admin-section-title {
+  margin: 0 0 16px;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.admin-dashboard-page .admin-quick-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-dashboard-page .btn-outline-secondary {
+  background: #fff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.admin-dashboard-page .btn-outline-secondary:hover {
+  background: #f8fafc;
+}
+
+.admin-dashboard-page .btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.admin-dashboard-page .btn i {
+  font-size: 0.85rem;
+}
+
+.admin-dashboard-page .btn-primary { background: #2563eb; color: #fff; }
+.admin-dashboard-page .btn-success { background: #10b981; color: #fff; }
+.admin-dashboard-page .btn-info { background: #06b6d4; color: #082f49; }
+.admin-dashboard-page .btn-secondary { background: #64748b; color: #fff; }
+.admin-dashboard-page .btn-warning { background: #facc15; color: #111827; }
+
+.admin-dashboard-page .recent-question-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-dashboard-page .recent-question-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.admin-dashboard-page .recent-question-text {
+  font-weight: 500;
+  line-height: 1.45;
+  color: #1f2937;
+}
+
+.admin-dashboard-page .recent-question-meta {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #64748b;
+  flex-wrap: wrap;
+}
+
+.admin-dashboard-page .manage-questions .data-table-container {
+  width: 100%;
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.admin-dashboard-page .manage-questions .data-table {
+  width: 100%;
+  min-width: 1220px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.admin-dashboard-page .manage-questions .data-table col.col-id { width: 84px; }
+.admin-dashboard-page .manage-questions .data-table col.col-question { width: 330px; }
+.admin-dashboard-page .manage-questions .data-table col.col-type { width: 92px; }
+.admin-dashboard-page .manage-questions .data-table col.col-category { width: 180px; }
+.admin-dashboard-page .manage-questions .data-table col.col-subcategory { width: 170px; }
+.admin-dashboard-page .manage-questions .data-table col.col-difficulty { width: 96px; }
+.admin-dashboard-page .manage-questions .data-table col.col-times { width: 90px; }
+.admin-dashboard-page .manage-questions .data-table col.col-success { width: 108px; }
+.admin-dashboard-page .manage-questions .data-table col.col-actions { width: 150px; }
+
+.admin-dashboard-page .manage-questions .data-table thead th {
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+  text-align: left;
+  background: #f8fbff;
+}
+
+.admin-dashboard-page .manage-questions .data-table tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef2f7;
+  vertical-align: top;
+  color: #1f2937;
+  font-size: 0.88rem;
+}
+
+.admin-dashboard-page .manage-questions .data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-dashboard-page .manage-questions .mq-id-cell {
+  padding-top: 14px;
+}
+
+.admin-dashboard-page .manage-questions .mq-id-text {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 6px;
+  letter-spacing: 0.2px;
+}
+
+.admin-dashboard-page .manage-questions .mq-question-cell {
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.admin-dashboard-page .manage-questions .mq-category-cell {
+  line-height: 1.3;
+}
+
+.admin-dashboard-page .manage-questions .mq-subcategory-text {
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.25;
+  display: inline-block;
+  word-break: break-word;
+}
+
+.admin-dashboard-page .manage-questions .mq-actions-cell {
+  white-space: nowrap;
+}
+
+/* All Students table spacing/readability */
+.admin-dashboard-page .all-students .data-table-container {
+  width: 100%;
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.admin-dashboard-page .all-students .all-students-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.admin-dashboard-page .all-students .all-students-table col.col-select { width: 40px; }
+.admin-dashboard-page .all-students .all-students-table col.col-student-id { width: 96px; }
+.admin-dashboard-page .all-students .all-students-table col.col-name { width: 170px; }
+.admin-dashboard-page .all-students .all-students-table col.col-email { width: 260px; }
+.admin-dashboard-page .all-students .all-students-table col.col-program { width: 140px; }
+.admin-dashboard-page .all-students .all-students-table col.col-progress { width: 170px; }
+.admin-dashboard-page .all-students .all-students-table col.col-status { width: 120px; }
+.admin-dashboard-page .all-students .all-students-table col.col-actions { width: 240px; }
+
+.admin-dashboard-page .all-students .all-students-table thead th {
+  padding: 14px 14px;
+  white-space: nowrap;
+  font-size: 0.83rem;
+  color: #1e3a5f;
+  background: #f8fbff;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.admin-dashboard-page .all-students .all-students-table tbody td {
+  padding: 14px 14px;
+  border-bottom: 1px solid #eef2f7;
+  vertical-align: middle;
+  color: #1f2937;
+  font-size: 0.9rem;
+}
+
+.admin-dashboard-page .all-students .all-students-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-dashboard-page .all-students .all-students-id-cell {
+  color: #64748b;
+  letter-spacing: 0.1px;
+}
+
+.admin-dashboard-page .all-students .all-students-name-cell strong {
+  display: inline-block;
+  line-height: 1.2;
+}
+
+.admin-dashboard-page .all-students .all-students-email-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .all-students .all-students-program-cell,
+.admin-dashboard-page .all-students .all-students-status-cell {
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .all-students .all-students-progress-cell {
+  min-width: 0;
+}
+
+.admin-dashboard-page .all-students .all-students-actions-cell {
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .all-students .all-students-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-dashboard-page .all-students .all-students-actions-group .btn {
+  margin-right: 0 !important;
+}
+
+.admin-dashboard-page .manage-questions .mq-actions-cell .btn {
+  min-width: 64px;
+}
+
+.admin-dashboard-page .manage-questions .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .manage-questions .badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.admin-dashboard-page .manage-questions .badge-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.admin-dashboard-page .manage-questions .badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.admin-dashboard-page .manage-questions .badge-info {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.admin-dashboard-page .upload-question-header {
+  margin-bottom: 16px;
+}
+
+.admin-dashboard-page .upload-question-header h2 {
+  margin: 0;
+  color: #1e3a5f;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.admin-dashboard-page .upload-form-card {
+  padding: 16px 18px;
+}
+
+.admin-dashboard-page .upload-question .form-group {
+  margin-bottom: 14px;
+}
+
+.admin-dashboard-page .upload-question .form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.admin-dashboard-page .upload-question .form-control {
+  width: 100%;
+  border: 1px solid #d6deea;
+  border-radius: 6px;
+  padding: 9px 10px;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+
+.admin-dashboard-page .upload-question textarea.form-control {
+  resize: vertical;
+  min-height: 84px;
+}
+
+.admin-dashboard-page .upload-question .text-muted {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.admin-dashboard-page .upload-grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.admin-dashboard-page .upload-question .type-selector {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-dashboard-page .upload-question .type-btn {
+  border: 1px solid #d6deea;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  padding: 10px 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.admin-dashboard-page .upload-question .type-btn i {
+  font-size: 0.75rem;
+}
+
+.admin-dashboard-page .upload-question .type-btn.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(29, 78, 216, 0.16);
+}
+
+.admin-dashboard-page .upload-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.admin-dashboard-page .upload-row-header .form-label {
+  margin: 0;
+}
+
+.admin-dashboard-page .upload-question .option-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-dashboard-page .upload-question .option-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-dashboard-page .upload-question .option-index {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid #d6deea;
+  background: #f8fbff;
+  color: #1e3a5f;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.admin-dashboard-page .upload-question .option-correct-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .upload-question .btn-sm {
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  border-radius: 6px;
+}
+
+.admin-dashboard-page .upload-question .btn-danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.admin-dashboard-page .upload-question .btn-outline-secondary {
+  background: #fff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.admin-dashboard-page .upload-question .btn-outline-secondary:hover {
+  background: #f8fafc;
+}
+
+.admin-dashboard-page .drag-preview-card {
+  margin-top: 12px;
+  border: 1px dashed #93c5fd;
+  background: #f0f9ff;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.admin-dashboard-page .drag-preview-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.admin-dashboard-page .drag-preview-list {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-dashboard-page .drag-preview-item {
+  border: 1px solid #dbeafe;
+  background: #e0f2fe;
+  color: #1e3a5f;
+  border-radius: 5px;
+  padding: 7px 8px;
+  font-size: 0.8rem;
+}
+
+.admin-dashboard-page .drag-preview-item.empty {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.admin-dashboard-page .upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.admin-dashboard-page .bulk-import-card {
+  margin-top: 18px;
+}
+
+.admin-dashboard-page .bulk-import-title {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.admin-dashboard-page .bulk-import-help {
+  margin: 0 0 12px;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.admin-dashboard-page .bulk-import-actions {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-dashboard-page .bulk-import-status {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.admin-dashboard-page .bulk-import-status.success {
+  color: #059669;
+}
+
+.admin-dashboard-page .bulk-import-status.error {
+  color: #dc2626;
+}
+
+.admin-dashboard-page .usage-analytics {
+  width: 100%;
+}
+
+.admin-dashboard-page .usage-analytics > * + * {
+  margin-top: 16px;
+}
+
+.admin-dashboard-page .admin-analytics-header h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.95rem;
+  font-weight: 800;
+}
+
+.admin-dashboard-page .admin-analytics-subtitle {
+  margin: 8px 0 0;
+  color: #64748b;
+}
+
+.admin-dashboard-page .admin-analytics-range-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-dashboard-page .admin-analytics-range-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-dashboard-page .admin-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.admin-dashboard-page .admin-analytics-card {
+  background: #fff;
+  border: 1px solid #dbe3ee;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  padding: 22px 22px 16px;
+  min-width: 0;
+}
+
+.admin-dashboard-page .admin-analytics-card h3 {
+  margin: 0 0 16px;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.admin-dashboard-page .admin-analytics-chart-body {
+  height: 340px;
+  position: relative;
+}
+
+.admin-dashboard-page .admin-analytics-chart-body .text-muted {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  margin: 0;
+}
+
+.admin-dashboard-page .admin-analytics-section-card h3 {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.admin-dashboard-page .admin-analytics-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.admin-dashboard-page .admin-analytics-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.admin-dashboard-page .admin-analytics-table th,
+.admin-dashboard-page .admin-analytics-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.admin-dashboard-page .admin-analytics-table thead th {
+  color: #334155;
+  font-weight: 700;
+  background: #f8fbff;
+}
+
+.admin-dashboard-page .admin-analytics-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-dashboard-page .usage-analytics .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .usage-analytics .badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.admin-dashboard-page .usage-analytics .badge-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.admin-dashboard-page .usage-analytics .badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.admin-dashboard-page .usage-analytics .badge-info {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.admin-dashboard-page .admin-analytics-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-dashboard-page.admin-regular .sidebar {
+  background: linear-gradient(180deg, #d9a113 0%, #bf8700 100%);
+}
+
+.admin-dashboard-page.admin-regular .sidebar-header {
+  background: linear-gradient(180deg, #cf970a 0%, #b67f00 100%);
+}
+
+.admin-dashboard-page.admin-regular .logo-icon {
+  color: #b67f00;
+}
+
+.admin-dashboard-page.admin-regular .stat-card {
+  border-top-color: #f0c419 !important;
+}
+
+.admin-dashboard-page.admin-regular .btn-primary {
+  background: #d4a017;
+}
+
+.admin-dashboard-page.admin-regular .btn-primary:hover {
+  background: #b8870f;
+}
+
+.admin-dashboard-page.admin-regular .nav-link.active {
+  color: #b8870f;
+}
+
+.admin-dashboard-page.admin-regular .nav-link:hover {
+  background: rgba(240, 196, 25, 0.2);
+  color: #fff7cc;
+}
+
+.admin-dashboard-page.admin-regular .header h1 span {
+  color: #c79200;
+}
+
+.admin-dashboard-page.admin-regular .time-display .time {
+  color: #c79200;
+}
+
+.admin-dashboard-page.admin-regular .user-avatar {
+  background: #c79200;
+  box-shadow: 0 4px 12px rgba(199, 146, 0, 0.25);
+}
+
+.admin-dashboard-page:not(.admin-regular) .btn-info {
+  background: #2563eb;
+  color: #fff;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page,
+html[data-app-theme='dark'] .admin-dashboard-page.admin-container,
+html[data-app-theme='dark'] .admin-dashboard-page .main-content {
+  background: #0f172a !important;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .header,
+html[data-app-theme='dark'] .admin-dashboard-page .stat-card,
+html[data-app-theme='dark'] .admin-dashboard-page .form-card,
+html[data-app-theme='dark'] .admin-dashboard-page .manage-questions .data-table-container,
+html[data-app-theme='dark'] .admin-dashboard-page .admin-analytics-card {
+  background: #1b2433;
+  border-color: #334155;
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.28);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .header h1,
+html[data-app-theme='dark'] .admin-dashboard-page .stat-number,
+html[data-app-theme='dark'] .admin-dashboard-page .admin-section-title,
+html[data-app-theme='dark'] .admin-dashboard-page .admin-analytics-card h3,
+html[data-app-theme='dark'] .admin-dashboard-page .user-name,
+html[data-app-theme='dark'] .admin-dashboard-page .recent-question-text {
+  color: #e5e7eb;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .time-display .date,
+html[data-app-theme='dark'] .admin-dashboard-page .user-role-label,
+html[data-app-theme='dark'] .admin-dashboard-page .recent-question-meta,
+html[data-app-theme='dark'] .admin-dashboard-page .stat-card h3,
+html[data-app-theme='dark'] .admin-dashboard-page .bulk-import-help,
+html[data-app-theme='dark'] .admin-dashboard-page .admin-analytics-subtitle {
+  color: #94a3b8;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .btn-outline-secondary,
+html[data-app-theme='dark'] .admin-dashboard-page .upload-question .btn-outline-secondary {
+  background: #111827;
+  color: #cbd5e1;
+  border-color: #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .upload-question .form-control,
+html[data-app-theme='dark'] .admin-dashboard-page .upload-question .type-btn,
+html[data-app-theme='dark'] .admin-dashboard-page .upload-question .option-index {
+  background: #111827;
+  color: #e5e7eb;
+  border-color: #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .upload-question .form-label,
+html[data-app-theme='dark'] .admin-dashboard-page .upload-question .text-muted,
+html[data-app-theme='dark'] .admin-dashboard-page .upload-question .option-correct-toggle {
+  color: #cbd5e1;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .manage-questions .data-table thead th,
+html[data-app-theme='dark'] .admin-dashboard-page .admin-analytics-table thead th {
+  background: #111827;
+  color: #dbeafe;
+  border-bottom-color: #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .manage-questions .data-table tbody td,
+html[data-app-theme='dark'] .admin-dashboard-page .admin-analytics-table td {
+  color: #e5e7eb;
+  border-bottom-color: #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .manage-questions .mq-id-text {
+  background: #111827;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .sidebar {
+  border-right-color: rgba(148, 163, 184, 0.2);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page.admin-regular .sidebar {
+  background: linear-gradient(180deg, #c7900d 0%, #956a00 100%);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page.admin-regular .sidebar-header {
+  background: linear-gradient(180deg, #b9840a 0%, #855f00 100%);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .form-control,
+html[data-app-theme='dark'] .admin-dashboard-page .form-select,
+html[data-app-theme='dark'] .admin-dashboard-page select.form-control,
+html[data-app-theme='dark'] .admin-dashboard-page textarea.form-control {
+  background: #0f172a;
+  color: #e5e7eb;
+  border-color: #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .form-control::placeholder,
+html[data-app-theme='dark'] .admin-dashboard-page textarea.form-control::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .form-control:focus,
+html[data-app-theme='dark'] .admin-dashboard-page .form-select:focus,
+html[data-app-theme='dark'] .admin-dashboard-page select.form-control:focus,
+html[data-app-theme='dark'] .admin-dashboard-page textarea.form-control:focus {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.18);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .form-control option,
+html[data-app-theme='dark'] .admin-dashboard-page select.form-control option {
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .header p,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .form-label,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .text-muted,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-stat-card > div:first-child,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .all-students-empty-state {
+  color: #94a3b8 !important;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students h1,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students h3,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students h4,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students th,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students td,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students strong,
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .all-students-progress-value {
+  color: #e5e7eb;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .data-table-container {
+  background: #1b2433;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.28);
+  overflow: hidden;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .data-table {
+  background: transparent;
+  color: #e5e7eb;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .data-table thead th {
+  background: #111827;
+  color: #dbeafe;
+  border-bottom: 1px solid #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .data-table tbody td {
+  border-bottom: 1px solid #263446;
+  background: transparent;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .data-table tbody tr:hover > td {
+  background: rgba(148, 163, 184, 0.05);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .data-table input[type='checkbox'] {
+  accent-color: #3b82f6;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .all-students-progress-track {
+  background: #334155 !important;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-panel {
+  background: #111827 !important;
+  border-top-color: #334155 !important;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-stat-card {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-stat-card > div:last-child {
+  color: #f8fafc;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-table-wrap {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-table {
+  background: transparent;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-table-head {
+  background: #111827 !important;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-table th {
+  color: #dbeafe;
+  border-bottom-color: #334155 !important;
+  background: transparent;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .student-history-table td {
+  color: #e5e7eb;
+  border-bottom-color: #243244 !important;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .btn-outline-primary {
+  background: #111827;
+  color: #93c5fd;
+  border: 1px solid #3b82f6;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .btn-outline-primary:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: #dbeafe;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .btn-outline-secondary {
+  background: #111827;
+  color: #cbd5e1;
+  border-color: #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .btn-outline-secondary:hover {
+  background: #1f2937;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .badge-success {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .badge-danger {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .alert-danger {
+  background: rgba(127, 29, 29, 0.32);
+  border-color: rgba(248, 113, 113, 0.28);
+  color: #fecaca;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page .all-students .alert-success {
+  background: rgba(6, 95, 70, 0.28);
+  border-color: rgba(52, 211, 153, 0.25);
+  color: #a7f3d0;
+}
+
+@media (max-width: 900px) {
+  .admin-dashboard-page .sidebar {
+    position: static;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+  }
+
+  .admin-dashboard-page .main-content {
+    margin-left: 0 !important;
+    padding: 16px !important;
+  }
+
+  .admin-dashboard-page .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-dashboard-page .user-info {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .admin-dashboard-page .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-dashboard-page .upload-question .type-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-dashboard-page .upload-grid-two {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-page .admin-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-page .admin-analytics-chart-body {
+    height: 300px;
+  }
+
+  .admin-dashboard-page .upload-question .option-row {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .admin-dashboard-page .upload-question .option-correct-toggle {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-dashboard-page .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-page .admin-analytics-range-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+/* Matrix question styles */
+.matrix-table th,
+.matrix-table td {
+  vertical-align: middle;
+  padding: 12px;
+}
+
+.matrix-table input[type="radio"] {
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+.matrix-row .card {
+  border-left: 3px solid var(--nclex-blue);
+}
+
+.matrix-builder {
+  margin-top: 20px;
+}
+
+.matrix-columns .input-group {
+  max-width: 400px;
+}
+
+/* Admin dashboard responsive shell (global pass) */
+.admin-dashboard-page .admin-sidebar-collapse-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.admin-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(2, 6, 23, 0.45);
+  z-index: 1080;
+}
+
+.admin-sidebar-floating-open-btn {
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.22);
+}
+
+.admin-dashboard-page .section.active {
+  min-width: 0;
+}
+
+.admin-dashboard-page .section.active .table-responsive,
+.admin-dashboard-page .section.active [class*='table-wrap'] {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-dashboard-page .section.active .table,
+.admin-dashboard-page .section.active table {
+  max-width: 100%;
+}
+
+.admin-dashboard-page .header,
+.admin-dashboard-page .form-card,
+.admin-dashboard-page .admin-analytics-card {
+  min-width: 0;
+}
+
+.admin-dashboard-page .user-info {
+  min-width: 0;
+}
+
+.admin-dashboard-page .header h1 {
+  word-break: break-word;
+}
+
+.admin-dashboard-page .progress-report-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-dashboard-page .progress-report-table-wrap .data-table {
+  min-width: 640px;
+}
+
+@media (max-width: 991.98px) {
+  .admin-dashboard-page.admin-mobile {
+    position: relative;
+  }
+
+  .admin-dashboard-page.admin-mobile .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    height: 100vh;
+    overflow-y: auto;
+    width: min(86vw, 340px);
+    min-width: 0;
+    z-index: 1090;
+    transition: transform 0.28s ease, box-shadow 0.28s ease;
+  }
+
+  .admin-dashboard-page.admin-mobile .sidebar.collapsed {
+    transform: translateX(-100%);
+    width: min(86vw, 340px);
+    min-width: 0;
+  }
+
+  .admin-dashboard-page.admin-mobile .main-content,
+  .admin-dashboard-page.admin-mobile .admin-mobile-main-content {
+    margin-left: 0 !important;
+    width: 100%;
+    padding: 14px !important;
+  }
+
+  .admin-dashboard-page .header {
+    padding: 16px;
+    border-radius: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .admin-dashboard-page .header h1 {
+    font-size: clamp(1.35rem, 2vw + 1rem, 1.9rem);
+    line-height: 1.15;
+  }
+
+  .admin-dashboard-page .user-info {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto auto auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .admin-dashboard-page .admin-header-install-btn {
+    order: 0;
+    justify-self: start;
+  }
+
+  .admin-dashboard-page .time-display {
+    order: 1;
+    text-align: left;
+  }
+
+  .admin-dashboard-page .theme-toggle-btn {
+    order: 2;
+  }
+
+  .admin-dashboard-page .user-profile-meta {
+    order: 3;
+    text-align: left;
+    min-width: 0;
+  }
+
+  .admin-dashboard-page .user-avatar {
+    order: 4;
+    width: 44px;
+    height: 44px;
+    justify-self: end;
+  }
+
+  .admin-dashboard-page .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .admin-dashboard-page .stat-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .admin-dashboard-page .stat-number {
+    font-size: 1.8rem;
+  }
+
+  .admin-dashboard-page .form-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .admin-dashboard-page .upload-question .type-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-dashboard-page .upload-grid-two,
+  .admin-dashboard-page .admin-analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .admin-dashboard-page .admin-analytics-range-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-dashboard-page .admin-analytics-chart-body {
+    height: 280px;
+  }
+
+  .admin-dashboard-page .upload-row-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .admin-dashboard-page .upload-question .option-row {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .admin-dashboard-page .upload-question .option-correct-toggle {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .admin-dashboard-page .upload-question .option-row .btn,
+  .admin-dashboard-page .upload-question .option-row button {
+    justify-self: start;
+  }
+
+  .admin-dashboard-page .all-students .all-students-actions-group {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .admin-dashboard-page .all-students .all-students-actions-group .btn,
+  .admin-dashboard-page .manage-questions .mq-actions-cell .btn {
+    padding: 8px 10px;
+    font-size: 0.78rem;
+  }
+
+  .admin-dashboard-page .manage-questions-filter-row,
+  .admin-dashboard-page .progress-report-filter-row,
+  .admin-dashboard-page .system-logs-filter-row,
+  .admin-dashboard-page .student-feedback-filter-row {
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 639.98px) {
+  .admin-dashboard-page .header {
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+
+  .admin-dashboard-page .user-info {
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      'install avatar'
+      'time avatar'
+      'theme avatar'
+      'meta meta';
+    align-items: start;
+  }
+
+  .admin-dashboard-page .admin-header-install-btn {
+    grid-area: install;
+    width: fit-content;
+  }
+
+  .admin-dashboard-page .time-display {
+    grid-area: time;
+  }
+
+  .admin-dashboard-page .theme-toggle-btn {
+    grid-area: theme;
+    justify-self: start;
+  }
+
+  .admin-dashboard-page .user-profile-meta {
+    grid-area: meta;
+    width: 100%;
+  }
+
+  .admin-dashboard-page .user-avatar {
+    grid-area: avatar;
+    justify-self: end;
+  }
+
+  .admin-dashboard-page .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-page .admin-quick-actions {
+    flex-direction: column;
+  }
+
+  .admin-dashboard-page .admin-quick-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-dashboard-page .upload-question .type-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-page .upload-question .type-btn {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .admin-dashboard-page .upload-question .option-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-page .upload-question .option-index {
+    width: 30px;
+    height: 30px;
+  }
+
+  .admin-dashboard-page .upload-question .option-correct-toggle {
+    grid-column: auto;
+  }
+
+  .admin-dashboard-page .upload-question .option-row > * {
+    width: 100%;
+  }
+
+  .admin-dashboard-page .upload-question .option-row .option-index {
+    width: 30px;
+  }
+
+  .admin-dashboard-page .manage-questions-filter-row,
+  .admin-dashboard-page .progress-report-filter-row,
+  .admin-dashboard-page .system-logs-filter-row,
+  .admin-dashboard-page .student-feedback-filter-row {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .admin-dashboard-page .manage-questions-filter-control,
+  .admin-dashboard-page .progress-report-time-range,
+  .admin-dashboard-page .system-logs-filter-group,
+  .admin-dashboard-page .student-feedback-filter-group {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .admin-dashboard-page .system-logs-refresh-btn,
+  .admin-dashboard-page .student-feedback-refresh-btn {
+    width: 100%;
+    margin-top: 0 !important;
+  }
+
+  .admin-dashboard-page .progress-report-stats-grid,
+  .admin-dashboard-page .all-students-filter-grid,
+  .admin-dashboard-page .all-students-notify-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-dashboard-page .all-students-notify-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px !important;
+  }
+
+  .admin-dashboard-page .all-students-notify-actions .btn,
+  .admin-dashboard-page .student-feedback-detail-actions .btn {
+    width: 100%;
+  }
+
+  .admin-dashboard-page .student-history-panel-header {
+    align-items: flex-start !important;
+  }
+
+  .admin-dashboard-page .student-history-panel-header .btn {
+    width: 100%;
+  }
+
+  .admin-dashboard-page .progress-report-weak-area-item {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .admin-dashboard-page .manage-questions .data-table,
+  .admin-dashboard-page .all-students .all-students-table {
+    min-width: 980px;
+  }
+
+  .admin-dashboard-page .admin-analytics-table {
+    min-width: 640px;
+  }
+}
+
+html[data-app-theme='dark'] .admin-sidebar-overlay {
+  background: rgba(2, 6, 23, 0.66);
+}
+
+html[data-app-theme='dark'] .admin-sidebar-floating-open-btn {
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.45);
+}
