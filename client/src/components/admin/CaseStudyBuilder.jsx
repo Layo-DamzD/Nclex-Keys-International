@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { CATEGORIES } from '../../constants/categories';
+import { CATEGORIES } from '../../constants/Categories';
 
 const CASE_STUDY_TYPES = [
   { value: '6-question', label: '6-Question Case Study' },

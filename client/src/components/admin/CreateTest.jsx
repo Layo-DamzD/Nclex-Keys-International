@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { CATEGORIES } from '../../constants/categories';
+import { CATEGORIES } from '../../constants/Categories';
 
 const CreateTest = () => {
   const navigate = useNavigate();

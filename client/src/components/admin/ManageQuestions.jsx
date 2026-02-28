@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { CATEGORIES } from '../../constants/categories';
+import { CATEGORIES } from '../../constants/Categories';
 import CaseStudiesList from '../admin/CaseStudiesList';
 
 const ManageQuestions = ({ onSectionChange }) => {

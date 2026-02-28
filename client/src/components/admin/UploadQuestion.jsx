@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { CATEGORIES } from '../../constants/categories';
+import { CATEGORIES } from '../../constants/Categories';
 
 const QUESTION_TYPES = [
   { value: 'multiple-choice', label: 'Multiple Choice', icon: 'fas fa-list-ul' },
