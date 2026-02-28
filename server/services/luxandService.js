@@ -195,7 +195,8 @@ const createPersonFromFace = async ({ name, faceCapture, collection = 'students'
   if (collection) {
     payload.append('collections', String(collection).slice(0, 120));
   }
-  payload.append('photo', imageBlob, 'signup-face.jpg');
+  // Luxand /v2/person expects "photos" multipart field.
+  payload.append('photos', imageBlob, 'signup-face.jpg');
 
   const response = await requestLuxand('/v2/person', payload);
   const personId = pickPersonId(response);

@@ -356,7 +356,7 @@ const StudentSignup = () => {
               {!capturedFace ? (
                 <button
                   type="button"
-                  className="btn btn-outline-primary"
+                  className="btn btn-primary"
                   onClick={captureFace}
                   disabled={cameraLoading || loading}
                 >
