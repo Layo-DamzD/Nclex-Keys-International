@@ -23,6 +23,9 @@ const userSchema = new mongoose.Schema({
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   examDate: Date,
+  faceVerificationProvider: { type: String, default: 'luxand' },
+  luxandPersonId: { type: String },
+  faceEnrolledAt: { type: Date },
   seenQuestions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
   // Tracks questions already used in student's custom (Create Test) exams only.
   // This is separate from seenQuestions because students can "see" questions in

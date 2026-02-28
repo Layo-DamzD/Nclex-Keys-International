@@ -12,9 +12,7 @@ const DEFAULT_CONTENT = {
   },
   contact: {
     email: 'nclexkeysintl.academy@gmail.com',
-    phone: '+1 (800) 555-1234',
-    websiteUrl: 'https://www.nclexkeysintl.com',
-    websiteLabel: 'www.nclexkeysintl.com',
+    phone: '07037367480',
   },
   legal: {
     copyrightText:
@@ -41,11 +39,14 @@ const Footer = ({ content = {} }) => {
       ...(content.legal || {}),
     },
   };
+  if (String(data.contact.phone || '').trim() === '+1 (800) 555-1234') {
+    data.contact.phone = '07037367480';
+  }
 
-  const telHref = `tel:${String(data.contact.phone || '').replace(
-    /[^\d+]/g,
-    ''
-  )}`;
+  const whatsappDigits = String(data.contact.phone || '').replace(/[^\d]/g, '');
+  const whatsappHref = whatsappDigits
+    ? `https://wa.me/${whatsappDigits}`
+    : '#';
 
   return (
     <footer
@@ -167,25 +168,11 @@ const Footer = ({ content = {} }) => {
                   className="fab fa-whatsapp me-2"
                   style={{ color: '#28a745' }}
                 ></i>
-                <a href={telHref} className="text-white-50">
+                <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="text-white-50">
                   {data.contact.phone}
                 </a>
               </li>
 
-              <li className="mb-2">
-                <i
-                  className="fas fa-globe me-2"
-                  style={{ color: '#28a745' }}
-                ></i>
-                <a
-                  href={data.contact.websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white-50"
-                >
-                  {data.contact.websiteLabel}
-                </a>
-              </li>
             </ul>
           </div>
         </div>

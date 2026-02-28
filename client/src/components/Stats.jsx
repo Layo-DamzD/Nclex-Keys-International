@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 
 const DEFAULT_ITEMS = [
   { label: 'Nurses Trained', target: 2500, suffix: '+', color: '#0d6efd' },
-  { label: 'Pass Rate', target: 94, suffix: '%' },
+  { label: 'Pass Rate', target: 97, suffix: '%' },
   { label: 'Practice Questions', target: 10000, suffix: '+' },
   { label: 'Tutor Support', value: '24/7' },
 ];

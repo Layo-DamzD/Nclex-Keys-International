@@ -29,8 +29,10 @@ const StudentSignup = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [signupError, setSignupError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [cameraError, setCameraError] = useState('');
+  const [showFaceStep, setShowFaceStep] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState(null);
   const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState('');
   const [capturedFace, setCapturedFace] = useState('');
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -60,8 +62,9 @@ const StudentSignup = () => {
       setCameraError('Camera is not supported on this device/browser.');
       return;
     }
-    setCameraLoading(true);
+
     setCameraError('');
+    setCameraLoading(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
@@ -73,16 +76,21 @@ const StudentSignup = () => {
         await videoRef.current.play();
       }
     } catch (error) {
-      setCameraError('Unable to access camera. Please allow camera permission and reload.');
+      setCameraError('Unable to access camera. Please allow camera permission and try again.');
     } finally {
       setCameraLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!showFaceStep) {
+      stopCamera();
+      return undefined;
+    }
+
     startCamera();
     return () => stopCamera();
-  }, []);
+  }, [showFaceStep]);
 
   const captureFace = () => {
     if (!videoRef.current) return;
@@ -95,36 +103,57 @@ const StudentSignup = () => {
     const context = canvas.getContext('2d');
     if (!context) return;
     context.drawImage(video, 0, 0, width, height);
-    setCapturedFace(canvas.toDataURL('image/jpeg', 0.92));
+    const image = canvas.toDataURL('image/jpeg', 0.92);
+    setCapturedFace(image);
+    setCameraError('');
   };
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    setSignupError('');
+  const closeFaceStep = (force = false) => {
+    if (loading && !force) return;
+    setShowFaceStep(false);
+    setPendingFormData(null);
+    setCapturedFace('');
+    setCameraError('');
+    stopCamera();
+  };
+
+  const finalizeSignup = async () => {
+    if (!pendingFormData) return;
     if (!capturedFace) {
-      setSignupError('Face verification is required before signup.');
-      setLoading(false);
+      setCameraError('Capture your face to continue.');
       return;
     }
+
+    setLoading(true);
+    setSignupError('');
     try {
       await axios.post('/api/auth/student/register', {
-        name: `${data.firstName} ${data.lastName}`,
-        email: data.email,
-        password: data.password,
-        program: data.program,
-        phone: data.phone,
-        examDate: data.examDate || null,
-        accessCode: data.accessCode,
+        name: `${pendingFormData.firstName} ${pendingFormData.lastName}`,
+        email: pendingFormData.email,
+        password: pendingFormData.password,
+        program: pendingFormData.program,
+        phone: pendingFormData.phone,
+        examDate: pendingFormData.examDate || null,
+        accessCode: pendingFormData.accessCode,
         faceCapture: capturedFace,
         deviceId,
         deviceLabel
       });
+      closeFaceStep(true);
       navigate('/login', { state: { message: 'Registration successful! Please login.' } });
     } catch (error) {
       setSignupError(error.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const onSubmit = (data) => {
+    setSignupError('');
+    setPendingFormData(data);
+    setCapturedFace('');
+    setCameraError('');
+    setShowFaceStep(true);
   };
 
   return (
@@ -228,38 +257,6 @@ const StudentSignup = () => {
                 />
               </div>
 
-              <div className="mb-3 signup-face-block">
-                <label className="form-label fw-bold">Face Verification (required)</label>
-                <div className="signup-face-preview">
-                  {capturedFace ? (
-                    <img src={capturedFace} alt="Captured face for signup verification" />
-                  ) : (
-                    <video ref={videoRef} autoPlay muted playsInline />
-                  )}
-                </div>
-                {cameraError && <div className="text-danger mt-2 small">{cameraError}</div>}
-                <div className="d-flex gap-2 mt-2 flex-wrap">
-                  {!capturedFace ? (
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary"
-                      onClick={captureFace}
-                      disabled={cameraLoading}
-                    >
-                      {cameraLoading ? 'Starting camera...' : 'Capture Face'}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => setCapturedFace('')}
-                    >
-                      Retake
-                    </button>
-                  )}
-                </div>
-              </div>
-
             <div className="row">
               <div className="col-md-6 mb-3">
                 <label className="form-label fw-bold">Password</label>
@@ -304,7 +301,7 @@ const StudentSignup = () => {
               className="btn btn-primary w-100 py-3 fw-bold signup-clean-submit"
               disabled={loading}
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              Create Account
             </button>
             </form>
 
@@ -319,6 +316,75 @@ const StudentSignup = () => {
           </div>
         </div>
       </div>
+
+      {showFaceStep && (
+        <div className="signup-face-modal-overlay" role="dialog" aria-modal="true" aria-label="Face verification">
+          <div className="signup-face-modal-backdrop" onClick={closeFaceStep} />
+          <div className="signup-face-modal-card">
+            <div className="signup-face-modal-header">
+              <h3>Face Verification</h3>
+              <p>Take a clear selfie to complete signup.</p>
+            </div>
+
+            <div className="signup-face-modal-preview">
+              {capturedFace ? (
+                <img src={capturedFace} alt="Captured face for signup verification" />
+              ) : (
+                <video ref={videoRef} autoPlay muted playsInline />
+              )}
+            </div>
+
+            {cameraError ? <div className="signup-face-modal-error">{cameraError}</div> : null}
+            {signupError ? (
+              <div className="signup-face-modal-error">
+                <div>{signupError}</div>
+                {showAccessHelp && (
+                  <div className="mt-2">
+                    <a href={accessHelpWaLink} target="_blank" rel="noreferrer">
+                      Message {accessHelpNumber} on WhatsApp to get your access code
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            <div className="signup-face-modal-actions">
+              <button type="button" className="btn btn-outline-secondary" onClick={closeFaceStep} disabled={loading}>
+                Cancel
+              </button>
+
+              {!capturedFace ? (
+                <button
+                  type="button"
+                  className="btn btn-outline-primary"
+                  onClick={captureFace}
+                  disabled={cameraLoading || loading}
+                >
+                  {cameraLoading ? 'Starting camera...' : 'Capture Face'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setCapturedFace('')}
+                  disabled={loading}
+                >
+                  Retake
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={finalizeSignup}
+                disabled={loading}
+              >
+                {loading ? 'Verifying...' : 'Verify & Finish Signup'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

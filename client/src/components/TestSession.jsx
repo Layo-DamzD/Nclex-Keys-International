@@ -124,6 +124,10 @@ const TestSession = () => {
   const [isBooting, setIsBooting] = useState(true);
   const [bootProgress, setBootProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatText, setChatText] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
   // Case study state
   const [caseIndex, setCaseIndex] = useState(0);
@@ -261,6 +265,57 @@ const TestSession = () => {
     const shouldExit = window.confirm('Exit this test session and return to dashboard?');
     if (shouldExit) {
       navigate(dashboardReturnPath);
+    }
+  };
+
+  const sessionId = useMemo(
+    () => String(settings?.sessionId || settings?.testId || location?.state?.testId || 'live-session'),
+    [settings?.sessionId, settings?.testId, location?.state?.testId]
+  );
+
+  const loadChatMessages = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      setChatLoading(true);
+      const res = await axios.get('/api/student/exam-support/messages', {
+        params: { sessionId },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setChatMessages(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error('Failed to load exam support messages', error);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!submitted && !isBooting) {
+      loadChatMessages();
+    }
+    const timer = setInterval(() => {
+      if (!submitted && !isBooting) loadChatMessages();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [sessionId, submitted, isBooting]);
+
+  const sendChatMessage = async () => {
+    const trimmed = String(chatText || '').trim();
+    if (!trimmed) return;
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      await axios.post('/api/student/exam-support/messages', {
+        sessionId,
+        message: trimmed
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setChatText('');
+      loadChatMessages();
+    } catch (error) {
+      console.error('Failed to send exam support message', error);
     }
   };
 
@@ -1052,6 +1107,44 @@ const TestSession = () => {
         </div>
       )}
       <CalculatorModal show={showCalculator} onClose={() => setShowCalculator(false)} />
+      <div style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 1200 }}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setChatOpen((v) => !v)}
+          style={{ borderRadius: 999 }}
+        >
+          <i className="fas fa-comments me-1"></i> Exam Support
+        </button>
+        {chatOpen && (
+          <div style={{ width: 320, maxWidth: '90vw', height: 360, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 12, boxShadow: '0 12px 28px rgba(15,23,42,0.2)', marginTop: 8, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0', fontWeight: 700 }}>Live Support Chat</div>
+            <div style={{ flex: 1, overflow: 'auto', padding: 8 }}>
+              {chatLoading && <div className="text-muted small">Loading...</div>}
+              {chatMessages.map((m) => {
+                const mine = m.senderRole === 'student';
+                return (
+                  <div key={m._id} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start', marginBottom: 6 }}>
+                    <div style={{ maxWidth: '82%', background: mine ? '#dbeafe' : '#f1f5f9', borderRadius: 10, padding: '6px 8px' }}>
+                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{m.senderName || m.senderRole}</div>
+                      <div style={{ fontSize: '0.85rem' }}>{m.message}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ borderTop: '1px solid #e2e8f0', padding: 8, display: 'flex', gap: 6 }}>
+              <input
+                className="form-control form-control-sm"
+                value={chatText}
+                onChange={(e) => setChatText(e.target.value)}
+                placeholder="Type message..."
+              />
+              <button type="button" className="btn btn-sm btn-primary" onClick={sendChatMessage}>Send</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

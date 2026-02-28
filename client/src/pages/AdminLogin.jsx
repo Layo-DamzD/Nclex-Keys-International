@@ -88,7 +88,7 @@ const AdminLogin = () => {
                   onChange={(e) => setAccessCode(e.target.value)}
                   placeholder="••••••"
                 />
-                <small className="text-muted">Required</small>
+                <small className="text-muted">Required for Admin accounts only (not Super Admin)</small>
               </div>
               <button type="submit" className="btn-admin-login" disabled={loading}>
                 <i className="fas fa-sign-in-alt"></i> {loading ? 'Logging in...' : 'Login'}

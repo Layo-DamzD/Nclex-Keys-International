@@ -33,7 +33,7 @@ const DEFAULT_HOME_CONFIG = {
     stats: {
       items: [
         { label: 'Nurses Trained', target: 2500, suffix: '+', color: '#0d6efd' },
-        { label: 'Pass Rate', target: 94, suffix: '%' },
+        { label: 'Pass Rate', target: 97, suffix: '%' },
         { label: 'Practice Questions', target: 10000, suffix: '+' },
         { label: 'Tutor Support', value: '24/7' },
       ],
@@ -101,9 +101,7 @@ const DEFAULT_HOME_CONFIG = {
       },
       contact: {
         email: 'nclexkeysintl.academy@gmail.com',
-        phone: '+1 (800) 555-1234',
-        websiteUrl: 'https://www.nclexkeysintl.com',
-        websiteLabel: 'www.nclexkeysintl.com',
+        phone: '07037367480',
       },
       legal: {
         copyrightText: '© 2026 NCLEX KEYS International. All rights reserved.',
@@ -682,8 +680,6 @@ const LandingPageStudio = () => {
             <h4>Contact</h4>
             <label>Email<input value={footer.contact?.email || ''} onChange={(e) => mutateConfig((next) => { next.sections.footer.contact.email = e.target.value; })} /></label>
             <label>Phone<input value={footer.contact?.phone || ''} onChange={(e) => mutateConfig((next) => { next.sections.footer.contact.phone = e.target.value; })} /></label>
-            <label>Website URL<input value={footer.contact?.websiteUrl || ''} onChange={(e) => mutateConfig((next) => { next.sections.footer.contact.websiteUrl = e.target.value; })} /></label>
-            <label>Website Label<input value={footer.contact?.websiteLabel || ''} onChange={(e) => mutateConfig((next) => { next.sections.footer.contact.websiteLabel = e.target.value; })} /></label>
           </div>
 
           <div className="landing-studio-card">

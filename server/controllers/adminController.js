@@ -5,6 +5,7 @@ const Test = require('../models/Test');
 const StudyMaterial = require('../models/StudyMaterial');
 const SystemLog = require('../models/SystemLog');
 const Activity = require('../models/Activity');
+const ExamSupportMessage = require('../models/ExamSupportMessage');
 const { sendPushNotificationMulticast } = require('../services/firebaseAdmin');
 const fs = require('fs');
 const path = require('path');
@@ -1014,6 +1015,116 @@ const getAllAdmins = async (req, res) => {
   }
 };
 
+// @desc    Get active exam support conversations
+// @route   GET /api/admin/exam-support/conversations
+// @access  Private (admin only)
+const getExamSupportConversations = async (req, res) => {
+  try {
+    const rows = await ExamSupportMessage.aggregate([
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: { student: '$student', sessionId: '$sessionId' },
+          lastMessage: { $first: '$message' },
+          lastSenderRole: { $first: '$senderRole' },
+          lastSenderName: { $first: '$senderName' },
+          lastAt: { $first: '$createdAt' },
+          studentName: { $first: '$studentName' },
+          unreadAdminCount: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$senderRole', 'student'] }, { $eq: ['$isReadByAdmin', false] }] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { lastAt: -1 } },
+      { $limit: 200 }
+    ]);
+
+    res.json(rows.map((row) => ({
+      studentId: row?._id?.student,
+      sessionId: row?._id?.sessionId,
+      studentName: row?.studentName || 'Student',
+      lastMessage: row?.lastMessage || '',
+      lastSenderRole: row?.lastSenderRole || '',
+      lastSenderName: row?.lastSenderName || '',
+      lastAt: row?.lastAt,
+      unreadAdminCount: row?.unreadAdminCount || 0
+    })));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get exam support messages for one conversation
+// @route   GET /api/admin/exam-support/messages
+// @access  Private (admin only)
+const getExamSupportMessagesAdmin = async (req, res) => {
+  try {
+    const studentId = String(req.query?.studentId || '').trim();
+    const sessionId = String(req.query?.sessionId || '').trim();
+    if (!studentId || !sessionId) {
+      return res.status(400).json({ message: 'studentId and sessionId are required' });
+    }
+
+    const messages = await ExamSupportMessage.find({ student: studentId, sessionId })
+      .sort({ createdAt: 1 })
+      .limit(300)
+      .lean();
+
+    await ExamSupportMessage.updateMany(
+      { student: studentId, sessionId, senderRole: 'student', isReadByAdmin: false },
+      { $set: { isReadByAdmin: true } }
+    );
+
+    res.json(messages);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Send exam support message as admin/superadmin
+// @route   POST /api/admin/exam-support/messages
+// @access  Private (admin only)
+const sendExamSupportMessageAdmin = async (req, res) => {
+  try {
+    const studentId = String(req.body?.studentId || '').trim();
+    const sessionId = String(req.body?.sessionId || '').trim();
+    const message = String(req.body?.message || '').trim();
+    if (!studentId || !sessionId || !message) {
+      return res.status(400).json({ message: 'studentId, sessionId and message are required' });
+    }
+
+    const student = await User.findById(studentId).select('name');
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+
+    const senderRole = req.user?.role === 'superadmin' ? 'superadmin' : 'admin';
+    const senderName = req.user?.name || (senderRole === 'superadmin' ? 'Super Admin' : 'Admin');
+
+    const created = await ExamSupportMessage.create({
+      student: studentId,
+      studentName: student.name || 'Student',
+      sessionId,
+      senderRole,
+      senderName,
+      message,
+      isReadByStudent: false,
+      isReadByAdmin: true
+    });
+
+    res.status(201).json(created);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Get recent questions for dashboard widget
 // @route   GET /api/admin/questions/recent
 // @access  Private (admin only)
@@ -1115,6 +1226,9 @@ module.exports = {
   getFeedback,
   updateFeedback,
   deleteFeedback,
+  getExamSupportConversations,
+  getExamSupportMessagesAdmin,
+  sendExamSupportMessageAdmin,
   approveAdmin,
   getAllAdmins,
   deleteAdmin

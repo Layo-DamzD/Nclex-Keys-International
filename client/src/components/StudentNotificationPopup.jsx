@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { createPortal } from 'react-dom';
 
 const STORAGE_KEY_PREFIX = 'student-notification-seen:';
 
@@ -135,7 +136,7 @@ const StudentNotificationPopup = ({
 
   if (!enabled || blocked || !activeNotification) return null;
 
-  return (
+  const popup = (
     <div className="student-notification-popup-overlay" role="dialog" aria-modal="true" aria-label="New notification">
       <div className="student-notification-popup-backdrop" onClick={closePopup} />
       <div className="student-notification-popup-card">
@@ -171,6 +172,12 @@ const StudentNotificationPopup = ({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined' || !document.body) {
+    return popup;
+  }
+
+  return createPortal(popup, document.body);
 };
 
 export default StudentNotificationPopup;

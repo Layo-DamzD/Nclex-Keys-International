@@ -5,6 +5,7 @@ const Test = require('../models/Test');
 const Question = require('../models/Question');
 const StudyMaterial = require('../models/StudyMaterial');
 const Feedback = require('../models/Feedback');
+const ExamSupportMessage = require('../models/ExamSupportMessage');
 
 const MAX_FCM_TOKENS_PER_STUDENT = 8;
 
@@ -1060,6 +1061,67 @@ const submitStudentFeedback = async (req, res) => {
   }
 };
 
+// @desc    Get exam support chat messages for current student/session
+// @route   GET /api/student/exam-support/messages
+// @access  Private
+const getExamSupportMessages = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const sessionId = String(req.query?.sessionId || '').trim();
+    if (!sessionId) {
+      return res.status(400).json({ message: 'sessionId is required' });
+    }
+
+    const messages = await ExamSupportMessage.find({ student: studentId, sessionId })
+      .sort({ createdAt: 1 })
+      .limit(200)
+      .lean();
+
+    await ExamSupportMessage.updateMany(
+      { student: studentId, sessionId, senderRole: { $in: ['admin', 'superadmin'] }, isReadByStudent: false },
+      { $set: { isReadByStudent: true } }
+    );
+
+    res.json(messages);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Send exam support message as student
+// @route   POST /api/student/exam-support/messages
+// @access  Private
+const sendExamSupportMessage = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const sessionId = String(req.body?.sessionId || '').trim();
+    const message = String(req.body?.message || '').trim();
+    if (!sessionId || !message) {
+      return res.status(400).json({ message: 'sessionId and message are required' });
+    }
+
+    const user = await User.findById(studentId).select('name');
+    if (!user) return res.status(404).json({ message: 'Student not found' });
+
+    const created = await ExamSupportMessage.create({
+      student: studentId,
+      studentName: user.name || 'Student',
+      sessionId,
+      senderRole: 'student',
+      senderName: user.name || 'Student',
+      message,
+      isReadByAdmin: false,
+      isReadByStudent: true
+    });
+
+    res.status(201).json(created);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getRecentTests,
@@ -1086,5 +1148,7 @@ module.exports = {
   submitCATAnswer,
   checkWeeklyReview, 
   markReviewDone,
-  submitStudentFeedback
+  submitStudentFeedback,
+  getExamSupportMessages,
+  sendExamSupportMessage
 };

@@ -27,7 +27,9 @@ const {
   submitCATAnswer,
   checkWeeklyReview,
   markReviewDone,
-  submitStudentFeedback
+  submitStudentFeedback,
+  getExamSupportMessages,
+  sendExamSupportMessage
 } = require('../controllers/studentController');
 
 router.get('/dashboard/stats', protect, getDashboardStats);
@@ -56,5 +58,7 @@ router.post('/cat/answer', protect, submitCATAnswer);
 router.get('/check-weekly-review', protect, checkWeeklyReview);
 router.post('/mark-review-done', protect, markReviewDone);
 router.post('/feedback', protect, submitStudentFeedback);
+router.get('/exam-support/messages', protect, getExamSupportMessages);
+router.post('/exam-support/messages', protect, sendExamSupportMessage);
 
 module.exports = router;

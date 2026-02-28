@@ -68,7 +68,7 @@ const getDefaultConfig = (pageKey) => {
       stats: {
         items: [
           { label: 'Nurses Trained', target: 2500, suffix: '+' },
-          { label: 'Pass Rate', target: 94, suffix: '%' },
+          { label: 'Pass Rate', target: 97, suffix: '%' },
           { label: 'Practice Questions', target: 10000, suffix: '+' },
           { label: 'Tutor Support', value: '24/7' },
         ],
@@ -136,9 +136,7 @@ const getDefaultConfig = (pageKey) => {
         },
         contact: {
           email: 'nclexkeysintl.academy@gmail.com',
-          phone: '+1 (800) 555-1234',
-          websiteUrl: 'https://www.nclexkeysintl.com',
-          websiteLabel: 'www.nclexkeysintl.com',
+          phone: '07037367480',
         },
         legal: {
           copyrightText: '© 2026 NCLEX KEYS International. All rights reserved.',

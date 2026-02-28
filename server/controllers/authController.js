@@ -6,6 +6,12 @@ const {
   sendAdminSignupVerificationEmail,
   isEmailConfigured
 } = require('../services/emailService');
+const {
+  createPersonFromFace,
+  searchFaceMatches,
+  evaluateFaceMatch,
+  isLuxandConfigured
+} = require('../services/luxandService');
 
 const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -21,6 +27,10 @@ const normalizeDeviceId = (value = '') => String(value || '').trim().slice(0, 20
 const normalizeDeviceLabel = (value = '') => String(value || '').trim().slice(0, 160);
 const STUDENT_SIGNUP_ACCESS_CODE = process.env.STUDENT_SIGNUP_ACCESS_CODE || 'NCKeys5832';
 const SIGNUP_ACCESS_HELP_NUMBER = '07037367480';
+const LUXAND_STUDENT_COLLECTION = process.env.LUXAND_STUDENT_COLLECTION || 'students';
+const FACE_MATCH_MIN_SCORE = Number.isFinite(Number(process.env.LUXAND_FACE_MATCH_MIN_SCORE))
+  ? Number(process.env.LUXAND_FACE_MATCH_MIN_SCORE)
+  : 0.78;
 
 const savePasswordResetOtp = async (user) => {
   const otp = generateOtp();
@@ -53,7 +63,7 @@ const findCandidateByPassword = async (candidates, password) => {
 // ===== STUDENT =====
 const registerStudent = async (req, res) => {
   try {
-    const { name, email, password, program, phone, examDate, faceCapture, deviceId, deviceLabel, accessCode } = req.body;
+    const { name, email, password, program, phone, examDate, deviceId, deviceLabel, accessCode, faceCapture } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
@@ -68,12 +78,33 @@ const registerStudent = async (req, res) => {
     const facePayload = String(faceCapture || '');
     const looksLikeImage = facePayload.startsWith('data:image/') && facePayload.length > 500;
     if (!looksLikeImage) {
-      return res.status(400).json({ message: 'Face verification is required during signup.' });
+      return res.status(400).json({ message: 'Face verification is required before signup.' });
+    }
+
+    if (!isLuxandConfigured()) {
+      return res.status(503).json({
+        message: 'Face verification service is unavailable. Try again shortly or contact support.'
+      });
     }
 
     const normalizedDeviceId = normalizeDeviceId(deviceId);
     if (!normalizedDeviceId) {
       return res.status(400).json({ message: 'Device verification failed. Refresh and try again.' });
+    }
+
+    let luxandPersonId = '';
+    try {
+      const enrollment = await createPersonFromFace({
+        name,
+        faceCapture: facePayload,
+        collection: LUXAND_STUDENT_COLLECTION
+      });
+      luxandPersonId = enrollment.personId;
+    } catch (luxandError) {
+      console.error('Luxand signup enrollment failed:', luxandError?.message || luxandError);
+      return res.status(502).json({
+        message: 'Face verification enrollment failed. Please retake your selfie and try again.'
+      });
     }
 
     const user = await User.create({
@@ -84,6 +115,9 @@ const registerStudent = async (req, res) => {
       program,
       phone,
       examDate: examDate || null,
+      faceVerificationProvider: 'luxand',
+      luxandPersonId,
+      faceEnrolledAt: new Date(),
       trustedDevices: [{
         deviceId: normalizedDeviceId,
         label: normalizeDeviceLabel(deviceLabel) || 'Signup Device',
@@ -204,6 +238,39 @@ const verifyStudentFace = async (req, res) => {
       });
     }
 
+    if (!isLuxandConfigured()) {
+      return res.status(503).json({
+        message: 'Face verification service is unavailable. Please try again shortly.'
+      });
+    }
+
+    if (!String(user.luxandPersonId || '').trim()) {
+      return res.status(403).json({
+        message: 'This account has no enrolled face profile yet. Contact support to re-enroll.'
+      });
+    }
+
+    let verification = { matched: false, score: null, reason: 'unknown' };
+    try {
+      const search = await searchFaceMatches({ faceCapture: facePayload, limit: 5 });
+      verification = evaluateFaceMatch({
+        expectedPersonId: user.luxandPersonId,
+        matches: search.matches,
+        minScore: FACE_MATCH_MIN_SCORE
+      });
+    } catch (luxandError) {
+      console.error('Luxand face verification failed:', luxandError?.message || luxandError);
+      return res.status(502).json({
+        message: 'Face verification failed due to network error. Please try again.'
+      });
+    }
+
+    if (!verification.matched) {
+      return res.status(401).json({
+        message: 'Face does not match this account profile. Access denied on this device.'
+      });
+    }
+
     const now = new Date();
     const label = normalizeDeviceLabel(deviceLabel) || 'Unknown Device';
     if (!Array.isArray(user.trustedDevices)) user.trustedDevices = [];
@@ -271,8 +338,21 @@ const registerAdmin = async (req, res) => {
       role,
       approved,
       accessCode,
-      adminEmailVerified: false
+      adminEmailVerified: role === 'superadmin'
     });
+
+    if (role === 'superadmin') {
+      return res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        approved: user.approved,
+        accessCode: user.accessCode,
+        token: generateToken(user._id),
+        message: 'Super admin account created successfully.'
+      });
+    }
 
     if (!isEmailConfigured()) {
       await User.findByIdAndDelete(user._id);
@@ -312,7 +392,23 @@ const loginAdmin = async (req, res) => {
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    if (!user.adminEmailVerified) {
+    // Super admin should not be blocked by signup-email verification.
+    if (user.role === 'superadmin' && !user.adminEmailVerified) {
+      user.adminEmailVerified = true;
+      await user.save();
+    }
+    // Legacy approved admins created before verification flow should not be blocked.
+    if (
+      user.role === 'admin' &&
+      !user.adminEmailVerified &&
+      user.approved === true &&
+      user.accessCode &&
+      !user.adminVerificationCodeHash
+    ) {
+      user.adminEmailVerified = true;
+      await user.save();
+    }
+    if (user.role === 'admin' && !user.adminEmailVerified) {
       return res.status(403).json({ message: 'Please verify your admin signup code from email before logging in' });
     }
     if (user.status && user.status !== 'active') {

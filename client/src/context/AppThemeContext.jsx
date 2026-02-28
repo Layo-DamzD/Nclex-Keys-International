@@ -17,7 +17,6 @@ const isThemeExcludedRoute = (pathname = '') => {
     '/admin/forgot-password',
     '/admin/forgot-access-code',
     '/admin/reset-password',
-    '/test-session',
     '/test-review/',
     '/admin/test-results/',
   ];

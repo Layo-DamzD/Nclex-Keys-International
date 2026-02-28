@@ -38,6 +38,7 @@ const AdminSidebar = ({
         { id: 'all-students', icon: 'users', label: 'All Students' },
         { id: 'progress-report', icon: 'chart-bar', label: 'Progress Report' },
         { id: 'content-management', icon: 'folder', label: 'Content Management' },
+        { id: 'exam-support', icon: 'comments', label: 'Exam Support Chat' },
       ]
     },
     {
@@ -69,6 +70,7 @@ const AdminSidebar = ({
         { id: 'category-stats', icon: 'chart-pie', label: 'Category Stats' },
         { id: 'all-students', icon: 'users', label: 'All Students' },
         { id: 'progress-report', icon: 'chart-bar', label: 'Progress Report' },
+        { id: 'exam-support', icon: 'comments', label: 'Exam Support Chat' },
       ]
     }
   ];

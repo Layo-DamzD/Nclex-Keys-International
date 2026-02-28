@@ -55,7 +55,7 @@ function App() {
           } />
 
           {/* Admin Routes – Secret Gateway */}
-          <Route path="/Layo-DamzD" element={<AdminSecret />} />
+          <Route path="/NCLEXkeys" element={<AdminSecret />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/signup" element={<AdminSignup />} />
           <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
