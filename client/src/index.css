@@ -8818,6 +8818,15 @@ html[data-app-theme='dark'] .percentage.fail {
     0 0 0 1px rgba(15, 23, 42, 0.05) !important;
 }
 
+/* Keep signup field stable (no shake/spin) while edge light keeps moving */
+.signup-lamp-page .signup-cinematic-card,
+.signup-container.signup-lamp-page .signup-cinematic-card {
+  transform: none !important;
+  animation: none !important;
+  will-change: auto !important;
+  transition: box-shadow 0.35s ease !important;
+}
+
 .signup-container.signup-lamp-page .signup-cinematic-card::before,
 .signup-container.signup-lamp-page .signup-cinematic-card::after {
   content: none !important;
