@@ -51,7 +51,7 @@ const AdminSignup = () => {
         setSuccess('Super Admin account created! You can now login.');
         setTimeout(() => navigate('/admin/login'), 3000);
       } else {
-        setSuccess(`Regular admin account created. Your permanent access code is: ${accessCode}\nYour account is pending approval by a super admin.`);
+        setSuccess(`Simulated access code: ${accessCode}\nYour account is pending approval by the super-admin.`);
         setTimeout(() => navigate('/admin/login'), 5000);
       }
     } catch (err) {
