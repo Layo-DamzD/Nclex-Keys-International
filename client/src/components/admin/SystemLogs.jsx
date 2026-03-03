@@ -113,8 +113,16 @@ const SystemLogs = () => {
         </div>
       </div>
 
-      <div className="data-table-container">
-        <table className="data-table">
+      <div className="data-table-container system-logs-table-wrap">
+        <table className="data-table system-logs-table">
+          <colgroup>
+            <col style={{ width: '220px' }} />
+            <col style={{ width: '90px' }} />
+            <col style={{ width: '420px' }} />
+            <col style={{ width: '180px' }} />
+            <col style={{ width: '260px' }} />
+            <col style={{ width: '150px' }} />
+          </colgroup>
           <thead>
             <tr>
               <th>Time</th>
@@ -141,7 +149,7 @@ const SystemLogs = () => {
                       {log.level}
                     </span>
                   </td>
-                  <td style={{ maxWidth: '360px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.action}>
+                  <td style={{ maxWidth: '420px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.action}>
                     {simplifyAction(log.action)}
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }} title={String(log.details || '')}>

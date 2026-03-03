@@ -936,6 +936,33 @@
   gap: 12px;
 }
 
+.admin-dashboard-page .system-logs-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-dashboard-page .system-logs-table {
+  width: 100%;
+  min-width: 1320px;
+  table-layout: fixed;
+}
+
+.admin-dashboard-page .system-logs-table th,
+.admin-dashboard-page .system-logs-table td {
+  vertical-align: top;
+}
+
+.admin-dashboard-page .system-logs-table th:nth-child(3),
+.admin-dashboard-page .system-logs-table td:nth-child(3) {
+  max-width: 420px;
+}
+
+.admin-dashboard-page .system-logs-table th:nth-child(5),
+.admin-dashboard-page .system-logs-table td:nth-child(5) {
+  min-width: 240px;
+}
+
 .admin-dashboard-page.admin-regular .sidebar {
   background: linear-gradient(180deg, #d9a113 0%, #bf8700 100%);
 }

@@ -20,6 +20,7 @@ const AllStudents = () => {
   const [studentProgressById, setStudentProgressById] = useState({});
   const [studentHistoryLoadingById, setStudentHistoryLoadingById] = useState({});
   const [studentHistoryErrorById, setStudentHistoryErrorById] = useState({});
+  const [clearingDevicesById, setClearingDevicesById] = useState({});
 
   // Notification state
   const [notifyTitle, setNotifyTitle] = useState('');
@@ -225,6 +226,43 @@ const AllStudents = () => {
     }
   };
 
+  const handleClearStudentDevices = async (studentId) => {
+    if (!studentId) return;
+    if (!window.confirm('Clear this student device history?')) return;
+
+    try {
+      setClearingDevicesById((prev) => ({ ...prev, [studentId]: true }));
+      const token = sessionStorage.getItem('adminToken');
+      await axios.delete(`/api/admin/students/${studentId}/devices`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setStudentProgressById((prev) => {
+        const existing = prev[studentId];
+        if (!existing) return prev;
+        return {
+          ...prev,
+          [studentId]: {
+            ...existing,
+            student: {
+              ...(existing.student || {}),
+              trustedDevices: []
+            }
+          }
+        };
+      });
+
+      setActionStatusType('success');
+      setActionStatus('Student device history cleared successfully');
+    } catch (err) {
+      const message = err?.response?.data?.message || 'Failed to clear student device history';
+      setActionStatusType('danger');
+      setActionStatus(message);
+    } finally {
+      setClearingDevicesById((prev) => ({ ...prev, [studentId]: false }));
+    }
+  };
+
   if (loading) return <div>Loading students...</div>;
   if (error) return <div className="alert alert-danger">{error}</div>;
 
@@ -373,6 +411,7 @@ const AllStudents = () => {
               const studentProgress = studentProgressById[student._id];
               const testHistory = studentProgress?.testResults || [];
               const historyStats = studentProgress?.stats;
+              const trustedDevices = studentProgress?.student?.trustedDevices || [];
               const isHistoryLoading = !!studentHistoryLoadingById[student._id];
               const historyError = studentHistoryErrorById[student._id];
               
@@ -478,79 +517,126 @@ const AllStudents = () => {
                             </div>
                           )}
 
-                          {!isHistoryLoading && !historyError && testHistory.length > 0 && (
+                          {!isHistoryLoading && !historyError && (
                             <>
-                              <div className="student-history-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '15px' }}>
-                                <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
-                                  <div style={{ fontSize: '12px', color: '#64748b' }}>Total Tests</div>
-                                  <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.totalTests ?? testHistory.length}</div>
+                              <div style={{ marginBottom: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>
+                                  <strong>Device Login Records</strong>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => handleClearStudentDevices(student._id)}
+                                    disabled={Boolean(clearingDevicesById[student._id])}
+                                  >
+                                    {clearingDevicesById[student._id] ? 'Clearing...' : 'Clear Device Records'}
+                                  </button>
                                 </div>
-                                <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
-                                  <div style={{ fontSize: '12px', color: '#64748b' }}>Average Score</div>
-                                  <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.averageScore ?? 0}%</div>
-                                </div>
-                                <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
-                                  <div style={{ fontSize: '12px', color: '#64748b' }}>Best Score</div>
-                                  <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.bestScore ?? 0}%</div>
-                                </div>
-                                <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
-                                  <div style={{ fontSize: '12px', color: '#64748b' }}>Overall Accuracy</div>
-                                  <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.overallAccuracy ?? 0}%</div>
-                                </div>
-                              </div>
 
-                              <div className="student-history-table-wrap" style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
-                                <table className="student-history-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px' }}>
-                                  <thead>
-                                    <tr className="student-history-table-head" style={{ background: '#f8fafc' }}>
-                                      <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Date</th>
-                                      <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Test</th>
-                                      <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Score</th>
-                                      <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>%</th>
-                                      <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Time</th>
-                                      <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Status</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {[...testHistory]
-                                      .sort((a, b) => new Date(b.date) - new Date(a.date))
-                                      .map((result) => (
-                                        <tr key={result._id}>
-                                          <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
-                                            {formatDateTime(result.date)}
-                                          </td>
-                                          <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                                            {result.testName || 'Practice Test'}
-                                          </td>
-                                          <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
-                                            {result.score ?? 0}/{result.totalQuestions ?? 0}
-                                          </td>
-                                          <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center', fontWeight: 600 }}>
-                                            {result.percentage ?? 0}%
-                                          </td>
-                                          <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
-                                            {formatTimeTaken(result.timeTaken)}
-                                          </td>
-                                          <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
-                                            <span
-                                              className={`badge ${result.passed ? 'badge-success' : 'badge-danger'}`}
-                                              style={{ minWidth: '64px' }}
-                                            >
-                                              {result.passed ? 'Pass' : 'Fail'}
-                                            </span>
-                                          </td>
+                                <div style={{ overflowX: 'auto' }}>
+                                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '620px' }}>
+                                    <thead style={{ background: '#f8fafc' }}>
+                                      <tr>
+                                        <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Label</th>
+                                        <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Device ID</th>
+                                        <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Verified</th>
+                                        <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Last Used</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {trustedDevices.length === 0 ? (
+                                        <tr>
+                                          <td colSpan="4" style={{ padding: '12px', color: '#64748b' }}>No saved student devices.</td>
                                         </tr>
-                                      ))}
-                                  </tbody>
-                                </table>
+                                      ) : (
+                                        trustedDevices.map((device, idx) => (
+                                          <tr key={`${device.deviceId || 'device'}-${idx}`}>
+                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{device.label || 'Unknown Device'}</td>
+                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontFamily: 'monospace', fontSize: '12px' }}>
+                                              {device.deviceId || 'N/A'}
+                                            </td>
+                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{formatDateTime(device.verifiedAt)}</td>
+                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{formatDateTime(device.lastUsedAt)}</td>
+                                          </tr>
+                                        ))
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
                               </div>
-                            </>
-                          )}
 
-                          {!isHistoryLoading && !historyError && testHistory.length === 0 && (
-                            <p className="text-muted" style={{ marginBottom: 0 }}>
-                              No test history available yet.
-                            </p>
+                              {testHistory.length > 0 ? (
+                                <>
+                                  <div className="student-history-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '15px' }}>
+                                    <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
+                                      <div style={{ fontSize: '12px', color: '#64748b' }}>Total Tests</div>
+                                      <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.totalTests ?? testHistory.length}</div>
+                                    </div>
+                                    <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
+                                      <div style={{ fontSize: '12px', color: '#64748b' }}>Average Score</div>
+                                      <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.averageScore ?? 0}%</div>
+                                    </div>
+                                    <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
+                                      <div style={{ fontSize: '12px', color: '#64748b' }}>Best Score</div>
+                                      <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.bestScore ?? 0}%</div>
+                                    </div>
+                                    <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
+                                      <div style={{ fontSize: '12px', color: '#64748b' }}>Overall Accuracy</div>
+                                      <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.overallAccuracy ?? 0}%</div>
+                                    </div>
+                                  </div>
+
+                                  <div className="student-history-table-wrap" style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                                    <table className="student-history-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px' }}>
+                                      <thead>
+                                        <tr className="student-history-table-head" style={{ background: '#f8fafc' }}>
+                                          <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Date</th>
+                                          <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Test</th>
+                                          <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Score</th>
+                                          <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>%</th>
+                                          <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Time</th>
+                                          <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Status</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {[...testHistory]
+                                          .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                          .map((result) => (
+                                            <tr key={result._id}>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
+                                                {formatDateTime(result.date)}
+                                              </td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                                                {result.testName || 'Practice Test'}
+                                              </td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
+                                                {result.score ?? 0}/{result.totalQuestions ?? 0}
+                                              </td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center', fontWeight: 600 }}>
+                                                {result.percentage ?? 0}%
+                                              </td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
+                                                {formatTimeTaken(result.timeTaken)}
+                                              </td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
+                                                <span
+                                                  className={`badge ${result.passed ? 'badge-success' : 'badge-danger'}`}
+                                                  style={{ minWidth: '64px' }}
+                                                >
+                                                  {result.passed ? 'Pass' : 'Fail'}
+                                                </span>
+                                              </td>
+                                            </tr>
+                                          ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </>
+                              ) : (
+                                <p className="text-muted" style={{ marginBottom: 0 }}>
+                                  No test history available yet.
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>

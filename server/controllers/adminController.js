@@ -666,7 +666,7 @@ const getStudentProgress = async (req, res) => {
     const { timeRange = '30' } = req.query; // days
 
     // Verify student exists
-    const student = await User.findById(studentId).select('name email program');
+    const student = await User.findById(studentId).select('name email program trustedDevices');
     if (!student) {
       return res.status(404).json({ message: 'Student not found' });
     }
@@ -738,7 +738,17 @@ const getStudentProgress = async (req, res) => {
       student: {
         name: student.name,
         email: student.email,
-        program: student.program || 'NCLEX-RN'
+        program: student.program || 'NCLEX-RN',
+        trustedDevices: Array.isArray(student.trustedDevices)
+          ? [...student.trustedDevices]
+              .sort((a, b) => new Date(b?.lastUsedAt || 0).getTime() - new Date(a?.lastUsedAt || 0).getTime())
+              .map((d) => ({
+                deviceId: d?.deviceId || '',
+                label: d?.label || 'Unknown Device',
+                verifiedAt: d?.verifiedAt || null,
+                lastUsedAt: d?.lastUsedAt || null
+              }))
+          : []
       },
       stats: {
         totalTests,
@@ -1120,6 +1130,26 @@ const getAllAdmins = async (req, res) => {
   }
 };
 
+// @desc    Clear one student's trusted device history
+// @route   DELETE /api/admin/students/:id/devices
+// @access  Private (admin only)
+const clearStudentDeviceHistory = async (req, res) => {
+  try {
+    const student = await User.findById(req.params.id);
+    if (!student || student.role !== 'student') {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    student.trustedDevices = [];
+    await student.save();
+
+    res.json({ message: 'Student device history cleared successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Get active exam support conversations
 // @route   GET /api/admin/exam-support/conversations
 // @access  Private (admin only)
@@ -1461,5 +1491,6 @@ module.exports = {
   getAdminSettings,
   updateAdminProfileSettings,
   updateAdminPasswordSettings,
-  clearAdminDeviceSettings
+  clearAdminDeviceSettings,
+  clearStudentDeviceHistory
 };

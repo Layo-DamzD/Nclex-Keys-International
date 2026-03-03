@@ -17,6 +17,7 @@ const {
   deleteStudent,
   getStudentList,
   getStudentProgress,
+  clearStudentDeviceHistory,
   getTestResultForReview,
   getStudyMaterials,
   createStudyMaterial,
@@ -78,6 +79,7 @@ router.put('/landing-page/:pageKey', protect, superAdminOnly, saveLandingPageCon
 // Progress report routes
 router.get('/students/list', protect, adminOnly, getStudentList);
 router.get('/students/:studentId/progress', protect, adminOnly, getStudentProgress);
+router.delete('/students/:id/devices', protect, adminOnly, clearStudentDeviceHistory);
 router.get('/test-results/:resultId', protect, adminOnly, getTestResultForReview);
 
 // Content management routes
