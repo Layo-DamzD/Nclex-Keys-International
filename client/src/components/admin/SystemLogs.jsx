@@ -53,6 +53,30 @@ const SystemLogs = () => {
     return new Date(timestamp).toLocaleString();
   };
 
+  const simplifyAction = (action = '') => {
+    const value = String(action || '');
+    const [method = '', fullPath = ''] = value.split(' ');
+    const [pathOnly] = fullPath.split('?');
+    const shortPath = pathOnly.replace(/^\/api\//, '/').replace(/\/+$/, '');
+    return `${method} ${shortPath}`.trim();
+  };
+
+  const summarizeDetails = (detailsRaw) => {
+    try {
+      const parsed = typeof detailsRaw === 'string' ? JSON.parse(detailsRaw || '{}') : (detailsRaw || {});
+      const queryCount = Object.keys(parsed.query || {}).length;
+      const paramCount = Object.keys(parsed.params || {}).length;
+      const bodyCount = Object.keys(parsed.body || {}).length;
+      const parts = [];
+      if (queryCount) parts.push(`${queryCount} query`);
+      if (paramCount) parts.push(`${paramCount} param`);
+      if (bodyCount) parts.push(`${bodyCount} body`);
+      return parts.length ? parts.join(' | ') : '-';
+    } catch {
+      return '-';
+    }
+  };
+
   if (loading) return <div className="text-center py-5">Loading logs...</div>;
 
   return (
@@ -111,16 +135,20 @@ const SystemLogs = () => {
             ) : (
               logs.map(log => (
                 <tr key={log._id}>
-                  <td>{formatTime(log.createdAt)}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{formatTime(log.createdAt)}</td>
                   <td>
                     <span className={`badge ${getLevelBadge(log.level)}`}>
                       {log.level}
                     </span>
                   </td>
-                  <td>{log.action}</td>
-                  <td>{log.details}</td>
+                  <td style={{ maxWidth: '360px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.action}>
+                    {simplifyAction(log.action)}
+                  </td>
+                  <td style={{ whiteSpace: 'nowrap' }} title={String(log.details || '')}>
+                    {summarizeDetails(log.details)}
+                  </td>
                   <td>{log.user ? `${log.user.name} (${log.user.role})` : 'System'}</td>
-                  <td>{log.ip || 'N/A'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{log.ip || 'N/A'}</td>
                 </tr>
               ))
             )}
@@ -154,3 +182,4 @@ const SystemLogs = () => {
 };
 
 export default SystemLogs;
+

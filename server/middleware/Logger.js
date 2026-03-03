@@ -1,5 +1,23 @@
 const SystemLog = require('../models/SystemLog');
 
+const normalizeIp = (raw = '') => String(raw || '').trim().replace(/^::ffff:/, '');
+
+const resolveClientIp = (req) => {
+  const forwardedFor = String(req.headers['x-forwarded-for'] || '').trim();
+  if (forwardedFor) {
+    const first = forwardedFor.split(',')[0];
+    if (first) return normalizeIp(first);
+  }
+
+  const realIp = String(req.headers['x-real-ip'] || '').trim();
+  if (realIp) return normalizeIp(realIp);
+
+  const cfIp = String(req.headers['cf-connecting-ip'] || '').trim();
+  if (cfIp) return normalizeIp(cfIp);
+
+  return normalizeIp(req.ip || req.socket?.remoteAddress || '');
+};
+
 const logger = async (req, res, next) => {
   // Store original end method
   const originalEnd = res.end;
@@ -16,7 +34,7 @@ const logger = async (req, res, next) => {
           query: req.query,
           params: req.params
         }),
-        ip: req.ip,
+        ip: resolveClientIp(req),
         userAgent: req.get('User-Agent'),
         level: res.statusCode >= 400 ? 'error' : 'info'
       });
