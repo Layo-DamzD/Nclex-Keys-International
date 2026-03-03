@@ -1,4 +1,5 @@
 import React from 'react';
+import axios from 'axios';
 
 const DEFAULT_TESTIMONIALS = [
   {
@@ -31,6 +32,20 @@ const Testimonials = ({ content = {} }) => {
   const testimonials = Array.isArray(content.items) && content.items.length ? content.items : DEFAULT_TESTIMONIALS;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
+  const resolveMediaUrl = (rawUrl) => {
+    const url = String(rawUrl || '').trim();
+    if (!url) return '';
+    if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
+    if (url.startsWith('//')) {
+      return `${window.location.protocol}${url}`;
+    }
+
+    const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
+    if (url.startsWith('/')) {
+      return apiBase ? `${apiBase}${url}` : url;
+    }
+    return apiBase ? `${apiBase}/${url}` : url;
+  };
 
   return (
     <section
@@ -61,7 +76,7 @@ const Testimonials = ({ content = {} }) => {
                         }}
                       >
                         <img
-                          src={testimonial.imageUrl || testimonial.avatar}
+                          src={resolveMediaUrl(testimonial.imageUrl || testimonial.avatar)}
                           alt={testimonial.name || 'Success story'}
                           style={{
                             width: '100%',
@@ -87,7 +102,7 @@ const Testimonials = ({ content = {} }) => {
                           <div className="testimonial-header d-flex align-items-center justify-content-center mb-4">
                             {(testimonial.avatar || testimonial.imageUrl) && (
                               <img
-                                src={testimonial.avatar || testimonial.imageUrl}
+                                src={resolveMediaUrl(testimonial.avatar || testimonial.imageUrl)}
                                 alt={testimonial.name || 'Success story'}
                                 style={{ width: '60px', height: '60px', borderRadius: '50%', marginRight: '15px', objectFit: 'cover' }}
                               />

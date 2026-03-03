@@ -7,6 +7,19 @@ const AdminApproval = () => {
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [visibleSecrets, setVisibleSecrets] = useState({});
+
+  const isSecretVisible = (adminId, field) => Boolean(visibleSecrets[`${adminId}:${field}`]);
+  const toggleSecretVisibility = (adminId, field) => {
+    const key = `${adminId}:${field}`;
+    setVisibleSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const maskSecret = (value) => {
+    const str = String(value || '');
+    if (!str) return 'Not set';
+    return '*'.repeat(Math.max(12, Math.min(str.length, 64)));
+  };
 
   useEffect(() => {
     fetchAdmins();
@@ -72,6 +85,8 @@ const AdminApproval = () => {
               <th>Email</th>
               <th>Role</th>
               <th>Status</th>
+              <th>Access Code</th>
+              <th>Password Hash</th>
               <th>Joined</th>
               <th>Actions</th>
             </tr>
@@ -79,7 +94,7 @@ const AdminApproval = () => {
           <tbody>
             {admins.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
                   No admins found
                 </td>
               </tr>
@@ -97,13 +112,49 @@ const AdminApproval = () => {
                       </span>
                     </td>
                     <td>
-                      {admin.role === 'superadmin' ? (
+                      {admin.status === 'inactive' ? (
+                        <span className="badge badge-danger">Inactive</span>
+                      ) : admin.role === 'superadmin' ? (
                         <span className="badge badge-info">Active</span>
                       ) : admin.approved ? (
                         <span className="badge badge-success">Approved</span>
                       ) : (
                         <span className="badge badge-warning">Pending</span>
                       )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <code style={{ fontSize: '0.8rem' }}>
+                          {isSecretVisible(admin._id, 'accessCode')
+                            ? (admin.accessCode || 'Not set')
+                            : maskSecret(admin.accessCode)}
+                        </code>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => toggleSecretVisibility(admin._id, 'accessCode')}
+                          aria-label={isSecretVisible(admin._id, 'accessCode') ? 'Hide access code' : 'Show access code'}
+                        >
+                          <i className={`fas ${isSecretVisible(admin._id, 'accessCode') ? 'fa-eye-slash' : 'fa-eye'}`} />
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <code style={{ fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                          {isSecretVisible(admin._id, 'passwordHash')
+                            ? (admin.password || 'Not available')
+                            : maskSecret(admin.password)}
+                        </code>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => toggleSecretVisibility(admin._id, 'passwordHash')}
+                          aria-label={isSecretVisible(admin._id, 'passwordHash') ? 'Hide password hash' : 'Show password hash'}
+                        >
+                          <i className={`fas ${isSecretVisible(admin._id, 'passwordHash') ? 'fa-eye-slash' : 'fa-eye'}`} />
+                        </button>
+                      </div>
                     </td>
                     <td>{new Date(admin.createdAt).toLocaleDateString()}</td>
                     <td>
@@ -139,3 +190,4 @@ const AdminApproval = () => {
 };
 
 export default AdminApproval;
+
