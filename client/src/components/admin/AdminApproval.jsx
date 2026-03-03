@@ -86,7 +86,6 @@ const AdminApproval = () => {
               <th>Role</th>
               <th>Status</th>
               <th>Access Code</th>
-              <th>Password Hash</th>
               <th>Joined</th>
               <th>Actions</th>
             </tr>
@@ -94,7 +93,7 @@ const AdminApproval = () => {
           <tbody>
             {admins.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
                   No admins found
                 </td>
               </tr>
@@ -136,23 +135,6 @@ const AdminApproval = () => {
                           aria-label={isSecretVisible(admin._id, 'accessCode') ? 'Hide access code' : 'Show access code'}
                         >
                           <i className={`fas ${isSecretVisible(admin._id, 'accessCode') ? 'fa-eye-slash' : 'fa-eye'}`} />
-                        </button>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <code style={{ fontSize: '0.75rem', wordBreak: 'break-all' }}>
-                          {isSecretVisible(admin._id, 'passwordHash')
-                            ? (admin.password || 'Not available')
-                            : maskSecret(admin.password)}
-                        </code>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-secondary"
-                          onClick={() => toggleSecretVisibility(admin._id, 'passwordHash')}
-                          aria-label={isSecretVisible(admin._id, 'passwordHash') ? 'Hide password hash' : 'Show password hash'}
-                        >
-                          <i className={`fas ${isSecretVisible(admin._id, 'passwordHash') ? 'fa-eye-slash' : 'fa-eye'}`} />
                         </button>
                       </div>
                     </td>

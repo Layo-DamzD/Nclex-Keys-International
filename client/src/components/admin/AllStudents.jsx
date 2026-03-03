@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { formatStudentDisplayId } from '../../utils/studentId';
 
 const AllStudents = () => {
-  const navigate = useNavigate();
   const user = JSON.parse(sessionStorage.getItem('adminUser') || '{}');
   const userRole = user.role;
   const normalizedUserRole = String(userRole || '').trim().toLowerCase();
@@ -43,11 +41,6 @@ const AllStudents = () => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins}m ${secs}s`;
-  };
-
-  const handleAdminReviewResult = (resultId) => {
-    if (!resultId) return;
-    navigate(`/admin/test-results/${resultId}/review`);
   };
 
   useEffect(() => {
@@ -516,7 +509,6 @@ const AllStudents = () => {
                                       <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>%</th>
                                       <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Time</th>
                                       <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Status</th>
-                                      <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Review</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -546,16 +538,6 @@ const AllStudents = () => {
                                             >
                                               {result.passed ? 'Pass' : 'Fail'}
                                             </span>
-                                          </td>
-                                          <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
-                                            <button
-                                              type="button"
-                                              className="btn btn-sm btn-primary"
-                                              onClick={() => handleAdminReviewResult(result._id)}
-                                              disabled={!result._id}
-                                            >
-                                              Review
-                                            </button>
                                           </td>
                                         </tr>
                                       ))}

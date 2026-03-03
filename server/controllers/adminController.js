@@ -1111,7 +1111,7 @@ const approveAdmin = async (req, res) => {
 const getAllAdmins = async (req, res) => {
   try {
     const admins = await User.find({ role: { $in: ['admin', 'superadmin'] } })
-      .select('name email role status approved accessCode password createdAt')
+      .select('name email role status approved accessCode createdAt')
       .sort({ createdAt: -1 });
     res.json(admins);
   } catch (error) {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -26,7 +25,6 @@ ChartJS.register(
 );
 
 const ProgressReport = () => {
-  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [timeRange, setTimeRange] = useState('30');
@@ -239,7 +237,6 @@ return (
                       <th>Score</th>
                       <th>Percentage</th>
                       <th>Time</th>
-                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -254,14 +251,6 @@ return (
                           </span>
                         </td>
                         <td>{test.timeTaken} min</td>
-                        <td>
-                          <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => navigate(`/admin/test-results/${test._id}/review`)}
-                          >
-                            Review
-                          </button>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
