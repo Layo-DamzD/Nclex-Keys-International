@@ -192,7 +192,40 @@ const bulkImportQuestions = async (req, res) => {
       return res.status(400).json({ message: 'CSV file is empty or invalid' });
     }
 
-    const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
+    const parseCsvLine = (line = '') => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        const nextChar = line[i + 1];
+
+        if (char === '"' && inQuotes && nextChar === '"') {
+          current += '"';
+          i += 1;
+          continue;
+        }
+
+        if (char === '"') {
+          inQuotes = !inQuotes;
+          continue;
+        }
+
+        if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+          continue;
+        }
+
+        current += char;
+      }
+
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase().trim());
     const requiredHeaders = ['type', 'category', 'subcategory', 'questiontext'];
     const missing = requiredHeaders.filter(h => !headers.includes(h));
     if (missing.length > 0) {
@@ -203,7 +236,7 @@ const bulkImportQuestions = async (req, res) => {
     const errors = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
+      const values = parseCsvLine(lines[i]);
       if (values.length < headers.length) continue;
 
       const row = {};
@@ -225,8 +258,15 @@ const bulkImportQuestions = async (req, res) => {
 
       // Parse correctAnswer
       let correctAnswer = row.correctanswer || '';
-      if (row.type === 'sata' && correctAnswer.includes(',')) {
-        correctAnswer = correctAnswer.split(',').map(c => c.trim());
+      if (row.type === 'sata') {
+        const sataParts = String(correctAnswer)
+          .split(/[,;]+/)
+          .map(c => c.trim())
+          .filter(Boolean);
+        correctAnswer = sataParts;
+      }
+      if (row.type === 'drag-drop' && (!correctAnswer || !String(correctAnswer).trim()) && options.length > 0) {
+        correctAnswer = options.map((_, idx) => String.fromCharCode(65 + idx)).join(',');
       }
 
       const question = {
@@ -239,6 +279,71 @@ const bulkImportQuestions = async (req, res) => {
         rationale: row.rationale || '',
         difficulty: row.difficulty || 'medium',
       };
+
+      if (row.type === 'highlight') {
+        const start = Number(row.highlightstart);
+        const end = Number(row.highlightend);
+        if (!Number.isNaN(start)) question.highlightStart = start;
+        if (!Number.isNaN(end)) question.highlightEnd = end;
+      }
+
+      if (row.type === 'matrix') {
+        let matrixColumns = [];
+        let matrixRows = [];
+
+        if (row.matrixcolumns) {
+          if (String(row.matrixcolumns).trim().startsWith('[')) {
+            try {
+              const parsed = JSON.parse(row.matrixcolumns);
+              if (Array.isArray(parsed)) matrixColumns = parsed.map((c) => String(c || '').trim()).filter(Boolean);
+            } catch {
+              // Fallback handled below
+            }
+          }
+          if (!matrixColumns.length) {
+            matrixColumns = String(row.matrixcolumns).split(';').map((c) => c.trim()).filter(Boolean);
+          }
+        }
+
+        if (row.matrixrows) {
+          if (String(row.matrixrows).trim().startsWith('[')) {
+            try {
+              const parsed = JSON.parse(row.matrixrows);
+              if (Array.isArray(parsed)) {
+                matrixRows = parsed
+                  .map((r) => ({
+                    rowText: String(r?.rowText || '').trim(),
+                    correctColumn: Number(r?.correctColumn)
+                  }))
+                  .filter((r) => r.rowText && !Number.isNaN(r.correctColumn));
+              }
+            } catch {
+              // Fallback handled below
+            }
+          }
+          if (!matrixRows.length) {
+            matrixRows = String(row.matrixrows)
+              .split(';')
+              .map((item) => item.trim())
+              .filter(Boolean)
+              .map((item) => {
+                const [rowText, col] = item.split('|').map((v) => String(v || '').trim());
+                return { rowText, correctColumn: Number(col) };
+              })
+              .filter((r) => r.rowText && !Number.isNaN(r.correctColumn));
+          }
+        }
+
+        if (!matrixColumns.length || !matrixRows.length) {
+          errors.push(`Row ${i + 1}: matrix questions require matrixColumns and matrixRows`);
+          continue;
+        }
+
+        question.matrixColumns = matrixColumns;
+        question.matrixRows = matrixRows;
+        question.options = [];
+        question.correctAnswer = matrixRows.map((r) => r.correctColumn);
+      }
 
       questions.push(question);
     }

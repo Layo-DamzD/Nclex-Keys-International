@@ -45,13 +45,17 @@ const AdminSignup = () => {
         password: formData.password
       });
 
-      const { role, accessCode } = response.data;
+      const { role, accessCodeSent } = response.data;
 
       if (role === 'superadmin') {
         setSuccess('Super Admin account created! You can now login.');
         setTimeout(() => navigate('/admin/login'), 3000);
       } else {
-        setSuccess(`Simulated access code: ${accessCode}\nYour account is pending approval by the super-admin.`);
+        setSuccess(
+          accessCodeSent
+            ? 'Access code has been sent to your email. Your account is pending approval by the super-admin.'
+            : 'Account created and pending approval. Access code email was not delivered, contact super-admin.'
+        );
         setTimeout(() => navigate('/admin/login'), 5000);
       }
     } catch (err) {

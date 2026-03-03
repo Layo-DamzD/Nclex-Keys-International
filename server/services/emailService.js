@@ -256,10 +256,70 @@ const sendAdminSignupVerificationEmail = async ({
   }
 };
 
+const sendAdminAccessCodeEmail = async ({
+  to,
+  name,
+  accessCode
+}) => {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'not_configured' };
+  }
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    return { sent: false, reason: 'transporter_unavailable' };
+  }
+
+  const displayName = name || 'there';
+  const subject = 'NCLEX KEYS International - Your admin access code';
+  const text = [
+    `Hello ${displayName},`,
+    '',
+    'Your admin account was created successfully.',
+    `Your permanent admin access code is: ${accessCode || 'N/A'}`,
+    '',
+    'Keep this code private. You will need it during admin login after approval.',
+    '',
+    'NCLEX KEYS International'
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:600px;margin:0 auto;padding:24px;">
+      <h2 style="margin:0 0 12px;color:#1d4ed8;">NCLEX KEYS International</h2>
+      <p>Hello ${displayName},</p>
+      <p>Your admin account was created successfully.</p>
+      <p>Your permanent admin access code is:</p>
+      <div style="display:inline-block;font-size:28px;letter-spacing:6px;font-weight:700;background:#eef2ff;color:#1d4ed8;padding:12px 16px;border-radius:8px;">
+        ${accessCode || 'N/A'}
+      </div>
+      <p style="margin-top:16px;">Keep this code private. You will need it during admin login after approval.</p>
+      <p style="margin-top:24px;">NCLEX KEYS International</p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
+};
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
   sendPasswordResetOtpEmail,
   sendAdminSignupVerificationEmail,
+  sendAdminAccessCodeEmail,
   buildResetUrl
 };

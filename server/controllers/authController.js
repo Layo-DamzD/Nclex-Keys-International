@@ -3,7 +3,9 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const {
+  sendPasswordResetEmail,
   sendPasswordResetOtpEmail,
+  sendAdminAccessCodeEmail,
   isEmailConfigured
 } = require('../services/emailService');
 
@@ -276,14 +278,22 @@ const registerAdmin = async (req, res) => {
       });
     }
 
+    const accessCodeEmailResult = await sendAdminAccessCodeEmail({
+      to: user.email,
+      name: user.name,
+      accessCode: user.accessCode
+    });
+
     res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
-      accessCode: user.accessCode,
       role: user.role,
       approved: user.approved,
-      message: 'Simulated access code generated. Account pending approval by super admin.'
+      accessCodeSent: Boolean(accessCodeEmailResult?.sent),
+      message: accessCodeEmailResult?.sent
+        ? 'Access code sent to your email. Account pending approval by super admin.'
+        : 'Account created and pending approval. Email delivery failed, contact super admin for your access code.'
     });
   } catch (error) {
     console.error(error);
@@ -397,22 +407,27 @@ const forgotAdminPassword = async (req, res) => {
     }
 
     if (!isEmailConfigured()) {
-      return res.status(503).json({ message: 'Email OTP is not configured yet. Contact support.' });
+      return res.status(503).json({ message: 'Email is not configured yet. Contact support.' });
     }
 
-    const otp = await savePasswordResetOtp(user);
-    const emailResult = await sendPasswordResetOtpEmail({
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.resetPasswordToken = hashedResetToken;
+    user.resetPasswordExpire = Date.now() + 60 * 60 * 1000; // 1 hour
+    await user.save();
+
+    const emailResult = await sendPasswordResetEmail({
       to: user.email,
       name: user.name,
-      otp,
+      resetPath: `/admin/reset-password/${resetToken}`,
       accountLabel: 'admin account'
     });
 
     if (!emailResult.sent) {
-      return res.status(500).json({ message: 'Failed to send OTP email. Please try again.' });
+      return res.status(500).json({ message: 'Failed to send reset email. Please try again.' });
     }
 
-    return res.json({ message: 'OTP sent to your email. Enter it below to reset your password.' });
+    return res.json({ message: 'Password reset link sent to your email.' });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
@@ -517,8 +532,9 @@ const resetAdminPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
+    const hashedToken = crypto.createHash('sha256').update(String(token)).digest('hex');
     const user = await User.findOne({
-      resetPasswordToken: token,
+      resetPasswordToken: { $in: [String(token), hashedToken] },
       resetPasswordExpire: { $gt: Date.now() },
       role: { $in: ['admin', 'superadmin'] }
     });
