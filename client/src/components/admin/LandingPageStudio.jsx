@@ -101,7 +101,7 @@ const DEFAULT_HOME_CONFIG = {
       },
       contact: {
         email: 'nclexkeysintl.academy@gmail.com',
-        phone: '07037367480',
+        phone: '+2347037367480',
       },
       legal: {
         copyrightText: '© 2026 NCLEX KEYS International. All rights reserved.',

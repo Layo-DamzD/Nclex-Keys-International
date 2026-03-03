@@ -12,7 +12,7 @@ const DEFAULT_CONTENT = {
   },
   contact: {
     email: 'nclexkeysintl.academy@gmail.com',
-    phone: '07037367480',
+    phone: '+2347037367480',
   },
   legal: {
     copyrightText:
@@ -39,8 +39,9 @@ const Footer = ({ content = {} }) => {
       ...(content.legal || {}),
     },
   };
-  if (String(data.contact.phone || '').trim() === '+1 (800) 555-1234') {
-    data.contact.phone = '07037367480';
+  const normalizedPhone = String(data.contact.phone || '').trim();
+  if (normalizedPhone === '+1 (800) 555-1234' || normalizedPhone === '07037367480') {
+    data.contact.phone = '+2347037367480';
   }
 
   const whatsappDigits = String(data.contact.phone || '').replace(/[^\d]/g, '');
