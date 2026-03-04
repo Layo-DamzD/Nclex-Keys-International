@@ -23,6 +23,7 @@ const DEFAULT_CONTENT = {
 };
 
 const Footer = ({ content = {} }) => {
+  const ADMIN_MESSAGE_NUMBER = '+2347037367480';
   const data = {
     ...DEFAULT_CONTENT,
     ...content,
@@ -39,10 +40,8 @@ const Footer = ({ content = {} }) => {
       ...(content.legal || {}),
     },
   };
-  const normalizedPhone = String(data.contact.phone || '').trim();
-  if (normalizedPhone === '+1 (800) 555-1234' || normalizedPhone === '07037367480') {
-    data.contact.phone = '+2347037367480';
-  }
+  // Force footer phone to admin message number so saved legacy config can't override it.
+  data.contact.phone = ADMIN_MESSAGE_NUMBER;
 
   const whatsappDigits = String(data.contact.phone || '').replace(/[^\d]/g, '');
   const whatsappHref = whatsappDigits

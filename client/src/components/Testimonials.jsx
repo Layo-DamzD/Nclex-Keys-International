@@ -62,15 +62,15 @@ const Testimonials = ({ content = {} }) => {
           <div className="carousel-inner">
             {testimonials.map((testimonial, index) => (
               <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
-                <div className="row justify-content-center">
-                  <div className="col-md-8">
+                <div className={`row justify-content-center ${testimonial.imageOnly ? 'mx-0' : ''}`}>
+                  <div className={testimonial.imageOnly ? 'col-12 px-0' : 'col-md-8'}>
                     {testimonial.imageOnly && (testimonial.imageUrl || testimonial.avatar) ? (
                       <div
                         className="testimonial-card testimonial-card-image-only"
                         style={{
                           background: 'white',
-                          padding: '14px',
-                          borderRadius: '20px',
+                          padding: '0',
+                          borderRadius: '0',
                           boxShadow: '0 5px 20px rgba(0,0,0,0.05)',
                           textAlign: 'center',
                         }}
@@ -80,9 +80,9 @@ const Testimonials = ({ content = {} }) => {
                           alt={testimonial.name || 'Success story'}
                           style={{
                             width: '100%',
-                            maxHeight: '460px',
+                            maxHeight: '620px',
                             objectFit: 'cover',
-                            borderRadius: '16px',
+                            borderRadius: '0',
                             display: 'block'
                           }}
                         />
