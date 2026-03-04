@@ -36,14 +36,6 @@ const AllStudents = () => {
     return date.toLocaleString();
   };
 
-  const formatTimeTaken = (seconds) => {
-    if (seconds == null || Number.isNaN(Number(seconds))) return '—';
-    const totalSeconds = Math.max(0, Math.round(Number(seconds)));
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins}m ${secs}s`;
-  };
-
   useEffect(() => {
     fetchStudents();
   }, [search, statusFilter]);
@@ -329,7 +321,7 @@ const AllStudents = () => {
             <input
               type="text"
               className="form-control"
-              placeholder="e.g., New Practice Test Available"
+              placeholder="e.g., Important Student Update"
               value={notifyTitle}
               onChange={(e) => setNotifyTitle(e.target.value)}
             />
@@ -409,8 +401,6 @@ const AllStudents = () => {
             {students.map(student => {
               const progress = Math.floor(Math.random() * 100); // Placeholder - replace with real data
               const studentProgress = studentProgressById[student._id];
-              const testHistory = studentProgress?.testResults || [];
-              const historyStats = studentProgress?.stats;
               const trustedDevices = studentProgress?.student?.trustedDevices || [];
               const isHistoryLoading = !!studentHistoryLoadingById[student._id];
               const historyError = studentHistoryErrorById[student._id];
@@ -497,7 +487,7 @@ const AllStudents = () => {
                       <td colSpan="8" style={{ padding: '0' }}>
                         <div className="student-history-panel" style={{ background: '#f8fafc', padding: '20px', borderTop: '2px solid #e2e8f0' }}>
                           <div className="student-history-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                            <h4 style={{ margin: 0 }}>Test History for {student.name}</h4>
+                            <h4 style={{ margin: 0 }}>Student Device Details for {student.name}</h4>
                             <button
                               className="btn btn-sm btn-outline-primary"
                               onClick={() => fetchStudentHistory(student._id, { force: true })}
@@ -508,7 +498,7 @@ const AllStudents = () => {
                           </div>
 
                           {isHistoryLoading && (
-                            <p className="text-muted" style={{ marginBottom: 0 }}>Loading test history...</p>
+                            <p className="text-muted" style={{ marginBottom: 0 }}>Loading student details...</p>
                           )}
 
                           {!isHistoryLoading && historyError && (
@@ -563,79 +553,6 @@ const AllStudents = () => {
                                   </table>
                                 </div>
                               </div>
-
-                              {testHistory.length > 0 ? (
-                                <>
-                                  <div className="student-history-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '15px' }}>
-                                    <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
-                                      <div style={{ fontSize: '12px', color: '#64748b' }}>Total Tests</div>
-                                      <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.totalTests ?? testHistory.length}</div>
-                                    </div>
-                                    <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
-                                      <div style={{ fontSize: '12px', color: '#64748b' }}>Average Score</div>
-                                      <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.averageScore ?? 0}%</div>
-                                    </div>
-                                    <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
-                                      <div style={{ fontSize: '12px', color: '#64748b' }}>Best Score</div>
-                                      <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.bestScore ?? 0}%</div>
-                                    </div>
-                                    <div className="student-history-stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px' }}>
-                                      <div style={{ fontSize: '12px', color: '#64748b' }}>Overall Accuracy</div>
-                                      <div style={{ fontWeight: 700, fontSize: '20px' }}>{historyStats?.overallAccuracy ?? 0}%</div>
-                                    </div>
-                                  </div>
-
-                                  <div className="student-history-table-wrap" style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
-                                    <table className="student-history-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px' }}>
-                                      <thead>
-                                        <tr className="student-history-table-head" style={{ background: '#f8fafc' }}>
-                                          <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Date</th>
-                                          <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Test</th>
-                                          <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Score</th>
-                                          <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>%</th>
-                                          <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Time</th>
-                                          <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Status</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {[...testHistory]
-                                          .sort((a, b) => new Date(b.date) - new Date(a.date))
-                                          .map((result) => (
-                                            <tr key={result._id}>
-                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
-                                                {formatDateTime(result.date)}
-                                              </td>
-                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                                                {result.testName || 'Practice Test'}
-                                              </td>
-                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
-                                                {result.score ?? 0}/{result.totalQuestions ?? 0}
-                                              </td>
-                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center', fontWeight: 600 }}>
-                                                {result.percentage ?? 0}%
-                                              </td>
-                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
-                                                {formatTimeTaken(result.timeTaken)}
-                                              </td>
-                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
-                                                <span
-                                                  className={`badge ${result.passed ? 'badge-success' : 'badge-danger'}`}
-                                                  style={{ minWidth: '64px' }}
-                                                >
-                                                  {result.passed ? 'Pass' : 'Fail'}
-                                                </span>
-                                              </td>
-                                            </tr>
-                                          ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </>
-                              ) : (
-                                <p className="text-muted" style={{ marginBottom: 0 }}>
-                                  No test history available yet.
-                                </p>
-                              )}
                             </>
                           )}
                         </div>
@@ -661,3 +578,4 @@ const AllStudents = () => {
 };
 
 export default AllStudents;
+
