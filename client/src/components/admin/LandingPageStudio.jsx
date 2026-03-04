@@ -201,6 +201,16 @@ const parseLines = (value) =>
     .map((line) => line.trim())
     .filter(Boolean);
 
+const resolveMediaUrl = (rawUrl) => {
+  const url = String(rawUrl || '').trim();
+  if (!url) return '';
+  if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('//')) return `${window.location.protocol}${url}`;
+  const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
+  if (url.startsWith('/')) return apiBase ? `${apiBase}${url}` : url;
+  return apiBase ? `${apiBase}/${url}` : url;
+};
+
 const LandingPageStudio = () => {
   const token = sessionStorage.getItem('adminToken');
   const [pageKey, setPageKey] = useState('home');
@@ -631,7 +641,10 @@ const LandingPageStudio = () => {
                 </div>
                 {(item.imageUrl || item.avatar) ? (
                   <div className="landing-studio-upload-preview">
-                    <img src={item.imageUrl || item.avatar} alt={item.name || `Success Story ${index + 1}`} />
+                    <img
+                      src={resolveMediaUrl(item.imageUrl || item.avatar)}
+                      alt={item.name || `Success Story ${index + 1}`}
+                    />
                   </div>
                 ) : (
                   <div className="landing-studio-upload-hint">Upload an image for avatar/full-image story card.</div>
@@ -755,7 +768,7 @@ const LandingPageStudio = () => {
             </div>
             {tutor.imageUrl ? (
               <div className="landing-studio-upload-preview landing-studio-upload-preview--avatar">
-                <img src={tutor.imageUrl} alt={tutor.name || 'Brainiac'} />
+                <img src={resolveMediaUrl(tutor.imageUrl)} alt={tutor.name || 'Brainiac'} />
               </div>
             ) : (
               <div className="landing-studio-upload-hint">Upload an image to replace the icon on this Brainiac card.</div>

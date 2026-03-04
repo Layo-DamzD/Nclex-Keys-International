@@ -81,7 +81,9 @@ const Testimonials = ({ content = {} }) => {
                           style={{
                             width: '100%',
                             maxHeight: '620px',
-                            objectFit: 'cover',
+                            objectFit: 'contain',
+                            objectPosition: 'center',
+                            backgroundColor: '#ffffff',
                             borderRadius: '0',
                             display: 'block'
                           }}
