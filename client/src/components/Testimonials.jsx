@@ -62,8 +62,8 @@ const Testimonials = ({ content = {} }) => {
           <div className="carousel-inner">
             {testimonials.map((testimonial, index) => (
               <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
-                <div className={`row justify-content-center ${testimonial.imageOnly ? 'mx-0' : ''}`}>
-                  <div className={testimonial.imageOnly ? 'col-12 px-0' : 'col-md-8'}>
+                <div className="row justify-content-center">
+                  <div className="col-md-8">
                     {testimonial.imageOnly && (testimonial.imageUrl || testimonial.avatar) ? (
                       <div
                         className="testimonial-card testimonial-card-image-only"

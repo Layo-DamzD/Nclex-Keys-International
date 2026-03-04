@@ -57,7 +57,7 @@ const Footer = ({ content = {} }) => {
         padding: '60px 0 30px',
       }}
     >
-      <div className="container">
+      <div className="container-fluid px-4 px-md-5">
         <div className="row">
           {/* BRAND SECTION */}
           <div className="col-lg-5 mb-4">
