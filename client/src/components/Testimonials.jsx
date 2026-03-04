@@ -32,19 +32,69 @@ const Testimonials = ({ content = {} }) => {
   const testimonials = Array.isArray(content.items) && content.items.length ? content.items : DEFAULT_TESTIMONIALS;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
-  const resolveMediaUrl = (rawUrl) => {
-    const url = String(rawUrl || '').trim();
-    if (!url) return '';
-    if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
-    if (url.startsWith('//')) {
-      return `${window.location.protocol}${url}`;
+  const resolveMediaCandidates = (rawUrl) => {
+    const original = String(rawUrl || '').trim();
+    if (!original) return [];
+
+    const normalized = original.replace(/\\/g, '/');
+    const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
+    const origin = window.location.origin.replace(/\/+$/, '');
+    const candidates = [];
+
+    const pushUnique = (value) => {
+      const next = String(value || '').trim();
+      if (!next) return;
+      if (!candidates.includes(next)) candidates.push(next);
+    };
+
+    if (/^data:/i.test(normalized)) {
+      pushUnique(normalized);
+      return candidates;
     }
 
-    const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
-    if (url.startsWith('/')) {
-      return apiBase ? `${apiBase}${url}` : url;
+    if (/^https?:\/\//i.test(normalized)) {
+      pushUnique(normalized);
+      try {
+        const parsed = new URL(normalized);
+        if (parsed.pathname.includes('/api/uploads/')) {
+          pushUnique(`${origin}${parsed.pathname}`);
+          pushUnique(`${apiBase}${parsed.pathname}`);
+        }
+      } catch {
+        // ignore parse failures
+      }
+    } else if (normalized.startsWith('//')) {
+      pushUnique(`${window.location.protocol}${normalized}`);
+    } else if (normalized.startsWith('/')) {
+      pushUnique(`${origin}${normalized}`);
+      pushUnique(`${apiBase}${normalized}`);
+      pushUnique(normalized);
+    } else {
+      pushUnique(`${origin}/${normalized}`);
+      pushUnique(`${apiBase}/${normalized}`);
+      pushUnique(normalized);
     }
-    return apiBase ? `${apiBase}/${url}` : url;
+
+    const uploadMatch = normalized.match(/(?:^|\/)api\/uploads\/([^/?#]+)/i) || normalized.match(/(?:^|\/)uploads\/([^/?#]+)/i);
+    if (uploadMatch?.[1]) {
+      const fileName = uploadMatch[1];
+      pushUnique(`${origin}/api/uploads/${fileName}`);
+      pushUnique(`${apiBase}/api/uploads/${fileName}`);
+    }
+
+    return candidates;
+  };
+
+  const firstMediaUrl = (rawUrl) => resolveMediaCandidates(rawUrl)[0] || '';
+
+  const handleImageFallback = (event) => {
+    const target = event.currentTarget;
+    const raw = target.getAttribute('data-raw-src') || '';
+    const index = Number(target.getAttribute('data-fallback-index') || '0');
+    const candidates = resolveMediaCandidates(raw);
+    if (index + 1 >= candidates.length) return;
+    target.setAttribute('data-fallback-index', String(index + 1));
+    target.src = candidates[index + 1];
   };
 
   return (
@@ -76,7 +126,10 @@ const Testimonials = ({ content = {} }) => {
                         }}
                       >
                         <img
-                          src={resolveMediaUrl(testimonial.imageUrl || testimonial.avatar)}
+                          src={firstMediaUrl(testimonial.imageUrl || testimonial.avatar)}
+                          data-raw-src={testimonial.imageUrl || testimonial.avatar || ''}
+                          data-fallback-index="0"
+                          onError={handleImageFallback}
                           alt={testimonial.name || 'Success story'}
                           style={{
                             width: '100%',
@@ -104,7 +157,10 @@ const Testimonials = ({ content = {} }) => {
                           <div className="testimonial-header d-flex align-items-center justify-content-center mb-4">
                             {(testimonial.avatar || testimonial.imageUrl) && (
                               <img
-                                src={resolveMediaUrl(testimonial.avatar || testimonial.imageUrl)}
+                                src={firstMediaUrl(testimonial.avatar || testimonial.imageUrl)}
+                                data-raw-src={testimonial.avatar || testimonial.imageUrl || ''}
+                                data-fallback-index="0"
+                                onError={handleImageFallback}
                                 alt={testimonial.name || 'Success story'}
                                 style={{ width: '60px', height: '60px', borderRadius: '50%', marginRight: '15px', objectFit: 'cover' }}
                               />
