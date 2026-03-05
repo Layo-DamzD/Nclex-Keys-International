@@ -1,79 +1,33 @@
 export const CATEGORIES = {
-  "Case Studies": [
+    "Case Studies": [
     "Layered Case Study",
     "Trend",
     "Bowtie"
+    ],
+  "Safe and Effective Care Environment": [
+    "Management of Care",
+    "Safety and Infection Control"
   ],
-  "Adult Health": [
-    "Cardiovascular",
-    "Endocrine",
-    "Gastrointestinal",
-    "Hematologic",
-    "Immune / Infectious Disease",
-    "Integumentary",
-    "Multisystem",
-    "Musculoskeletal",
-    "Neurologic",
-    "Reproductive",
-    "Respiratory",
-    "Urinary and Renal",
-    "Visual and Auditory"
-  ],
-  "Maternal & Newborn Health": [
-    "Antepartum",
-    "Labor & Delivery",
-    "Newborn",
-    "Postpartum"
-  ],
-  "Child Health": [
-    "Cardiovascular",
-    "Endocrine",
-    "Gastrointestinal",
+  "Health Promotion and Maintenance": [
     "Growth and Development",
-    "Hematologic",
-    "Immune / Infectious Disease",
-    "Integumentary",
-    "Musculoskeletal",
-    "Neurologic",
-    "Reproductive",
-    "Respiratory",
-    "Urinary and Renal",
-    "Visual and Auditory"
+    "Prevention and Early Detection of Disease",
+    "Health Screening",
+    "Prenatal Care",
+    "Health Education"
   ],
-  "Mental Health": [
-    "Cognitive and Developmental Disorders",
-    "Mood and Personality Disorders",
-    "Anxiety Disorders, Trauma, and Addiction",
-    "Foundations and Therapeutic Communication"
+  "Psychosocial Integrity": [
+    "Mental Health Concepts",
+    "Behavioral Interventions",
+    "Crisis Intervention",
+    "Therapeutic Communication",
+    "Coping and Adaptation"
   ],
-  "Pharmacology": [
-    "Cardiovascular",
-    "Endocrine",
-    "Gastrointestinal",
-    "Hematologic / Oncologic",
-    "Immune",
-    "Integumentary",
-    "Musculoskeletal",
-    "Neurologic",
-    "Psychiatric",
-    "Reproductive",
-    "Respiratory",
-    "Urinary and Renal",
-    "Medication Administration",
-    "Visual and Auditory"
-  ],
-  "Fundamentals": [
-    "Fluid, Electrolytes, and Acid-Base Balance",
-    "Safety and Infection Control",
+  "Physiological Integrity": [
     "Basic Care and Comfort",
-    "Nutrition and Elimination"
-  ],
-  "Management of Care": [
-    "Assignment and Delegation",
-    "Prioritization",
-    "Management Concepts"
+    "Pharmacological and Parenteral Therapies",
+    "Reduction of Risk Potential",
+    "Physiological Adaptation"
   ]
 };
 
-// For convenience, get an array of just category names
 export const categoryList = Object.keys(CATEGORIES);
