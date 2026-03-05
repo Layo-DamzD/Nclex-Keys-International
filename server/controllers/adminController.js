@@ -345,6 +345,87 @@ const bulkImportQuestions = async (req, res) => {
         question.correctAnswer = matrixRows.map((r) => r.correctColumn);
       }
 
+      if (row.type === 'case-study') {
+        const scenario = String(row.casestudyscenario || row.scenario || '').trim();
+        const caseStudyType = String(row.casestudytype || '').trim().toLowerCase();
+        const rawSections = String(row.casestudysections || '').trim();
+        const rawQuestions = String(row.casestudyquestions || '').trim();
+
+        if (!scenario) {
+          errors.push(`Row ${i + 1}: case-study questions require caseStudyScenario/scenario`);
+          continue;
+        }
+
+        if (!rawQuestions) {
+          errors.push(`Row ${i + 1}: case-study questions require caseStudyQuestions JSON`);
+          continue;
+        }
+
+        let sections = [];
+        if (rawSections) {
+          if (rawSections.startsWith('[')) {
+            try {
+              const parsedSections = JSON.parse(rawSections);
+              if (Array.isArray(parsedSections)) {
+                sections = parsedSections
+                  .map((s) => ({
+                    title: String(s?.title || '').trim(),
+                    content: String(s?.content || '').trim()
+                  }))
+                  .filter((s) => s.title || s.content);
+              }
+            } catch {
+              // Fallback handled below
+            }
+          }
+          if (!sections.length) {
+            sections = rawSections
+              .split(';;')
+              .map((pair) => pair.trim())
+              .filter(Boolean)
+              .map((pair) => {
+                const [title, content] = pair.split('|');
+                return {
+                  title: String(title || '').trim(),
+                  content: String(content || '').trim()
+                };
+              })
+              .filter((s) => s.title || s.content);
+          }
+        }
+
+        let caseStudyQuestions = [];
+        try {
+          const parsedQuestions = JSON.parse(rawQuestions);
+          if (Array.isArray(parsedQuestions)) {
+            caseStudyQuestions = parsedQuestions
+              .map((subQ) => ({
+                ...subQ,
+                category: subQ?.category || row.category,
+                subcategory: subQ?.subcategory || row.subcategory
+              }))
+              .filter((subQ) => subQ?.type && subQ?.questionText);
+          }
+        } catch {
+          errors.push(`Row ${i + 1}: caseStudyQuestions must be valid JSON array`);
+          continue;
+        }
+
+        if (!caseStudyQuestions.length) {
+          errors.push(`Row ${i + 1}: caseStudyQuestions array cannot be empty`);
+          continue;
+        }
+
+        question.scenario = scenario;
+        if (['layered', 'bowtie', 'trend'].includes(caseStudyType)) {
+          question.caseStudyType = caseStudyType;
+        }
+        question.sections = sections;
+        question.questions = caseStudyQuestions;
+        question.options = [];
+        question.correctAnswer = '';
+      }
+
       questions.push(question);
     }
 

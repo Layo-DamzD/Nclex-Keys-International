@@ -18,130 +18,6 @@ const QUESTION_TYPES = [
   { value: 'matrix', label: 'Matrix' },
 ];
 
-const HEMODYNAMIC_LAYERED_TEMPLATE = {
-  title: 'Layered Case Study: Pneumonia with Early Septic Shock',
-  type: '6-question',
-  category: 'Case Studies',
-  subcategory: 'Layered Case Study',
-  scenario:
-    'A 67-year-old client is admitted to the medical unit with community-acquired pneumonia. Past medical history includes hypertension and type 2 diabetes. Initial vital signs on admission: Temperature 38.8°C (101.8°F), Heart rate 108 bpm, Respiratory rate 24/min, Blood pressure 102/64 mmHg, SpO₂ 93% on room air. The client reports weakness, chills, and shortness of breath.',
-  sections: [
-    {
-      title: 'Initial Vital Signs',
-      content: 'Temp 38.8°C, HR 108 bpm, RR 24/min, BP 102/64 mmHg, SpO₂ 93% on room air'
-    },
-    {
-      title: 'Clinical Concern',
-      content: 'Nurse suspects early sepsis progression with risk for septic shock and tissue hypoperfusion.'
-    }
-  ],
-  questions: [
-    {
-      type: 'sata',
-      category: 'Case Studies',
-      subcategory: 'Layered Case Study',
-      questionText: 'Which findings indicate potential hemodynamic instability? (Select all that apply).',
-      options: [
-        'A. Temperature 38.8°C',
-        'B. Heart rate 108 bpm',
-        'C. Blood pressure 102/64 mmHg',
-        'D. Respiratory rate 24/min',
-        'E. Oxygen saturation 93%',
-        'F. History of hypertension'
-      ],
-      correctAnswer: ['A', 'B', 'C', 'D', 'E'],
-      rationale:
-        'Correct: A, B, C, D, E. Fever, tachycardia, soft blood pressure, tachypnea, and mild hypoxia are current instability cues in possible sepsis. F is a risk factor/history item, not current evidence of instability.',
-      difficulty: 'medium'
-    },
-    {
-      type: 'multiple-choice',
-      category: 'Case Studies',
-      subcategory: 'Layered Case Study',
-      questionText: 'The nurse suspects early septic shock. Which pathophysiologic process is most likely occurring?',
-      options: [
-        'A. Increased systemic vascular resistance causing hypertension',
-        'B. Systemic vasodilation causing decreased tissue perfusion',
-        'C. Increased preload leading to pulmonary edema',
-        'D. Decreased heart rate leading to reduced cardiac output'
-      ],
-      correctAnswer: 'B',
-      rationale:
-        'Septic shock is classically low-SVR (vasodilatory) shock early. Inflammatory mediators cause vasodilation and capillary leak, reducing effective perfusion despite compensatory tachycardia/tachypnea.',
-      difficulty: 'medium'
-    },
-    {
-      type: 'multiple-choice',
-      category: 'Case Studies',
-      subcategory: 'Layered Case Study',
-      questionText: 'Four clients are assigned to the nurse. Which client should the nurse assess first?',
-      options: [
-        'A. Pneumonia patient with BP 88/50, HR 124, confused',
-        'B. COPD patient with SpO₂ 90% on 2 L nasal cannula',
-        'C. Postoperative patient reporting pain 8/10',
-        'D. Client with fever 38.3°C receiving antibiotics'
-      ],
-      correctAnswer: 'A',
-      rationale:
-        'Hypotension + tachycardia + altered mentation indicate immediate perfusion threat and likely shock (ABCs/Circulation priority).',
-      difficulty: 'medium'
-    },
-    {
-      type: 'sata',
-      category: 'Case Studies',
-      subcategory: 'Layered Case Study',
-      questionText:
-        "The pneumonia patient's condition worsens (BP 84/48, HR 126, RR 28, SpO₂ 90% on 2 L, urine output 20 mL/hr). Which interventions should be implemented immediately? (Select all that apply).",
-      options: [
-        'A. Increase oxygen to 4 L nasal cannula',
-        'B. Administer 30 mL/kg IV normal saline bolus',
-        'C. Place the client in Trendelenburg position',
-        'D. Obtain blood cultures',
-        'E. Prepare to administer IV broad-spectrum antibiotics',
-        'F. Restrict fluids'
-      ],
-      correctAnswer: ['A', 'B', 'D', 'E'],
-      rationale:
-        'Septic shock priorities: oxygen support, rapid fluid resuscitation, blood cultures, and early broad-spectrum antibiotics. Trendelenburg is not recommended; fluid restriction is inappropriate with hypotension/low urine output.',
-      difficulty: 'hard'
-    },
-    {
-      type: 'multiple-choice',
-      category: 'Case Studies',
-      subcategory: 'Layered Case Study',
-      questionText:
-        'Despite fluid bolus, client remains hypotensive (BP 82/46, HR 132). Provider prescribes norepinephrine infusion. Which action is most appropriate?',
-      options: [
-        'A. Administer norepinephrine through a peripheral IV at maximum rate',
-        'B. Initiate infusion using an infusion pump and titrate to maintain MAP ≥ 65',
-        'C. Administer the medication as a rapid IV push',
-        'D. Hold the medication until blood pressure improves'
-      ],
-      correctAnswer: 'B',
-      rationale:
-        'Norepinephrine is first-line vasopressor in septic shock. Administer by controlled infusion pump and titrate to perfusion target (commonly MAP ≥ 65), with close monitoring.',
-      difficulty: 'hard'
-    },
-    {
-      type: 'multiple-choice',
-      category: 'Case Studies',
-      subcategory: 'Layered Case Study',
-      questionText:
-        "After treatment (BP 104/66, HR 98, urine output 45 mL/hr, SpO₂ 95% on 3 L), which finding best indicates improved hemodynamic stability?",
-      options: [
-        'A. Decreased heart rate',
-        'B. Urine output greater than 30 mL/hr',
-        'C. Improved oxygen saturation',
-        'D. Normal temperature'
-      ],
-      correctAnswer: 'B',
-      rationale:
-        'Urine output > 30 mL/hr is a strong perfusion endpoint and best marker of improved hemodynamic stability.\n\nReasoning Tip:\nHemodynamic instability clues: ↓ BP/soft BP, ↑ HR, ↑ RR, confusion, urine output < 30 mL/hr, cool clammy (some shocks) or warm vasodilated (early sepsis).\nSeptic shock priorities: O₂ → fluids 30 mL/kg → cultures → antibiotics → vasopressor to MAP ≥ 65 → monitor perfusion (UO/mentation/lactate reduction).',
-      difficulty: 'medium'
-    }
-  ],
-  isActive: true
-};
 
 const CaseStudyBuilder = () => {
   const navigate = useNavigate();
@@ -409,30 +285,12 @@ const CaseStudyBuilder = () => {
     }
   };
 
-  const loadHemodynamicTemplate = () => {
-    setCaseStudy({
-      ...HEMODYNAMIC_LAYERED_TEMPLATE
-    });
-    setActiveTab('details');
-    setEditingQuestionIndex(-1);
-    setCurrentQuestion(getEmptyQuestion());
-    setActiveQuestionTab('new');
-    setError('');
-  };
-
   if (loading && isEditing) return <div>Loading case study...</div>;
 
   return (
     <div className="case-study-builder">
       <h2>{isEditing ? 'Edit Case Study' : 'Create New Case Study'}</h2>
       {error && <div className="alert alert-danger">{error}</div>}
-      {!isEditing && (
-        <div className="mb-3">
-          <button type="button" className="btn btn-outline-primary" onClick={loadHemodynamicTemplate}>
-            Load Layered Septic-Shock Template
-          </button>
-        </div>
-      )}
 
       <div className="builder-tabs">
         <button
