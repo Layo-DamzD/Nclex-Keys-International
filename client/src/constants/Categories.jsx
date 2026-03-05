@@ -1,6 +1,6 @@
 export const CATEGORIES = {
   "Case Studies": [
-    "6-Question Case Study",
+    "Layered Case Study",
     "Trend",
     "Bowtie"
   ],

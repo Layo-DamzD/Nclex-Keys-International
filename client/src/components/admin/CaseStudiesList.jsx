@@ -42,7 +42,7 @@ const CaseStudiesList = () => {
 
   const getTypeLabel = (type) => {
     const labels = {
-      '6-question': '6-Question',
+      '6-question': 'Layered',
       'bowtie': 'Bowtie',
       'trend': 'Trend',
       'matrix': 'Matrix'

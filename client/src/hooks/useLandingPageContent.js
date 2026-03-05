@@ -43,11 +43,31 @@ const useLandingPageContent = (pageKey) => {
           },
         });
         if (!active) return;
+        const isObjectPayload =
+          res &&
+          res.data &&
+          typeof res.data === 'object' &&
+          !Array.isArray(res.data);
+
+        // Guard against misrouted deployments returning index.html with 200.
+        if (!isObjectPayload || (!Object.prototype.hasOwnProperty.call(res.data, 'config') && !Object.prototype.hasOwnProperty.call(res.data, 'hasSavedConfig'))) {
+          throw new Error('Invalid landing-page API payload');
+        }
+
         const payload = {
           hasSavedConfig: Boolean(res.data.hasSavedConfig),
           config: res.data.config || null,
           cachedAt: Date.now()
         };
+        // Do not overwrite a valid cache with empty/null payloads from transient backend issues.
+        if (!payload.hasSavedConfig && !payload.config) {
+          const cached = readCachedConfig();
+          if (cached?.config) {
+            setHasSavedConfig(Boolean(cached.hasSavedConfig));
+            setConfig(cached.config || null);
+            return;
+          }
+        }
         setHasSavedConfig(payload.hasSavedConfig);
         setConfig(payload.config);
         writeCachedConfig(payload);

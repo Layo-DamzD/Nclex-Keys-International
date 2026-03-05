@@ -139,6 +139,7 @@ const TestSession = () => {
   // Drag & drop state (non‑case)
   const [dragItems, setDragItems] = useState([]);
   const [caseDragItems, setCaseDragItems] = useState({});
+  const hideInProgressAnswerHints = Boolean(settings?.tutorMode || settings?.timed);
 
   // Timer effect
   useEffect(() => {
@@ -778,7 +779,7 @@ const TestSession = () => {
                     disabled={isPaused}
                     onChange={(e) => handleCaseAnswer(subQId, e.target.value)}
                   />
-                  {subQ.correctAnswer?.includes(';') && (
+                  {!hideInProgressAnswerHints && subQ.correctAnswer?.includes(';') && (
                     <small className="text-muted mt-2 d-block">
                       Acceptable answers: {subQ.correctAnswer.split(';').map(s => s.trim()).join(', ')}
                     </small>
@@ -986,7 +987,7 @@ const TestSession = () => {
               disabled={isPaused}
               onChange={(e) => handleAnswer(currentQ._id, e.target.value)}
             />
-            {currentQ.correctAnswer?.includes(';') && (
+            {!hideInProgressAnswerHints && currentQ.correctAnswer?.includes(';') && (
               <small className="text-muted mt-2 d-block">
                 Acceptable answers: {currentQ.correctAnswer.split(';').map(s => s.trim()).join(', ')}
               </small>
