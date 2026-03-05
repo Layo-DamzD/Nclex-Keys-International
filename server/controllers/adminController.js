@@ -94,7 +94,7 @@ const getQuestions = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .select('questionText type category subcategory difficulty timesUsed correctAttempts incorrectAttempts');
+      .select('questionText type category subcategory difficulty timesUsed correctAttempts incorrectAttempts caseStudyId');
 
     const total = await Question.countDocuments(filter);
 

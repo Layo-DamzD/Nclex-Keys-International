@@ -201,6 +201,14 @@ const parseLines = (value) =>
     .map((line) => line.trim())
     .filter(Boolean);
 
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.readAsDataURL(file);
+  });
+
 const resolveMediaUrl = (rawUrl) => {
   const url = String(rawUrl || '').trim();
   if (!url) return '';
@@ -280,7 +288,7 @@ const LandingPageStudio = () => {
     setError('');
   };
 
-  const uploadImageAsset = async ({ file, fieldKey, onUploaded }) => {
+  const uploadImageAsset = async ({ file, fieldKey, onUploaded, embedAsDataUrl = false }) => {
     if (!file) return;
     if (!String(file.type || '').startsWith('image/')) {
       setError('Please select an image file (jpg, png, webp, etc).');
@@ -292,6 +300,16 @@ const LandingPageStudio = () => {
     setStatus('');
 
     try {
+      if (embedAsDataUrl) {
+        const dataUrl = await fileToDataUrl(file);
+        if (!dataUrl) {
+          throw new Error('Image could not be embedded');
+        }
+        onUploaded(dataUrl);
+        setStatus('Image uploaded successfully');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('file', file);
 
@@ -615,6 +633,7 @@ const LandingPageStudio = () => {
                     onChange={(e) =>
                       onImageInputChange(e, {
                         fieldKey: `testimonial-${index}`,
+                        embedAsDataUrl: true,
                         onUploaded: (uploadedUrl) =>
                           mutateConfig((next) => {
                             next.sections.testimonials.items[index].avatar = uploadedUrl;

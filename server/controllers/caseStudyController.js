@@ -1,4 +1,25 @@
 const CaseStudy = require('../models/CaseStudy');
+const Question = require('../models/Question');
+
+const normalizeCaseStudyQuestions = (questions, category, subcategory) =>
+  (Array.isArray(questions) ? questions : []).map((q) => ({
+    ...q,
+    category,
+    subcategory
+  }));
+
+const buildLinkedQuestionPayload = (caseStudyDoc) => ({
+  type: 'case-study',
+  category: caseStudyDoc.category,
+  subcategory: caseStudyDoc.subcategory,
+  questionText: caseStudyDoc.title,
+  rationale: caseStudyDoc.scenario,
+  difficulty: 'medium',
+  scenario: caseStudyDoc.scenario,
+  sections: Array.isArray(caseStudyDoc.sections) ? caseStudyDoc.sections : [],
+  questions: Array.isArray(caseStudyDoc.questions) ? caseStudyDoc.questions : [],
+  caseStudyId: caseStudyDoc._id
+});
 
 // @desc    Get all case studies
 // @route   GET /api/admin/case-studies
@@ -7,7 +28,7 @@ const getCaseStudies = async (req, res) => {
   try {
     const caseStudies = await CaseStudy.find()
       .sort({ createdAt: -1 })
-      .select('title type createdAt isActive');
+      .select('title type category subcategory createdAt isActive linkedQuestionId');
     res.json(caseStudies);
   } catch (error) {
     console.error(error);
@@ -36,11 +57,23 @@ const getCaseStudy = async (req, res) => {
 // @access  Private (admin only)
 const createCaseStudy = async (req, res) => {
   try {
+    const payload = { ...req.body };
+    if (!payload.title || !payload.scenario || !payload.category || !payload.subcategory) {
+      return res.status(400).json({ message: 'Title, scenario, category, and subcategory are required' });
+    }
+
+    payload.questions = normalizeCaseStudyQuestions(payload.questions, payload.category, payload.subcategory);
+
     const caseStudy = new CaseStudy({
-      ...req.body,
+      ...payload,
       createdBy: req.user.id
     });
     await caseStudy.save();
+
+    const linkedQuestion = await Question.create(buildLinkedQuestionPayload(caseStudy));
+    caseStudy.linkedQuestionId = linkedQuestion._id;
+    await caseStudy.save();
+
     res.status(201).json(caseStudy);
   } catch (error) {
     console.error(error);
@@ -53,14 +86,38 @@ const createCaseStudy = async (req, res) => {
 // @access  Private (admin only)
 const updateCaseStudy = async (req, res) => {
   try {
-    const caseStudy = await CaseStudy.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const caseStudy = await CaseStudy.findById(req.params.id);
     if (!caseStudy) {
       return res.status(404).json({ message: 'Case study not found' });
     }
+
+    const nextCategory = req.body.category || caseStudy.category;
+    const nextSubcategory = req.body.subcategory || caseStudy.subcategory;
+    const nextQuestions = normalizeCaseStudyQuestions(req.body.questions, nextCategory, nextSubcategory);
+
+    Object.assign(caseStudy, {
+      ...req.body,
+      category: nextCategory,
+      subcategory: nextSubcategory,
+      questions: nextQuestions
+    });
+    await caseStudy.save();
+
+    const linkedPayload = buildLinkedQuestionPayload(caseStudy);
+    if (caseStudy.linkedQuestionId) {
+      await Question.findByIdAndUpdate(caseStudy.linkedQuestionId, linkedPayload, { runValidators: true });
+    } else {
+      const existingLinked = await Question.findOne({ caseStudyId: caseStudy._id, type: 'case-study' });
+      if (existingLinked) {
+        await Question.findByIdAndUpdate(existingLinked._id, linkedPayload, { runValidators: true });
+        caseStudy.linkedQuestionId = existingLinked._id;
+      } else {
+        const created = await Question.create(linkedPayload);
+        caseStudy.linkedQuestionId = created._id;
+      }
+      await caseStudy.save();
+    }
+
     res.json(caseStudy);
   } catch (error) {
     console.error(error);
@@ -77,6 +134,13 @@ const deleteCaseStudy = async (req, res) => {
     if (!caseStudy) {
       return res.status(404).json({ message: 'Case study not found' });
     }
+
+    if (caseStudy.linkedQuestionId) {
+      await Question.findByIdAndDelete(caseStudy.linkedQuestionId);
+    } else {
+      await Question.deleteMany({ caseStudyId: caseStudy._id, type: 'case-study' });
+    }
+
     await caseStudy.deleteOne();
     res.json({ message: 'Case study deleted successfully' });
   } catch (error) {

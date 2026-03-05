@@ -13,7 +13,7 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
 
   const categories = ['', ...Object.keys(CATEGORIES)];
-  const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix'];
+  const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'case-study'];
 
   useEffect(() => {
     fetchQuestions();
@@ -71,6 +71,17 @@ const ManageQuestions = ({ onSectionChange }) => {
   };
 
   const handleEdit = (question) => {
+    if (question.type === 'case-study' && question.caseStudyId) {
+      navigate('/admin/dashboard', {
+        state: {
+          section: 'case-studies',
+          caseStudyId: question.caseStudyId
+        }
+      });
+      if (onSectionChange) onSectionChange('case-studies');
+      return;
+    }
+
     // Navigate to upload page with question data for editing
     navigate('/admin/dashboard', { 
       state: { 
@@ -101,6 +112,7 @@ const ManageQuestions = ({ onSectionChange }) => {
       highlight: 'Highlight',
       'drag-drop': 'Drag',
       matrix: 'Matrix',
+      'case-study': 'Case Study',
     };
     return labels[type] || type;
   };
@@ -132,6 +144,8 @@ const ManageQuestions = ({ onSectionChange }) => {
         return 'badge-warning';
       case 'matrix':
         return 'badge-info';
+      case 'case-study':
+        return 'badge-primary';
       default:
         return 'badge-info';
     }

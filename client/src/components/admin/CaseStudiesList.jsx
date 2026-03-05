@@ -82,6 +82,8 @@ const CaseStudiesList = () => {
               <tr>
                 <th>Title</th>
                 <th>Type</th>
+                <th>Section</th>
+                <th>Sub Section</th>
                 <th>Created</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -94,6 +96,8 @@ const CaseStudiesList = () => {
                   <td>
                     <span className="badge badge-info">{getTypeLabel(cs.type)}</span>
                   </td>
+                  <td>{cs.category || '-'}</td>
+                  <td>{cs.subcategory || '-'}</td>
                   <td>{new Date(cs.createdAt).toLocaleDateString()}</td>
                   <td>
                     <span className={`badge ${cs.isActive ? 'badge-success' : 'badge-danger'}`}>

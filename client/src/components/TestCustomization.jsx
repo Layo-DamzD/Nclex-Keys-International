@@ -16,6 +16,20 @@ const TestCustomization = () => {
   const [countLoadError, setCountLoadError] = useState('');
   const navigate = useNavigate();
 
+  const handleTimedToggle = (checked) => {
+    setTimed(checked);
+    if (checked) {
+      setTutorMode(false);
+    }
+  };
+
+  const handleTutorToggle = (checked) => {
+    setTutorMode(checked);
+    if (checked) {
+      setTimed(false);
+    }
+  };
+
   const normalizeKey = (value) => {
     const base = String(value || '')
       .trim()
@@ -171,7 +185,7 @@ const TestCustomization = () => {
       {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
       <form onSubmit={handleSubmit}>
         <div className="categories-section">
-          <label>Categories & Subcategories (Total Questions)</label>
+          <label>Categories & Subcategories</label>
           <div className="category-grid">
             {categoryColumns.map((column, colIndex) => (
               <div key={colIndex} className="category-column">
@@ -252,7 +266,7 @@ const TestCustomization = () => {
                 type="checkbox"
                 id="timedSwitch"
                 checked={timed}
-                onChange={(e) => setTimed(e.target.checked)}
+                onChange={(e) => handleTimedToggle(e.target.checked)}
               />
               <label className="form-check-label" htmlFor="timedSwitch">Timed</label>
             </div>
@@ -263,7 +277,7 @@ const TestCustomization = () => {
                 type="checkbox"
                 id="tutorSwitch"
                 checked={tutorMode}
-                onChange={(e) => setTutorMode(e.target.checked)}
+                onChange={(e) => handleTutorToggle(e.target.checked)}
               />
               <label className="form-check-label" htmlFor="tutorSwitch">Tutor</label>
             </div>

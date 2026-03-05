@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const caseStudySchema = new mongoose.Schema({
   title: { type: String, required: true },
+  category: { type: String, required: true },
+  subcategory: { type: String, required: true },
   scenario: { type: String, required: true }, // The patient scenario
   type: { 
     type: String, 
@@ -41,6 +43,7 @@ const caseStudySchema = new mongoose.Schema({
     }]
   }],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  linkedQuestionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Question' },
   createdAt: { type: Date, default: Date.now },
   isActive: { type: Boolean, default: true }
 });

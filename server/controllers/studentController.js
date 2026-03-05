@@ -225,11 +225,20 @@ const generateTest = async (req, res) => {
       { $sample: { size: questionCount } }
     ]);
 
-    const formattedQuestions = questions.map(q => ({
+    const formattedQuestions = questions.map((q) => ({
       _id: q._id,
       type: q.type,
       questionText: q.questionText,
       options: q.options,
+      category: q.category,
+      subcategory: q.subcategory,
+      ...(q.type === 'case-study'
+        ? {
+            scenario: q.scenario,
+            sections: Array.isArray(q.sections) ? q.sections : [],
+            questions: Array.isArray(q.questions) ? q.questions : []
+          }
+        : {}),
       ...(tutorMode && { correctAnswer: q.correctAnswer, rationale: q.rationale })
     }));
 

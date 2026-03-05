@@ -6,6 +6,30 @@ const matrixRowSchema = new mongoose.Schema({
   correctColumn: { type: Number, required: true } // index of correct column (0-based)
 }, { _id: false });
 
+const caseStudySectionSchema = new mongoose.Schema({
+  title: { type: String, default: '' },
+  content: { type: String, default: '' }
+}, { _id: false });
+
+const caseStudyQuestionSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix'],
+    required: true
+  },
+  category: { type: String, default: '' },
+  subcategory: { type: String, default: '' },
+  questionText: { type: String, default: '' },
+  options: [String],
+  correctAnswer: mongoose.Schema.Types.Mixed,
+  rationale: { type: String, default: '' },
+  difficulty: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },
+  highlightStart: Number,
+  highlightEnd: Number,
+  matrixRows: [matrixRowSchema],
+  matrixColumns: [String]
+}, { _id: true });
+
 const questionSchema = new mongoose.Schema({
   type: {
     type: String,
@@ -33,6 +57,12 @@ const questionSchema = new mongoose.Schema({
   // Matrix-specific fields
   matrixRows: [matrixRowSchema],
   matrixColumns: [String],
+
+  // Case-study-specific fields
+  caseStudyId: { type: mongoose.Schema.Types.ObjectId, ref: 'CaseStudy' },
+  scenario: String,
+  sections: [caseStudySectionSchema],
+  questions: [caseStudyQuestionSchema],
   
   // Highlight-specific fields
   highlightStart: Number,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
 
@@ -20,8 +20,10 @@ const QUESTION_TYPES = [
 
 const CaseStudyBuilder = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams(); // for editing
-  const isEditing = !!id;
+  const editingId = id || location?.state?.caseStudyId || '';
+  const isEditing = Boolean(editingId);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,6 +32,8 @@ const CaseStudyBuilder = () => {
   // Case study data
   const [caseStudy, setCaseStudy] = useState({
     title: '',
+    category: '',
+    subcategory: '',
     type: '6-question',
     scenario: '',
     sections: [],
@@ -51,18 +55,19 @@ const CaseStudyBuilder = () => {
     highlightStart: 0,
     highlightEnd: 0,
   });
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState(-1);
 
   useEffect(() => {
     if (isEditing) {
       fetchCaseStudy();
     }
-  }, [id]);
+  }, [editingId]);
 
   const fetchCaseStudy = async () => {
     setLoading(true);
     try {
       const token = sessionStorage.getItem('adminToken');
-      const response = await axios.get(`/api/admin/case-studies/${id}`, {
+      const response = await axios.get(`/api/admin/case-studies/${editingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCaseStudy(response.data);
@@ -146,10 +151,24 @@ const CaseStudyBuilder = () => {
       return;
     }
 
-    setCaseStudy(prev => ({
-      ...prev,
-      questions: [...prev.questions, { ...currentQuestion }]
-    }));
+    const normalizedQuestion = {
+      ...currentQuestion,
+      category: caseStudy.category,
+      subcategory: caseStudy.subcategory,
+    };
+
+    if (editingQuestionIndex >= 0) {
+      setCaseStudy((prev) => ({
+        ...prev,
+        questions: prev.questions.map((q, idx) => (idx === editingQuestionIndex ? normalizedQuestion : q))
+      }));
+      setEditingQuestionIndex(-1);
+    } else {
+      setCaseStudy((prev) => ({
+        ...prev,
+        questions: [...prev.questions, normalizedQuestion]
+      }));
+    }
 
     // Reset question form
     setCurrentQuestion({
@@ -169,6 +188,39 @@ const CaseStudyBuilder = () => {
       ...prev,
       questions: prev.questions.filter((_, i) => i !== index)
     }));
+    if (editingQuestionIndex === index) {
+      setEditingQuestionIndex(-1);
+      setCurrentQuestion({
+        type: 'multiple-choice',
+        questionText: '',
+        options: ['', '', '', ''],
+        correctAnswer: '',
+        rationale: '',
+        difficulty: 'medium',
+        highlightStart: 0,
+        highlightEnd: 0,
+      });
+    }
+  };
+
+  const editQuestion = (index) => {
+    const nextQuestion = caseStudy.questions[index];
+    if (!nextQuestion) return;
+
+    setCurrentQuestion({
+      type: nextQuestion.type || 'multiple-choice',
+      questionText: nextQuestion.questionText || '',
+      options: Array.isArray(nextQuestion.options) && nextQuestion.options.length ? nextQuestion.options : ['', '', '', ''],
+      correctAnswer: nextQuestion.correctAnswer ?? '',
+      rationale: nextQuestion.rationale || '',
+      difficulty: nextQuestion.difficulty || 'medium',
+      highlightStart: Number(nextQuestion.highlightStart || 0),
+      highlightEnd: Number(nextQuestion.highlightEnd || 0),
+      matrixColumns: Array.isArray(nextQuestion.matrixColumns) ? nextQuestion.matrixColumns : [],
+      matrixRows: Array.isArray(nextQuestion.matrixRows) ? nextQuestion.matrixRows : [],
+    });
+    setEditingQuestionIndex(index);
+    setActiveTab('questions');
   };
 
   const handleSubmit = async (e) => {
@@ -177,6 +229,10 @@ const CaseStudyBuilder = () => {
     // Validate
     if (!caseStudy.title) {
       setError('Please enter a title');
+      return;
+    }
+    if (!caseStudy.category || !caseStudy.subcategory) {
+      setError('Please select a section and sub section');
       return;
     }
     if (!caseStudy.scenario) {
@@ -194,7 +250,7 @@ const CaseStudyBuilder = () => {
     try {
       const token = sessionStorage.getItem('adminToken');
       if (isEditing) {
-        await axios.put(`/api/admin/case-studies/${id}`, caseStudy, {
+        await axios.put(`/api/admin/case-studies/${editingId}`, caseStudy, {
           headers: { Authorization: `Bearer ${token}` }
         });
         alert('Case study updated successfully');
@@ -267,6 +323,39 @@ const CaseStudyBuilder = () => {
               >
                 {CASE_STUDY_TYPES.map(type => (
                   <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Section (Category)</label>
+              <select
+                name="category"
+                className="form-control"
+                value={caseStudy.category}
+                onChange={(e) => setCaseStudy((prev) => ({ ...prev, category: e.target.value, subcategory: '' }))}
+                required
+              >
+                <option value="">Select Section</option>
+                {Object.keys(CATEGORIES).map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Sub Section (Subcategory)</label>
+              <select
+                name="subcategory"
+                className="form-control"
+                value={caseStudy.subcategory}
+                onChange={handleCaseStudyChange}
+                disabled={!caseStudy.category}
+                required
+              >
+                <option value="">Select Sub Section</option>
+                {(CATEGORIES[caseStudy.category] || []).map((sub) => (
+                  <option key={sub} value={sub}>{sub}</option>
                 ))}
               </select>
             </div>
@@ -378,13 +467,22 @@ const CaseStudyBuilder = () => {
                   <div className="card-body">
                     <div className="d-flex justify-content-between">
                       <h6>Question {index + 1}: {q.questionText.substring(0, 50)}...</h6>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger"
-                        onClick={() => removeQuestion(index)}
-                      >
-                        Remove
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-primary"
+                          onClick={() => editQuestion(index)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger"
+                          onClick={() => removeQuestion(index)}
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                     <span className="badge badge-info">{q.type}</span>
                   </div>
@@ -393,7 +491,7 @@ const CaseStudyBuilder = () => {
             </div>
 
             <div className="add-question-form">
-              <h5>Add New Question</h5>
+              <h5>{editingQuestionIndex >= 0 ? `Edit Question ${editingQuestionIndex + 1}` : 'Add New Question'}</h5>
               
               <div className="form-group">
                 <label className="form-label">Question Type</label>
@@ -546,8 +644,29 @@ const CaseStudyBuilder = () => {
               </div>
 
               <button type="button" className="btn btn-primary" onClick={addQuestion}>
-                Add Question to Case Study
+                {editingQuestionIndex >= 0 ? 'Save Question Changes' : 'Add Question to Case Study'}
               </button>
+              {editingQuestionIndex >= 0 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary ms-2"
+                  onClick={() => {
+                    setEditingQuestionIndex(-1);
+                    setCurrentQuestion({
+                      type: 'multiple-choice',
+                      questionText: '',
+                      options: ['', '', '', ''],
+                      correctAnswer: '',
+                      rationale: '',
+                      difficulty: 'medium',
+                      highlightStart: 0,
+                      highlightEnd: 0,
+                    });
+                  }}
+                >
+                  Cancel Edit
+                </button>
+              )}
             </div>
 
             <div className="mt-4 d-flex justify-content-between">

@@ -5,9 +5,30 @@ const useLandingPageContent = (pageKey) => {
   const [config, setConfig] = useState(null);
   const [hasSavedConfig, setHasSavedConfig] = useState(false);
   const [loading, setLoading] = useState(true);
+  const cacheKey = `landing-page-cache:${pageKey}`;
 
   useEffect(() => {
     let active = true;
+
+    const readCachedConfig = () => {
+      try {
+        const raw = localStorage.getItem(cacheKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    };
+
+    const writeCachedConfig = (payload) => {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(payload));
+      } catch {
+        // Ignore storage errors
+      }
+    };
 
     const load = async ({ silent = false } = {}) => {
       if (!silent) {
@@ -22,13 +43,25 @@ const useLandingPageContent = (pageKey) => {
           },
         });
         if (!active) return;
-        setHasSavedConfig(Boolean(res.data.hasSavedConfig));
-        setConfig(res.data.config || null);
+        const payload = {
+          hasSavedConfig: Boolean(res.data.hasSavedConfig),
+          config: res.data.config || null,
+          cachedAt: Date.now()
+        };
+        setHasSavedConfig(payload.hasSavedConfig);
+        setConfig(payload.config);
+        writeCachedConfig(payload);
       } catch (error) {
         if (!active) return;
         console.error(`Failed to load landing page config for ${pageKey}:`, error);
-        setHasSavedConfig(false);
-        setConfig(null);
+        const cached = readCachedConfig();
+        if (cached) {
+          setHasSavedConfig(Boolean(cached.hasSavedConfig));
+          setConfig(cached.config || null);
+        } else {
+          setHasSavedConfig(false);
+          setConfig(null);
+        }
       } finally {
         if (active) setLoading(false);
       }
