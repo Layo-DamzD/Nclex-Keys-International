@@ -84,29 +84,64 @@ const exportQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getQuestions = async (req, res) => {
   try {
-    const { category, subcategory, type, page = 1, limit = 10 } = req.query;
+    const { category, subcategory, type } = req.query;
+    const rawPage = Number(req.query.page || 1);
+    const rawLimit = String(req.query.limit || '10').trim().toLowerCase();
+    const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+    const includeAll = rawLimit === 'all';
+    const parsedLimit = Number(rawLimit);
+    const limit = includeAll ? 0 : (Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10);
     const filter = {};
     if (category) filter.category = category;
     if (subcategory) filter.subcategory = subcategory;
     if (type) filter.type = type;
 
-    const questions = await Question.find(filter)
+    const total = await Question.countDocuments(filter);
+    let query = Question.find(filter)
       .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
       .select('questionText type category subcategory difficulty timesUsed correctAttempts incorrectAttempts caseStudyId');
 
-    const total = await Question.countDocuments(filter);
+    if (!includeAll) {
+      query = query.limit(limit).skip((page - 1) * limit);
+    }
+
+    const questions = await query;
+    const totalPages = includeAll ? 1 : Math.max(1, Math.ceil(total / limit));
 
     res.json({
       questions,
-      totalPages: Math.ceil(total / limit),
+      totalPages,
       currentPage: page,
       total
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Bulk delete questions by IDs
+// @route   POST /api/admin/questions/bulk-delete
+// @access  Private (admin only)
+const bulkDeleteQuestions = async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.map((id) => String(id || '').trim()).filter(Boolean)
+      : [];
+
+    if (!ids.length) {
+      return res.status(400).json({ message: 'No question IDs provided' });
+    }
+
+    const result = await Question.deleteMany({ _id: { $in: ids } });
+    return res.json({
+      message: `Deleted ${result.deletedCount || 0} question(s)`,
+      deletedCount: result.deletedCount || 0,
+      requestedCount: ids.length
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -1742,6 +1777,7 @@ module.exports = {
   exportQuestions,
   getQuestions,
   getQuestionById,
+  bulkDeleteQuestions,
   getRecentQuestions,
   deleteQuestion,
   updateQuestion,

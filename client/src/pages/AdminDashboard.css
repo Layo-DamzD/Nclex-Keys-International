@@ -348,11 +348,12 @@
 
 .admin-dashboard-page .manage-questions .data-table {
   width: 100%;
-  min-width: 1220px;
+  min-width: 1260px;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
+.admin-dashboard-page .manage-questions .data-table col.col-select { width: 42px; }
 .admin-dashboard-page .manage-questions .data-table col.col-id { width: 84px; }
 .admin-dashboard-page .manage-questions .data-table col.col-question { width: 330px; }
 .admin-dashboard-page .manage-questions .data-table col.col-type { width: 92px; }
@@ -361,7 +362,7 @@
 .admin-dashboard-page .manage-questions .data-table col.col-difficulty { width: 96px; }
 .admin-dashboard-page .manage-questions .data-table col.col-times { width: 90px; }
 .admin-dashboard-page .manage-questions .data-table col.col-success { width: 108px; }
-.admin-dashboard-page .manage-questions .data-table col.col-actions { width: 150px; }
+.admin-dashboard-page .manage-questions .data-table col.col-actions { width: 220px; }
 
 .admin-dashboard-page .manage-questions .data-table thead th {
   padding: 12px 14px;

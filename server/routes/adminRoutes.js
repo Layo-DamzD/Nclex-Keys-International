@@ -6,6 +6,7 @@ const {
   exportQuestions,
   getQuestions,
   getQuestionById,
+  bulkDeleteQuestions,
   getRecentQuestions,
   deleteQuestion,
   createQuestion,
@@ -60,6 +61,7 @@ router.get('/questions/export', protect, adminOnly, exportQuestions);
 router.get('/questions/recent', protect, adminOnly, getRecentQuestions);
 router.get('/questions', protect, adminOnly, getQuestions);
 router.get('/questions/:id', protect, adminOnly, getQuestionById);
+router.post('/questions/bulk-delete', protect, adminOnly, bulkDeleteQuestions);
 router.delete('/questions/:id', protect, adminOnly, deleteQuestion);
 router.post('/questions', protect, adminOnly, createQuestion);
 router.put('/questions/:id', protect, adminOnly, updateQuestion);

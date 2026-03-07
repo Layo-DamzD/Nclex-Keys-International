@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
-import CaseStudiesList from '../admin/CaseStudiesList';
 
 const ManageQuestions = ({ onSectionChange }) => {
   const navigate = useNavigate();
@@ -10,7 +9,7 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
   const [filters, setFilters] = useState({ category: '', type: '' });
-  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, perPage: '25' });
   const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
   const [previewQuestion, setPreviewQuestion] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -20,7 +19,7 @@ const ManageQuestions = ({ onSectionChange }) => {
 
   useEffect(() => {
     fetchQuestions();
-  }, [filters, pagination.page]);
+  }, [filters, pagination.page, pagination.perPage]);
 
   const fetchQuestions = async () => {
     setLoading(true);
@@ -30,7 +29,7 @@ const ManageQuestions = ({ onSectionChange }) => {
       const token = sessionStorage.getItem('adminToken');
       const params = new URLSearchParams({
         page: String(pagination.page),
-        limit: '10',
+        limit: pagination.perPage,
         ...(filters.category && { category: filters.category }),
         ...(filters.type && { type: filters.type }),
       });
@@ -43,7 +42,7 @@ const ManageQuestions = ({ onSectionChange }) => {
       setSelectedQuestionIds([]);
       setPagination((prev) => ({
         ...prev,
-        totalPages: response.data?.totalPages || 1,
+        totalPages: Math.max(1, response.data?.totalPages || 1),
         total: response.data?.total || 0,
       }));
     } catch (error) {
@@ -162,17 +161,15 @@ const ManageQuestions = ({ onSectionChange }) => {
     if (!window.confirm(`Delete ${selectedQuestionIds.length} selected question(s)?`)) return;
     try {
       const token = sessionStorage.getItem('adminToken');
-      const results = await Promise.allSettled(
-        selectedQuestionIds.map((id) =>
-          axios.delete(`/api/admin/questions/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-        )
+      const response = await axios.post(
+        '/api/admin/questions/bulk-delete',
+        { ids: selectedQuestionIds },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      const successCount = results.filter((r) => r.status === 'fulfilled').length;
-      const failCount = results.length - successCount;
-      if (failCount > 0) {
-        alert(`Deleted ${successCount} question(s). ${failCount} failed.`);
+      const deletedCount = Number(response?.data?.deletedCount || 0);
+      const requestedCount = Number(response?.data?.requestedCount || selectedQuestionIds.length);
+      if (deletedCount < requestedCount) {
+        alert(`Deleted ${deletedCount} of ${requestedCount} selected question(s).`);
       }
       fetchQuestions();
     } catch (error) {
@@ -430,25 +427,48 @@ const ManageQuestions = ({ onSectionChange }) => {
         </div>
       )}
 
-      {pagination.totalPages > 1 && (
+      {(pagination.totalPages > 1 || pagination.total > 0) && (
         <div
           className="pagination"
-          style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px' }}
+          style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}
         >
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginRight: '8px' }}>
+            <span>Questions per page:</span>
+            <select
+              className="form-control form-control-sm"
+              value={pagination.perPage}
+              onChange={(e) =>
+                setPagination((prev) => ({
+                  ...prev,
+                  page: 1,
+                  perPage: e.target.value
+                }))
+              }
+              style={{ width: 'auto' }}
+            >
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="75">75</option>
+              <option value="100">100</option>
+              <option value="all">All</option>
+            </select>
+          </label>
           <button
             className="btn btn-sm btn-outline-primary"
-            disabled={pagination.page === 1}
+            disabled={pagination.perPage === 'all' || pagination.page === 1}
             onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
             type="button"
           >
             Previous
           </button>
           <span style={{ padding: '5px 10px' }}>
-            Page {pagination.page} of {pagination.totalPages}
+            {pagination.perPage === 'all'
+              ? `Showing all ${pagination.total} question(s)`
+              : `Page ${pagination.page} of ${pagination.totalPages}`}
           </span>
           <button
             className="btn btn-sm btn-outline-primary"
-            disabled={pagination.page === pagination.totalPages}
+            disabled={pagination.perPage === 'all' || pagination.page === pagination.totalPages}
             onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
             type="button"
           >
