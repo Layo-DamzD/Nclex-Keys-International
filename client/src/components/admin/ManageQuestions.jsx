@@ -11,6 +11,9 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [fetchError, setFetchError] = useState('');
   const [filters, setFilters] = useState({ category: '', type: '' });
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
+  const [previewQuestion, setPreviewQuestion] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const categories = ['', ...Object.keys(CATEGORIES)];
   const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
@@ -37,6 +40,7 @@ const ManageQuestions = ({ onSectionChange }) => {
       });
 
       setQuestions(response.data?.questions || []);
+      setSelectedQuestionIds([]);
       setPagination((prev) => ({
         ...prev,
         totalPages: response.data?.totalPages || 1,
@@ -70,7 +74,15 @@ const ManageQuestions = ({ onSectionChange }) => {
     }
   };
 
-  const handleEdit = (question) => {
+  const fetchFullQuestion = async (questionId) => {
+    const token = sessionStorage.getItem('adminToken');
+    const response = await axios.get(`/api/admin/questions/${questionId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  };
+
+  const handleEdit = async (question) => {
     if (question.type === 'case-study' && question.caseStudyId) {
       navigate('/admin/dashboard', {
         state: {
@@ -82,16 +94,20 @@ const ManageQuestions = ({ onSectionChange }) => {
       return;
     }
 
-    // Navigate to upload page with question data for editing
-    navigate('/admin/dashboard', { 
-      state: { 
-        section: 'upload',
-        question: question 
+    try {
+      const fullQuestion = await fetchFullQuestion(question._id);
+      navigate('/admin/dashboard', {
+        state: {
+          section: 'upload',
+          question: fullQuestion
+        }
+      });
+      if (onSectionChange) {
+        onSectionChange('upload');
       }
-    });
-    // Also call onSectionChange if needed to update active section
-    if (onSectionChange) {
-      onSectionChange('upload');
+    } catch (error) {
+      console.error('Error loading full question for edit:', error);
+      alert(error.response?.data?.message || 'Failed to load full question details');
     }
   };
 
@@ -106,32 +122,61 @@ const ManageQuestions = ({ onSectionChange }) => {
 
   const handlePreview = async (questionId) => {
     try {
-      const token = sessionStorage.getItem('adminToken');
-      const response = await axios.get(`/api/admin/questions/${questionId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const fullQuestion = response.data;
+      setPreviewLoading(true);
+      const fullQuestion = await fetchFullQuestion(questionId);
       if (!fullQuestion?._id) {
         alert('Unable to load full question for preview.');
         return;
       }
-
-      navigate('/admin/question-preview', {
-        state: {
-          questions: [fullQuestion],
-          settings: {
-            timed: false,
-            totalQuestions: 1,
-            returnTo: '/admin/dashboard?section=questions',
-            isAdminPreview: true,
-            hideExamSupport: true,
-            testTitle: 'Admin Question Preview',
-          },
-        },
-      });
+      setPreviewQuestion(fullQuestion);
     } catch (error) {
       console.error('Error loading question preview:', error);
       alert(error.response?.data?.message || 'Failed to load preview');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const toggleQuestionSelection = (questionId) => {
+    setSelectedQuestionIds((prev) =>
+      prev.includes(questionId) ? prev.filter((id) => id !== questionId) : [...prev, questionId]
+    );
+  };
+
+  const allVisibleSelected = questions.length > 0 && questions.every((q) => selectedQuestionIds.includes(q._id));
+  const toggleSelectAllVisible = () => {
+    if (!questions.length) return;
+    if (allVisibleSelected) {
+      setSelectedQuestionIds((prev) => prev.filter((id) => !questions.some((q) => q._id === id)));
+      return;
+    }
+    setSelectedQuestionIds((prev) => {
+      const merged = new Set(prev);
+      questions.forEach((q) => merged.add(q._id));
+      return Array.from(merged);
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedQuestionIds.length) return;
+    if (!window.confirm(`Delete ${selectedQuestionIds.length} selected question(s)?`)) return;
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const results = await Promise.allSettled(
+        selectedQuestionIds.map((id) =>
+          axios.delete(`/api/admin/questions/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      );
+      const successCount = results.filter((r) => r.status === 'fulfilled').length;
+      const failCount = results.length - successCount;
+      if (failCount > 0) {
+        alert(`Deleted ${successCount} question(s). ${failCount} failed.`);
+      }
+      fetchQuestions();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to delete selected questions');
     }
   };
 
@@ -187,6 +232,31 @@ const ManageQuestions = ({ onSectionChange }) => {
     }
   };
 
+  const formatAnswerForPreview = (q) => {
+    if (!q) return '';
+    if (q.type === 'multiple-choice') {
+      const letter = String(q.correctAnswer || '').trim();
+      if (!letter) return 'N/A';
+      const idx = letter.charCodeAt(0) - 65;
+      const optionText = Array.isArray(q.options) ? q.options[idx] : '';
+      return optionText ? `${letter}. ${optionText}` : letter;
+    }
+    if (q.type === 'sata') {
+      const values = Array.isArray(q.correctAnswer) ? q.correctAnswer : [];
+      if (!values.length) return 'N/A';
+      return values.join(', ');
+    }
+    if (q.type === 'cloze-dropdown' && q.correctAnswer && typeof q.correctAnswer === 'object') {
+      return Object.entries(q.correctAnswer).map(([k, v]) => `${k}: ${v}`).join(' | ');
+    }
+    if (q.type === 'matrix' && Array.isArray(q.matrixRows) && Array.isArray(q.matrixColumns)) {
+      return q.matrixRows
+        .map((row) => `${row.rowText}: ${q.matrixColumns[row.correctColumn] || row.correctColumn}`)
+        .join(' | ');
+    }
+    return Array.isArray(q.correctAnswer) ? q.correctAnswer.join(', ') : String(q.correctAnswer || 'N/A');
+  };
+
   if (loading) return <div className="text-center py-5">Loading questions...</div>;
 
   return (
@@ -221,6 +291,15 @@ const ManageQuestions = ({ onSectionChange }) => {
               </option>
             ))}
           </select>
+
+          <button
+            type="button"
+            className="btn btn-danger"
+            disabled={!selectedQuestionIds.length}
+            onClick={handleBulkDelete}
+          >
+            Delete Selected ({selectedQuestionIds.length})
+          </button>
         </div>
       </div>
 
@@ -229,6 +308,7 @@ const ManageQuestions = ({ onSectionChange }) => {
       <div className="data-table-container">
         <table className="data-table">
           <colgroup>
+            <col className="col-select" />
             <col className="col-id" />
             <col className="col-question" />
             <col className="col-type" />
@@ -241,6 +321,14 @@ const ManageQuestions = ({ onSectionChange }) => {
           </colgroup>
           <thead>
             <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={toggleSelectAllVisible}
+                  aria-label="Select all visible questions"
+                />
+              </th>
               <th>ID</th>
               <th>Question</th>
               <th>Type</th>
@@ -255,6 +343,14 @@ const ManageQuestions = ({ onSectionChange }) => {
           <tbody>
             {questions.map((q) => (
               <tr key={q._id}>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={selectedQuestionIds.includes(q._id)}
+                    onChange={() => toggleQuestionSelection(q._id)}
+                    aria-label={`Select question ${q._id}`}
+                  />
+                </td>
                 <td className="mq-id-cell">
                   <span className="mq-id-text">{q._id?.substring(0, 8)}</span>
                 </td>
@@ -299,8 +395,9 @@ const ManageQuestions = ({ onSectionChange }) => {
                     style={{ marginRight: '8px' }}
                     onClick={() => handlePreview(q._id)}
                     type="button"
+                    disabled={previewLoading}
                   >
-                    Preview
+                    {previewLoading ? 'Loading...' : 'Preview'}
                   </button>
                   <button
                     className="btn btn-sm btn-primary"
@@ -357,6 +454,41 @@ const ManageQuestions = ({ onSectionChange }) => {
           >
             Next
           </button>
+        </div>
+      )}
+
+      {previewQuestion && (
+        <div className="modal fade show d-block" tabIndex="-1" role="dialog" aria-modal="true" style={{ background: 'rgba(2,6,23,0.6)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Question Preview</h5>
+                <button type="button" className="btn-close" aria-label="Close" onClick={() => setPreviewQuestion(null)} />
+              </div>
+              <div className="modal-body">
+                <p><strong>Type:</strong> {previewQuestion.type}</p>
+                <p><strong>Category:</strong> {previewQuestion.category} / {previewQuestion.subcategory}</p>
+                <p><strong>Question:</strong> {previewQuestion.questionText}</p>
+                {Array.isArray(previewQuestion.options) && previewQuestion.options.length > 0 && (
+                  <div>
+                    <strong>Options:</strong>
+                    <ol type="A">
+                      {previewQuestion.options.map((opt, idx) => (
+                        <li key={`${previewQuestion._id}-opt-${idx}`}>{opt}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                <p><strong>Correct Answer:</strong> {formatAnswerForPreview(previewQuestion)}</p>
+                <p><strong>Rationale:</strong> {previewQuestion.rationale || 'N/A'}</p>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setPreviewQuestion(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

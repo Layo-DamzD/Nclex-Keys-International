@@ -71,11 +71,6 @@ function App() {
               <AdminTestReviewPage />
             </AdminRoute>
           } />
-          <Route path="/admin/question-preview" element={
-            <AdminRoute>
-              <TestSession />
-            </AdminRoute>
-          } />
           </Routes>
         </AppThemeProvider>
       </BrowserRouter>

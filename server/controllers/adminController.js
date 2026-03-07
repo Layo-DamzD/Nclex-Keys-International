@@ -209,9 +209,14 @@ const bulkImportQuestions = async (req, res) => {
 
     const csvText = req.file.buffer.toString();
     const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
+    const rowCount = Math.max(0, lines.length - 1);
+    const maxRowsPerImport = 500;
     
     if (lines.length < 2) {
       return res.status(400).json({ message: 'CSV file is empty or invalid' });
+    }
+    if (rowCount > maxRowsPerImport) {
+      return res.status(400).json({ message: `Maximum ${maxRowsPerImport} rows allowed per import. Found ${rowCount}.` });
     }
 
     const parseCsvLine = (line = '') => {
@@ -280,6 +285,15 @@ const bulkImportQuestions = async (req, res) => {
         options = row.options.split(';').map(o => o.trim());
       }
 
+      const toOptionLetter = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        const upper = raw.toUpperCase();
+        if (/^[A-Z]$/.test(upper)) return upper;
+        const idx = options.findIndex((opt) => String(opt || '').trim().toLowerCase() === raw.toLowerCase());
+        return idx >= 0 ? String.fromCharCode(65 + idx) : '';
+      };
+
       // Parse correctAnswer
       let correctAnswer = row.correctanswer || '';
       if (row.type === 'sata') {
@@ -287,7 +301,20 @@ const bulkImportQuestions = async (req, res) => {
           .split(/[,;]+/)
           .map(c => c.trim())
           .filter(Boolean);
-        correctAnswer = sataParts;
+        const mappedSata = sataParts.map(toOptionLetter).filter(Boolean);
+        if (!mappedSata.length) {
+          errors.push(`Row ${i + 1}: SATA correctAnswer must be option letters or option text values`);
+          continue;
+        }
+        correctAnswer = mappedSata;
+      }
+      if (row.type === 'multiple-choice') {
+        const mappedMc = toOptionLetter(correctAnswer);
+        if (!mappedMc) {
+          errors.push(`Row ${i + 1}: multiple-choice correctAnswer must match an option letter or option text`);
+          continue;
+        }
+        correctAnswer = mappedMc;
       }
       if (row.type === 'drag-drop' && (!correctAnswer || !String(correctAnswer).trim()) && options.length > 0) {
         correctAnswer = options.map((_, idx) => String.fromCharCode(65 + idx)).join(',');
