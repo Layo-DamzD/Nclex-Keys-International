@@ -110,6 +110,22 @@ const getQuestions = async (req, res) => {
   }
 };
 
+// @desc    Get full question details by ID
+// @route   GET /api/admin/questions/:id
+// @access  Private (admin only)
+const getQuestionById = async (req, res) => {
+  try {
+    const question = await Question.findById(req.params.id).lean();
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+    return res.json(question);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Delete a question
 // @route   DELETE /api/admin/questions/:id
 // @access  Private (admin only)
@@ -1686,6 +1702,7 @@ module.exports = {
   getAdminStats,
   exportQuestions,
   getQuestions,
+  getQuestionById,
   getRecentQuestions,
   deleteQuestion,
   updateQuestion,

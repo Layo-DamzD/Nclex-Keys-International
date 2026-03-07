@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useReducer } from 'react';
+import React, { useState, useEffect, useRef, useReducer, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Doughnut } from 'react-chartjs-2';
@@ -113,6 +113,8 @@ const TestSession = () => {
   const navigate = useNavigate();
   const { questions, settings } = location.state || { questions: [], settings: {} };
   const dashboardReturnPath = settings?.returnTo || '/dashboard';
+  const isAdminPreview = Boolean(settings?.isAdminPreview);
+  const hideExamSupport = Boolean(settings?.hideExamSupport || isAdminPreview);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(settings.timed ? settings.totalQuestions * 60 : null);
@@ -292,6 +294,7 @@ const TestSession = () => {
   };
 
   useEffect(() => {
+    if (hideExamSupport) return undefined;
     if (!submitted && !isBooting) {
       loadChatMessages();
     }
@@ -299,9 +302,10 @@ const TestSession = () => {
       if (!submitted && !isBooting) loadChatMessages();
     }, 5000);
     return () => clearInterval(timer);
-  }, [sessionId, submitted, isBooting]);
+  }, [sessionId, submitted, isBooting, hideExamSupport]);
 
   const sendChatMessage = async () => {
+    if (hideExamSupport) return;
     const trimmed = String(chatText || '').trim();
     if (!trimmed) return;
     try {
@@ -534,21 +538,23 @@ const TestSession = () => {
 
     setResults(allResults);
 
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post('/api/student/submit-test', {
-        testName: 'Custom Test',
-        answers: { ...answers, ...caseAnswers },
-        results: allResults,
-        totalQuestions: allResults.length,
-        timeTaken: settings.timed ? (settings.totalQuestions * 60 - timeLeft) / 60 : 0,
-        passed: allResults.filter(r => r.isCorrect).length / allResults.length >= 0.7,
-        isCustomTest: true,
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch (error) {
-      console.error('Submit failed:', error);
+    if (!isAdminPreview) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post('/api/student/submit-test', {
+          testName: 'Custom Test',
+          answers: { ...answers, ...caseAnswers },
+          results: allResults,
+          totalQuestions: allResults.length,
+          timeTaken: settings.timed ? (settings.totalQuestions * 60 - timeLeft) / 60 : 0,
+          passed: allResults.filter(r => r.isCorrect).length / allResults.length >= 0.7,
+          isCustomTest: true,
+        }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (error) {
+        console.error('Submit failed:', error);
+      }
     }
   };
 
@@ -608,7 +614,7 @@ const TestSession = () => {
 
     return (
       <div className="test-results">
-        <h3>Test Completed</h3>
+        <h3>{isAdminPreview ? 'Preview Completed' : 'Test Completed'}</h3>
         <div className="score-display d-flex align-items-center justify-content-between">
           <div className="chart-container" style={{ width: '150px', height: '150px' }}>
             <Doughnut data={chartData} options={chartOptions} />
@@ -1224,15 +1230,17 @@ const TestSession = () => {
       )}
       <CalculatorModal show={showCalculator} onClose={() => setShowCalculator(false)} />
       <div style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 1200 }}>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setChatOpen((v) => !v)}
-          style={{ borderRadius: 999 }}
-        >
-          <i className="fas fa-comments me-1"></i> Exam Support
-        </button>
-        {chatOpen && (
+        {!hideExamSupport && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setChatOpen((v) => !v)}
+            style={{ borderRadius: 999 }}
+          >
+            <i className="fas fa-comments me-1"></i> Exam Support
+          </button>
+        )}
+        {!hideExamSupport && chatOpen && (
           <div style={{ width: 320, maxWidth: '90vw', height: 360, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 12, boxShadow: '0 12px 28px rgba(15,23,42,0.2)', marginTop: 8, display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0', fontWeight: 700 }}>Live Support Chat</div>
             <div style={{ flex: 1, overflow: 'auto', padding: 8 }}>

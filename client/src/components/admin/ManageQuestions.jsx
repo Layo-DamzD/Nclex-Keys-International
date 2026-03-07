@@ -104,6 +104,37 @@ const ManageQuestions = ({ onSectionChange }) => {
     }
   };
 
+  const handlePreview = async (questionId) => {
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.get(`/api/admin/questions/${questionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const fullQuestion = response.data;
+      if (!fullQuestion?._id) {
+        alert('Unable to load full question for preview.');
+        return;
+      }
+
+      navigate('/admin/question-preview', {
+        state: {
+          questions: [fullQuestion],
+          settings: {
+            timed: false,
+            totalQuestions: 1,
+            returnTo: '/admin/dashboard?section=questions',
+            isAdminPreview: true,
+            hideExamSupport: true,
+            testTitle: 'Admin Question Preview',
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error loading question preview:', error);
+      alert(error.response?.data?.message || 'Failed to load preview');
+    }
+  };
+
   const getTypeLabel = (type) => {
     const labels = {
       'multiple-choice': 'MC',
@@ -263,6 +294,14 @@ const ManageQuestions = ({ onSectionChange }) => {
                   {getSuccessRate(q)}
                 </td>
                 <td className="mq-actions-cell">
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    style={{ marginRight: '8px' }}
+                    onClick={() => handlePreview(q._id)}
+                    type="button"
+                  >
+                    Preview
+                  </button>
                   <button
                     className="btn btn-sm btn-primary"
                     style={{ marginRight: '8px' }}
