@@ -17,7 +17,7 @@ const caseStudySchema = new mongoose.Schema({
   questions: [{
     type: { 
       type: String, 
-      enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix'],
+      enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown'],
       required: true 
     },
     questionText: String,
@@ -36,6 +36,20 @@ const caseStudySchema = new mongoose.Schema({
     bowtieCondition: [String],
     bowtieActions: [String],
     bowtieParameters: [String],
+    hotspotImageUrl: String,
+    hotspotTargets: [{
+      id: String,
+      label: String,
+      x: Number,
+      y: Number,
+      radius: Number
+    }],
+    clozeTemplate: String,
+    clozeBlanks: [{
+      key: String,
+      options: [String],
+      correctAnswer: String
+    }],
     // For trend questions
     trendData: [{
       time: String,

@@ -303,6 +303,8 @@ const CreateTest = () => {
               <option value="highlight">Highlight</option>
               <option value="drag-drop">Drag & Drop</option>
               <option value="matrix">Matrix</option>
+              <option value="hotspot">Hotspot</option>
+              <option value="cloze-dropdown">Cloze Dropdown</option>
               <option value="case-study">Case Study</option>
             </select>
           </div>

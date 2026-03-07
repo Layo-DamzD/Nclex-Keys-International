@@ -9,12 +9,19 @@ import Footer from '../components/Footer';
 import LandingLayoutRenderer from '../components/LandingLayoutRenderer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
 
+const HOME_SECTION_FALLBACK_ORDER = ['hero', 'stats', 'program', 'testimonials'];
+
 const Home = () => {
   const { config, hasSavedConfig } = useLandingPageContent('home');
   const isStructured = hasSavedConfig && config?.mode === 'structured';
-  const order = Array.isArray(config?.sectionOrder) && config.sectionOrder.length
-    ? config.sectionOrder
-    : ['hero', 'stats', 'program', 'testimonials'];
+  const incomingOrder = Array.isArray(config?.sectionOrder) ? config.sectionOrder : [];
+  const order = [
+    ...new Set(
+      [...incomingOrder, ...HOME_SECTION_FALLBACK_ORDER].filter((sectionKey) =>
+        HOME_SECTION_FALLBACK_ORDER.includes(sectionKey)
+      )
+    ),
+  ];
   const sections = config?.sections || {};
 
   useEffect(() => {

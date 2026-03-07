@@ -10,6 +10,8 @@ const QUESTION_TYPES = [
   { value: 'highlight', label: 'Highlight Text', icon: 'fas fa-highlighter' },
   { value: 'drag-drop', label: 'Drag & Drop (Ordered Response)', icon: 'fas fa-arrows-alt' },
   { value: 'matrix', label: 'Matrix', icon: 'fas fa-table' },
+  { value: 'hotspot', label: 'Hotspot', icon: 'fas fa-map-marker-alt' },
+  { value: 'cloze-dropdown', label: 'Cloze Dropdown', icon: 'fas fa-caret-square-down' },
 ];
 
 const UploadQuestion = () => {
@@ -33,6 +35,14 @@ const UploadQuestion = () => {
     { rowText: '', correctColumn: 0 },
     { rowText: '', correctColumn: 0 },
     { rowText: '', correctColumn: 0 },
+  ]);
+  const [hotspotImageUrl, setHotspotImageUrl] = useState('');
+  const [hotspotTargets, setHotspotTargets] = useState([
+    { id: 'A', label: 'Target A', x: 50, y: 50, radius: 6 }
+  ]);
+  const [clozeTemplate, setClozeTemplate] = useState('');
+  const [clozeBlanks, setClozeBlanks] = useState([
+    { key: 'blank1', optionsText: '', correctAnswer: '' }
   ]);
 
   const [loading, setLoading] = useState(false);
@@ -63,7 +73,35 @@ const UploadQuestion = () => {
         { rowText: '', correctColumn: 0 },
       ],
     );
+    setHotspotImageUrl(editingQuestion.hotspotImageUrl || '');
+    setHotspotTargets(
+      Array.isArray(editingQuestion.hotspotTargets) && editingQuestion.hotspotTargets.length
+        ? editingQuestion.hotspotTargets.map((t, idx) => ({
+            id: String(t.id || `target${idx + 1}`),
+            label: String(t.label || `Target ${idx + 1}`),
+            x: Number(t.x ?? 50),
+            y: Number(t.y ?? 50),
+            radius: Number(t.radius ?? 6),
+          }))
+        : [{ id: 'A', label: 'Target A', x: 50, y: 50, radius: 6 }]
+    );
+    setClozeTemplate(editingQuestion.clozeTemplate || editingQuestion.questionText || '');
+    setClozeBlanks(
+      Array.isArray(editingQuestion.clozeBlanks) && editingQuestion.clozeBlanks.length
+        ? editingQuestion.clozeBlanks.map((b, idx) => ({
+            key: String(b.key || `blank${idx + 1}`),
+            optionsText: Array.isArray(b.options) ? b.options.join('; ') : '',
+            correctAnswer: String(b.correctAnswer || ''),
+          }))
+        : [{ key: 'blank1', optionsText: '', correctAnswer: '' }]
+    );
   }, [editingQuestion]);
+
+  useEffect(() => {
+    if (type === 'cloze-dropdown') return;
+    if (typeof correctAnswer === 'string' || Array.isArray(correctAnswer)) return;
+    setCorrectAnswer('');
+  }, [type]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCategoryChange = (e) => {
     setCategory(e.target.value);
@@ -101,7 +139,60 @@ const UploadQuestion = () => {
       { rowText: '', correctColumn: 0 },
       { rowText: '', correctColumn: 0 },
     ]);
+    setHotspotImageUrl('');
+    setHotspotTargets([{ id: 'A', label: 'Target A', x: 50, y: 50, radius: 6 }]);
+    setClozeTemplate('');
+    setClozeBlanks([{ key: 'blank1', optionsText: '', correctAnswer: '' }]);
     setError('');
+  };
+
+  const updateHotspotTarget = (index, field, value) => {
+    setHotspotTargets((prev) =>
+      prev.map((target, i) =>
+        i === index
+          ? {
+              ...target,
+              [field]: ['x', 'y', 'radius'].includes(field) ? Number(value) : value
+            }
+          : target
+      )
+    );
+  };
+
+  const addHotspotTarget = () => {
+    setHotspotTargets((prev) => [
+      ...prev,
+      {
+        id: `target${prev.length + 1}`,
+        label: `Target ${prev.length + 1}`,
+        x: 50,
+        y: 50,
+        radius: 6
+      }
+    ]);
+  };
+
+  const removeHotspotTarget = (index) => {
+    if (hotspotTargets.length <= 1) return;
+    setHotspotTargets((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateClozeBlank = (index, field, value) => {
+    setClozeBlanks((prev) =>
+      prev.map((blank, i) => (i === index ? { ...blank, [field]: value } : blank))
+    );
+  };
+
+  const addClozeBlank = () => {
+    setClozeBlanks((prev) => [
+      ...prev,
+      { key: `blank${prev.length + 1}`, optionsText: '', correctAnswer: '' }
+    ]);
+  };
+
+  const removeClozeBlank = (index) => {
+    if (clozeBlanks.length <= 1) return;
+    setClozeBlanks((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleBulkImport = async () => {
@@ -230,6 +321,101 @@ const UploadQuestion = () => {
         setLoading(false);
         return;
       }
+    } else if (type === 'hotspot') {
+      if (!hotspotImageUrl.trim()) {
+        setError('Please provide a hotspot image URL');
+        setLoading(false);
+        return;
+      }
+
+      const cleanedTargets = hotspotTargets
+        .map((target, idx) => ({
+          id: String(target.id || `target${idx + 1}`).trim(),
+          label: String(target.label || '').trim(),
+          x: Number(target.x),
+          y: Number(target.y),
+          radius: Number(target.radius || 6),
+        }))
+        .filter((target) => target.id && !Number.isNaN(target.x) && !Number.isNaN(target.y));
+
+      if (!cleanedTargets.length) {
+        setError('Please add at least one valid hotspot target');
+        setLoading(false);
+        return;
+      }
+
+      const normalizedCorrect = String(correctAnswer || '').trim();
+      if (!normalizedCorrect) {
+        setError('Please choose the correct hotspot target');
+        setLoading(false);
+        return;
+      }
+
+      if (!cleanedTargets.some((target) => target.id === normalizedCorrect)) {
+        setError('Correct hotspot target must match one target id');
+        setLoading(false);
+        return;
+      }
+
+      questionData.hotspotImageUrl = hotspotImageUrl.trim();
+      questionData.hotspotTargets = cleanedTargets.map((target) => ({
+        ...target,
+        x: Math.max(0, Math.min(100, target.x)),
+        y: Math.max(0, Math.min(100, target.y)),
+        radius: Math.max(1, Math.min(20, Number.isFinite(target.radius) ? target.radius : 6)),
+      }));
+      questionData.correctAnswer = normalizedCorrect;
+      questionData.options = [];
+    } else if (type === 'cloze-dropdown') {
+      const template = String(clozeTemplate || questionText || '').trim();
+      if (!template) {
+        setError('Please provide a cloze template');
+        setLoading(false);
+        return;
+      }
+
+      const parsedBlanks = clozeBlanks
+        .map((blank, idx) => ({
+          key: String(blank.key || `blank${idx + 1}`).trim(),
+          options: String(blank.optionsText || '')
+            .split(';')
+            .map((opt) => opt.trim())
+            .filter(Boolean),
+          correctAnswer: String(blank.correctAnswer || '').trim(),
+        }))
+        .filter((blank) => blank.key && blank.correctAnswer);
+
+      if (!parsedBlanks.length) {
+        setError('Please define at least one blank with a correct answer');
+        setLoading(false);
+        return;
+      }
+
+      for (const blank of parsedBlanks) {
+        if (blank.options.length && !blank.options.includes(blank.correctAnswer)) {
+          setError(`Correct answer for ${blank.key} must be one of its options`);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const missingTokens = parsedBlanks.filter((blank) => !template.includes(`{{${blank.key}}}`));
+      if (missingTokens.length > 0) {
+        setError(`Template is missing placeholder(s): ${missingTokens.map((b) => `{{${b.key}}}`).join(', ')}`);
+        setLoading(false);
+        return;
+      }
+
+      const correctMap = {};
+      parsedBlanks.forEach((blank) => {
+        correctMap[blank.key] = blank.correctAnswer;
+      });
+
+      questionData.questionText = template;
+      questionData.clozeTemplate = template;
+      questionData.clozeBlanks = parsedBlanks;
+      questionData.correctAnswer = correctMap;
+      questionData.options = [];
     }
 
     try {
@@ -550,6 +736,173 @@ const UploadQuestion = () => {
           </div>
         )}
 
+        {type === 'hotspot' && (
+          <div className="form-group">
+            <label className="form-label">Hotspot Image URL</label>
+            <input
+              type="url"
+              className="form-control"
+              value={hotspotImageUrl}
+              onChange={(e) => setHotspotImageUrl(e.target.value)}
+              placeholder="https://.../image.png"
+            />
+            <small className="text-muted d-block mt-2">Target coordinates use percentages (x/y from 0 to 100).</small>
+
+            <div className="upload-row-header mt-3">
+              <label className="form-label mb-0">Hotspot Targets</label>
+              <button type="button" className="btn btn-sm btn-primary" onClick={addHotspotTarget}>Add Target</button>
+            </div>
+
+            <div className="option-list">
+              {hotspotTargets.map((target, idx) => (
+                <div key={`target-${idx}`} className="matrix-row-builder">
+                  <div className="upload-grid-three">
+                    <div>
+                      <label className="form-label">Target ID</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={target.id}
+                        onChange={(e) => updateHotspotTarget(idx, 'id', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Label</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={target.label}
+                        onChange={(e) => updateHotspotTarget(idx, 'label', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Correct</label>
+                      <div>
+                        <input
+                          type="radio"
+                          name="hotspot-correct"
+                          value={target.id}
+                          checked={correctAnswer === target.id}
+                          onChange={(e) => setCorrectAnswer(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="upload-grid-three mt-2">
+                    <div>
+                      <label className="form-label">X (%)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        className="form-control"
+                        value={target.x}
+                        onChange={(e) => updateHotspotTarget(idx, 'x', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Y (%)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        className="form-control"
+                        value={target.y}
+                        onChange={(e) => updateHotspotTarget(idx, 'y', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Radius (%)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        className="form-control"
+                        value={target.radius}
+                        onChange={(e) => updateHotspotTarget(idx, 'radius', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {hotspotTargets.length > 1 && (
+                    <button type="button" className="btn btn-sm btn-danger mt-2" onClick={() => removeHotspotTarget(idx)}>
+                      Remove Target
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {type === 'cloze-dropdown' && (
+          <div className="form-group">
+            <label className="form-label">Cloze Template</label>
+            <textarea
+              className="form-control"
+              rows="4"
+              value={clozeTemplate}
+              onChange={(e) => {
+                setClozeTemplate(e.target.value);
+                setQuestionText(e.target.value);
+              }}
+              placeholder="Example: The mitral valve is best heard at {{blank1}}."
+            />
+            <small className="text-muted d-block mt-2">
+              Use placeholders like <code>{'{{blank1}}'}</code>, <code>{'{{blank2}}'}</code>.
+            </small>
+
+            <div className="upload-row-header mt-3">
+              <label className="form-label mb-0">Blank Definitions</label>
+              <button type="button" className="btn btn-sm btn-primary" onClick={addClozeBlank}>Add Blank</button>
+            </div>
+
+            <div className="option-list">
+              {clozeBlanks.map((blank, idx) => (
+                <div key={`blank-${idx}`} className="matrix-row-builder">
+                  <div className="upload-grid-three">
+                    <div>
+                      <label className="form-label">Blank Key</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={blank.key}
+                        onChange={(e) => updateClozeBlank(idx, 'key', e.target.value)}
+                        placeholder={`blank${idx + 1}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Options (; separated)</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={blank.optionsText}
+                        onChange={(e) => updateClozeBlank(idx, 'optionsText', e.target.value)}
+                        placeholder="left 5th ICS MCL; right 2nd ICS"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Correct Answer</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={blank.correctAnswer}
+                        onChange={(e) => updateClozeBlank(idx, 'correctAnswer', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  {clozeBlanks.length > 1 && (
+                    <button type="button" className="btn btn-sm btn-danger mt-2" onClick={() => removeClozeBlank(idx)}>
+                      Remove Blank
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="form-group">
           <label className="form-label">Rationale/Explanation</label>
           <textarea className="form-control" rows="3" value={rationale} onChange={(e) => setRationale(e.target.value)} required />
@@ -579,9 +932,11 @@ const UploadQuestion = () => {
           Upload a CSV file to import multiple questions at once.
           <br />
           <strong>CSV format recommended:</strong> First row headers: type, category, subcategory, questionText, options, correctAnswer, rationale, difficulty
-          <br />- type: multiple-choice | sata | fill-blank | highlight | drag-drop | matrix
+          <br />- type: multiple-choice | sata | fill-blank | highlight | drag-drop | matrix | hotspot | cloze-dropdown
           <br />- options: semicolon-separated (e.g., A) Option1;B) Option2)
           <br />- correctAnswer: letters (e.g., A) or comma-separated for SATA
+          <br />- hotspot: use hotspotImageUrl and hotspotTargets (JSON or id|label|x|y|radius;...)
+          <br />- cloze-dropdown: use clozeTemplate and clozeBlanks (JSON or key|opt1/opt2|correct;;...)
         </p>
 
         <div className="form-group">

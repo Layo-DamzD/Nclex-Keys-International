@@ -132,20 +132,26 @@ const deleteQuestion = async (req, res) => {
 // @access  Private (admin only)
 const createQuestion = async (req, res) => {
   try {
-    const { type, category, subcategory, questionText, options, correctAnswer, rationale, difficulty, highlightStart, highlightEnd } = req.body;
+    const payload = {
+      type: req.body?.type,
+      category: req.body?.category,
+      subcategory: req.body?.subcategory,
+      questionText: req.body?.questionText,
+      options: req.body?.options,
+      correctAnswer: req.body?.correctAnswer,
+      rationale: req.body?.rationale,
+      difficulty: req.body?.difficulty,
+      highlightStart: req.body?.highlightStart,
+      highlightEnd: req.body?.highlightEnd,
+      matrixColumns: req.body?.matrixColumns,
+      matrixRows: req.body?.matrixRows,
+      hotspotImageUrl: req.body?.hotspotImageUrl,
+      hotspotTargets: req.body?.hotspotTargets,
+      clozeTemplate: req.body?.clozeTemplate,
+      clozeBlanks: req.body?.clozeBlanks
+    };
 
-    const question = new Question({
-      type,
-      category,
-      subcategory,
-      questionText,
-      options,
-      correctAnswer,
-      rationale,
-      difficulty,
-      highlightStart,
-      highlightEnd
-    });
+    const question = new Question(payload);
 
     await question.save();
     res.status(201).json(question);
@@ -237,7 +243,9 @@ const bulkImportQuestions = async (req, res) => {
 
     for (let i = 1; i < lines.length; i++) {
       const values = parseCsvLine(lines[i]);
-      if (values.length < headers.length) continue;
+      if (values.length < headers.length) {
+        values.push(...Array(headers.length - values.length).fill(''));
+      }
 
       const row = {};
       headers.forEach((h, idx) => {
@@ -343,6 +351,148 @@ const bulkImportQuestions = async (req, res) => {
         question.matrixRows = matrixRows;
         question.options = [];
         question.correctAnswer = matrixRows.map((r) => r.correctColumn);
+      }
+
+      if (row.type === 'hotspot') {
+        const hotspotImageUrl = String(row.hotspotimageurl || '').trim();
+        const rawTargets = String(row.hotspottargets || '').trim();
+        if (!hotspotImageUrl) {
+          errors.push(`Row ${i + 1}: hotspot questions require hotspotImageUrl`);
+          continue;
+        }
+        if (!rawTargets) {
+          errors.push(`Row ${i + 1}: hotspot questions require hotspotTargets`);
+          continue;
+        }
+
+        let hotspotTargets = [];
+
+        if (rawTargets.startsWith('[')) {
+          try {
+            const parsed = JSON.parse(rawTargets);
+            if (Array.isArray(parsed)) {
+              hotspotTargets = parsed
+                .map((t, idx) => ({
+                  id: String(t?.id || `target${idx + 1}`).trim(),
+                  label: String(t?.label || '').trim(),
+                  x: Number(t?.x),
+                  y: Number(t?.y),
+                  radius: Number(t?.radius)
+                }))
+                .filter((t) => t.id && !Number.isNaN(t.x) && !Number.isNaN(t.y));
+            }
+          } catch {
+            // Fallback handled below
+          }
+        }
+
+        if (!hotspotTargets.length) {
+          hotspotTargets = rawTargets
+            .split(';')
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .map((item, idx) => {
+              const [id, label, x, y, radius] = item.split('|').map((v) => String(v || '').trim());
+              return {
+                id: id || `target${idx + 1}`,
+                label: label || id || `Target ${idx + 1}`,
+                x: Number(x),
+                y: Number(y),
+                radius: Number(radius || 6)
+              };
+            })
+            .filter((t) => t.id && !Number.isNaN(t.x) && !Number.isNaN(t.y));
+        }
+
+        if (!hotspotTargets.length) {
+          errors.push(`Row ${i + 1}: hotspotTargets must be valid JSON or id|label|x|y|radius items`);
+          continue;
+        }
+
+        const normalizedCorrect = String(correctAnswer || '').trim();
+        if (!normalizedCorrect) {
+          errors.push(`Row ${i + 1}: hotspot questions require correctAnswer target id`);
+          continue;
+        }
+
+        const hasCorrectTarget = hotspotTargets.some((t) => String(t.id) === normalizedCorrect);
+        if (!hasCorrectTarget) {
+          errors.push(`Row ${i + 1}: hotspot correctAnswer must match one hotspot target id`);
+          continue;
+        }
+
+        question.hotspotImageUrl = hotspotImageUrl;
+        question.hotspotTargets = hotspotTargets.map((t) => ({
+          ...t,
+          radius: Number.isFinite(t.radius) ? Math.max(1, Math.min(20, t.radius)) : 6
+        }));
+        question.options = [];
+        question.correctAnswer = normalizedCorrect;
+      }
+
+      if (row.type === 'cloze-dropdown') {
+        const clozeTemplate = String(row.clozetemplate || row.questiontext || '').trim();
+        const rawClozeBlanks = String(row.clozeblanks || '').trim();
+        if (!clozeTemplate) {
+          errors.push(`Row ${i + 1}: cloze-dropdown questions require clozeTemplate/questionText`);
+          continue;
+        }
+        if (!rawClozeBlanks) {
+          errors.push(`Row ${i + 1}: cloze-dropdown questions require clozeBlanks`);
+          continue;
+        }
+
+        let clozeBlanks = [];
+        if (rawClozeBlanks.startsWith('[')) {
+          try {
+            const parsed = JSON.parse(rawClozeBlanks);
+            if (Array.isArray(parsed)) {
+              clozeBlanks = parsed
+                .map((b) => ({
+                  key: String(b?.key || '').trim(),
+                  options: Array.isArray(b?.options)
+                    ? b.options.map((opt) => String(opt || '').trim()).filter(Boolean)
+                    : [],
+                  correctAnswer: String(b?.correctAnswer || '').trim()
+                }))
+                .filter((b) => b.key && b.correctAnswer);
+            }
+          } catch {
+            // Fallback handled below
+          }
+        }
+
+        if (!clozeBlanks.length) {
+          clozeBlanks = rawClozeBlanks
+            .split(';;')
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .map((item) => {
+              const [key, optionsPart, answer] = item.split('|').map((v) => String(v || '').trim());
+              return {
+                key,
+                options: optionsPart ? optionsPart.split('/').map((v) => v.trim()).filter(Boolean) : [],
+                correctAnswer: answer
+              };
+            })
+            .filter((b) => b.key && b.correctAnswer);
+        }
+
+        if (!clozeBlanks.length) {
+          errors.push(`Row ${i + 1}: clozeBlanks must be JSON or key|opt1/opt2|correct blocks`);
+          continue;
+        }
+
+        const correctAnswerMap = {};
+        clozeBlanks.forEach((b) => {
+          correctAnswerMap[b.key] = b.correctAnswer;
+        });
+
+        question.questionText = clozeTemplate;
+        question.clozeTemplate = clozeTemplate;
+        question.clozeBlanks = clozeBlanks;
+        question.options = [];
+        question.correctAnswer = correctAnswerMap;
       }
 
       if (row.type === 'case-study') {

@@ -5,7 +5,7 @@ const useLandingPageContent = (pageKey) => {
   const [config, setConfig] = useState(null);
   const [hasSavedConfig, setHasSavedConfig] = useState(false);
   const [loading, setLoading] = useState(true);
-  const cacheKey = `landing-page-cache:${pageKey}`;
+  const cacheKey = `landing-page-cache:v2:${pageKey}`;
 
   useEffect(() => {
     let active = true;

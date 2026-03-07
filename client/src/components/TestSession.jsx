@@ -423,6 +423,16 @@ const TestSession = () => {
     }
     return true;
   };
+  const isHotspotCorrect = (userAnswer, correctAnswer) => {
+    if (!userAnswer || !correctAnswer) return false;
+    return String(userAnswer).trim() === String(correctAnswer).trim();
+  };
+  const isClozeDropdownCorrect = (userAnswer, correctAnswer) => {
+    if (!userAnswer || !correctAnswer || typeof correctAnswer !== 'object') return false;
+    const expectedKeys = Object.keys(correctAnswer);
+    if (!expectedKeys.length) return false;
+    return expectedKeys.every((key) => String(userAnswer?.[key] || '').trim() === String(correctAnswer[key] || '').trim());
+  };
 
   async function handleSubmit() {
     if (submitted) return;
@@ -450,6 +460,10 @@ const TestSession = () => {
             isCorrect = isDragDropCorrect(userAnswer, subQ.correctAnswer);
           } else if (subQ.type === 'matrix') {
             isCorrect = isMatrixCorrect(userAnswer, subQ.matrixRows);
+          } else if (subQ.type === 'hotspot') {
+            isCorrect = isHotspotCorrect(userAnswer, subQ.correctAnswer);
+          } else if (subQ.type === 'cloze-dropdown') {
+            isCorrect = isClozeDropdownCorrect(userAnswer, subQ.correctAnswer);
           }
           allResults.push({
             questionId: subQ._id,
@@ -467,6 +481,10 @@ const TestSession = () => {
             subcategory: subQ.subcategory,
             matrixColumns: subQ.matrixColumns,
             matrixRows: subQ.matrixRows,
+            hotspotImageUrl: subQ.hotspotImageUrl,
+            hotspotTargets: subQ.hotspotTargets,
+            clozeTemplate: subQ.clozeTemplate,
+            clozeBlanks: subQ.clozeBlanks,
           });
         });
       } else {
@@ -486,6 +504,10 @@ const TestSession = () => {
           isCorrect = isDragDropCorrect(userAnswer, q.correctAnswer);
         } else if (q.type === 'matrix') {
           isCorrect = isMatrixCorrect(userAnswer, q.matrixRows);
+        } else if (q.type === 'hotspot') {
+          isCorrect = isHotspotCorrect(userAnswer, q.correctAnswer);
+        } else if (q.type === 'cloze-dropdown') {
+          isCorrect = isClozeDropdownCorrect(userAnswer, q.correctAnswer);
         }
         allResults.push({
           questionId: q._id,
@@ -502,6 +524,10 @@ const TestSession = () => {
           subcategory: q.subcategory,
           matrixColumns: q.matrixColumns,
           matrixRows: q.matrixRows,
+          hotspotImageUrl: q.hotspotImageUrl,
+          hotspotTargets: q.hotspotTargets,
+          clozeTemplate: q.clozeTemplate,
+          clozeBlanks: q.clozeBlanks,
         });
       }
     });
@@ -629,6 +655,14 @@ const TestSession = () => {
                            item.type === 'fill-blank' ? item.userAnswer :
                            item.type === 'highlight' ? `"${item.userAnswer}"` :
                            item.type === 'drag-drop' ? item.userAnswer?.replace(/\|/g, ' → ') :
+                           item.type === 'hotspot' ? (item.userAnswer ? `Selected: ${item.userAnswer}` : 'Not answered') :
+                           item.type === 'cloze-dropdown' ? (
+                             <div>
+                               {Object.entries(item.userAnswer || {}).map(([key, val]) => (
+                                 <div key={key}><strong>{key}:</strong> {String(val || '') || 'None'}</div>
+                               ))}
+                             </div>
+                           ) :
                            item.type === 'matrix' ? (
                              <div>
                                {item.matrixRows.map((row, idx) => (
@@ -652,6 +686,14 @@ const TestSession = () => {
                         item.type === 'fill-blank' ? (item.correctAnswer.includes(';') ? item.correctAnswer.split(';').map(s => s.trim()).join(' or ') : item.correctAnswer) :
                         item.type === 'highlight' ? `"${item.correctAnswer}"` :
                         item.type === 'drag-drop' ? item.correctAnswer?.replace(/\|/g, ' → ') :
+                        item.type === 'hotspot' ? `Target: ${item.correctAnswer}` :
+                        item.type === 'cloze-dropdown' ? (
+                          <div>
+                            {Object.entries(item.correctAnswer || {}).map(([key, val]) => (
+                              <div key={key}><strong>{key}:</strong> {String(val || '')}</div>
+                            ))}
+                          </div>
+                        ) :
                         item.type === 'matrix' ? (
                           <div>
                             {item.matrixRows.map((row, idx) => (
@@ -865,6 +907,79 @@ const TestSession = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {subQ.type === 'hotspot' && (
+                <div className="hotspot-container">
+                  <p className="mb-2">Click the correct location on the image:</p>
+                  <div style={{ position: 'relative', maxWidth: 620 }}>
+                    <img
+                      src={subQ.hotspotImageUrl}
+                      alt="Hotspot question"
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid #cbd5e1' }}
+                    />
+                    {(subQ.hotspotTargets || []).map((target, idx) => {
+                      const isSelected = caseAnswers[subQId] === target.id;
+                      return (
+                        <button
+                          key={`${target.id}-${idx}`}
+                          type="button"
+                          disabled={isPaused}
+                          onClick={() => handleCaseAnswer(subQId, target.id)}
+                          title={target.label || target.id}
+                          style={{
+                            position: 'absolute',
+                            left: `${target.x}%`,
+                            top: `${target.y}%`,
+                            width: `${target.radius || 6}%`,
+                            height: `${target.radius || 6}%`,
+                            minWidth: 22,
+                            minHeight: 22,
+                            transform: 'translate(-50%, -50%)',
+                            borderRadius: '50%',
+                            border: `2px solid ${isSelected ? '#1d4ed8' : '#334155'}`,
+                            background: isSelected ? 'rgba(29,78,216,0.35)' : 'rgba(255,255,255,0.65)',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p className="text-muted mt-2">Selected: <strong>{caseAnswers[subQId] || 'none'}</strong></p>
+                </div>
+              )}
+
+              {subQ.type === 'cloze-dropdown' && (
+                <div className="cloze-dropdown-container">
+                  <p className="mb-2">Select the best answers from the dropdowns:</p>
+                  <div className="p-3 border rounded bg-light">
+                    {(subQ.clozeTemplate || subQ.questionText || '').split(/(\{\{[^}]+\}\})/g).map((chunk, idx) => {
+                      const match = chunk.match(/^\{\{([^}]+)\}\}$/);
+                      if (!match) return <span key={`txt-${idx}`}>{chunk}</span>;
+                      const key = match[1].trim();
+                      const blank = (subQ.clozeBlanks || []).find((b) => b.key === key);
+                      const value = caseAnswers[subQId]?.[key] || '';
+                      return (
+                        <select
+                          key={`sel-${key}-${idx}`}
+                          className="form-select form-select-sm d-inline-block mx-1"
+                          style={{ width: 'auto', minWidth: 170 }}
+                          disabled={isPaused}
+                          value={value}
+                          onChange={(e) => {
+                            const current = caseAnswers[subQId] || {};
+                            handleCaseAnswer(subQId, { ...current, [key]: e.target.value });
+                          }}
+                        >
+                          <option value="">Select...</option>
+                          {(blank?.options || []).map((opt) => (
+                            <option key={`${key}-${opt}`} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -1142,6 +1257,79 @@ const TestSession = () => {
                 placeholder="Type message..."
               />
               <button type="button" className="btn btn-sm btn-primary" onClick={sendChatMessage}>Send</button>
+            </div>
+          </div>
+        )}
+
+        {currentQ.type === 'hotspot' && (
+          <div className="hotspot-container">
+            <p className="mb-2">Click the correct location on the image:</p>
+            <div style={{ position: 'relative', maxWidth: 680 }}>
+              <img
+                src={currentQ.hotspotImageUrl}
+                alt="Hotspot question"
+                style={{ width: '100%', borderRadius: 10, border: '1px solid #cbd5e1' }}
+              />
+              {(currentQ.hotspotTargets || []).map((target, idx) => {
+                const isSelected = answers[currentQ._id] === target.id;
+                return (
+                  <button
+                    key={`${target.id}-${idx}`}
+                    type="button"
+                    disabled={isPaused}
+                    onClick={() => handleAnswer(currentQ._id, target.id)}
+                    title={target.label || target.id}
+                    style={{
+                      position: 'absolute',
+                      left: `${target.x}%`,
+                      top: `${target.y}%`,
+                      width: `${target.radius || 6}%`,
+                      height: `${target.radius || 6}%`,
+                      minWidth: 22,
+                      minHeight: 22,
+                      transform: 'translate(-50%, -50%)',
+                      borderRadius: '50%',
+                      border: `2px solid ${isSelected ? '#1d4ed8' : '#334155'}`,
+                      background: isSelected ? 'rgba(29,78,216,0.35)' : 'rgba(255,255,255,0.65)',
+                      cursor: 'pointer'
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <p className="text-muted mt-2">Selected: <strong>{answers[currentQ._id] || 'none'}</strong></p>
+          </div>
+        )}
+
+        {currentQ.type === 'cloze-dropdown' && (
+          <div className="cloze-dropdown-container">
+            <p className="mb-2">Select the best answers from the dropdowns:</p>
+            <div className="p-3 border rounded bg-light">
+              {(currentQ.clozeTemplate || currentQ.questionText || '').split(/(\{\{[^}]+\}\})/g).map((chunk, idx) => {
+                const match = chunk.match(/^\{\{([^}]+)\}\}$/);
+                if (!match) return <span key={`txt-${idx}`}>{chunk}</span>;
+                const key = match[1].trim();
+                const blank = (currentQ.clozeBlanks || []).find((b) => b.key === key);
+                const value = answers[currentQ._id]?.[key] || '';
+                return (
+                  <select
+                    key={`sel-${key}-${idx}`}
+                    className="form-select form-select-sm d-inline-block mx-1"
+                    style={{ width: 'auto', minWidth: 170 }}
+                    disabled={isPaused}
+                    value={value}
+                    onChange={(e) => {
+                      const current = answers[currentQ._id] || {};
+                      handleAnswer(currentQ._id, { ...current, [key]: e.target.value });
+                    }}
+                  >
+                    <option value="">Select...</option>
+                    {(blank?.options || []).map((opt) => (
+                      <option key={`${key}-${opt}`} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                );
+              })}
             </div>
           </div>
         )}

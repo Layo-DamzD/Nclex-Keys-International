@@ -101,6 +101,17 @@ const formatAnswerValue = (item, value) => {
     return String(value).replace(/\|/g, ' -> ');
   }
 
+  if (item.type === 'hotspot') {
+    return `Selected target: ${String(value)}`;
+  }
+
+  if (item.type === 'cloze-dropdown') {
+    if (typeof value !== 'object' || value === null) return String(value ?? '');
+    return Object.entries(value)
+      .map(([key, val]) => `${key}: ${String(val ?? '')}`)
+      .join(' | ');
+  }
+
   if (Array.isArray(value)) return value.join(', ');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -111,6 +122,12 @@ const formatCorrectAnswer = (item) => {
     return item.correctAnswer.includes(';')
       ? item.correctAnswer.split(';').map((s) => s.trim()).join(' or ')
       : item.correctAnswer;
+  }
+
+  if (item.type === 'cloze-dropdown' && item.correctAnswer && typeof item.correctAnswer === 'object') {
+    return Object.entries(item.correctAnswer)
+      .map(([key, val]) => `${key}: ${String(val ?? '')}`)
+      .join(' | ');
   }
 
   return formatAnswerValue(item, item.correctAnswer);
@@ -299,6 +316,22 @@ const TestReviewExamView = ({
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {active.type === 'hotspot' && (
+            <div className="mt-3">
+              <div className="label mb-1">Hotspot Target</div>
+              <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
+              <div className="small text-muted mt-1">Correct: {formatCorrectAnswer(active)}</div>
+            </div>
+          )}
+
+          {active.type === 'cloze-dropdown' && (
+            <div className="mt-3">
+              <div className="label mb-1">Cloze Responses</div>
+              <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
+              <div className="small text-muted mt-1">Correct: {formatCorrectAnswer(active)}</div>
             </div>
           )}
 

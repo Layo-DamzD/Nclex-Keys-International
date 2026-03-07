@@ -1,32 +1,74 @@
 export const CATEGORIES = {
-    "Case Studies": [
-    "Layered Case Study",
-    "Trend",
-    "Bowtie"
-    ],
-  "Safe and Effective Care Environment": [
-    "Management of Care",
-    "Safety and Infection Control"
+  "Adult Health": [
+    "Cardiovascular",
+    "Emergency Care",
+    "Endocrine",
+    "Gastrointestinal/Nutrition",
+    "Hematological/Oncological",
+    "Immune",
+    "Infectious Disease",
+    "Integumentary",
+    "Musculoskeletal",
+    "Neurologic",
+    "Respiratory",
+    "Urinary/Renal",
+    "Visual/Auditory"
   ],
-  "Health Promotion and Maintenance": [
-    "Growth and Development",
-    "Prevention and Early Detection of Disease",
-    "Health Screening",
-    "Prenatal Care",
-    "Health Education"
+
+  "Child Health": [
+    "Cardiovascular",
+    "Endocrine",
+    "Gastrointestinal/Nutrition",
+    "Growth & Development",
+    "Hematological/Oncological",
+    "Immune",
+    "Infectious Disease",
+    "Integumentary",
+    "Musculoskeletal",
+    "Neurologic",
+    "Respiratory",
+    "Urinary/Renal",
+    "Visual/Auditory"
   ],
-  "Psychosocial Integrity": [
+
+  "Fundamentals": [
+    "Basic Care & Comfort",
+    "Communication",
+    "Development Throughout the Life Span",
+    "Ethical/Legal",
+    "Fluid, Electrolyte, Acid-Base Balance",
+    "Medication Administration",
+    "Safety/Infection Control",
+    "Skills/Procedures"
+  ],
+
+  "Leadership & Management": [
+    "Assignment/Delegation",
+    "Management Concepts",
+    "Prioritization",
+    "Ethical/Legal",
+    "Leadership & Management"
+  ],
+
+  "Maternal & Newborn Health": [
+    "Antepartum",
+    "Labor/Delivery",
+    "Postpartum",
+    "Newborn",
+    "Reproductive"
+  ],
+
+  "Mental Health": [
     "Mental Health Concepts",
-    "Behavioral Interventions",
-    "Crisis Intervention",
-    "Therapeutic Communication",
-    "Coping and Adaptation"
+    "Communication"
   ],
-  "Physiological Integrity": [
-    "Basic Care and Comfort",
-    "Pharmacological and Parenteral Therapies",
-    "Reduction of Risk Potential",
-    "Physiological Adaptation"
+
+  "Pharmacology": [
+    "Analgesics",
+    "Agents to Treat Gout",
+    "Medication Administration",
+    "Psychiatric Medications",
+    "Vitamins & Supplements"
   ]
 };
 

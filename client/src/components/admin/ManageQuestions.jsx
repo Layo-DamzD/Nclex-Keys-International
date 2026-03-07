@@ -13,7 +13,7 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
 
   const categories = ['', ...Object.keys(CATEGORIES)];
-  const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'case-study'];
+  const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
 
   useEffect(() => {
     fetchQuestions();
@@ -112,6 +112,8 @@ const ManageQuestions = ({ onSectionChange }) => {
       highlight: 'Highlight',
       'drag-drop': 'Drag',
       matrix: 'Matrix',
+      hotspot: 'Hotspot',
+      'cloze-dropdown': 'Cloze',
       'case-study': 'Case Study',
     };
     return labels[type] || type;
@@ -146,6 +148,9 @@ const ManageQuestions = ({ onSectionChange }) => {
         return 'badge-info';
       case 'case-study':
         return 'badge-primary';
+      case 'hotspot':
+      case 'cloze-dropdown':
+        return 'badge-info';
       default:
         return 'badge-info';
     }

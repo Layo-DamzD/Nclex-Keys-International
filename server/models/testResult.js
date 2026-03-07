@@ -14,6 +14,20 @@ const answerSchema = new mongoose.Schema({
   highlightStart: Number,
   highlightEnd: Number,
   scenario: String,
+  hotspotImageUrl: String,
+  hotspotTargets: [{
+    id: String,
+    label: String,
+    x: Number,
+    y: Number,
+    radius: Number
+  }],
+  clozeTemplate: String,
+  clozeBlanks: [{
+    key: String,
+    options: [String],
+    correctAnswer: String
+  }]
 }, { _id: false });
 
 const testResultSchema = new mongoose.Schema({

@@ -6,6 +6,20 @@ const matrixRowSchema = new mongoose.Schema({
   correctColumn: { type: Number, required: true } // index of correct column (0-based)
 }, { _id: false });
 
+const hotspotTargetSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  label: { type: String, default: '' },
+  x: { type: Number, required: true }, // percentage 0-100
+  y: { type: Number, required: true }, // percentage 0-100
+  radius: { type: Number, default: 6 } // percentage 1-20
+}, { _id: false });
+
+const clozeBlankSchema = new mongoose.Schema({
+  key: { type: String, required: true }, // e.g. blank1 used as {{blank1}}
+  options: [{ type: String }],
+  correctAnswer: { type: String, required: true }
+}, { _id: false });
+
 const caseStudySectionSchema = new mongoose.Schema({
   title: { type: String, default: '' },
   content: { type: String, default: '' }
@@ -14,7 +28,7 @@ const caseStudySectionSchema = new mongoose.Schema({
 const caseStudyQuestionSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix'],
+    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown'],
     required: true
   },
   category: { type: String, default: '' },
@@ -28,12 +42,20 @@ const caseStudyQuestionSchema = new mongoose.Schema({
   highlightEnd: Number,
   matrixRows: [matrixRowSchema],
   matrixColumns: [String]
+  ,
+  // Hotspot-specific fields
+  hotspotImageUrl: String,
+  hotspotTargets: [hotspotTargetSchema],
+
+  // Cloze dropdown-specific fields
+  clozeTemplate: String,
+  clozeBlanks: [clozeBlankSchema]
 }, { _id: true });
 
 const questionSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'case-study'],
+    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'],
     required: true
   },
   
@@ -57,6 +79,10 @@ const questionSchema = new mongoose.Schema({
   // Matrix-specific fields
   matrixRows: [matrixRowSchema],
   matrixColumns: [String],
+  hotspotImageUrl: String,
+  hotspotTargets: [hotspotTargetSchema],
+  clozeTemplate: String,
+  clozeBlanks: [clozeBlankSchema],
 
   // Case-study-specific fields
   caseStudyId: { type: mongoose.Schema.Types.ObjectId, ref: 'CaseStudy' },
