@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
@@ -280,18 +281,45 @@ const isAnswered = (question, answerValue) => {
   return String(answerValue || '').trim() !== '';
 };
 
+const isCorrectAnswer = (question, answerValue) => {
+  if (!question) return false;
+  if (question.type === 'sata') {
+    const expected = Array.isArray(question.correctAnswer)
+      ? question.correctAnswer.map((v) => String(v).trim().toLowerCase()).sort()
+      : [];
+    const submitted = Array.isArray(answerValue)
+      ? answerValue.map((v) => String(v).trim().toLowerCase()).sort()
+      : [];
+    if (expected.length !== submitted.length) return false;
+    return expected.every((value, idx) => value === submitted[idx]);
+  }
+  return String(answerValue || '').trim().toLowerCase() === String(question.correctAnswer || '').trim().toLowerCase();
+};
+
 const PublicKnowledgeTest = () => {
   const { config, hasSavedConfig, loading } = useLandingPageContent('home');
   const questions = useMemo(() => scatterByType(normalizeQuestions(RAW_QUESTIONS)), []);
   const [answers, setAnswers] = useState({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [showEmailGate, setShowEmailGate] = useState(false);
+  const [submitEmail, setSubmitEmail] = useState('');
+  const [submitEmailError, setSubmitEmailError] = useState('');
+  const [submitEmailLoading, setSubmitEmailLoading] = useState(false);
   const current = questions[currentIndex];
 
   const answeredCount = useMemo(
     () =>
       questions.reduce((count, q) => (isAnswered(q, answers[q.id]) ? count + 1 : count), 0),
     [answers, questions]
+  );
+  const score = useMemo(
+    () => questions.reduce((count, question) => (isCorrectAnswer(question, answers[question.id]) ? count + 1 : count), 0),
+    [answers, questions]
+  );
+  const percentage = useMemo(
+    () => (questions.length ? Math.round((score / questions.length) * 100) : 0),
+    [score, questions.length]
   );
 
   const onPickOption = (question, option) => {
@@ -312,9 +340,43 @@ const PublicKnowledgeTest = () => {
     setAnswers((prev) => ({ ...prev, [question.id]: value }));
   };
 
-  const onSubmit = () => {
+  const completeSubmit = () => {
+    setShowEmailGate(false);
     setSubmitted(true);
+    setSubmitEmail('');
+    setSubmitEmailError('');
+    setSubmitEmailLoading(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const onSubmit = () => {
+    setSubmitEmailError('');
+    setShowEmailGate(true);
+  };
+
+  const onConfirmEmailAndSubmit = async () => {
+    const email = String(submitEmail || '').trim();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email) {
+      setSubmitEmailError('Email is required.');
+      return;
+    }
+
+    if (!emailPattern.test(email)) {
+      setSubmitEmailError('Enter a valid email address.');
+      return;
+    }
+
+    try {
+      setSubmitEmailLoading(true);
+      setSubmitEmailError('');
+      await axios.post('/api/auth/student/verify-public-test-email', { email });
+      completeSubmit();
+    } catch (error) {
+      setSubmitEmailError(error?.response?.data?.message || 'Unable to verify email. Please try again.');
+      setSubmitEmailLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -356,7 +418,12 @@ const PublicKnowledgeTest = () => {
 
           {submitted ? (
             <section className="public-test-lock-card">
-              <h2>Test Submitted</h2>
+              <h2>{percentage >= 70 ? 'Congratulations' : 'Test Submitted'}</h2>
+              <p>
+                <strong>
+                  Your score: {score}/{questions.length} ({percentage}%)
+                </strong>
+              </p>
               <p>
                 Your responses have been recorded.
                 {' '}
@@ -446,6 +513,62 @@ const PublicKnowledgeTest = () => {
             </section>
           )}
         </div>
+
+        {showEmailGate && !submitted && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(2, 6, 23, 0.65)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              zIndex: 1200
+            }}
+          >
+            <section className="public-test-card" style={{ maxWidth: '520px', width: '100%' }}>
+              <h2 className="public-test-question" style={{ marginBottom: '12px' }}>Confirm Your Signup Email</h2>
+              <p className="text-muted" style={{ marginBottom: '12px' }}>
+                Enter the same email used during signup before final submission.
+              </p>
+              <input
+                type="email"
+                className="form-control"
+                placeholder="you@example.com"
+                value={submitEmail}
+                onChange={(e) => setSubmitEmail(e.target.value)}
+                autoFocus
+              />
+              {submitEmailError && (
+                <div className="alert alert-danger" style={{ marginTop: '12px', marginBottom: 0 }}>
+                  {submitEmailError}
+                </div>
+              )}
+              <div className="public-test-actions" style={{ marginTop: '16px' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  disabled={submitEmailLoading}
+                  onClick={() => {
+                    setShowEmailGate(false);
+                    setSubmitEmailError('');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  disabled={submitEmailLoading}
+                  onClick={onConfirmEmailAndSubmit}
+                >
+                  {submitEmailLoading ? 'Verifying...' : 'Verify & Submit'}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
       </main>
       {!loading && <Footer content={hasSavedConfig && config?.mode === 'structured' ? config?.sections?.footer : undefined} />}
     </>

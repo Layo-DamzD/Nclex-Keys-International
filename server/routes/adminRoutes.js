@@ -40,6 +40,8 @@ const {
   sendExamSupportMessageAdmin,
   approveAdmin,
   getAllAdmins,
+  getAdminStudentScope,
+  updateAdminStudentScope,
   deleteAdmin,
   getAdminSettings,
   updateAdminProfileSettings,
@@ -111,6 +113,8 @@ router.post('/exam-support/messages', protect, adminOnly, sendExamSupportMessage
 
 router.put('/approve/:adminId', protect, superAdminOnly, approveAdmin);
 router.get('/users/admins', protect, superAdminOnly, getAllAdmins);
+router.get('/users/:adminId/student-scope', protect, superAdminOnly, getAdminStudentScope);
+router.put('/users/:adminId/student-scope', protect, superAdminOnly, updateAdminStudentScope);
 router.delete('/users/:adminId', protect, superAdminOnly, deleteAdmin);
 router.get('/settings', protect, adminOnly, getAdminSettings);
 router.put('/settings/profile', protect, adminOnly, updateAdminProfileSettings);

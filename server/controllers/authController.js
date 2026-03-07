@@ -232,6 +232,35 @@ const verifyStudentFace = async (req, res) => {
   return res.status(410).json({ message: 'Face verification is disabled.' });
 };
 
+// @desc    Verify public test email against signed-up student account
+// @route   POST /api/auth/student/verify-public-test-email
+// @access  Public
+const verifyPublicTestEmail = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim();
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const student = await User.findOne({
+      role: 'student',
+      email: exactRegex(email)
+    }).select('_id name email');
+
+    if (!student) {
+      return res.status(404).json({ message: 'Email not found. Use the same email you used during signup.' });
+    }
+
+    return res.json({
+      verified: true,
+      email: student.email
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 // ===== ADMIN =====
 const registerAdmin = async (req, res) => {
   try {
@@ -609,6 +638,7 @@ module.exports = {
   registerStudent,
   loginStudent,
   verifyStudentFace,
+  verifyPublicTestEmail,
   registerAdmin,
   loginAdmin,
   verifyAdminSignupCode,

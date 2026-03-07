@@ -261,8 +261,10 @@ const AllStudents = () => {
   return (
     <div className="all-students">
       <div className="header all-students-header" style={{ marginBottom: '20px' }}>
-        <h1>All Students</h1>
-        <p style={{ color: '#64748b' }}>Manage student accounts and profiles</p>
+        <h1>{isSuperAdmin ? 'All Students' : 'Your Students'}</h1>
+        <p style={{ color: '#64748b' }}>
+          {isSuperAdmin ? 'Manage student accounts and profiles' : 'Manage students assigned to your account'}
+        </p>
       </div>
 
       {actionStatus && (

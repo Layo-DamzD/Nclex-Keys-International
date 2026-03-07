@@ -4,6 +4,7 @@ const {
   registerStudent,
   loginStudent,
   verifyStudentFace,
+  verifyPublicTestEmail,
   registerAdmin,
   loginAdmin,
   verifyAdminSignupCode,
@@ -23,6 +24,7 @@ const { protect, superAdminOnly } = require('../middleware/authMiddleware');
 router.post('/student/register', registerStudent);
 router.post('/student/login', loginStudent);
 router.post('/student/verify-face', verifyStudentFace);
+router.post('/student/verify-public-test-email', verifyPublicTestEmail);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 router.post('/reset-password-otp', resetPasswordWithOtp);

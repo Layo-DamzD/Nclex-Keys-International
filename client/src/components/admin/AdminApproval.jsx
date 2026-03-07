@@ -8,6 +8,13 @@ const AdminApproval = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [visibleSecrets, setVisibleSecrets] = useState({});
+  const [scopeModalOpen, setScopeModalOpen] = useState(false);
+  const [scopeLoading, setScopeLoading] = useState(false);
+  const [scopeSaving, setScopeSaving] = useState(false);
+  const [scopeError, setScopeError] = useState('');
+  const [scopeAdmin, setScopeAdmin] = useState(null);
+  const [scopeStudents, setScopeStudents] = useState([]);
+  const [scopeSelectedIds, setScopeSelectedIds] = useState([]);
 
   const isSecretVisible = (adminId, field) => Boolean(visibleSecrets[`${adminId}:${field}`]);
   const toggleSecretVisibility = (adminId, field) => {
@@ -46,7 +53,7 @@ const AdminApproval = () => {
       await axios.put(`/api/admin/approve/${adminId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAdmins(prev => prev.map(admin =>
+      setAdmins((prev) => prev.map((admin) =>
         admin._id === adminId ? { ...admin, approved: true } : admin
       ));
     } catch {
@@ -61,9 +68,83 @@ const AdminApproval = () => {
       await axios.delete(`/api/admin/users/${adminId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAdmins(prev => prev.filter(admin => admin._id !== adminId));
+      setAdmins((prev) => prev.filter((admin) => admin._id !== adminId));
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete admin');
+    }
+  };
+
+  const openManageStudents = async (admin) => {
+    try {
+      setScopeModalOpen(true);
+      setScopeLoading(true);
+      setScopeSaving(false);
+      setScopeError('');
+      setScopeAdmin(admin);
+      setScopeStudents([]);
+      setScopeSelectedIds([]);
+
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.get(`/api/admin/users/${admin._id}/student-scope`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setScopeStudents(Array.isArray(response.data?.students) ? response.data.students : []);
+      setScopeSelectedIds(Array.isArray(response.data?.assignedStudentIds) ? response.data.assignedStudentIds : []);
+    } catch (err) {
+      setScopeError(err.response?.data?.message || 'Failed to load student scope');
+    } finally {
+      setScopeLoading(false);
+    }
+  };
+
+  const closeManageStudents = () => {
+    setScopeModalOpen(false);
+    setScopeError('');
+    setScopeAdmin(null);
+    setScopeStudents([]);
+    setScopeSelectedIds([]);
+  };
+
+  const toggleScopeStudent = (studentId) => {
+    setScopeSelectedIds((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const toggleScopeSelectAll = () => {
+    if (scopeSelectedIds.length === scopeStudents.length) {
+      setScopeSelectedIds([]);
+      return;
+    }
+    setScopeSelectedIds(scopeStudents.map((student) => student._id));
+  };
+
+  const saveManageStudents = async () => {
+    if (!scopeAdmin?._id) return;
+
+    try {
+      setScopeSaving(true);
+      setScopeError('');
+      const token = sessionStorage.getItem('adminToken');
+      await axios.put(
+        `/api/admin/users/${scopeAdmin._id}/student-scope`,
+        { studentIds: scopeSelectedIds },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setAdmins((prev) =>
+        prev.map((admin) =>
+          admin._id === scopeAdmin._id ? { ...admin, managedStudents: [...scopeSelectedIds] } : admin
+        )
+      );
+      closeManageStudents();
+    } catch (err) {
+      setScopeError(err.response?.data?.message || 'Failed to save student scope');
+    } finally {
+      setScopeSaving(false);
     }
   };
 
@@ -86,6 +167,7 @@ const AdminApproval = () => {
               <th>Role</th>
               <th>Status</th>
               <th>Access Code</th>
+              <th>Your Students</th>
               <th>Joined</th>
               <th>Actions</th>
             </tr>
@@ -93,12 +175,12 @@ const AdminApproval = () => {
           <tbody>
             {admins.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
                   No admins found
                 </td>
               </tr>
             ) : (
-              admins.map(admin => {
+              admins.map((admin) => {
                 const isCurrentAdmin = String(admin._id) === String(currentAdminId || '');
 
                 return (
@@ -138,6 +220,7 @@ const AdminApproval = () => {
                         </button>
                       </div>
                     </td>
+                    <td>{admin.role === 'admin' ? (Array.isArray(admin.managedStudents) ? admin.managedStudents.length : 0) : '-'}</td>
                     <td>{new Date(admin.createdAt).toLocaleDateString()}</td>
                     <td>
                       {admin.role !== 'superadmin' && !admin.approved && (
@@ -146,6 +229,15 @@ const AdminApproval = () => {
                           onClick={() => handleApprove(admin._id)}
                         >
                           Approve
+                        </button>
+                      )}
+
+                      {admin.role === 'admin' && (
+                        <button
+                          className="btn btn-sm btn-primary me-2"
+                          onClick={() => openManageStudents(admin)}
+                        >
+                          Manage Students
                         </button>
                       )}
 
@@ -167,9 +259,93 @@ const AdminApproval = () => {
           </tbody>
         </table>
       </div>
+
+      {scopeModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(2, 6, 23, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+            padding: '20px'
+          }}
+        >
+          <div className="form-card" style={{ width: '100%', maxWidth: '720px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ marginBottom: 0 }}>Manage Students: {scopeAdmin?.name || 'Admin'}</h3>
+              <button type="button" className="btn btn-sm btn-outline-secondary" onClick={closeManageStudents}>
+                Close
+              </button>
+            </div>
+
+            {scopeError && <div className="alert alert-danger">{scopeError}</div>}
+
+            {scopeLoading ? (
+              <div>Loading students...</div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ color: '#64748b' }}>
+                    Assign which students this tutor can view and set tests for.
+                  </div>
+                  <button type="button" className="btn btn-sm btn-outline-primary" onClick={toggleScopeSelectAll}>
+                    {scopeSelectedIds.length === scopeStudents.length && scopeStudents.length > 0 ? 'Clear All' : 'Select All'}
+                  </button>
+                </div>
+
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: '420px', overflowY: 'auto' }}>
+                  <table className="data-table" style={{ marginBottom: 0 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '50px' }}></th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Program</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scopeStudents.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '24px' }}>No students found</td>
+                        </tr>
+                      ) : (
+                        scopeStudents.map((student) => (
+                          <tr key={student._id}>
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={scopeSelectedIds.includes(student._id)}
+                                onChange={() => toggleScopeStudent(student._id)}
+                              />
+                            </td>
+                            <td>{student.name}</td>
+                            <td>{student.email}</td>
+                            <td>{student.program || 'NCLEX-RN'}</td>
+                            <td>{student.status || 'active'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#64748b' }}>{scopeSelectedIds.length} selected</span>
+                  <button type="button" className="btn btn-success" onClick={saveManageStudents} disabled={scopeSaving}>
+                    {scopeSaving ? 'Saving...' : 'Save Scope'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default AdminApproval;
-

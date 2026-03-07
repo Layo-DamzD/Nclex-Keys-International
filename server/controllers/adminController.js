@@ -16,6 +16,8 @@ const getScopedStudentIdsForAdmin = (user) =>
   Array.isArray(user?.managedStudents)
     ? user.managedStudents.map((id) => String(id)).filter(Boolean)
     : [];
+const getScopedStudentObjectIdsForAdmin = (user) =>
+  Array.isArray(user?.managedStudents) ? user.managedStudents.filter(Boolean) : [];
 
 const applyStudentScopeFilter = (user, baseFilter = {}, idField = '_id') => {
   if (isSuperAdminUser(user)) return { ...baseFilter };
@@ -25,6 +27,11 @@ const applyStudentScopeFilter = (user, baseFilter = {}, idField = '_id') => {
     [idField]: { $in: scopedIds }
   };
 };
+
+const normalizeStudentIds = (ids) =>
+  Array.isArray(ids)
+    ? [...new Set(ids.map((id) => String(id || '').trim()).filter(Boolean))]
+    : [];
 
 const ensureStudentInScopeForAdmin = (user, studentId) => {
   if (isSuperAdminUser(user)) return true;
@@ -267,7 +274,7 @@ const bulkImportQuestions = async (req, res) => {
     const csvText = req.file.buffer.toString();
     const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
     const rowCount = Math.max(0, lines.length - 1);
-    const maxRowsPerImport = 500;
+    const maxRowsPerImport = 1000;
     
     if (lines.length < 2) {
       return res.status(400).json({ message: 'CSV file is empty or invalid' });
@@ -710,6 +717,7 @@ const createAdminTest = async (req, res) => {
       assignmentType = 'individual',
       assignedStudents = []
     } = req.body;
+    let studentsForAssignment = [];
 
     if (!title || !String(title).trim()) {
       return res.status(400).json({ message: 'Test title is required' });
@@ -732,16 +740,37 @@ const createAdminTest = async (req, res) => {
     }
 
     if (assignmentType === 'individual') {
-      if (!Array.isArray(assignedStudents) || assignedStudents.length === 0) {
+      const normalizedAssignedStudents = normalizeStudentIds(assignedStudents);
+      if (normalizedAssignedStudents.length === 0) {
         return res.status(400).json({ message: 'Select at least one student' });
       }
-      const validStudentCount = await User.countDocuments({
-        _id: { $in: assignedStudents },
-        role: 'student'
-      });
-      if (validStudentCount !== assignedStudents.length) {
-        return res.status(400).json({ message: 'One or more selected students are invalid' });
+
+      if (!isSuperAdminUser(req.user)) {
+        const outOfScopeStudent = normalizedAssignedStudents.find(
+          (studentId) => !ensureStudentInScopeForAdmin(req.user, studentId)
+        );
+        if (outOfScopeStudent) {
+          return res.status(403).json({ message: 'You can only assign tests to your students' });
+        }
       }
+
+      const studentValidationFilter = {
+        _id: { $in: normalizedAssignedStudents },
+        role: 'student'
+      };
+      if (!isSuperAdminUser(req.user)) {
+        studentValidationFilter._id.$in = normalizedAssignedStudents.filter((studentId) =>
+          ensureStudentInScopeForAdmin(req.user, studentId)
+        );
+      }
+
+      const validStudentCount = await User.countDocuments(studentValidationFilter);
+
+      if (validStudentCount !== normalizedAssignedStudents.length) {
+        return res.status(400).json({ message: 'One or more selected students are invalid or outside your scope' });
+      }
+
+      studentsForAssignment = normalizedAssignedStudents;
     }
 
     const validQuestionCount = await Question.countDocuments({ _id: { $in: questions } });
@@ -757,7 +786,7 @@ const createAdminTest = async (req, res) => {
       duration: Number(duration),
       passingScore: Number(passingScore),
       assignmentType,
-      assignedStudents: assignmentType === 'individual' ? assignedStudents : [],
+      assignedStudents: assignmentType === 'individual' ? studentsForAssignment : [],
       createdBy: req.user._id
     });
 
@@ -774,7 +803,7 @@ const createAdminTest = async (req, res) => {
 const getStudents = async (req, res) => {
   try {
     const { search, status } = req.query;
-    const filter = { role: 'student' };
+    const filter = applyStudentScopeFilter(req.user, { role: 'student' });
     
     if (status) {
       filter.status = status;
@@ -857,7 +886,7 @@ const sendNotification = async (req, res) => {
   try {
     const { title, message, studentIds } = req.body;
     const adminId = req.user.id;
-    const admin = await User.findById(adminId);
+    const admin = req.user;
     const now = new Date();
 
     // Validate
@@ -865,7 +894,7 @@ const sendNotification = async (req, res) => {
       return res.status(400).json({ message: 'Title and message are required' });
     }
 
-    let targetStudentIds = Array.isArray(studentIds) ? studentIds : [];
+    let targetStudentIds = normalizeStudentIds(studentIds);
 
     // If sending to all students, check if superadmin
     if (!studentIds || studentIds.length === 0) {
@@ -880,6 +909,15 @@ const sendNotification = async (req, res) => {
       }).select('_id');
       targetStudentIds = allStudents.map(s => s._id);
     } else {
+      if (!isSuperAdminUser(admin)) {
+        const outOfScopeStudent = targetStudentIds.find(
+          (studentId) => !ensureStudentInScopeForAdmin(admin, studentId)
+        );
+        if (outOfScopeStudent) {
+          return res.status(403).json({ message: 'You can only notify your students' });
+        }
+      }
+
       // Resolve and sanitize selected student IDs to real student records only.
       const selectedStudents = await User.find({
         _id: { $in: targetStudentIds },
@@ -978,7 +1016,7 @@ const sendNotification = async (req, res) => {
 // @access  Private (admin only)
 const getStudentList = async (req, res) => {
   try {
-    const students = await User.find({ role: 'student' })
+    const students = await User.find(applyStudentScopeFilter(req.user, { role: 'student' }))
       .select('name email program')
       .sort({ name: 1 });
     res.json(students);
@@ -995,6 +1033,10 @@ const getStudentProgress = async (req, res) => {
   try {
     const { studentId } = req.params;
     const { timeRange = '30' } = req.query; // days
+
+    if (!ensureStudentInScopeForAdmin(req.user, studentId)) {
+      return res.status(403).json({ message: 'You can only view progress for your students' });
+    }
 
     // Verify student exists
     const student = await User.findById(studentId).select('name email program trustedDevices');
@@ -1117,6 +1159,11 @@ const getTestResultForReview = async (req, res) => {
     if (!testResult) {
       return res.status(404).json({ message: 'Test result not found' });
     }
+
+    if (!ensureStudentInScopeForAdmin(req.user, testResult.student)) {
+      return res.status(403).json({ message: 'You can only review results for your students' });
+    }
+
     res.json(testResult);
   } catch (error) {
     console.error(error);
@@ -1464,7 +1511,7 @@ const approveAdmin = async (req, res) => {
 const getAllAdmins = async (req, res) => {
   try {
     const admins = await User.find({ role: { $in: ['admin', 'superadmin'] } })
-      .select('name email role status approved accessCode createdAt')
+      .select('name email role status approved accessCode createdAt managedStudents')
       .sort({ createdAt: -1 });
     res.json(admins);
   } catch (error) {
@@ -1478,6 +1525,10 @@ const getAllAdmins = async (req, res) => {
 // @access  Private (admin only)
 const clearStudentDeviceHistory = async (req, res) => {
   try {
+    if (!ensureStudentInScopeForAdmin(req.user, req.params.id)) {
+      return res.status(403).json({ message: 'You can only manage your students' });
+    }
+
     const student = await User.findById(req.params.id);
     if (!student || student.role !== 'student') {
       return res.status(404).json({ message: 'Student not found' });
@@ -1498,7 +1549,18 @@ const clearStudentDeviceHistory = async (req, res) => {
 // @access  Private (admin only)
 const getExamSupportConversations = async (req, res) => {
   try {
-    const rows = await ExamSupportMessage.aggregate([
+    const pipeline = [];
+
+    if (!isSuperAdminUser(req.user)) {
+      const scopedStudentIds = getScopedStudentObjectIdsForAdmin(req.user);
+      pipeline.push({
+        $match: {
+          student: { $in: scopedStudentIds }
+        }
+      });
+    }
+
+    pipeline.push(
       { $sort: { createdAt: -1 } },
       {
         $group: {
@@ -1521,7 +1583,9 @@ const getExamSupportConversations = async (req, res) => {
       },
       { $sort: { lastAt: -1 } },
       { $limit: 200 }
-    ]);
+    );
+
+    const rows = await ExamSupportMessage.aggregate(pipeline);
 
     res.json(rows.map((row) => ({
       studentId: row?._id?.student,
@@ -1548,6 +1612,10 @@ const getExamSupportMessagesAdmin = async (req, res) => {
     const sessionId = String(req.query?.sessionId || '').trim();
     if (!studentId || !sessionId) {
       return res.status(400).json({ message: 'studentId and sessionId are required' });
+    }
+
+    if (!ensureStudentInScopeForAdmin(req.user, studentId)) {
+      return res.status(403).json({ message: 'You can only view conversations for your students' });
     }
 
     const messages = await ExamSupportMessage.find({ student: studentId, sessionId })
@@ -1579,6 +1647,10 @@ const sendExamSupportMessageAdmin = async (req, res) => {
       return res.status(400).json({ message: 'studentId, sessionId and message are required' });
     }
 
+    if (!ensureStudentInScopeForAdmin(req.user, studentId)) {
+      return res.status(403).json({ message: 'You can only message your students' });
+    }
+
     const student = await User.findById(studentId).select('name');
     if (!student) return res.status(404).json({ message: 'Student not found' });
 
@@ -1597,6 +1669,75 @@ const sendExamSupportMessageAdmin = async (req, res) => {
     });
 
     res.status(201).json(created);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get current managed student scope for one admin
+// @route   GET /api/admin/users/:adminId/student-scope
+// @access  Private (superadmin only)
+const getAdminStudentScope = async (req, res) => {
+  try {
+    const admin = await User.findById(req.params.adminId)
+      .select('name email role managedStudents');
+
+    if (!admin || admin.role !== 'admin') {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    const assignedIds = getScopedStudentIdsForAdmin(admin);
+    const students = await User.find({ role: 'student' })
+      .select('name email program status')
+      .sort({ name: 1 });
+
+    res.json({
+      admin: {
+        _id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role
+      },
+      assignedStudentIds: assignedIds,
+      students
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Update managed student scope for one admin
+// @route   PUT /api/admin/users/:adminId/student-scope
+// @access  Private (superadmin only)
+const updateAdminStudentScope = async (req, res) => {
+  try {
+    const admin = await User.findById(req.params.adminId).select('role managedStudents');
+    if (!admin || admin.role !== 'admin') {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    const nextStudentIds = normalizeStudentIds(req.body?.studentIds);
+    if (nextStudentIds.length > 0) {
+      const validStudentCount = await User.countDocuments({
+        _id: { $in: nextStudentIds },
+        role: 'student'
+      });
+
+      if (validStudentCount !== nextStudentIds.length) {
+        return res.status(400).json({ message: 'One or more selected students are invalid' });
+      }
+    }
+
+    admin.managedStudents = nextStudentIds;
+    await admin.save();
+
+    res.json({
+      message: 'Tutor student scope updated successfully',
+      adminId: admin._id,
+      assignedCount: nextStudentIds.length
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -1832,6 +1973,8 @@ module.exports = {
   sendExamSupportMessageAdmin,
   approveAdmin,
   getAllAdmins,
+  getAdminStudentScope,
+  updateAdminStudentScope,
   deleteAdmin,
   getAdminSettings,
   updateAdminProfileSettings,
