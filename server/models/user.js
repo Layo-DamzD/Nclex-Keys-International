@@ -58,7 +58,16 @@ const userSchema = new mongoose.Schema({
     questionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Question' },
     lastAttempted: { type: Date, default: Date.now },
     attemptCount: { type: Number, default: 1 }
-  }]
+  }],
+  // Latest matched landing-page public test result, revealed after signup/login email match.
+  publicTestResult: {
+    source: { type: String, default: 'landing-page-public-test' },
+    score: { type: Number, default: 0 },
+    total: { type: Number, default: 0 },
+    attempted: { type: Number, default: 0 },
+    percentage: { type: Number, default: 0 },
+    submittedAt: { type: Date, default: null }
+  }
 });
 
 userSchema.pre('save', async function () {

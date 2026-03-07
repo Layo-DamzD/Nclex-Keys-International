@@ -330,11 +330,69 @@ const sendAdminAccessCodeEmail = async ({
   }
 };
 
+const sendPublicTestLeadEmail = async ({
+  to = process.env.PUBLIC_TEST_LEAD_TO || 'nclexkeysintl.academy@gmail.com',
+  name,
+  email,
+  ip = 'Unknown',
+  location = 'Unknown'
+}) => {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'not_configured' };
+  }
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    return { sent: false, reason: 'transporter_unavailable' };
+  }
+
+  const subject = `NCLEX KEYS International - Public Test Lead (${name || 'Unknown'})`;
+  const text = [
+    'New public test submission received.',
+    '',
+    `Name: ${name || 'Unknown'}`,
+    `Email: ${email || 'Unknown'}`,
+    `IP: ${ip || 'Unknown'}`,
+    `Location: ${location || 'Unknown'}`
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:640px;margin:0 auto;padding:24px;">
+      <h2 style="margin:0 0 12px;color:#1d4ed8;">NCLEX KEYS International</h2>
+      <p style="margin:0 0 12px;">New public test submission received.</p>
+      <table cellpadding="8" cellspacing="0" style="width:100%;border-collapse:collapse;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+        <tr><td style="font-weight:700;width:160px;">Name</td><td>${name || 'Unknown'}</td></tr>
+        <tr><td style="font-weight:700;">Email</td><td>${email || 'Unknown'}</td></tr>
+        <tr><td style="font-weight:700;">IP Address</td><td>${ip || 'Unknown'}</td></tr>
+        <tr><td style="font-weight:700;">Location</td><td>${location || 'Unknown'}</td></tr>
+      </table>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
+};
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
   sendPasswordResetOtpEmail,
   sendAdminSignupVerificationEmail,
   sendAdminAccessCodeEmail,
+  sendPublicTestLeadEmail,
   buildResetUrl
 };

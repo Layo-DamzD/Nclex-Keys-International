@@ -4,9 +4,6 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
 
-const RESULT_CONTACT_NUMBER = '+2347037367480';
-const RESULT_CONTACT_WA_LINK = `https://wa.me/${RESULT_CONTACT_NUMBER.replace(/\D/g, '')}`;
-
 const RAW_QUESTIONS = [
   {
     type: 'multiple-choice',
@@ -307,8 +304,15 @@ const PublicKnowledgeTest = () => {
   const [submitEmail, setSubmitEmail] = useState('');
   const [submitConsent, setSubmitConsent] = useState(false);
   const [submitEmailLoading, setSubmitEmailLoading] = useState(false);
-  const [showInstantResult, setShowInstantResult] = useState(false);
   const current = questions[currentIndex];
+  const resultContactNumber = useMemo(
+    () => String(config?.sections?.footer?.contact?.phone || '+2347037367480').trim(),
+    [config]
+  );
+  const resultContactWaLink = useMemo(
+    () => `https://wa.me/${resultContactNumber.replace(/\D/g, '')}`,
+    [resultContactNumber]
+  );
 
   const answeredCount = useMemo(
     () =>
@@ -342,10 +346,9 @@ const PublicKnowledgeTest = () => {
     setAnswers((prev) => ({ ...prev, [question.id]: value }));
   };
 
-  const completeSubmit = ({ instantResult = false } = {}) => {
+  const completeSubmit = () => {
     setShowEmailGate(false);
     setSubmitted(true);
-    setShowInstantResult(instantResult);
     setSubmitEmail('');
     setSubmitName('');
     setSubmitConsent(false);
@@ -383,43 +386,32 @@ const PublicKnowledgeTest = () => {
     try {
       setSubmitEmailLoading(true);
       const browserLocation = await getBrowserLocation();
-      await axios.post('/api/auth/student/verify-public-test-email', { email });
-      const leadRes = await axios.post('/api/content/public-test/lead', {
+      await axios.post('/api/content/public-test/lead', {
         name,
         email,
         attempted: answeredCount,
         total: questions.length,
         score,
         percentage,
-        browserLocation,
-        footerPhone: RESULT_CONTACT_NUMBER
+        browserLocation
       });
-      const waLink = String(leadRes?.data?.waLink || '').trim();
-      if (waLink) {
-        window.open(waLink, '_blank', 'noopener,noreferrer');
-      }
-      completeSubmit({ instantResult: true });
+      completeSubmit();
     } catch (error) {
       try {
         const browserLocation = await getBrowserLocation();
-        const leadRes = await axios.post('/api/content/public-test/lead', {
+        await axios.post('/api/content/public-test/lead', {
           name,
           email,
           attempted: answeredCount,
           total: questions.length,
           score,
           percentage,
-          browserLocation,
-          footerPhone: RESULT_CONTACT_NUMBER
+          browserLocation
         });
-        const waLink = String(leadRes?.data?.waLink || '').trim();
-        if (waLink) {
-          window.open(waLink, '_blank', 'noopener,noreferrer');
-        }
       } catch (leadErr) {
         console.error('Failed to send public test lead:', leadErr);
       }
-      completeSubmit({ instantResult: false });
+      completeSubmit();
     }
   };
 
@@ -462,31 +454,20 @@ const PublicKnowledgeTest = () => {
 
           {submitted ? (
             <section className="public-test-lock-card">
-              {showInstantResult ? (
-                <>
-                  <h2>{percentage >= 70 ? 'Congratulations' : 'Test Submitted'}</h2>
-                  <p>
-                    <strong>
-                      Your score: {score}/{questions.length} ({percentage}%)
-                    </strong>
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h2>Test Submitted</h2>
-                  <p>
-                    Your responses have been recorded.
-                    {' '}
-                    <strong>
-                      To view your result, message this WhatsApp number:
-                      {' '}
-                      <a href={RESULT_CONTACT_WA_LINK} target="_blank" rel="noreferrer">
-                        {RESULT_CONTACT_NUMBER}
-                      </a>
-                    </strong>
-                  </p>
-                </>
-              )}
+              <h2>Test Submitted</h2>
+              <p>
+                Your responses have been recorded.
+                {' '}
+                <strong>
+                  Message
+                  {' '}
+                  <a href={resultContactWaLink} target="_blank" rel="noreferrer">
+                    {resultContactNumber}
+                  </a>
+                  {' '}
+                  to see your result.
+                </strong>
+              </p>
               <p className="small text-muted mb-0">
                 Attempted {answeredCount} of {questions.length} questions.
               </p>
@@ -609,7 +590,7 @@ const PublicKnowledgeTest = () => {
                     style={{ marginTop: '2px' }}
                   />
                   <span>
-                    By submitting, you consent to share your name, email, IP address, and location details for verification.
+                    By submitting, you consent to share your details.
                   </span>
                 </label>
               </div>
@@ -633,7 +614,7 @@ const PublicKnowledgeTest = () => {
                   disabled={submitEmailLoading || !submitName.trim() || !submitEmail.trim() || !submitConsent}
                   onClick={onConfirmEmailAndSubmit}
                 >
-                  {submitEmailLoading ? 'Verifying...' : 'Verify & Submit'}
+                  {submitEmailLoading ? 'Submitting...' : 'Submit'}
                 </button>
               </div>
             </section>

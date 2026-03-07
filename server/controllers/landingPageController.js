@@ -1,4 +1,6 @@
 const LandingPageConfig = require('../models/LandingPageConfig');
+const PublicTestLead = require('../models/PublicTestLead');
+const { sendPublicTestLeadEmail } = require('../services/emailService');
 
 const isValidPageKey = (pageKey) => ['home', 'brainiac'].includes(pageKey);
 const cloneStructured = (value) => JSON.parse(JSON.stringify(value));
@@ -323,8 +325,6 @@ const createPublicTestLead = async (req, res) => {
       return res.status(400).json({ message: 'Name and email are required' });
     }
 
-    const phoneRaw = String(req.body?.footerPhone || '').trim() || '+2347037367480';
-    const phoneDigits = phoneRaw.replace(/\D/g, '');
     const ip = resolveClientIp(req);
     const country =
       String(req.headers['cf-ipcountry'] || '').trim()
@@ -338,19 +338,31 @@ const createPublicTestLead = async (req, res) => {
       ? `${browserLocation.latitude}, ${browserLocation.longitude}`
       : [city, region, country].filter(Boolean).join(', ') || 'Unknown';
 
-    const message = [
-      '*Public Test Submission*',
-      `Name: ${name}`,
-      `Email: ${email}`,
-      `Score: ${score}/${total} (${percent}%)`,
-      `Attempted: ${attempted}/${total}`,
-      `IP: ${ip || 'Unknown'}`,
-      `Location: ${locationLine}`,
-      `Device: ${ua || 'Unknown'}`
-    ].join('\n');
+    await PublicTestLead.create({
+      name,
+      email: String(email).toLowerCase(),
+      attempted,
+      total,
+      score,
+      percentage: percent,
+      ip: ip || 'Unknown',
+      location: locationLine,
+      device: ua || 'Unknown',
+      browserLocation
+    });
 
-    const waLink = `https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`;
-    return res.json({ waLink, message });
+    const emailResult = await sendPublicTestLeadEmail({
+      name,
+      email,
+      ip: ip || 'Unknown',
+      location: locationLine
+    });
+
+    if (!emailResult?.sent) {
+      console.warn('Public test lead email was not sent:', emailResult?.reason || 'unknown_reason');
+    }
+
+    return res.json({ success: true, emailSent: Boolean(emailResult?.sent) });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });

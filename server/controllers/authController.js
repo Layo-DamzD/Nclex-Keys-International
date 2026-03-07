@@ -1,4 +1,5 @@
 const User = require('../models/user');
+const PublicTestLead = require('../models/PublicTestLead');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -122,6 +123,39 @@ const findCandidateByPassword = async (candidates, password) => {
   return null;
 };
 
+const claimLatestPublicTestResultForUser = async (user) => {
+  if (!user || String(user.role) !== 'student' || !user.email) {
+    return false;
+  }
+
+  const email = String(user.email).trim().toLowerCase();
+  if (!email) return false;
+
+  const leads = await PublicTestLead.find({
+    email,
+    claimedBy: null
+  }).sort({ createdAt: -1 });
+
+  if (!Array.isArray(leads) || !leads.length) return false;
+  const latestLead = leads[0];
+
+  user.publicTestResult = {
+    source: 'landing-page-public-test',
+    score: Number(latestLead.score || 0),
+    total: Number(latestLead.total || 0),
+    attempted: Number(latestLead.attempted || 0),
+    percentage: Number(latestLead.percentage || 0),
+    submittedAt: latestLead.createdAt || new Date()
+  };
+
+  const claimAt = new Date();
+  await PublicTestLead.updateMany(
+    { _id: { $in: leads.map((item) => item._id) } },
+    { $set: { claimedBy: user._id, claimedAt: claimAt } }
+  );
+  return true;
+};
+
 // ===== STUDENT =====
 const registerStudent = async (req, res) => {
   try {
@@ -157,6 +191,10 @@ const registerStudent = async (req, res) => {
       examDate: examDate || null,
       trustedDevices
     });
+    const claimedLead = await claimLatestPublicTestResultForUser(user);
+    if (claimedLead) {
+      await user.save();
+    }
 
     res.status(201).json({
       _id: user._id,
@@ -211,6 +249,11 @@ const loginStudent = async (req, res) => {
             .slice(0, 25);
         }
       }
+    }
+
+    const claimedLead = await claimLatestPublicTestResultForUser(user);
+
+    if (normalizedDeviceId || claimedLead) {
       await user.save();
     }
 
@@ -633,6 +676,12 @@ const forgotAdminAccessCode = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password -recoveryPinHash');
+    if (user && user.role === 'student') {
+      const claimedLead = await claimLatestPublicTestResultForUser(user);
+      if (claimedLead) {
+        await user.save();
+      }
+    }
     res.json(user);
   } catch (error) {
     console.error(error);

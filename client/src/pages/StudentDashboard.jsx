@@ -262,6 +262,17 @@ const StudentDashboard = () => {
 
         {activeSection === 'dashboard' && (
           <div id="dashboard" className="content-section active">
+            {user?.publicTestResult?.total > 0 && (
+              <div className="alert alert-info" role="status" style={{ marginBottom: '16px' }}>
+                <strong>Public Test Result:</strong>
+                {' '}
+                {Number(user.publicTestResult.score || 0)}/{Number(user.publicTestResult.total || 0)}
+                {' '}
+                (
+                {Number(user.publicTestResult.percentage || 0)}
+                %)
+              </div>
+            )}
             <StatsCards />
             <div className="row">
               <div className="col-lg-8">
