@@ -4,6 +4,7 @@ import Footer from '../components/Footer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
 
 const RESULT_CONTACT_NUMBER = '+2347037367480';
+const RESULT_CONTACT_WA_LINK = `https://wa.me/${RESULT_CONTACT_NUMBER.replace(/\D/g, '')}`;
 
 const RAW_QUESTIONS = [
   {
@@ -317,9 +318,11 @@ const PublicKnowledgeTest = () => {
                 Your responses have been recorded.
                 {' '}
                 <strong>
-                  To view your result, message the footer WhatsApp number:
+                  To view your result, message this WhatsApp number:
                   {' '}
-                  {RESULT_CONTACT_NUMBER}
+                  <a href={RESULT_CONTACT_WA_LINK} target="_blank" rel="noreferrer">
+                    {RESULT_CONTACT_NUMBER}
+                  </a>
                 </strong>
               </p>
               <p className="small text-muted mb-0">
