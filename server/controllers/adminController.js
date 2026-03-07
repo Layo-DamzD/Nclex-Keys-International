@@ -10,6 +10,28 @@ const { sendPushNotificationMulticast } = require('../services/firebaseAdmin');
 const fs = require('fs');
 const path = require('path');
 
+const normalizeRole = (role) => String(role || '').trim().toLowerCase();
+const isSuperAdminUser = (user) => normalizeRole(user?.role) === 'superadmin';
+const getScopedStudentIdsForAdmin = (user) =>
+  Array.isArray(user?.managedStudents)
+    ? user.managedStudents.map((id) => String(id)).filter(Boolean)
+    : [];
+
+const applyStudentScopeFilter = (user, baseFilter = {}, idField = '_id') => {
+  if (isSuperAdminUser(user)) return { ...baseFilter };
+  const scopedIds = getScopedStudentIdsForAdmin(user);
+  return {
+    ...baseFilter,
+    [idField]: { $in: scopedIds }
+  };
+};
+
+const ensureStudentInScopeForAdmin = (user, studentId) => {
+  if (isSuperAdminUser(user)) return true;
+  const scopedIds = getScopedStudentIdsForAdmin(user);
+  return scopedIds.includes(String(studentId));
+};
+
 // @desc    Get admin dashboard stats
 // @route   GET /api/admin/stats
 // @access  Private (admin only)

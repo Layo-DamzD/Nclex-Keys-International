@@ -531,7 +531,25 @@ const ManageQuestions = ({ onSectionChange }) => {
                 <p><strong>Correct Answer:</strong> {formatAnswerForPreview(previewQuestion)}</p>
                 <p><strong>Rationale:</strong> {previewQuestion.rationale || 'N/A'}</p>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer d-flex justify-content-between align-items-center w-100">
+                <div className="d-flex align-items-center gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary"
+                    onClick={() => navigatePreview(-1)}
+                    disabled={previewLoading || previewIndex <= 0}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => navigatePreview(1)}
+                    disabled={previewLoading || previewIndex < 0 || previewIndex >= questions.length - 1}
+                  >
+                    Next
+                  </button>
+                </div>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -541,22 +559,6 @@ const ManageQuestions = ({ onSectionChange }) => {
                   }}
                 >
                   Close
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline-primary"
-                  onClick={() => navigatePreview(-1)}
-                  disabled={previewLoading || previewIndex <= 0}
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => navigatePreview(1)}
-                  disabled={previewLoading || previewIndex < 0 || previewIndex >= questions.length - 1}
-                >
-                  Next
                 </button>
               </div>
             </div>

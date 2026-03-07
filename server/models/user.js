@@ -50,6 +50,8 @@ const userSchema = new mongoose.Schema({
     firstSeenAt: { type: Date, default: Date.now },
     lastSeenAt: { type: Date, default: Date.now }
   }],
+  // Super-admin managed scope: which students a regular admin can manage.
+  managedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   lastReview: { type: Number, default: 0 }, // timestamp of last review
   // ✅ Add incorrectQuestions here (inside the schema)
   incorrectQuestions: [{ 
