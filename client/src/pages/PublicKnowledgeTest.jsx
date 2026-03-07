@@ -241,6 +241,40 @@ const shuffleArray = (items) => {
   return arr;
 };
 
+const scatterByType = (items) => {
+  const buckets = new Map();
+  items.forEach((item) => {
+    const type = String(item.type || 'unknown');
+    if (!buckets.has(type)) buckets.set(type, []);
+    buckets.get(type).push(item);
+  });
+
+  // Randomize inside each type first so sequence is not predictable.
+  for (const [type, list] of buckets.entries()) {
+    buckets.set(type, shuffleArray(list));
+  }
+
+  const result = [];
+  let prevType = null;
+
+  while (result.length < items.length) {
+    const candidates = Array.from(buckets.entries())
+      .filter(([, list]) => list.length > 0)
+      .sort((a, b) => b[1].length - a[1].length);
+
+    if (!candidates.length) break;
+
+    // Prefer the largest bucket that is not the same as previous type.
+    let picked = candidates.find(([type]) => type !== prevType) || candidates[0];
+    const [pickedType, pickedList] = picked;
+    const nextItem = pickedList.shift();
+    result.push(nextItem);
+    prevType = pickedType;
+  }
+
+  return result;
+};
+
 const isAnswered = (question, answerValue) => {
   if (question.type === 'sata') return Array.isArray(answerValue) && answerValue.length > 0;
   return String(answerValue || '').trim() !== '';
@@ -248,7 +282,7 @@ const isAnswered = (question, answerValue) => {
 
 const PublicKnowledgeTest = () => {
   const { config, hasSavedConfig, loading } = useLandingPageContent('home');
-  const questions = useMemo(() => shuffleArray(normalizeQuestions(RAW_QUESTIONS)), []);
+  const questions = useMemo(() => scatterByType(normalizeQuestions(RAW_QUESTIONS)), []);
   const [answers, setAnswers] = useState({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
