@@ -274,13 +274,9 @@ const bulkImportQuestions = async (req, res) => {
     const csvText = req.file.buffer.toString();
     const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
     const rowCount = Math.max(0, lines.length - 1);
-    const maxRowsPerImport = 1000;
     
     if (lines.length < 2) {
       return res.status(400).json({ message: 'CSV file is empty or invalid' });
-    }
-    if (rowCount > maxRowsPerImport) {
-      return res.status(400).json({ message: `Maximum ${maxRowsPerImport} rows allowed per import. Found ${rowCount}.` });
     }
 
     const parseCsvLine = (line = '') => {
@@ -325,6 +321,8 @@ const bulkImportQuestions = async (req, res) => {
 
     const questions = [];
     const errors = [];
+    let inserted = 0;
+    let updated = 0;
 
     for (let i = 1; i < lines.length; i++) {
       const values = parseCsvLine(lines[i]);
@@ -686,13 +684,32 @@ const bulkImportQuestions = async (req, res) => {
       questions.push(question);
     }
 
-    // Insert all valid questions
+    // Upsert valid questions so existing records are updated (not duplicated)
     if (questions.length > 0) {
-      await Question.insertMany(questions);
+      for (const question of questions) {
+        const keyFilter = {
+          type: String(question.type || '').trim(),
+          category: String(question.category || '').trim(),
+          subcategory: String(question.subcategory || '').trim(),
+          questionText: String(question.questionText || '').trim()
+        };
+
+        const existing = await Question.findOne(keyFilter).select('_id');
+        if (existing) {
+          await Question.findByIdAndUpdate(existing._id, { $set: question }, { runValidators: true });
+          updated += 1;
+        } else {
+          await Question.create(question);
+          inserted += 1;
+        }
+      }
     }
 
     res.json({
-      imported: questions.length,
+      imported: inserted + updated,
+      inserted,
+      updated,
+      processedRows: rowCount,
       errors: errors.length,
       errorDetails: errors
     });
@@ -1274,8 +1291,12 @@ const uploadFile = async (req, res) => {
     const ext = path.extname(originalName);
     const extType = ext.replace('.', '').toLowerCase();
     const mimetype = String(req.file.mimetype || '').toLowerCase();
-    if (extType !== 'pdf' || (mimetype && mimetype !== 'application/pdf')) {
-      return res.status(400).json({ message: 'Only PDF files are allowed' });
+    const isPdf = extType === 'pdf' && (!mimetype || mimetype === 'application/pdf');
+    const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(extType)
+      && (!mimetype || mimetype.startsWith('image/'));
+
+    if (!isPdf && !isImage) {
+      return res.status(400).json({ message: 'Only PDF and image files are allowed' });
     }
     const base = path.basename(originalName, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
     const fileName = `${Date.now()}-${base}${ext}`;
@@ -1284,7 +1305,7 @@ const uploadFile = async (req, res) => {
     fs.writeFileSync(filePath, req.file.buffer);
 
     const fileUrl = `/api/uploads/${fileName}`;
-    const fileType = 'pdf';
+    const fileType = isPdf ? 'pdf' : 'image';
     
     res.json({
       fileUrl,

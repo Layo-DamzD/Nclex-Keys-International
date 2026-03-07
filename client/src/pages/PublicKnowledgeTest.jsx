@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
@@ -298,14 +297,15 @@ const isCorrectAnswer = (question, answerValue) => {
 };
 
 const PublicKnowledgeTest = () => {
-  const navigate = useNavigate();
   const { config, hasSavedConfig, loading } = useLandingPageContent('home');
   const questions = useMemo(() => scatterByType(normalizeQuestions(RAW_QUESTIONS)), []);
   const [answers, setAnswers] = useState({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [showEmailGate, setShowEmailGate] = useState(false);
+  const [submitName, setSubmitName] = useState('');
   const [submitEmail, setSubmitEmail] = useState('');
+  const [submitConsent, setSubmitConsent] = useState(false);
   const [submitEmailLoading, setSubmitEmailLoading] = useState(false);
   const [showInstantResult, setShowInstantResult] = useState(false);
   const current = questions[currentIndex];
@@ -347,6 +347,8 @@ const PublicKnowledgeTest = () => {
     setSubmitted(true);
     setShowInstantResult(instantResult);
     setSubmitEmail('');
+    setSubmitName('');
+    setSubmitConsent(false);
     setSubmitEmailLoading(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -355,19 +357,69 @@ const PublicKnowledgeTest = () => {
     setShowEmailGate(true);
   };
 
+  const getBrowserLocation = () =>
+    new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: Number(position.coords?.latitude || 0),
+            longitude: Number(position.coords?.longitude || 0)
+          });
+        },
+        () => resolve(null),
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+      );
+    });
+
   const onConfirmEmailAndSubmit = async () => {
+    const name = String(submitName || '').trim();
     const email = String(submitEmail || '').trim();
-    if (!email) return;
+    if (!name || !email || !submitConsent) return;
 
     try {
       setSubmitEmailLoading(true);
+      const browserLocation = await getBrowserLocation();
       await axios.post('/api/auth/student/verify-public-test-email', { email });
+      const leadRes = await axios.post('/api/content/public-test/lead', {
+        name,
+        email,
+        attempted: answeredCount,
+        total: questions.length,
+        score,
+        percentage,
+        browserLocation,
+        footerPhone: RESULT_CONTACT_NUMBER
+      });
+      const waLink = String(leadRes?.data?.waLink || '').trim();
+      if (waLink) {
+        window.open(waLink, '_blank', 'noopener,noreferrer');
+      }
       completeSubmit({ instantResult: true });
     } catch (error) {
-      setShowEmailGate(false);
-      setSubmitEmail('');
-      setSubmitEmailLoading(false);
-      navigate('/dashboard');
+      try {
+        const browserLocation = await getBrowserLocation();
+        const leadRes = await axios.post('/api/content/public-test/lead', {
+          name,
+          email,
+          attempted: answeredCount,
+          total: questions.length,
+          score,
+          percentage,
+          browserLocation,
+          footerPhone: RESULT_CONTACT_NUMBER
+        });
+        const waLink = String(leadRes?.data?.waLink || '').trim();
+        if (waLink) {
+          window.open(waLink, '_blank', 'noopener,noreferrer');
+        }
+      } catch (leadErr) {
+        console.error('Failed to send public test lead:', leadErr);
+      }
+      completeSubmit({ instantResult: false });
     }
   };
 
@@ -530,8 +582,16 @@ const PublicKnowledgeTest = () => {
             <section className="public-test-card" style={{ maxWidth: '520px', width: '100%' }}>
               <h2 className="public-test-question" style={{ marginBottom: '12px' }}>Confirm Your Signup Email</h2>
               <p className="text-muted" style={{ marginBottom: '12px' }}>
-                Enter the same email used during signup before final submission.
+                Enter your name and email to submit and send your details.
               </p>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Your full name"
+                value={submitName}
+                onChange={(e) => setSubmitName(e.target.value)}
+                style={{ marginBottom: '10px' }}
+              />
               <input
                 type="email"
                 className="form-control"
@@ -540,6 +600,19 @@ const PublicKnowledgeTest = () => {
                 onChange={(e) => setSubmitEmail(e.target.value)}
                 autoFocus
               />
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#334155', fontSize: '13px' }}>
+                  <input
+                    type="checkbox"
+                    checked={submitConsent}
+                    onChange={(e) => setSubmitConsent(e.target.checked)}
+                    style={{ marginTop: '2px' }}
+                  />
+                  <span>
+                    By submitting, you consent to share your name, email, IP address, and location details for verification.
+                  </span>
+                </label>
+              </div>
               <div className="public-test-actions" style={{ marginTop: '16px' }}>
                 <button
                   type="button"
@@ -547,6 +620,9 @@ const PublicKnowledgeTest = () => {
                   disabled={submitEmailLoading}
                   onClick={() => {
                     setShowEmailGate(false);
+                    setSubmitName('');
+                    setSubmitEmail('');
+                    setSubmitConsent(false);
                   }}
                 >
                   Cancel
@@ -554,7 +630,7 @@ const PublicKnowledgeTest = () => {
                 <button
                   type="button"
                   className="btn btn-success"
-                  disabled={submitEmailLoading}
+                  disabled={submitEmailLoading || !submitName.trim() || !submitEmail.trim() || !submitConsent}
                   onClick={onConfirmEmailAndSubmit}
                 >
                   {submitEmailLoading ? 'Verifying...' : 'Verify & Submit'}

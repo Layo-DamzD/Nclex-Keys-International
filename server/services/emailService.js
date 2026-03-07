@@ -47,7 +47,7 @@ const createTransporter = () => {
 
   const auth = {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+    pass: String(process.env.SMTP_PASS || '').replace(/\s+/g, '')
   };
 
   if (process.env.SMTP_SERVICE) {
@@ -126,15 +126,23 @@ const sendPasswordResetEmail = async ({
     </div>
   `;
 
-  await transporter.sendMail({
-    from: getMailFrom(),
-    to,
-    subject,
-    text,
-    html
-  });
-
-  return { sent: true, resetUrl };
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true, resetUrl };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error',
+      resetUrl
+    };
+  }
 };
 
 const sendPasswordResetOtpEmail = async ({
@@ -179,15 +187,22 @@ const sendPasswordResetOtpEmail = async ({
     </div>
   `;
 
-  await transporter.sendMail({
-    from: getMailFrom(),
-    to,
-    subject,
-    text,
-    html
-  });
-
-  return { sent: true };
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
 };
 
 const sendAdminSignupVerificationEmail = async ({

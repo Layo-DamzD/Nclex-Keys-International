@@ -75,24 +75,54 @@ const getDefaultConfig = (pageKey) => {
       },
       program: {
         heading: 'Why Choose NCLEX KEYS?',
-        subheading: 'Comprehensive NCLEX preparation designed for international nurses',
+        subheading: 'Strategic, intensive coaching that transforms NCLEX preparation into confident success.',
         cards: [
           {
-            icon: 'fa-user-md',
-            title: 'Expert Instructors',
-            text: 'Learn from NCLEX specialists with 10+ years of teaching experience and clinical practice.',
+            icon: 'fa-bullseye',
+            title: 'Strategic Coaching',
+            text: 'Intensive, results-driven coaching that meticulously decodes NCLEX exam logic.',
           },
           {
-            icon: 'fa-laptop-house',
-            title: 'Live Virtual Classes',
-            text: 'Interactive online sessions with real-time Q&A. Attend from anywhere in the world.',
+            icon: 'fa-chalkboard-user',
+            title: 'Expert Mentorship',
+            text: 'Learn from RNs and experienced educators with 25+ years of clinical practice.',
           },
           {
-            icon: 'fa-file-alt',
-            title: 'Custom Study Plans',
-            text: 'Personalized learning path based on your strengths and weaknesses analysis.',
+            icon: 'fa-award',
+            title: 'Proven Success',
+            text: 'Over 100 aspiring nurses successfully guided to NCLEX licensure with confidence.',
+          },
+          {
+            icon: 'fa-book-open',
+            title: 'Comprehensive Content',
+            text: 'High-quality learning materials designed for immediate professional success.',
+          },
+          {
+            icon: 'fa-circle-check',
+            title: 'Confidence Building',
+            text: 'Transform from anxious test taker to confident, competent clinician.',
+          },
+          {
+            icon: 'fa-users',
+            title: 'Global Engagement',
+            text: 'Strategic collaboration and support for nursing professionals worldwide.',
           },
         ],
+        missionVision: {
+          heading: 'Our Mission & Vision',
+          cards: [
+            {
+              icon: 'fa-bullseye',
+              title: 'Mission',
+              text: 'NCLEX KEYS is dedicated to empowering future nurses by providing intensive, results-driven coaching and strategic mentorship.',
+            },
+            {
+              icon: 'fa-people-arrows',
+              title: 'Vision',
+              text: 'To be the globally recognized premier standard for strategic NCLEX preparation, transforming aspiring nurses into confident, licensed clinicians.',
+            },
+          ],
+        },
       },
       testimonials: {
         heading: 'Success Stories',
@@ -271,8 +301,65 @@ const getPublicLandingPageConfig = async (req, res) => {
   }
 };
 
+const resolveClientIp = (req) => {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').trim();
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return String(req.ip || req.socket?.remoteAddress || '').trim();
+};
+
+const createPublicTestLead = async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    const email = String(req.body?.email || '').trim();
+    const attempted = Number(req.body?.attempted || 0);
+    const total = Number(req.body?.total || 0);
+    const score = Number(req.body?.score || 0);
+    const percent = Number(req.body?.percentage || 0);
+    const browserLocation = req.body?.browserLocation && typeof req.body.browserLocation === 'object'
+      ? req.body.browserLocation
+      : null;
+
+    if (!name || !email) {
+      return res.status(400).json({ message: 'Name and email are required' });
+    }
+
+    const phoneRaw = String(req.body?.footerPhone || '').trim() || '+2347037367480';
+    const phoneDigits = phoneRaw.replace(/\D/g, '');
+    const ip = resolveClientIp(req);
+    const country =
+      String(req.headers['cf-ipcountry'] || '').trim()
+      || String(req.headers['x-vercel-ip-country'] || '').trim()
+      || 'Unknown';
+    const region = String(req.headers['x-vercel-ip-country-region'] || '').trim() || '';
+    const city = String(req.headers['x-vercel-ip-city'] || '').trim() || '';
+    const ua = String(req.get('user-agent') || '').trim();
+
+    const locationLine = browserLocation?.latitude && browserLocation?.longitude
+      ? `${browserLocation.latitude}, ${browserLocation.longitude}`
+      : [city, region, country].filter(Boolean).join(', ') || 'Unknown';
+
+    const message = [
+      '*Public Test Submission*',
+      `Name: ${name}`,
+      `Email: ${email}`,
+      `Score: ${score}/${total} (${percent}%)`,
+      `Attempted: ${attempted}/${total}`,
+      `IP: ${ip || 'Unknown'}`,
+      `Location: ${locationLine}`,
+      `Device: ${ua || 'Unknown'}`
+    ].join('\n');
+
+    const waLink = `https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`;
+    return res.json({ waLink, message });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getLandingPageConfig,
   saveLandingPageConfig,
   getPublicLandingPageConfig,
+  createPublicTestLead,
 };

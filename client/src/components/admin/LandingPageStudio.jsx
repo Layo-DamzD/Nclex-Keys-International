@@ -40,24 +40,54 @@ const DEFAULT_HOME_CONFIG = {
     },
     program: {
       heading: 'Why Choose NCLEX KEYS?',
-      subheading: 'Comprehensive NCLEX preparation designed for international nurses',
+      subheading: 'Strategic, intensive coaching that transforms NCLEX preparation into confident success.',
       cards: [
         {
-          icon: 'fa-user-md',
-          title: 'Expert Instructors',
-          text: 'Learn from NCLEX specialists with 10+ years of teaching experience and clinical practice.',
+          icon: 'fa-bullseye',
+          title: 'Strategic Coaching',
+          text: 'Intensive, results-driven coaching that meticulously decodes NCLEX exam logic.',
         },
         {
-          icon: 'fa-laptop-house',
-          title: 'Live Virtual Classes',
-          text: 'Interactive online sessions with real-time Q&A. Attend from anywhere in the world.',
+          icon: 'fa-chalkboard-user',
+          title: 'Expert Mentorship',
+          text: 'Learn from RNs and experienced educators with 25+ years of clinical practice.',
         },
         {
-          icon: 'fa-file-alt',
-          title: 'Custom Study Plans',
-          text: 'Personalized learning path based on your strengths and weaknesses analysis.',
+          icon: 'fa-award',
+          title: 'Proven Success',
+          text: 'Over 100 aspiring nurses successfully guided to NCLEX licensure with confidence.',
+        },
+        {
+          icon: 'fa-book-open',
+          title: 'Comprehensive Content',
+          text: 'High-quality learning materials designed for immediate professional success.',
+        },
+        {
+          icon: 'fa-circle-check',
+          title: 'Confidence Building',
+          text: 'Transform from anxious test taker to confident, competent clinician.',
+        },
+        {
+          icon: 'fa-users',
+          title: 'Global Engagement',
+          text: 'Strategic collaboration and support for nursing professionals worldwide.',
         },
       ],
+      missionVision: {
+        heading: 'Our Mission & Vision',
+        cards: [
+          {
+            icon: 'fa-bullseye',
+            title: 'Mission',
+            text: 'NCLEX KEYS is dedicated to empowering future nurses by providing intensive, results-driven coaching and strategic mentorship.',
+          },
+          {
+            icon: 'fa-people-arrows',
+            title: 'Vision',
+            text: 'To be the globally recognized premier standard for strategic NCLEX preparation, transforming aspiring nurses into confident, licensed clinicians.',
+          },
+        ],
+      },
     },
     testimonials: {
       heading: 'Success Stories',

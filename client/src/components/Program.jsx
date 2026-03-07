@@ -2,24 +2,54 @@ import React from 'react';
 
 const DEFAULT_CONTENT = {
   heading: 'Why Choose NCLEX KEYS?',
-  subheading: 'Comprehensive NCLEX preparation designed for international nurses',
+  subheading: 'Strategic, intensive coaching that transforms NCLEX preparation into confident success.',
   cards: [
     {
-      icon: 'fa-user-md',
-      title: 'Expert Instructors',
-      text: 'Learn from NCLEX specialists with 10+ years of teaching experience and clinical practice.',
+      icon: 'fa-bullseye',
+      title: 'Strategic Coaching',
+      text: 'Intensive, results-driven coaching that meticulously decodes NCLEX exam logic.',
     },
     {
-      icon: 'fa-laptop-house',
-      title: 'Live Virtual Classes',
-      text: 'Interactive online sessions with real-time Q&A. Attend from anywhere in the world.',
+      icon: 'fa-chalkboard-user',
+      title: 'Expert Mentorship',
+      text: 'Learn from RNs and experienced educators with 25+ years of clinical practice.',
     },
     {
-      icon: 'fa-file-alt',
-      title: 'Custom Study Plans',
-      text: 'Personalized learning path based on your strengths and weaknesses analysis.',
+      icon: 'fa-award',
+      title: 'Proven Success',
+      text: 'Over 100 aspiring nurses successfully guided to NCLEX licensure with confidence.',
+    },
+    {
+      icon: 'fa-book-open',
+      title: 'Comprehensive Content',
+      text: 'High-quality learning materials designed for immediate professional success.',
+    },
+    {
+      icon: 'fa-circle-check',
+      title: 'Confidence Building',
+      text: 'Transform from anxious test taker to confident, competent clinician.',
+    },
+    {
+      icon: 'fa-users',
+      title: 'Global Engagement',
+      text: 'Strategic collaboration and support for nursing professionals worldwide.',
     },
   ],
+  missionVision: {
+    heading: 'Our Mission & Vision',
+    cards: [
+      {
+        icon: 'fa-bullseye',
+        title: 'Mission',
+        text: 'NCLEX KEYS is dedicated to empowering future nurses by providing intensive, results-driven coaching and strategic mentorship.'
+      },
+      {
+        icon: 'fa-people-arrows',
+        title: 'Vision',
+        text: 'To be the globally recognized premier standard for strategic NCLEX preparation, transforming aspiring nurses into confident, licensed clinicians.'
+      }
+    ]
+  }
 };
 
 const Program = ({ content = {} }) => {
@@ -27,60 +57,111 @@ const Program = ({ content = {} }) => {
     ...DEFAULT_CONTENT,
     ...content,
     cards: Array.isArray(content.cards) && content.cards.length ? content.cards : DEFAULT_CONTENT.cards,
+    missionVision: content.missionVision && typeof content.missionVision === 'object'
+      ? {
+          ...DEFAULT_CONTENT.missionVision,
+          ...content.missionVision,
+          cards:
+            Array.isArray(content.missionVision.cards) && content.missionVision.cards.length
+              ? content.missionVision.cards
+              : DEFAULT_CONTENT.missionVision.cards
+        }
+      : DEFAULT_CONTENT.missionVision
   };
 
   return (
-    <section id="program" className="program-section" style={{ padding: '80px 0' }}>
+    <section id="program" className="program-section" style={{ padding: '80px 0', background: '#e8edf3' }}>
       <div className="container">
         <div className="section-header text-center mb-5" data-aos="fade-down">
-          <h2 style={{ fontFamily: "'Roboto Slab', serif", color: '#1d3557' }}>{data.heading}</h2>
-          <p style={{ color: '#457b9d' }}>{data.subheading}</p>
+          <h2 style={{ fontFamily: "'Roboto Slab', serif", color: '#0b63ce', fontWeight: 700 }}>{data.heading}</h2>
+          <p style={{ color: '#0b63ce', maxWidth: '520px', margin: '0 auto', fontSize: '13px' }}>{data.subheading}</p>
         </div>
-        <div className="row">
+        <div className="row justify-content-center">
           {data.cards.map((card, index) => (
-            <div className="col-md-4 mb-4" data-aos="zoom-in" data-aos-delay={100 * (index + 1)} key={`${card.title}-${index}`}>
+            <div className="col-md-4 mb-4" data-aos="zoom-in" data-aos-delay={80 * (index + 1)} key={`${card.title}-${index}`}>
               <div
                 className="feature-card"
-                style={
-                  index === 0
-                    ? {
-                        background: 'white',
-                        padding: '30px',
-                        borderRadius: '20px',
-                        boxShadow: '0 5px 20px rgba(0,0,0,0.05)',
-                        textAlign: 'center',
-                        transition: 'transform 0.3s',
-                      }
-                    : undefined
-                }
+                style={{
+                  background: '#edf2f7',
+                  padding: '18px',
+                  borderRadius: '10px',
+                  border: '1px solid #f044ff',
+                  boxShadow: 'none',
+                  textAlign: 'left',
+                  minHeight: '160px'
+                }}
               >
                 <div
                   className="feature-icon"
-                  style={
-                    index === 0
-                      ? {
-                          fontSize: '2.5rem',
-                          color: '#0d6efd',
-                          background: 'rgba(13,110,253,0.1)',
-                          width: '80px',
-                          height: '80px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: '50%',
-                          margin: '0 auto 20px',
-                        }
-                      : undefined
-                  }
+                  style={{
+                    fontSize: '14px',
+                    color: '#0b63ce',
+                    background: '#dbeafe',
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    marginBottom: '10px'
+                  }}
                 >
                   <i className={`fas ${card.icon || 'fa-star'}`}></i>
                 </div>
-                <h4>{card.title}</h4>
-                <p>{card.text}</p>
+                <h4 style={{ color: '#0b63ce', fontSize: '16px', marginBottom: '8px' }}>{card.title}</h4>
+                <p style={{ color: '#0b63ce', fontSize: '12px', marginBottom: 0 }}>{card.text}</p>
               </div>
             </div>
           ))}
         </div>
+
+        {data.missionVision && (
+          <div style={{ marginTop: '48px' }}>
+            <div className="section-header text-center mb-5" data-aos="fade-down">
+              <h2 style={{ fontFamily: "'Roboto Slab', serif", color: '#0b63ce', fontWeight: 700 }}>
+                {data.missionVision.heading || 'Our Mission & Vision'}
+              </h2>
+            </div>
+            <div className="row justify-content-center">
+              {(data.missionVision.cards || []).slice(0, 2).map((card, index) => (
+                <div className="col-md-5 mb-4" data-aos="zoom-in" data-aos-delay={120 * (index + 1)} key={`${card.title}-${index}`}>
+                  <div
+                    className="feature-card"
+                    style={{
+                      background: '#edf2f7',
+                      padding: '18px',
+                      borderRadius: '10px',
+                      border: '1px solid #f044ff',
+                      boxShadow: 'none',
+                      textAlign: 'left',
+                      minHeight: '180px'
+                    }}
+                  >
+                    <div
+                      className="feature-icon"
+                      style={{
+                        fontSize: '14px',
+                        color: '#0b63ce',
+                        background: '#dbeafe',
+                        width: '30px',
+                        height: '30px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '6px',
+                        marginBottom: '10px'
+                      }}
+                    >
+                      <i className={`fas ${card.icon || 'fa-star'}`}></i>
+                    </div>
+                    <h4 style={{ color: '#0b63ce', fontSize: '16px', marginBottom: '8px' }}>{card.title}</h4>
+                    <p style={{ color: '#0b63ce', fontSize: '12px', marginBottom: 0 }}>{card.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

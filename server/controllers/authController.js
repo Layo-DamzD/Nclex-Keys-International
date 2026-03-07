@@ -320,6 +320,7 @@ const registerAdmin = async (req, res) => {
       role: user.role,
       approved: user.approved,
       accessCodeSent: Boolean(accessCodeEmailResult?.sent),
+      accessCodeSendReason: accessCodeEmailResult?.reason || null,
       message: accessCodeEmailResult?.sent
         ? 'Access code sent to your email. Account pending approval by super admin.'
         : 'Account created and pending approval. Email delivery failed, contact super admin for your access code.'
@@ -436,7 +437,9 @@ const forgotAdminPassword = async (req, res) => {
     }
 
     if (!isEmailConfigured()) {
-      return res.status(503).json({ message: 'Email is not configured yet. Contact support.' });
+      return res.json({
+        message: 'Reset email service is temporarily unavailable. Please contact support to reset your password.'
+      });
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
@@ -453,7 +456,10 @@ const forgotAdminPassword = async (req, res) => {
     });
 
     if (!emailResult.sent) {
-      return res.status(500).json({ message: 'Failed to send reset email. Please try again.' });
+      return res.json({
+        message: 'We could not deliver reset email right now. Please contact support for password reset assistance.',
+        reason: emailResult?.reason || 'send_failed'
+      });
     }
 
     return res.json({ message: 'Password reset link sent to your email.' });

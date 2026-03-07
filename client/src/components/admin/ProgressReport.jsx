@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Chart as ChartJS,
@@ -25,6 +26,7 @@ ChartJS.register(
 );
 
 const ProgressReport = () => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [timeRange, setTimeRange] = useState('30');
@@ -67,7 +69,7 @@ const ProgressReport = () => {
       });
       setProgressData(response.data);
     } catch (err) {
-      setError('Failed to load progress data');
+      setError(err?.response?.data?.message || 'Failed to load progress data');
       console.error(err);
     } finally {
       setLoading(false);
@@ -140,6 +142,7 @@ return (
               <option value="30">Last 30 days</option>
               <option value="90">Last 90 days</option>
               <option value="365">Last year</option>
+              <option value="all">All time</option>
             </select>
           </div>
         </div>
@@ -237,6 +240,7 @@ return (
                       <th>Score</th>
                       <th>Percentage</th>
                       <th>Time</th>
+                      <th>Review</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -251,6 +255,15 @@ return (
                           </span>
                         </td>
                         <td>{test.timeTaken} min</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => navigate(`/admin/test-results/${test._id}/review`)}
+                          >
+                            Review Full Test
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

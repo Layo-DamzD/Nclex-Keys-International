@@ -214,7 +214,9 @@ const UploadQuestion = () => {
           'Content-Type': 'multipart/form-data',
         },
       });
-      setBulkStatus(`Imported ${response.data.imported} questions. ${response.data.errors} errors.`);
+      const inserted = Number(response.data?.inserted || 0);
+      const updated = Number(response.data?.updated || 0);
+      setBulkStatus(`Imported ${response.data.imported} questions (${inserted} new, ${updated} updated). ${response.data.errors} errors.`);
       setBulkFile(null);
     } catch (err) {
       setBulkStatus(`Import failed: ${err.response?.data?.message || err.message}`);
@@ -932,7 +934,7 @@ const UploadQuestion = () => {
           Upload a CSV file to import multiple questions at once.
           <br />
           <strong>CSV format recommended:</strong> First row headers: type, category, subcategory, questionText, options, correctAnswer, rationale, difficulty
-          <br />- max rows per import: 1000
+          <br />- no row limit per import
           <br />- type: multiple-choice | sata | fill-blank | highlight | drag-drop | matrix | hotspot | cloze-dropdown
           <br />- options: semicolon-separated (e.g., A) Option1;B) Option2)
           <br />- correctAnswer: letters (e.g., A) or comma-separated for SATA
