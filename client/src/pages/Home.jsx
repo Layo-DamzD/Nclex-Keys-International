@@ -12,7 +12,7 @@ import useLandingPageContent from '../hooks/useLandingPageContent';
 const HOME_SECTION_FALLBACK_ORDER = ['hero', 'stats', 'program', 'testimonials'];
 
 const Home = () => {
-  const { config, hasSavedConfig } = useLandingPageContent('home');
+  const { config, hasSavedConfig, loading } = useLandingPageContent('home');
   const isStructured = hasSavedConfig && config?.mode === 'structured';
   const incomingOrder = Array.isArray(config?.sectionOrder) ? config.sectionOrder : [];
   const order = [
@@ -32,14 +32,14 @@ const Home = () => {
     if (sectionKey === 'hero') return <Hero content={sections.hero} key="hero" />;
     if (sectionKey === 'stats') return <Stats content={sections.stats} key="stats" />;
     if (sectionKey === 'program') return <Program content={sections.program} key="program" />;
-    if (sectionKey === 'testimonials') return <Testimonials content={sections.testimonials} key="testimonials" />;
+    if (sectionKey === 'testimonials') return <Testimonials content={sections.testimonials || { items: [] }} key="testimonials" />;
     return null;
   };
 
   return (
     <>
       <Navbar />
-      {isStructured ? (
+      {loading ? null : isStructured ? (
         <>{order.map(renderStructuredSection)}</>
       ) : hasSavedConfig && config ? (
         <div className="landing-public-page">

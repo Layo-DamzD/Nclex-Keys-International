@@ -29,7 +29,9 @@ const DEFAULT_TESTIMONIALS = [
 ];
 
 const Testimonials = ({ content = {} }) => {
-  const testimonials = Array.isArray(content.items) && content.items.length ? content.items : DEFAULT_TESTIMONIALS;
+  const hasExplicitItems = Array.isArray(content?.items);
+  const testimonials = hasExplicitItems ? content.items : DEFAULT_TESTIMONIALS;
+  if (hasExplicitItems && testimonials.length === 0) return null;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
   const resolveMediaCandidates = (rawUrl) => {
@@ -201,14 +203,18 @@ const Testimonials = ({ content = {} }) => {
               </div>
             ))}
           </div>
-          <button className="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
-            <span className="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span className="visually-hidden">Previous</span>
-          </button>
-          <button className="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
-            <span className="carousel-control-next-icon" aria-hidden="true"></span>
-            <span className="visually-hidden">Next</span>
-          </button>
+          {testimonials.length > 1 && (
+            <>
+              <button className="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
+                <span className="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span className="visually-hidden">Previous</span>
+              </button>
+              <button className="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
+                <span className="carousel-control-next-icon" aria-hidden="true"></span>
+                <span className="visually-hidden">Next</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </section>
