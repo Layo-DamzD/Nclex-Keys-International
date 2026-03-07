@@ -9362,6 +9362,23 @@ html[data-app-theme='dark'] .student-dashboard-shell .student-notification-popup
 }
 
 /* Clean student signup page (no lamp/cinematic animation) */
+#signup-love-rain-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.signup-love-rain-active {
+  background:
+    radial-gradient(circle at 20% 15%, rgba(79, 70, 229, 0.26), transparent 42%),
+    radial-gradient(circle at 78% 18%, rgba(236, 72, 153, 0.2), transparent 46%),
+    radial-gradient(circle at 50% 86%, rgba(56, 189, 248, 0.18), transparent 55%),
+    linear-gradient(180deg, #091833 0%, #132a54 52%, #182f5a 100%) !important;
+}
+
 .signup-clean-page {
   min-height: 100vh;
   min-height: 100dvh;
@@ -9370,14 +9387,15 @@ html[data-app-theme='dark'] .student-dashboard-shell .student-notification-popup
   padding: 24px 16px;
   position: relative;
   isolation: isolate;
-  overflow-x: hidden;
+  z-index: 1;
+  overflow: hidden;
   background: transparent;
 }
 
 .signup-clean-card-shell {
   width: min(100%, 640px);
   position: relative;
-  z-index: 1;
+  z-index: 2;
   border-radius: 20px;
   padding: 0;
   isolation: isolate;
@@ -9469,12 +9487,42 @@ html[data-app-theme='dark'] .student-dashboard-shell .student-notification-popup
 .signup-clean-submit {
   background: linear-gradient(90deg, #2563eb 0%, #06b6d4 100%) !important;
   border: none !important;
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 12px 28px rgba(14, 116, 239, 0.38),
+    0 0 22px rgba(6, 182, 212, 0.28);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
+}
+
+.signup-clean-submit::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -130%;
+  width: 120%;
+  height: 100%;
+  background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.32) 50%, transparent 100%);
+  transition: left 0.42s ease;
 }
 
 .signup-clean-submit:hover:not(:disabled) {
-  filter: brightness(0.97);
-  transform: translateY(-1px);
+  filter: brightness(1.05);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow:
+    0 18px 34px rgba(14, 116, 239, 0.44),
+    0 0 30px rgba(34, 211, 238, 0.36);
+}
+
+.signup-clean-submit:hover:not(:disabled)::before {
+  left: 120%;
+}
+
+.signup-clean-submit:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  box-shadow:
+    0 8px 18px rgba(14, 116, 239, 0.36),
+    0 0 14px rgba(34, 211, 238, 0.28);
 }
 
 .signup-clean-submit:disabled {

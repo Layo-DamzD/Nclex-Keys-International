@@ -32,16 +32,14 @@ const initLoveRainBackground = () => {
 
   const canvas = document.createElement('canvas');
   canvas.id = 'signup-love-rain-canvas';
-  canvas.style.position = 'absolute';
+  canvas.style.position = 'fixed';
   canvas.style.top = '0';
   canvas.style.left = '0';
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
+  canvas.style.width = '100vw';
+  canvas.style.height = '100vh';
   canvas.style.pointerEvents = 'none';
   canvas.style.zIndex = '0';
-
-  const host = document.querySelector('.signup-clean-page') || document.body;
-  host.appendChild(canvas);
+  document.body.appendChild(canvas);
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
@@ -53,21 +51,46 @@ const initLoveRainBackground = () => {
   let width = 0;
   let height = 0;
   let frameId = null;
+  let hearts = [];
 
-  const resize = () => {
-    width = window.innerWidth;
-    height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
-  };
-
-  const randomOpacity = () => 0.35 + Math.random() * 0.6;
+  const randomOpacity = () => 0.45 + Math.random() * 0.5;
   const colorWithOpacity = (hex, alpha) => {
     const val = parseInt(hex.slice(1), 16);
     const r = (val >> 16) & 255;
     const g = (val >> 8) & 255;
     const b = val & 255;
     return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
+  };
+
+  const createHeart = (yOffset = 0) => {
+    const size = 10 + Math.random() * 16;
+    return {
+      x: Math.random() * width,
+      y: Math.random() * height + yOffset,
+      baseX: Math.random() * width,
+      size,
+      speed: 1.4 + Math.random() * 3.2,
+      swayAmp: 6 + Math.random() * 18,
+      swayFreq: 0.0013 + Math.random() * 0.003,
+      swayPhase: Math.random() * Math.PI * 2,
+      color: palette[Math.floor(Math.random() * palette.length)],
+      opacity: randomOpacity(),
+    };
+  };
+
+  const rebuildHearts = () => {
+    const targetCount = Math.max(140, Math.round((width * height) / 14000));
+    hearts = Array.from({ length: targetCount }, () => createHeart(-height));
+  };
+
+  const resize = () => {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(width * dpr));
+    canvas.height = Math.max(1, Math.floor(height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    rebuildHearts();
   };
 
   const drawHeart = (x, y, size, color) => {
@@ -82,37 +105,23 @@ const initLoveRainBackground = () => {
     ctx.fill();
   };
 
-  const HEART_COUNT = 120;
-  const hearts = Array.from({ length: HEART_COUNT }, () => {
-    const size = 7 + Math.random() * 12;
-    return {
-      x: Math.random() * width,
-      y: Math.random() * height - height,
-      baseX: Math.random() * width,
-      size,
-      speed: 1.2 + Math.random() * 2.8,
-      swayAmp: 2 + Math.random() * 8,
-      swayFreq: 0.0018 + Math.random() * 0.0045,
-      swayPhase: Math.random() * Math.PI * 2,
-      color: palette[Math.floor(Math.random() * palette.length)],
-      opacity: randomOpacity(),
-    };
-  });
-
   const tick = (time) => {
     ctx.clearRect(0, 0, width, height);
     hearts.forEach((heart) => {
       heart.y += heart.speed;
       heart.x = heart.baseX + Math.sin(time * heart.swayFreq + heart.swayPhase) * heart.swayAmp;
 
+      if (heart.x < -heart.size * 2) heart.x = width + heart.size;
+      if (heart.x > width + heart.size * 2) heart.x = -heart.size;
+
       if (heart.y - heart.size * 2 > height) {
-        heart.y = -heart.size * (1 + Math.random() * 2);
-        heart.baseX = Math.random() * width;
-        heart.opacity = randomOpacity();
-        heart.speed = 1.2 + Math.random() * 2.8;
+        Object.assign(heart, createHeart(-heart.size * 6));
       }
 
+      ctx.shadowColor = colorWithOpacity(heart.color, Math.min(1, heart.opacity + 0.3));
+      ctx.shadowBlur = 14;
       drawHeart(heart.x, heart.y, heart.size, colorWithOpacity(heart.color, heart.opacity));
+      ctx.shadowBlur = 0;
     });
 
     frameId = window.requestAnimationFrame(tick);
@@ -145,8 +154,12 @@ const StudentSignup = () => {
   const showAccessHelp = /access code/i.test(signupError);
 
   useEffect(() => {
+    document.body.classList.add('signup-love-rain-active');
     const cleanup = initLoveRainBackground();
-    return cleanup;
+    return () => {
+      document.body.classList.remove('signup-love-rain-active');
+      cleanup();
+    };
   }, []);
 
   const onSubmit = async (data) => {
