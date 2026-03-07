@@ -32,14 +32,16 @@ const initLoveRainBackground = () => {
 
   const canvas = document.createElement('canvas');
   canvas.id = 'signup-love-rain-canvas';
-  canvas.style.position = 'fixed';
+  canvas.style.position = 'absolute';
   canvas.style.top = '0';
   canvas.style.left = '0';
-  canvas.style.width = '100vw';
-  canvas.style.height = '100vh';
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
   canvas.style.pointerEvents = 'none';
-  canvas.style.zIndex = '-1';
-  document.body.appendChild(canvas);
+  canvas.style.zIndex = '0';
+
+  const host = document.querySelector('.signup-clean-page') || document.body;
+  host.appendChild(canvas);
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
@@ -80,16 +82,17 @@ const initLoveRainBackground = () => {
     ctx.fill();
   };
 
-  const hearts = Array.from({ length: 50 }, () => {
-    const size = 8 + Math.random() * 20;
+  const HEART_COUNT = 120;
+  const hearts = Array.from({ length: HEART_COUNT }, () => {
+    const size = 7 + Math.random() * 12;
     return {
       x: Math.random() * width,
-      y: Math.random() * height,
+      y: Math.random() * height - height,
       baseX: Math.random() * width,
       size,
-      speed: 0.5 + Math.random() * 1.8,
-      swayAmp: 4 + Math.random() * 16,
-      swayFreq: 0.003 + Math.random() * 0.01,
+      speed: 1.2 + Math.random() * 2.8,
+      swayAmp: 2 + Math.random() * 8,
+      swayFreq: 0.0018 + Math.random() * 0.0045,
       swayPhase: Math.random() * Math.PI * 2,
       color: palette[Math.floor(Math.random() * palette.length)],
       opacity: randomOpacity(),
@@ -102,10 +105,11 @@ const initLoveRainBackground = () => {
       heart.y += heart.speed;
       heart.x = heart.baseX + Math.sin(time * heart.swayFreq + heart.swayPhase) * heart.swayAmp;
 
-      if (heart.y - heart.size * 1.5 > height) {
+      if (heart.y - heart.size * 2 > height) {
         heart.y = -heart.size * (1 + Math.random() * 2);
         heart.baseX = Math.random() * width;
         heart.opacity = randomOpacity();
+        heart.speed = 1.2 + Math.random() * 2.8;
       }
 
       drawHeart(heart.x, heart.y, heart.size, colorWithOpacity(heart.color, heart.opacity));

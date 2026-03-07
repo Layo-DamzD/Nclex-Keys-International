@@ -9377,6 +9377,7 @@ html[data-app-theme='dark'] .student-dashboard-shell .student-notification-popup
 .signup-clean-card-shell {
   width: min(100%, 640px);
   position: relative;
+  z-index: 1;
   border-radius: 20px;
   padding: 0;
   isolation: isolate;
