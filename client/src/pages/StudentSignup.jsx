@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -25,6 +25,106 @@ const getDeviceLabel = () => {
   return `${browser} on ${platform}`.slice(0, 160);
 };
 
+// Self-contained falling hearts background for signup page.
+const initLoveRainBackground = () => {
+  const existing = document.getElementById('signup-love-rain-canvas');
+  if (existing) existing.remove();
+
+  const canvas = document.createElement('canvas');
+  canvas.id = 'signup-love-rain-canvas';
+  canvas.style.position = 'fixed';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.width = '100vw';
+  canvas.style.height = '100vh';
+  canvas.style.pointerEvents = 'none';
+  canvas.style.zIndex = '-1';
+  document.body.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    canvas.remove();
+    return () => {};
+  }
+
+  const palette = ['#ff4d6d', '#ff758f', '#ffb3c1'];
+  let width = 0;
+  let height = 0;
+  let frameId = null;
+
+  const resize = () => {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  };
+
+  const randomOpacity = () => 0.35 + Math.random() * 0.6;
+  const colorWithOpacity = (hex, alpha) => {
+    const val = parseInt(hex.slice(1), 16);
+    const r = (val >> 16) & 255;
+    const g = (val >> 8) & 255;
+    const b = val & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
+  };
+
+  const drawHeart = (x, y, size, color) => {
+    ctx.beginPath();
+    ctx.moveTo(x, y + size * 0.3);
+    ctx.bezierCurveTo(x, y, x - size * 0.5, y, x - size * 0.5, y + size * 0.3);
+    ctx.bezierCurveTo(x - size * 0.5, y + size * 0.6, x, y + size * 0.9, x, y + size * 1.2);
+    ctx.bezierCurveTo(x, y + size * 0.9, x + size * 0.5, y + size * 0.6, x + size * 0.5, y + size * 0.3);
+    ctx.bezierCurveTo(x + size * 0.5, y, x, y, x, y + size * 0.3);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+
+  const hearts = Array.from({ length: 50 }, () => {
+    const size = 8 + Math.random() * 20;
+    return {
+      x: Math.random() * width,
+      y: Math.random() * height,
+      baseX: Math.random() * width,
+      size,
+      speed: 0.5 + Math.random() * 1.8,
+      swayAmp: 4 + Math.random() * 16,
+      swayFreq: 0.003 + Math.random() * 0.01,
+      swayPhase: Math.random() * Math.PI * 2,
+      color: palette[Math.floor(Math.random() * palette.length)],
+      opacity: randomOpacity(),
+    };
+  });
+
+  const tick = (time) => {
+    ctx.clearRect(0, 0, width, height);
+    hearts.forEach((heart) => {
+      heart.y += heart.speed;
+      heart.x = heart.baseX + Math.sin(time * heart.swayFreq + heart.swayPhase) * heart.swayAmp;
+
+      if (heart.y - heart.size * 1.5 > height) {
+        heart.y = -heart.size * (1 + Math.random() * 2);
+        heart.baseX = Math.random() * width;
+        heart.opacity = randomOpacity();
+      }
+
+      drawHeart(heart.x, heart.y, heart.size, colorWithOpacity(heart.color, heart.opacity));
+    });
+
+    frameId = window.requestAnimationFrame(tick);
+  };
+
+  resize();
+  window.addEventListener('resize', resize);
+  frameId = window.requestAnimationFrame(tick);
+
+  return () => {
+    if (frameId) window.cancelAnimationFrame(frameId);
+    window.removeEventListener('resize', resize);
+    canvas.remove();
+  };
+};
+
 const StudentSignup = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [signupError, setSignupError] = useState('');
@@ -39,6 +139,11 @@ const StudentSignup = () => {
     'Hello, I need my student signup access code for NCLEX KEYS.'
   )}`;
   const showAccessHelp = /access code/i.test(signupError);
+
+  useEffect(() => {
+    const cleanup = initLoveRainBackground();
+    return cleanup;
+  }, []);
 
   const onSubmit = async (data) => {
     setLoading(true);
