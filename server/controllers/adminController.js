@@ -1088,13 +1088,17 @@ const getStudyMaterials = async (req, res) => {
 const createStudyMaterial = async (req, res) => {
   try {
     const { title, description, category, fileUrl, fileType } = req.body;
+    const normalizedType = String(fileType || '').trim().toLowerCase();
+    if (normalizedType && normalizedType !== 'pdf') {
+      return res.status(400).json({ message: 'Only PDF materials are allowed' });
+    }
 
     const material = new StudyMaterial({
       title,
       description,
       category,
       fileUrl,
-      fileType,
+      fileType: 'pdf',
       uploadedBy: req.user.id
     });
 
@@ -1111,9 +1115,14 @@ const createStudyMaterial = async (req, res) => {
 // @access  Private (admin only)
 const updateStudyMaterial = async (req, res) => {
   try {
+    const normalizedType = String(req.body?.fileType || '').trim().toLowerCase();
+    if (normalizedType && normalizedType !== 'pdf') {
+      return res.status(400).json({ message: 'Only PDF materials are allowed' });
+    }
+    const updates = { ...req.body, fileType: 'pdf' };
     const material = await StudyMaterial.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updates,
       { new: true, runValidators: true }
     );
     if (!material) {
@@ -1159,6 +1168,11 @@ const uploadFile = async (req, res) => {
 
     const originalName = req.file.originalname || 'file';
     const ext = path.extname(originalName);
+    const extType = ext.replace('.', '').toLowerCase();
+    const mimetype = String(req.file.mimetype || '').toLowerCase();
+    if (extType !== 'pdf' || (mimetype && mimetype !== 'application/pdf')) {
+      return res.status(400).json({ message: 'Only PDF files are allowed' });
+    }
     const base = path.basename(originalName, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
     const fileName = `${Date.now()}-${base}${ext}`;
     const filePath = path.join(uploadsDir, fileName);
@@ -1166,9 +1180,7 @@ const uploadFile = async (req, res) => {
     fs.writeFileSync(filePath, req.file.buffer);
 
     const fileUrl = `/api/uploads/${fileName}`;
-    const extType = ext.replace('.', '').toLowerCase();
-    const allowedTypes = new Set(['pdf', 'docx', 'pptx', 'mp4']);
-    const fileType = allowedTypes.has(extType) ? extType : 'other';
+    const fileType = 'pdf';
     
     res.json({
       fileUrl,

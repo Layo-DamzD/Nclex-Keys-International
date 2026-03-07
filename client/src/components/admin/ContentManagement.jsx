@@ -39,7 +39,19 @@ const ContentManagement = () => {
   };
 
   const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
+    const file = e.target.files?.[0] || null;
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+    const fileName = String(file.name || '').toLowerCase();
+    if (!fileName.endsWith('.pdf')) {
+      alert('Only PDF files are allowed.');
+      e.target.value = '';
+      setSelectedFile(null);
+      return;
+    }
+    setSelectedFile(file);
   };
 
   const handleUpload = async () => {
@@ -210,7 +222,7 @@ const ContentManagement = () => {
                   type="file"
                   className="form-control"
                   onChange={handleFileChange}
-                  accept=".pdf,.docx,.pptx,.mp4"
+                  accept=".pdf,application/pdf"
                 />
                 <button
                   type="button"
