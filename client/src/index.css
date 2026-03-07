@@ -9371,17 +9371,14 @@ html[data-app-theme='dark'] .student-dashboard-shell .student-notification-popup
   position: relative;
   isolation: isolate;
   overflow-x: hidden;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(37, 99, 235, 0.1), transparent 42%),
-    radial-gradient(circle at 88% 82%, rgba(34, 211, 238, 0.1), transparent 46%),
-    linear-gradient(180deg, #f7faff 0%, #eef4fb 100%);
+  background: transparent;
 }
 
 .signup-clean-card-shell {
   width: min(100%, 640px);
   position: relative;
   border-radius: 20px;
-  padding: 2px;
+  padding: 0;
   isolation: isolate;
   overflow: visible;
   transform: translateZ(0);
@@ -9389,49 +9386,15 @@ html[data-app-theme='dark'] .student-dashboard-shell .student-notification-popup
 
 .signup-clean-card-shell::before,
 .signup-clean-card-shell::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 20px;
-  padding: 3px;
-  pointer-events: none;
-  background: conic-gradient(
-    from 90deg,
-    #ff2d55 0deg,
-    #ff7a18 45deg,
-    #ffd60a 90deg,
-    #32d74b 135deg,
-    #00d1ff 180deg,
-    #0a84ff 225deg,
-    #7d5cff 270deg,
-    #ff2d55 360deg
-  );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: signupRainbowEdgeSpin 4.8s linear infinite;
-  transform-origin: center;
-  z-index: 0;
+  content: none;
 }
 
 .signup-clean-card-shell::before {
-  opacity: 1;
-  filter: saturate(1.95) brightness(1.26);
+  content: none;
 }
 
 .signup-clean-card-shell::after {
-  inset: -12px;
-  border-radius: 24px;
-  padding: 12px;
-  opacity: 0.94;
-  filter: blur(10px) saturate(2.15) brightness(1.2);
-  z-index: -1;
-  animation: signupRainbowEdgeSpin 7.1s linear infinite reverse;
+  content: none;
 }
 
 .signup-clean-card {
