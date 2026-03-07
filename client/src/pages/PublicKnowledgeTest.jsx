@@ -232,6 +232,15 @@ const normalizeQuestions = (rows) =>
         : String(row.correctAnswer || '').trim(),
   }));
 
+const shuffleArray = (items) => {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
 const isAnswered = (question, answerValue) => {
   if (question.type === 'sata') return Array.isArray(answerValue) && answerValue.length > 0;
   return String(answerValue || '').trim() !== '';
@@ -239,7 +248,7 @@ const isAnswered = (question, answerValue) => {
 
 const PublicKnowledgeTest = () => {
   const { config, hasSavedConfig, loading } = useLandingPageContent('home');
-  const questions = useMemo(() => normalizeQuestions(RAW_QUESTIONS), []);
+  const questions = useMemo(() => shuffleArray(normalizeQuestions(RAW_QUESTIONS)), []);
   const [answers, setAnswers] = useState({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);

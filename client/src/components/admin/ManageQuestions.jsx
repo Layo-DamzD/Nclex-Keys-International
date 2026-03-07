@@ -13,6 +13,7 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
   const [previewQuestion, setPreviewQuestion] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(-1);
 
   const categories = ['', ...Object.keys(CATEGORIES)];
   const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
@@ -122,18 +123,29 @@ const ManageQuestions = ({ onSectionChange }) => {
   const handlePreview = async (questionId) => {
     try {
       setPreviewLoading(true);
+      const index = questions.findIndex((q) => q._id === questionId);
       const fullQuestion = await fetchFullQuestion(questionId);
       if (!fullQuestion?._id) {
         alert('Unable to load full question for preview.');
         return;
       }
       setPreviewQuestion(fullQuestion);
+      setPreviewIndex(index);
     } catch (error) {
       console.error('Error loading question preview:', error);
       alert(error.response?.data?.message || 'Failed to load preview');
     } finally {
       setPreviewLoading(false);
     }
+  };
+
+  const navigatePreview = async (direction) => {
+    if (previewLoading || previewIndex < 0) return;
+    const nextIndex = previewIndex + direction;
+    if (nextIndex < 0 || nextIndex >= questions.length) return;
+    const nextQuestion = questions[nextIndex];
+    if (!nextQuestion?._id) return;
+    await handlePreview(nextQuestion._id);
   };
 
   const toggleQuestionSelection = (questionId) => {
@@ -230,7 +242,10 @@ const ManageQuestions = ({ onSectionChange }) => {
   };
 
   const cleanQuestionPrefix = (text) =>
-    String(text || '').replace(/^\s*Q\s*\d+\s*[:.)-]?\s*/i, '').trim();
+    String(text || '')
+      .replace(/^[\uFEFF"'`\s]*Q\s*[-#:.)]?\s*\d+\s*[:.)-]?\s*/i, '')
+      .replace(/^[\uFEFF"'`\s]*\d+\s*[:.)-]\s*/i, '')
+      .trim();
 
   const formatAnswerForPreview = (q) => {
     if (!q) return '';
@@ -489,7 +504,15 @@ const ManageQuestions = ({ onSectionChange }) => {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Question Preview</h5>
-                <button type="button" className="btn-close" aria-label="Close" onClick={() => setPreviewQuestion(null)} />
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Close"
+                  onClick={() => {
+                    setPreviewQuestion(null);
+                    setPreviewIndex(-1);
+                  }}
+                />
               </div>
               <div className="modal-body">
                 <p><strong>Type:</strong> {previewQuestion.type}</p>
@@ -509,8 +532,31 @@ const ManageQuestions = ({ onSectionChange }) => {
                 <p><strong>Rationale:</strong> {previewQuestion.rationale || 'N/A'}</p>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setPreviewQuestion(null)}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setPreviewQuestion(null);
+                    setPreviewIndex(-1);
+                  }}
+                >
                   Close
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-primary"
+                  onClick={() => navigatePreview(-1)}
+                  disabled={previewLoading || previewIndex <= 0}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => navigatePreview(1)}
+                  disabled={previewLoading || previewIndex < 0 || previewIndex >= questions.length - 1}
+                >
+                  Next
                 </button>
               </div>
             </div>

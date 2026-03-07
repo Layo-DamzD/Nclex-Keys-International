@@ -53,7 +53,7 @@ const initLoveRainBackground = () => {
   let frameId = null;
   let hearts = [];
 
-  const randomOpacity = () => 0.22 + Math.random() * 0.28;
+  const randomOpacity = () => 0.55 + Math.random() * 0.35;
   const colorWithOpacity = (hex, alpha) => {
     const val = parseInt(hex.slice(1), 16);
     const r = (val >> 16) & 255;
@@ -63,7 +63,7 @@ const initLoveRainBackground = () => {
   };
 
   const createHeart = (yOffset = 0) => {
-    const size = 8 + Math.random() * 12;
+    const size = 10 + Math.random() * 15;
     return {
       x: Math.random() * width,
       y: Math.random() * height + yOffset,
@@ -118,8 +118,8 @@ const initLoveRainBackground = () => {
         Object.assign(heart, createHeart(-heart.size * 6));
       }
 
-      ctx.shadowColor = colorWithOpacity(heart.color, Math.min(1, heart.opacity + 0.24));
-      ctx.shadowBlur = 10;
+      ctx.shadowColor = colorWithOpacity(heart.color, Math.min(1, heart.opacity + 0.4));
+      ctx.shadowBlur = 16;
       drawHeart(heart.x, heart.y, heart.size, colorWithOpacity(heart.color, heart.opacity));
       ctx.shadowBlur = 0;
     });
