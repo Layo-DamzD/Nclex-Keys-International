@@ -38,6 +38,11 @@ const Navbar = () => {
                 <i className="fas fa-brain me-1"></i>Meet our Brainiac
               </Link>
             </li>
+            <li className="nav-item">
+              <Link className="btn btn-outline-success me-2 nki-navbar-knowledge-btn" to="/test-your-knowledge">
+                <i className="fas fa-clipboard-check me-1"></i>Test Your Knowledge
+              </Link>
+            </li>
             {/* Login button - solid blue, on right edge */}
             <li className="nav-item">
               <Link className="btn btn-primary nki-navbar-login-btn" to="/login">

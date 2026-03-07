@@ -1,7 +1,0 @@
-type,category,subcategory,questionText,options,correctAnswer,rationale,difficulty,highlightStart,highlightEnd,matrixColumns,matrixRows
-multiple-choice,Fundamentals,Safety and Infection Control,Which action best prevents patient falls,Use bed alarm;Keep call bell within reach;Restrict oral fluids;Dim all lights,B,Keeping the call bell within reach helps the patient request help before ambulating,medium,,,,
-sata,Adult Health,Respiratory,Which findings suggest hypoxia,Restlessness;Cyanosis;Bradycardia;Low oxygen saturation,A;B;D,Hypoxia often presents with restlessness cyanosis and low oxygen saturation,hard,,,,
-fill-blank,Pharmacology,Medication Administration,The antidote for opioid overdose is ________,,Naloxone,Naloxone reverses opioid respiratory depression,easy,,,,
-highlight,Mental Health,Foundations and Therapeutic Communication,The nurse should use open-ended questions to encourage the client to express feelings freely.,,open-ended questions,Open-ended questions promote therapeutic communication,medium,21,41,,
-drag-drop,Management of Care,Prioritization,Arrange the nursing process in order,Assess;Diagnose;Plan;Implement;Evaluate,,The nursing process follows ADPIE order,medium,,,,
-matrix,Child Health,Growth and Development,Match each pediatric age group to expected milestone,,,"Each row maps to one correct column index",medium,,,Age Group;Milestone,Toddler walks independently|1;Infant lifts head|0;Preschooler hops on one foot|2

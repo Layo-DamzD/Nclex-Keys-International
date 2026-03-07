@@ -145,6 +145,33 @@ const TestReviewExamView = ({
   const [questionRuntimeMode, setQuestionRuntimeMode] = useState(false);
 
   useEffect(() => {
+    const blockEvent = (event) => {
+      event.preventDefault();
+    };
+
+    const blockShortcuts = (event) => {
+      const key = String(event.key || '').toLowerCase();
+      const isMod = event.ctrlKey || event.metaKey;
+      if (!isMod) return;
+      if (['c', 'x', 'a', 'u', 's', 'p'].includes(key)) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener('copy', blockEvent);
+    document.addEventListener('cut', blockEvent);
+    document.addEventListener('contextmenu', blockEvent);
+    document.addEventListener('keydown', blockShortcuts);
+
+    return () => {
+      document.removeEventListener('copy', blockEvent);
+      document.removeEventListener('cut', blockEvent);
+      document.removeEventListener('contextmenu', blockEvent);
+      document.removeEventListener('keydown', blockShortcuts);
+    };
+  }, []);
+
+  useEffect(() => {
     setActiveQuestionIndex(0);
     setQuestionRuntimeMode(false);
   }, [testResult?._id, testResult?.date]);
@@ -276,7 +303,7 @@ const TestReviewExamView = ({
     const runtimeStatus = getAnswerStatusMeta(active);
 
     return (
-      <div className="test-session exam-runtime-skin exam-review-question-runtime">
+      <div className="test-session exam-runtime-skin exam-review-question-runtime app-no-copy">
         <div className="test-header">
           <div className="d-flex align-items-center">
             <h3 className="mb-0 me-3">Review {activeQuestionIndex + 1} of {Math.max(answers.length, 1)}</h3>
@@ -376,7 +403,7 @@ const TestReviewExamView = ({
   }
 
   return (
-    <div className="exam-review-shell exam-review-runtime">
+    <div className="exam-review-shell exam-review-runtime app-no-copy">
       <div className="exam-review-topbar">
         <div className="exam-review-topbar-left">
           <button type="button" className="btn btn-link p-0" onClick={onBack}>

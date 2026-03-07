@@ -141,6 +141,33 @@ const TestSession = () => {
   const [caseDragItems, setCaseDragItems] = useState({});
   const hideInProgressAnswerHints = Boolean(settings?.tutorMode || settings?.timed);
 
+  useEffect(() => {
+    const blockEvent = (event) => {
+      event.preventDefault();
+    };
+
+    const blockShortcuts = (event) => {
+      const key = String(event.key || '').toLowerCase();
+      const isMod = event.ctrlKey || event.metaKey;
+      if (!isMod) return;
+      if (['c', 'x', 'a', 'u', 's', 'p'].includes(key)) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener('copy', blockEvent);
+    document.addEventListener('cut', blockEvent);
+    document.addEventListener('contextmenu', blockEvent);
+    document.addEventListener('keydown', blockShortcuts);
+
+    return () => {
+      document.removeEventListener('copy', blockEvent);
+      document.removeEventListener('cut', blockEvent);
+      document.removeEventListener('contextmenu', blockEvent);
+      document.removeEventListener('keydown', blockShortcuts);
+    };
+  }, []);
+
   // Timer effect
   useEffect(() => {
     if (settings.timed && timeLeft !== null && timeLeft > 0 && !submitted && !isPaused) {
@@ -734,7 +761,7 @@ const TestSession = () => {
     const dragList = caseDragItems[dragKey];
 
     return (
-      <div className="test-session case-study-session" style={{ position: 'relative' }}>
+      <div className="test-session case-study-session app-no-copy" style={{ position: 'relative' }}>
         <div className="test-header">
           <div className="d-flex align-items-center">
             <h3 className="mb-0 me-3">Case Study {currentIndex + 1} of {questions.length} – Q{caseIndex + 1}/{currentQ.questions.length}</h3>
@@ -1023,7 +1050,7 @@ const TestSession = () => {
 
   // Regular (non-case) question
   return (
-    <div className="test-session exam-runtime-skin" style={{ position: 'relative' }}>
+    <div className="test-session exam-runtime-skin app-no-copy" style={{ position: 'relative' }}>
       <div className="test-header">
         <div className="d-flex align-items-center">
           <h3 className="mb-0 me-3">Question {currentIndex + 1} of {questions.length}</h3>

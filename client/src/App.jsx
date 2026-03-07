@@ -11,6 +11,7 @@ import AdminForgotAccessCode from './pages/AdminForgotAccessCode';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentTestReviewPage from './pages/StudentTestReviewPage';
 import Brainiac from './pages/Brainiac';
+import PublicKnowledgeTest from './pages/PublicKnowledgeTest';
 import ProtectedRoute from './components/ProtectedRoute';
 import TestSession from './components/TestSession';
 import AdminDashboard from './pages/AdminDashboard';
@@ -32,6 +33,7 @@ function App() {
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/brainiac" element={<Brainiac />} />
+          <Route path="/test-your-knowledge" element={<PublicKnowledgeTest />} />
           <Route path="/login" element={<StudentLogin />} />
           <Route path="/signup" element={<StudentSignup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

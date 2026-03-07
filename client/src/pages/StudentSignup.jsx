@@ -38,7 +38,7 @@ const initLoveRainBackground = () => {
   canvas.style.width = '100vw';
   canvas.style.height = '100vh';
   canvas.style.pointerEvents = 'none';
-  canvas.style.zIndex = '0';
+  canvas.style.zIndex = '4';
   document.body.appendChild(canvas);
 
   const ctx = canvas.getContext('2d');
@@ -53,7 +53,7 @@ const initLoveRainBackground = () => {
   let frameId = null;
   let hearts = [];
 
-  const randomOpacity = () => 0.45 + Math.random() * 0.5;
+  const randomOpacity = () => 0.22 + Math.random() * 0.28;
   const colorWithOpacity = (hex, alpha) => {
     const val = parseInt(hex.slice(1), 16);
     const r = (val >> 16) & 255;
@@ -63,7 +63,7 @@ const initLoveRainBackground = () => {
   };
 
   const createHeart = (yOffset = 0) => {
-    const size = 10 + Math.random() * 16;
+    const size = 8 + Math.random() * 12;
     return {
       x: Math.random() * width,
       y: Math.random() * height + yOffset,
@@ -118,8 +118,8 @@ const initLoveRainBackground = () => {
         Object.assign(heart, createHeart(-heart.size * 6));
       }
 
-      ctx.shadowColor = colorWithOpacity(heart.color, Math.min(1, heart.opacity + 0.3));
-      ctx.shadowBlur = 14;
+      ctx.shadowColor = colorWithOpacity(heart.color, Math.min(1, heart.opacity + 0.24));
+      ctx.shadowBlur = 10;
       drawHeart(heart.x, heart.y, heart.size, colorWithOpacity(heart.color, heart.opacity));
       ctx.shadowBlur = 0;
     });

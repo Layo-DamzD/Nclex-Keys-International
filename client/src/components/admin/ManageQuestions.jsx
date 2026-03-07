@@ -229,6 +229,9 @@ const ManageQuestions = ({ onSectionChange }) => {
     }
   };
 
+  const cleanQuestionPrefix = (text) =>
+    String(text || '').replace(/^\s*Q\s*\d+\s*[:.)-]?\s*/i, '').trim();
+
   const formatAnswerForPreview = (q) => {
     if (!q) return '';
     if (q.type === 'multiple-choice') {
@@ -352,7 +355,10 @@ const ManageQuestions = ({ onSectionChange }) => {
                   <span className="mq-id-text">{q._id?.substring(0, 8)}</span>
                 </td>
                 <td className="mq-question-cell">
-                  {q.questionText?.length > 70 ? `${q.questionText.substring(0, 70)}...` : q.questionText}
+                  {(() => {
+                    const cleanText = cleanQuestionPrefix(q.questionText);
+                    return cleanText.length > 70 ? `${cleanText.substring(0, 70)}...` : cleanText;
+                  })()}
                 </td>
                 <td>
                   <span className={`badge ${getTypeBadge(q.type)}`}>
@@ -488,7 +494,7 @@ const ManageQuestions = ({ onSectionChange }) => {
               <div className="modal-body">
                 <p><strong>Type:</strong> {previewQuestion.type}</p>
                 <p><strong>Category:</strong> {previewQuestion.category} / {previewQuestion.subcategory}</p>
-                <p><strong>Question:</strong> {previewQuestion.questionText}</p>
+                <p><strong>Question:</strong> {cleanQuestionPrefix(previewQuestion.questionText)}</p>
                 {Array.isArray(previewQuestion.options) && previewQuestion.options.length > 0 && (
                   <div>
                     <strong>Options:</strong>

@@ -1,7 +1,0 @@
-type,category,subcategory,questionText,options,correctAnswer,rationale,difficulty,highlightStart,highlightEnd,matrixColumns,matrixRows
-multiple-choice,{{CATEGORY}},{{SUBCATEGORY}},{{QUESTION_TEXT}},{{OPTION_A}};{{OPTION_B}};{{OPTION_C}};{{OPTION_D}},{{CORRECT_OPTION_LETTER}},{{RATIONALE}},medium,,,,
-sata,{{CATEGORY}},{{SUBCATEGORY}},{{QUESTION_TEXT}},{{OPTION_A}};{{OPTION_B}};{{OPTION_C}};{{OPTION_D}},{{CORRECT_OPTION_LETTERS_SEMICOLON}},{{RATIONALE}},hard,,,,
-fill-blank,{{CATEGORY}},{{SUBCATEGORY}},{{QUESTION_TEXT}},,{{CORRECT_TEXT_ANSWER}},{{RATIONALE}},easy,,,,
-highlight,{{CATEGORY}},{{SUBCATEGORY}},{{PASSAGE_TEXT}},,{{TEXT_TO_HIGHLIGHT}},{{RATIONALE}},medium,{{START_INDEX}},{{END_INDEX}},,
-drag-drop,{{CATEGORY}},{{SUBCATEGORY}},{{ORDER_THE_STEPS_QUESTION}},{{STEP_1}};{{STEP_2}};{{STEP_3}};{{STEP_4}},,{{RATIONALE}},medium,,,,
-matrix,{{CATEGORY}},{{SUBCATEGORY}},{{MATRIX_PROMPT}},,,{{RATIONALE}},medium,,,{{COLUMN_1}};{{COLUMN_2}};{{COLUMN_3}},{{ROW_1_TEXT}}|0;{{ROW_2_TEXT}}|1;{{ROW_3_TEXT}}|2
