@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
@@ -297,6 +298,7 @@ const isCorrectAnswer = (question, answerValue) => {
 };
 
 const PublicKnowledgeTest = () => {
+  const navigate = useNavigate();
   const { config, hasSavedConfig, loading } = useLandingPageContent('home');
   const questions = useMemo(() => scatterByType(normalizeQuestions(RAW_QUESTIONS)), []);
   const [answers, setAnswers] = useState({});
@@ -304,8 +306,8 @@ const PublicKnowledgeTest = () => {
   const [submitted, setSubmitted] = useState(false);
   const [showEmailGate, setShowEmailGate] = useState(false);
   const [submitEmail, setSubmitEmail] = useState('');
-  const [submitEmailError, setSubmitEmailError] = useState('');
   const [submitEmailLoading, setSubmitEmailLoading] = useState(false);
+  const [showInstantResult, setShowInstantResult] = useState(false);
   const current = questions[currentIndex];
 
   const answeredCount = useMemo(
@@ -340,42 +342,32 @@ const PublicKnowledgeTest = () => {
     setAnswers((prev) => ({ ...prev, [question.id]: value }));
   };
 
-  const completeSubmit = () => {
+  const completeSubmit = ({ instantResult = false } = {}) => {
     setShowEmailGate(false);
     setSubmitted(true);
+    setShowInstantResult(instantResult);
     setSubmitEmail('');
-    setSubmitEmailError('');
     setSubmitEmailLoading(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const onSubmit = () => {
-    setSubmitEmailError('');
     setShowEmailGate(true);
   };
 
   const onConfirmEmailAndSubmit = async () => {
     const email = String(submitEmail || '').trim();
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!email) {
-      setSubmitEmailError('Email is required.');
-      return;
-    }
-
-    if (!emailPattern.test(email)) {
-      setSubmitEmailError('Enter a valid email address.');
-      return;
-    }
+    if (!email) return;
 
     try {
       setSubmitEmailLoading(true);
-      setSubmitEmailError('');
       await axios.post('/api/auth/student/verify-public-test-email', { email });
-      completeSubmit();
+      completeSubmit({ instantResult: true });
     } catch (error) {
-      setSubmitEmailError(error?.response?.data?.message || 'Unable to verify email. Please try again.');
+      setShowEmailGate(false);
+      setSubmitEmail('');
       setSubmitEmailLoading(false);
+      navigate('/dashboard');
     }
   };
 
@@ -418,23 +410,31 @@ const PublicKnowledgeTest = () => {
 
           {submitted ? (
             <section className="public-test-lock-card">
-              <h2>{percentage >= 70 ? 'Congratulations' : 'Test Submitted'}</h2>
-              <p>
-                <strong>
-                  Your score: {score}/{questions.length} ({percentage}%)
-                </strong>
-              </p>
-              <p>
-                Your responses have been recorded.
-                {' '}
-                <strong>
-                  To view your result, message this WhatsApp number:
-                  {' '}
-                  <a href={RESULT_CONTACT_WA_LINK} target="_blank" rel="noreferrer">
-                    {RESULT_CONTACT_NUMBER}
-                  </a>
-                </strong>
-              </p>
+              {showInstantResult ? (
+                <>
+                  <h2>{percentage >= 70 ? 'Congratulations' : 'Test Submitted'}</h2>
+                  <p>
+                    <strong>
+                      Your score: {score}/{questions.length} ({percentage}%)
+                    </strong>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2>Test Submitted</h2>
+                  <p>
+                    Your responses have been recorded.
+                    {' '}
+                    <strong>
+                      To view your result, message this WhatsApp number:
+                      {' '}
+                      <a href={RESULT_CONTACT_WA_LINK} target="_blank" rel="noreferrer">
+                        {RESULT_CONTACT_NUMBER}
+                      </a>
+                    </strong>
+                  </p>
+                </>
+              )}
               <p className="small text-muted mb-0">
                 Attempted {answeredCount} of {questions.length} questions.
               </p>
@@ -540,11 +540,6 @@ const PublicKnowledgeTest = () => {
                 onChange={(e) => setSubmitEmail(e.target.value)}
                 autoFocus
               />
-              {submitEmailError && (
-                <div className="alert alert-danger" style={{ marginTop: '12px', marginBottom: 0 }}>
-                  {submitEmailError}
-                </div>
-              )}
               <div className="public-test-actions" style={{ marginTop: '16px' }}>
                 <button
                   type="button"
@@ -552,7 +547,6 @@ const PublicKnowledgeTest = () => {
                   disabled={submitEmailLoading}
                   onClick={() => {
                     setShowEmailGate(false);
-                    setSubmitEmailError('');
                   }}
                 >
                   Cancel
