@@ -47,7 +47,7 @@ const initLoveRainBackground = () => {
     return () => {};
   }
 
-  const palette = ['#ff4d6d', '#ff758f', '#ffb3c1'];
+  const palette = ['#ff1f1f', '#e11d48', '#b91c1c'];
   let width = 0;
   let height = 0;
   let frameId = null;
