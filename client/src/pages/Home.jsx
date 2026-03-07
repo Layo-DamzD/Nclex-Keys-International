@@ -55,7 +55,7 @@ const Home = () => {
           <Testimonials />
         </>
       )}
-      <Footer content={isStructured ? sections.footer : undefined} />
+      {!loading && <Footer content={isStructured ? sections.footer : undefined} />}
     </>
   );
 };
