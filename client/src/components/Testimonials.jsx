@@ -1,37 +1,16 @@
 import React from 'react';
 import axios from 'axios';
 
-const DEFAULT_TESTIMONIALS = [
-  {
-    id: 1,
-    name: 'Maria Santos',
-    role: 'Passed NCLEX-RN, 2023',
-    text: 'NCLEX KEYS gave me the confidence I needed. The mock exams were exactly like the real test. Passed in 75 questions!',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria',
-    rating: 5,
-  },
-  {
-    id: 2,
-    name: 'John Adebayo',
-    role: 'Passed NCLEX-PN, 2023',
-    text: 'As an international nurse, the cultural adaptation tips were invaluable. The instructors understood our unique challenges.',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-    rating: 4.5,
-  },
-  {
-    id: 3,
-    name: 'Sarah Chen',
-    role: 'Passed NCLEX-RN, 2024',
-    text: 'The personalized study plan identified my weak areas. 24/7 tutor support was amazing when I needed last-minute help.',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-    rating: 5,
-  },
-];
+const DEFAULT_TESTIMONIALS = [];
+const BLOCKED_LEGACY_NAMES = new Set(['maria santos', 'john adebayo', 'sarah chen']);
 
 const Testimonials = ({ content = {} }) => {
   const hasExplicitItems = Array.isArray(content?.items);
-  const testimonials = hasExplicitItems ? content.items : DEFAULT_TESTIMONIALS;
-  if (hasExplicitItems && testimonials.length === 0) return null;
+  const testimonials = (hasExplicitItems ? content.items : DEFAULT_TESTIMONIALS).filter((item) => {
+    const name = String(item?.name || '').trim().toLowerCase();
+    return !BLOCKED_LEGACY_NAMES.has(name);
+  });
+  if (testimonials.length === 0) return null;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
   const resolveMediaCandidates = (rawUrl) => {

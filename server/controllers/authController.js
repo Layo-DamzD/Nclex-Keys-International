@@ -488,7 +488,7 @@ const forgotAdminPassword = async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const hashedResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     user.resetPasswordToken = hashedResetToken;
-    user.resetPasswordExpire = Date.now() + 60 * 60 * 1000; // 1 hour
+    user.resetPasswordExpire = Date.now() + 5 * 60 * 1000; // 5 minutes
     await user.save();
 
     const emailResult = await sendPasswordResetEmail({

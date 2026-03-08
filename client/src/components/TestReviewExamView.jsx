@@ -432,9 +432,6 @@ const TestReviewExamView = ({
         <div className="exam-review-summary-hero">
           <div className="exam-review-summary-hero-head">
             <h4>Review Exam</h4>
-            <span className={`exam-review-pass-chip ${testResult?.passed ? 'pass' : 'fail'}`}>
-              {testResult?.passed ? 'Pass' : 'Fail'}
-            </span>
           </div>
           <div className="exam-review-summary-hero-title">{testResult?.testName || 'NCLEX KEYS Exam'}</div>
           <div className="exam-review-summary-scoreline">
@@ -446,7 +443,7 @@ const TestReviewExamView = ({
               className="exam-review-score-progress-fill"
               style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
             />
-            <span className="exam-review-score-progress-tag">{testResult?.passed ? 'Pass' : 'Fail'}</span>
+            <span className="exam-review-score-progress-tag">{percent}%</span>
           </div>
         </div>
 
@@ -482,9 +479,7 @@ const TestReviewExamView = ({
             </div>
             <div className="exam-review-score-meta exam-review-score-meta-report">
               <div><strong>{score}</strong> / {totalQuestions}</div>
-              <div className={`exam-review-pass-chip ${testResult?.passed ? 'pass' : 'fail'}`}>
-                {testResult?.passed ? 'Passed' : 'Needs Review'}
-              </div>
+              <div>Accuracy: {percent}%</div>
             </div>
           </div>
 

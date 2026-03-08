@@ -1,5 +1,38 @@
 import React from 'react';
 
+const normalizeCardTitle = (title = '') => {
+  const raw = String(title || '').trim();
+  if (!raw) return raw;
+  if (raw.toLowerCase() === 'custom study plan') return 'Customized Study Plan';
+  return raw;
+};
+
+const normalizeCard = (card = {}) => ({
+  ...card,
+  title: normalizeCardTitle(card.title),
+  text: String(card.text || '').trim()
+});
+
+const cardUniqKey = (card = {}) => {
+  const title = String(card.title || '').trim().toLowerCase();
+  const text = String(card.text || '').trim().toLowerCase();
+  return `${title}::${text}`;
+};
+
+const mergeUniqueCards = (baseCards = [], incomingCards = []) => {
+  const merged = [];
+  const seen = new Set();
+  [...baseCards, ...incomingCards]
+    .map((card) => normalizeCard(card))
+    .forEach((card) => {
+      const key = cardUniqKey(card);
+      if (!card.title || seen.has(key)) return;
+      seen.add(key);
+      merged.push(card);
+    });
+  return merged;
+};
+
 const DEFAULT_CONTENT = {
   heading: 'Why Choose NCLEX KEYS?',
   subheading: 'Strategic, intensive coaching that transforms NCLEX preparation into confident success.',
@@ -34,6 +67,11 @@ const DEFAULT_CONTENT = {
       title: 'Global Engagement',
       text: 'Strategic collaboration and support for nursing professionals worldwide.',
     },
+    {
+      icon: 'fa-list-check',
+      title: 'Customized Study Plan',
+      text: 'Personalized preparation roadmap focused on your weak areas and exam goals.',
+    },
   ],
   missionVision: {
     heading: 'Our Mission & Vision',
@@ -56,7 +94,10 @@ const Program = ({ content = {} }) => {
   const data = {
     ...DEFAULT_CONTENT,
     ...content,
-    cards: Array.isArray(content.cards) && content.cards.length ? content.cards : DEFAULT_CONTENT.cards,
+    cards: mergeUniqueCards(
+      DEFAULT_CONTENT.cards,
+      Array.isArray(content.cards) ? content.cards : []
+    ),
     missionVision: content.missionVision && typeof content.missionVision === 'object'
       ? {
           ...DEFAULT_CONTENT.missionVision,

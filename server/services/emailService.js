@@ -101,7 +101,7 @@ const sendPasswordResetEmail = async ({
     `Hello ${displayName},`,
     '',
     `We received a request to reset your ${accountLabel} password.`,
-    'Use the link below to reset it (valid for 1 hour):',
+    'Use the link below to reset it (valid for 5 minutes):',
     resetUrl,
     '',
     'If you did not request this, please ignore this email.',
@@ -114,7 +114,7 @@ const sendPasswordResetEmail = async ({
       <h2 style="margin:0 0 12px;color:#1d4ed8;">NCLEX KEYS International</h2>
       <p>Hello ${displayName},</p>
       <p>We received a request to reset your <strong>${accountLabel}</strong> password.</p>
-      <p>This link expires in <strong>1 hour</strong>.</p>
+      <p>This link expires in <strong>5 minutes</strong>.</p>
       <p style="margin:20px 0;">
         <a href="${resetUrl}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">
           Reset Password

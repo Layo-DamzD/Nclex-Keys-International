@@ -109,6 +109,11 @@ const getDefaultConfig = (pageKey) => {
             title: 'Global Engagement',
             text: 'Strategic collaboration and support for nursing professionals worldwide.',
           },
+          {
+            icon: 'fa-list-check',
+            title: 'Customized Study Plan',
+            text: 'Personalized preparation roadmap focused on your weak areas and exam goals.',
+          },
         ],
         missionVision: {
           heading: 'Our Mission & Vision',
@@ -129,32 +134,7 @@ const getDefaultConfig = (pageKey) => {
       testimonials: {
         heading: 'Success Stories',
         subheading: 'Hear from our graduates who passed NCLEX',
-        items: [
-          {
-            id: 1,
-            name: 'Maria Santos',
-            role: 'Passed NCLEX-RN, 2023',
-            text: 'NCLEX KEYS gave me the confidence I needed. The mock exams were exactly like the real test. Passed in 75 questions!',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria',
-            rating: 5,
-          },
-          {
-            id: 2,
-            name: 'John Adebayo',
-            role: 'Passed NCLEX-PN, 2023',
-            text: 'As an international nurse, the cultural adaptation tips were invaluable. The instructors understood our unique challenges.',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-            rating: 4.5,
-          },
-          {
-            id: 3,
-            name: 'Sarah Chen',
-            role: 'Passed NCLEX-RN, 2024',
-            text: 'The personalized study plan identified my weak areas. 24/7 tutor support was amazing when I needed last-minute help.',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-            rating: 5,
-          },
-        ],
+        items: [],
       },
       footer: {
         brandLinkUrl: '/',
