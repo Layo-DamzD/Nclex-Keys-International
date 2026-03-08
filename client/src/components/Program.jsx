@@ -3,7 +3,9 @@ import React from 'react';
 const normalizeCardTitle = (title = '') => {
   const raw = String(title || '').trim();
   if (!raw) return raw;
-  if (raw.toLowerCase() === 'custom study plan') return 'Customized Study Plan';
+  if (['custom study plan', 'customized study plan', 'customised study plan'].includes(raw.toLowerCase())) {
+    return 'Customised Study Plan';
+  }
   return raw;
 };
 
@@ -68,8 +70,8 @@ const DEFAULT_CONTENT = {
       text: 'Strategic collaboration and support for nursing professionals worldwide.',
     },
     {
-      icon: 'fa-list-check',
-      title: 'Customized Study Plan',
+      icon: 'fa-gears',
+      title: 'Customised Study Plan',
       text: 'Personalized preparation roadmap focused on your weak areas and exam goals.',
     },
   ],

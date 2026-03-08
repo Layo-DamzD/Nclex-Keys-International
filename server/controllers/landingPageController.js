@@ -110,8 +110,8 @@ const getDefaultConfig = (pageKey) => {
             text: 'Strategic collaboration and support for nursing professionals worldwide.',
           },
           {
-            icon: 'fa-list-check',
-            title: 'Customized Study Plan',
+            icon: 'fa-gears',
+            title: 'Customised Study Plan',
             text: 'Personalized preparation roadmap focused on your weak areas and exam goals.',
           },
         ],
