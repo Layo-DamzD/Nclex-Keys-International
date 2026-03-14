@@ -1854,6 +1854,32 @@ html[data-app-theme='dark'] .admin-sidebar-floating-open-btn {
   gap: 8px;
 }
 
+codex/fix-review-function-for-admin-and-students-r6oxeg
+.admin-dashboard-page .admin-sidebar-icon-wrap {
+  position: relative;
+  width: 20px;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.admin-dashboard-page .admin-sidebar-icon-badge {
+  position: absolute;
+  top: -9px;
+  right: -12px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  border: 2px solid #ffffff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+main
 .admin-dashboard-page .admin-sidebar-item-badge {
   margin-left: auto;
   background: #dc2626;
@@ -1864,3 +1890,9 @@ html[data-app-theme='dark'] .admin-sidebar-floating-open-btn {
   font-weight: 700;
   line-height: 1.2;
 }
+codex/fix-review-function-for-admin-and-students-r6oxeg
+
+.admin-dashboard-page .sidebar.collapsed .admin-sidebar-item-badge {
+  display: none;
+}
+main
