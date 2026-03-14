@@ -435,10 +435,6 @@ const PublicKnowledgeTest = () => {
       const regionCode = regionMatch ? String(regionMatch[1]).toUpperCase() : '';
       if (!regionCode) return null;
       const displayNames = new Intl.DisplayNames([localeText], { type: 'region' });
-      const regionMatch = String(locale).match(/[-_]([A-Z]{2})/i);
-      const regionCode = regionMatch ? regionMatch[1].toUpperCase() : '';
-      if (!regionCode) return null;
-      const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
       return displayNames.of(regionCode) || null;
     } catch {
       return null;
@@ -478,7 +474,7 @@ const PublicKnowledgeTest = () => {
           percentage,
           answers: serializedAnswers,
           browserLocation,
-          countryName: getBrowserCountryName()
+          countryName: getBrowserCountryName(),
           browserLocation
         });
       } catch (leadErr) {
