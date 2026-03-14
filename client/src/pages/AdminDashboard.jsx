@@ -64,8 +64,6 @@ const AdminDashboard = () => {
       try {
         const token = sessionStorage.getItem('adminToken');
         if (!token) return;
-codex/fix-review-function-for-admin-and-students-r6oxeg
- main
         const [adminsRes, feedbackRes, supportRes] = await Promise.all([
           axios.get('/api/admin/users/admins', { headers: { Authorization: `Bearer ${token}` } }),
           axios.get('/api/admin/feedback', { headers: { Authorization: `Bearer ${token}` } }),
@@ -85,9 +83,7 @@ codex/fix-review-function-for-admin-and-students-r6oxeg
             'admin-approval': pendingApprovals,
             'student-feedback': unreadFeedback,
             'exam-support': unreadSupport
- codex/fix-review-function-for-admin-and-students-r6oxeg
-
-
+              
         const response = await axios.get('/api/admin/users/admins', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -99,7 +95,7 @@ codex/fix-review-function-for-admin-and-students-r6oxeg
             'landing-page': 'PRO',
             logs: 'SYS',
             'student-feedback': 'NEW'
- main
+
           });
         }
       } catch (error) {
