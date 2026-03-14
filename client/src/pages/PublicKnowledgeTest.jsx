@@ -459,7 +459,6 @@ const PublicKnowledgeTest = () => {
         answers: serializedAnswers,
         browserLocation,
         countryName: getBrowserCountryName()
-        browserLocation,
       });
       completeSubmit();
     } catch {
