@@ -315,6 +315,12 @@ const COUNTRY_CODE_FALLBACK_MAP = {
   RO: 'Romania', HU: 'Hungary', GR: 'Greece', TR: 'Turkey', RU: 'Russia',
   UA: 'Ukraine', BR: 'Brazil', AR: 'Argentina', MX: 'Mexico', CL: 'Chile',
   CO: 'Colombia', PE: 'Peru', VE: 'Venezuela'
+  try {
+    const names = new Intl.DisplayNames([locale], { type: 'region' });
+    return names.of(raw.toUpperCase()) || raw;
+  } catch {
+    return raw;
+  }
 };
 
 const resolveClientIp = (req) => {

@@ -17,6 +17,10 @@ app.use(cors());
 // Allow very large request payloads so long rationales and rich uploads are not truncated.
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: true, limit: '500mb' }));
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ extended: true, limit: '500mb' }));
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 const logger = require('./middleware/Logger');
 app.use(logger);
