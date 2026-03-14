@@ -56,7 +56,9 @@ const AdminTestReviewPage = () => {
       onBack={() => navigate('/admin/dashboard')}
       backLabel="Back to Admin Dashboard"
       titlePrefix="Student Test Review"
+ codex/fix-review-function-for-admin-and-students-9g0yj0
       runtimeMode={true}
+main
     />
   );
 };
