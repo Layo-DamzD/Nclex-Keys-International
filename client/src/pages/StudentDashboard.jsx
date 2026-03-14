@@ -43,6 +43,9 @@ const StudentDashboard = () => {
   const [preparedTestCount, setPreparedTestCount] = useState(0);
   const [showWelcomeCelebration, setShowWelcomeCelebration] = useState(false);
 
+ codex/fix-review-function-for-admin-and-students-9g0yj0
+  const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState(null);
+
   // Calculate days until exam based on user.examDate
   useEffect(() => {
     if (user?.examDate) {
@@ -57,6 +60,21 @@ const StudentDashboard = () => {
       setDaysUntilExam('No exam date set');
     }
   }, [user?.examDate]);
+
+  useEffect(() => {
+    if (!user?.createdAt) {
+      setSubscriptionDaysLeft(null);
+      return;
+    }
+    const createdAt = new Date(user.createdAt);
+    if (Number.isNaN(createdAt.getTime())) {
+      setSubscriptionDaysLeft(null);
+      return;
+    }
+    const expiryDate = new Date(createdAt.getTime() + (30 * 24 * 60 * 60 * 1000));
+    const diffDays = Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    setSubscriptionDaysLeft(diffDays);
+  }, [user?.createdAt]);
 
   useEffect(() => {
     if (loading) return;
@@ -366,6 +384,13 @@ const StudentDashboard = () => {
 
         {activeSection === 'dashboard' && (
           <div id="dashboard" className="content-section active">
+ codex/fix-review-function-for-admin-and-students-9g0yj0
+            {subscriptionDaysLeft !== null && subscriptionDaysLeft >= 0 && (
+              <div className="alert alert-warning" style={{ fontWeight: 800, fontSize: '1.05rem', borderWidth: '2px' }}>
+                Your subscription is expiring in {subscriptionDaysLeft} day{subscriptionDaysLeft === 1 ? '' : 's'}.
+              </div>
+            )}
+main
             <StatsCards />
             <div className="row">
               <div className="col-lg-8">

@@ -6,6 +6,7 @@ const Question = require('../models/Question');
 const StudyMaterial = require('../models/StudyMaterial');
 const Feedback = require('../models/Feedback');
 const ExamSupportMessage = require('../models/ExamSupportMessage');
+const { sendExamSupportUsageEmail } = require('../services/emailService');
 
 const MAX_FCM_TOKENS_PER_STUDENT = 8;
 
@@ -1124,8 +1125,14 @@ const sendExamSupportMessage = async (req, res) => {
       return res.status(400).json({ message: 'sessionId and message are required' });
     }
 
-    const user = await User.findById(studentId).select('name');
+    const user = await User.findById(studentId).select('name email');
     if (!user) return res.status(404).json({ message: 'Student not found' });
+
+    const priorStudentMessages = await ExamSupportMessage.countDocuments({
+      student: studentId,
+      sessionId,
+      senderRole: 'student'
+    });
 
     const created = await ExamSupportMessage.create({
       student: studentId,
@@ -1137,6 +1144,18 @@ const sendExamSupportMessage = async (req, res) => {
       isReadByAdmin: false,
       isReadByStudent: true
     });
+
+    if (priorStudentMessages === 0) {
+      const emailResult = await sendExamSupportUsageEmail({
+        studentName: user.name || 'Student',
+        studentEmail: user.email || 'Unknown',
+        sessionId,
+        message
+      });
+      if (!emailResult?.sent) {
+        console.warn('Exam support usage email was not sent:', emailResult?.reason || 'unknown_reason');
+      }
+    }
 
     res.status(201).json(created);
   } catch (error) {

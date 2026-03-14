@@ -192,6 +192,27 @@ const CreateTest = () => {
           </div>
         </div>
 
+
+        <div className="form-group" style={{ border: '2px solid #0d6efd', borderRadius: '10px', padding: '12px 14px', background: '#f5f9ff' }}>
+          <div className="form-check" style={{ marginBottom: '4px' }}>
+            <input
+              type="checkbox"
+              name="proctored"
+              id="proctored"
+              className="form-check-input"
+              checked={Boolean(testData.proctored)}
+              onChange={handleTestDataChange}
+              style={{ transform: 'scale(1.2)', marginTop: '0.35rem' }}
+            />
+            <label className="form-check-label fw-bold fs-5" htmlFor="proctored" style={{ color: '#0b3d91' }}>
+              Make this exam proctored
+            </label>
+          </div>
+          <small className="text-muted">
+            If enabled, students must pass camera, microphone and fullscreen checks before starting.
+          </small>
+        </div>
+
         {/* Assignment Type - Role Based */}
         <div className="form-group">
           <label className="form-label">Assign To</label>

@@ -64,6 +64,27 @@ const AdminDashboard = () => {
       try {
         const token = sessionStorage.getItem('adminToken');
         if (!token) return;
+ codex/fix-review-function-for-admin-and-students-9g0yj0
+        const [adminsRes, feedbackRes, supportRes] = await Promise.all([
+          axios.get('/api/admin/users/admins', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('/api/admin/feedback', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('/api/admin/exam-support/conversations', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+
+        const admins = Array.isArray(adminsRes.data) ? adminsRes.data : [];
+        const feedback = Array.isArray(feedbackRes.data) ? feedbackRes.data : [];
+        const supportConversations = Array.isArray(supportRes.data) ? supportRes.data : [];
+
+        const pendingApprovals = admins.filter((item) => item?.role !== 'superadmin' && item?.approved !== true).length;
+        const unreadFeedback = feedback.filter((item) => String(item?.status || '').toLowerCase() === 'new').length;
+        const unreadSupport = supportConversations.reduce((sum, item) => sum + Number(item?.unreadAdminCount || 0), 0);
+
+        if (mounted) {
+          setSidebarBadges({
+            'admin-approval': pendingApprovals,
+            'student-feedback': unreadFeedback,
+            'exam-support': unreadSupport
+
         const response = await axios.get('/api/admin/users/admins', {
           headers: { Authorization: `Bearer ${token}` }
         });

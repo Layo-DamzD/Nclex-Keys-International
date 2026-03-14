@@ -425,6 +425,20 @@ const PublicKnowledgeTest = () => {
       );
     });
 
+
+  const getBrowserCountryName = () => {
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale || navigator.language || '';
+      const regionMatch = String(locale).match(/[-_]([A-Z]{2})/i);
+      const regionCode = regionMatch ? regionMatch[1].toUpperCase() : '';
+      if (!regionCode) return null;
+      const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
+      return displayNames.of(regionCode) || null;
+    } catch {
+      return null;
+    }
+  };
+
   const onConfirmEmailAndSubmit = async () => {
     const name = String(submitName || '').trim();
     const email = String(submitEmail || '').trim();
@@ -441,7 +455,12 @@ const PublicKnowledgeTest = () => {
         score,
         percentage,
         answers: serializedAnswers,
+
+        codex/fix-review-function-for-admin-and-students-9g0yj0
+        browserLocation,
+        countryName: getBrowserCountryName()
         browserLocation
+main
       });
       completeSubmit();
     } catch (error) {

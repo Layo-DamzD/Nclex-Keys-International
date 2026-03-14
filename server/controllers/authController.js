@@ -26,6 +26,16 @@ const normalizeDeviceLabel = (value = '') => String(value || '').trim().slice(0,
 const normalizeIpAddress = (value = '') => String(value || '').trim().slice(0, 80);
 const STUDENT_SIGNUP_ACCESS_CODE = process.env.STUDENT_SIGNUP_ACCESS_CODE || 'NCKeys5832';
 const SIGNUP_ACCESS_HELP_NUMBER = '+2347037367480';
+const STUDENT_SUBSCRIPTION_DAYS = 30;
+
+const isStudentSubscriptionExpired = (user) => {
+  if (!user || user.role !== 'student') return false;
+  const createdAt = user.createdAt ? new Date(user.createdAt) : null;
+  if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
+  const expiry = new Date(createdAt.getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
+  return Date.now() > expiry.getTime();
+};
+
 const normalizeAccessCode = (value = '') => String(value || '').replace(/\s+/g, '').toLowerCase();
 
 const savePasswordResetOtp = async (user) => {
@@ -236,6 +246,7 @@ const registerStudent = async (req, res) => {
       role: user.role,
       examDate: user.examDate,
       country: user.country,
+      subscriptionExpiresAt: new Date(new Date(user.createdAt).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
       token: generateToken(user._id)
     });
   } catch (error) {
@@ -251,9 +262,14 @@ const loginStudent = async (req, res) => {
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
+    if (isStudentSubscriptionExpired(user) && user.status !== 'inactive') {
+      user.status = 'inactive';
+      await user.save();
+    }
+
     if (user.status !== 'active') {
       return res.status(403).json({
-        message: 'Your acct has been suspended, kindly renew your subscription to continue enjoying the service. For assistance, contact support via WhatsApp below.'
+        message: 'Your subscription has expired. Kindly renew your subscription to continue enjoying the service.'
       });
     }
 
@@ -298,6 +314,7 @@ const loginStudent = async (req, res) => {
       role: user.role,
       examDate: user.examDate,
       country: user.country,
+      subscriptionExpiresAt: new Date(new Date(user.createdAt).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
       token: generateToken(user._id)
     });
   } catch (error) {

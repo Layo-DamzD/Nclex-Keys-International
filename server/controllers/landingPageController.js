@@ -283,6 +283,19 @@ const getPublicLandingPageConfig = async (req, res) => {
   }
 };
 
+
+const getFullCountryName = (value = '', locale = 'en') => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.length !== 2) return raw;
+  try {
+    const names = new Intl.DisplayNames([locale], { type: 'region' });
+    return names.of(raw.toUpperCase()) || raw;
+  } catch {
+    return raw;
+  }
+};
+
 const resolveClientIp = (req) => {
   const forwarded = String(req.headers['x-forwarded-for'] || '').trim();
   if (forwarded) return forwarded.split(',')[0].trim();
@@ -307,10 +320,12 @@ const createPublicTestLead = async (req, res) => {
     }
 
     const ip = resolveClientIp(req);
-    const country =
-      String(req.headers['cf-ipcountry'] || '').trim()
+    const countryRaw =
+      String(req.body?.countryName || '').trim()
+      || String(req.headers['cf-ipcountry'] || '').trim()
       || String(req.headers['x-vercel-ip-country'] || '').trim()
       || 'Unknown';
+    const country = getFullCountryName(countryRaw);
     const region = String(req.headers['x-vercel-ip-country-region'] || '').trim() || '';
     const city = String(req.headers['x-vercel-ip-city'] || '').trim() || '';
     const ua = String(req.get('user-agent') || '').trim();
