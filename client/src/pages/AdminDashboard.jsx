@@ -84,7 +84,7 @@ const AdminDashboard = () => {
             'student-feedback': unreadFeedback,
             'exam-support': unreadSupport
               
-        const response = await axios.get('/api/admin/users/admins', {
+          } const response = await axios.get('/api/admin/users/admins', {
           headers: { Authorization: `Bearer ${token}` }
         });
         const admins = Array.isArray(response.data) ? response.data : [];
