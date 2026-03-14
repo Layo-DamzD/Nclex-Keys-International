@@ -330,6 +330,64 @@ const sendAdminAccessCodeEmail = async ({
   }
 };
 
+
+const sendExamSupportUsageEmail = async ({
+  to = process.env.EXAM_SUPPORT_ALERT_TO || 'nclexkeysintl.academy@gmail.com',
+  studentName,
+  studentEmail,
+  sessionId,
+  message
+}) => {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'not_configured' };
+  }
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    return { sent: false, reason: 'transporter_unavailable' };
+  }
+
+  const subject = `NCLEX KEYS International - Exam Support Alert (${studentName || 'Student'})`;
+  const text = [
+    'A student has started using exam support.',
+    '',
+    `Student: ${studentName || 'Unknown'}`,
+    `Email: ${studentEmail || 'Unknown'}`,
+    `Session ID: ${sessionId || 'Unknown'}`,
+    `First message: ${message || ''}`
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:640px;margin:0 auto;padding:24px;">
+      <h2 style="margin:0 0 12px;color:#1d4ed8;">NCLEX KEYS International</h2>
+      <p style="margin:0 0 12px;">A student has started using exam support.</p>
+      <table cellpadding="8" cellspacing="0" style="width:100%;border-collapse:collapse;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+        <tr><td style="font-weight:700;width:160px;">Student</td><td>${studentName || 'Unknown'}</td></tr>
+        <tr><td style="font-weight:700;">Email</td><td>${studentEmail || 'Unknown'}</td></tr>
+        <tr><td style="font-weight:700;">Session</td><td>${sessionId || 'Unknown'}</td></tr>
+        <tr><td style="font-weight:700;">First Message</td><td>${message || ''}</td></tr>
+      </table>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
+};
+
 const sendPublicTestLeadEmail = async ({
   to = process.env.PUBLIC_TEST_LEAD_TO || 'nclexkeysintl.academy@gmail.com',
   name,
@@ -394,5 +452,6 @@ module.exports = {
   sendAdminSignupVerificationEmail,
   sendAdminAccessCodeEmail,
   sendPublicTestLeadEmail,
+  sendExamSupportUsageEmail,
   buildResetUrl
 };

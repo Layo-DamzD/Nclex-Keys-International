@@ -57,9 +57,14 @@ const PreviousTests = () => {
               </tr>
             </thead>
             <tbody>
-              {tests.map((test) => (
+              {tests.map((test) => {
+                const isPublicTest = String(test.testName || '').toLowerCase().includes('public knowledge test');
+                return (
                 <tr key={test._id}>
-                  <td>{test.testName}</td>
+                  <td>
+                    {test.testName}
+                    {isPublicTest && <span className="badge bg-info ms-2">Public</span>}
+                  </td>
                   <td>{new Date(test.date).toLocaleDateString()}</td>
                   <td>{test.score}/{test.totalQuestions}</td>
                   <td>
@@ -74,7 +79,8 @@ const PreviousTests = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

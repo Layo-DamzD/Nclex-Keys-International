@@ -2990,7 +2990,11 @@ html[data-app-theme='dark'] .calculator-buttons button:hover {
 }
 
 .exam-review-row-action {
-  min-width: 78px;
+  min-width: 88px;
+  font-weight: 700;
+  border-width: 2px;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .exam-review-status {
@@ -4244,6 +4248,17 @@ html[data-app-theme='dark'] .exam-runtime-skin .option:hover {
 .exam-runtime-skin .option.review-correct-option {
   border-color: #10b981;
   background: rgba(16, 185, 129, 0.06);
+}
+
+.exam-runtime-skin .option.review-selected-wrong {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.exam-runtime-skin .option.review-selected-correct,
+.exam-runtime-skin .option.review-correct-option {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.14);
 }
 
 .exam-review-rationale-runtime {

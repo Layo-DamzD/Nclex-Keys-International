@@ -37,6 +37,7 @@ const AdminDashboard = () => {
   const user = JSON.parse(sessionStorage.getItem('adminUser') || '{}');
   const userRole = user.role;
   const { theme, toggleTheme, isThemeEnabled } = useAppTheme();
+  const [sidebarBadges, setSidebarBadges] = useState({});
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
   const handleSectionChange = useCallback((sectionId) => {
@@ -50,6 +51,52 @@ const AdminDashboard = () => {
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+
+  useEffect(() => {
+    if (userRole !== 'superadmin') {
+      setSidebarBadges({});
+      return;
+    }
+
+    let mounted = true;
+    const fetchSidebarBadges = async () => {
+      try {
+        const token = sessionStorage.getItem('adminToken');
+        if (!token) return;
+        const [adminsRes, feedbackRes, supportRes] = await Promise.all([
+          axios.get('/api/admin/users/admins', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('/api/admin/feedback', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('/api/admin/exam-support/conversations', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+
+        const admins = Array.isArray(adminsRes.data) ? adminsRes.data : [];
+        const feedback = Array.isArray(feedbackRes.data) ? feedbackRes.data : [];
+        const supportConversations = Array.isArray(supportRes.data) ? supportRes.data : [];
+
+        const pendingApprovals = admins.filter((item) => item?.role !== 'superadmin' && item?.approved !== true).length;
+        const unreadFeedback = feedback.filter((item) => String(item?.status || '').toLowerCase() === 'new').length;
+        const unreadSupport = supportConversations.reduce((sum, item) => sum + Number(item?.unreadAdminCount || 0), 0);
+
+        if (mounted) {
+          setSidebarBadges({
+            'admin-approval': pendingApprovals,
+            'student-feedback': unreadFeedback,
+            'exam-support': unreadSupport
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load sidebar badges:', error);
+      }
+    };
+
+    fetchSidebarBadges();
+    const intervalId = window.setInterval(fetchSidebarBadges, 30000);
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [userRole]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -110,6 +157,7 @@ const AdminDashboard = () => {
         toggleSidebar={toggleSidebar}
         userRole={userRole}
         isMobileViewport={isMobileViewport}
+        sectionBadges={sidebarBadges}
       />
 
       {sidebarCollapsed && (

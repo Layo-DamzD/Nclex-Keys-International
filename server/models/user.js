@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   program: { type: String, enum: ['NCLEX-RN', 'NCLEX-PN'] },
   phone: String,
+  country: String,
   approved: { type: Boolean, default: false },
   accessCode: { type: String },
   adminEmailVerified: { type: Boolean, default: false },

@@ -29,7 +29,7 @@ const ProgressReport = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState('');
-  const [timeRange, setTimeRange] = useState('30');
+  const [timeRange, setTimeRange] = useState('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [progressData, setProgressData] = useState(null);

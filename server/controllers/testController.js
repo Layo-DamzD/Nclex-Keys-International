@@ -6,7 +6,7 @@ const User = require('../models/user');
 // @access  Private (admin only)
 const createTest = async (req, res) => {
   try {
-    const { title, description, category, questions, duration, passingScore, assignmentType, assignedStudents } = req.body;
+    const { title, description, category, questions, duration, passingScore, assignmentType, assignedStudents, proctored = false } = req.body;
 
     const test = new Test({
       title,
@@ -17,7 +17,8 @@ const createTest = async (req, res) => {
       passingScore,
       assignmentType,
       assignedStudents: assignmentType === 'individual' ? assignedStudents : [],
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      proctored: Boolean(proctored)
     });
 
     await test.save();
