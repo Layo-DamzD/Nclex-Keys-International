@@ -288,6 +288,33 @@ const getFullCountryName = (value = '', locale = 'en') => {
   const raw = String(value || '').trim();
   if (!raw) return '';
   if (raw.length !== 2) return raw;
+
+  const code = raw.toUpperCase();
+  try {
+    if (typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
+      const names = new Intl.DisplayNames([locale], { type: 'region' });
+      const resolved = names.of(code);
+      if (resolved && resolved.toLowerCase() !== code.toLowerCase()) return resolved;
+    }
+  } catch {
+    // Fall back to static mapping below.
+  }
+
+  return COUNTRY_CODE_FALLBACK_MAP[code] || code;
+};
+
+const COUNTRY_CODE_FALLBACK_MAP = {
+  US: 'United States', CA: 'Canada', GB: 'United Kingdom', AU: 'Australia', NZ: 'New Zealand',
+  NG: 'Nigeria', GH: 'Ghana', KE: 'Kenya', ZA: 'South Africa', IN: 'India', PK: 'Pakistan',
+  PH: 'Philippines', BD: 'Bangladesh', CN: 'China', JP: 'Japan', KR: 'South Korea',
+  AE: 'United Arab Emirates', SA: 'Saudi Arabia', QA: 'Qatar', KW: 'Kuwait', EG: 'Egypt',
+  MA: 'Morocco', DZ: 'Algeria', ET: 'Ethiopia', UG: 'Uganda', TZ: 'Tanzania',
+  FR: 'France', DE: 'Germany', IT: 'Italy', ES: 'Spain', PT: 'Portugal', IE: 'Ireland',
+  NL: 'Netherlands', BE: 'Belgium', CH: 'Switzerland', AT: 'Austria', SE: 'Sweden',
+  NO: 'Norway', DK: 'Denmark', FI: 'Finland', PL: 'Poland', CZ: 'Czechia',
+  RO: 'Romania', HU: 'Hungary', GR: 'Greece', TR: 'Turkey', RU: 'Russia',
+  UA: 'Ukraine', BR: 'Brazil', AR: 'Argentina', MX: 'Mexico', CL: 'Chile',
+  CO: 'Colombia', PE: 'Peru', VE: 'Venezuela'
   try {
     const names = new Intl.DisplayNames([locale], { type: 'region' });
     return names.of(raw.toUpperCase()) || raw;

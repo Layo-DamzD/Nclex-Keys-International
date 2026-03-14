@@ -42,8 +42,6 @@ const StudentDashboard = () => {
   const [showPreparedTestAlert, setShowPreparedTestAlert] = useState(false);
   const [preparedTestCount, setPreparedTestCount] = useState(0);
   const [showWelcomeCelebration, setShowWelcomeCelebration] = useState(false);
-
- codex/fix-review-function-for-admin-and-students-9g0yj0
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState(null);
 
   // Calculate days until exam based on user.examDate
@@ -384,7 +382,6 @@ const StudentDashboard = () => {
 
         {activeSection === 'dashboard' && (
           <div id="dashboard" className="content-section active">
- codex/fix-review-function-for-admin-and-students-9g0yj0
             {subscriptionDaysLeft !== null && subscriptionDaysLeft >= 0 && (
               <div className="alert alert-warning" style={{ fontWeight: 800, fontSize: '1.05rem', borderWidth: '2px' }}>
                 Your subscription is expiring in {subscriptionDaysLeft} day{subscriptionDaysLeft === 1 ? '' : 's'}.

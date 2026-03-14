@@ -455,12 +455,14 @@ const PublicKnowledgeTest = () => {
         score,
         percentage,
         answers: serializedAnswers,
+        browserLocation,
+        countryName: getBrowserCountryName()
+
 
         codex/fix-review-function-for-admin-and-students-9g0yj0
         browserLocation,
         countryName: getBrowserCountryName()
         browserLocation
-main
       });
       completeSubmit();
     } catch (error) {
@@ -474,7 +476,10 @@ main
           score,
           percentage,
           answers: serializedAnswers,
+          browserLocation,
+          countryName: getBrowserCountryName()
           browserLocation
+
         });
       } catch (leadErr) {
         console.error('Failed to send public test lead:', leadErr);
