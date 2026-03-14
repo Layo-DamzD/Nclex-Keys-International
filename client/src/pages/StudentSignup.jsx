@@ -172,6 +172,7 @@ const StudentSignup = () => {
         password: data.password,
         program: data.program,
         phone: data.phone,
+        country: data.country,
         examDate: data.examDate || null,
         accessCode: data.accessCode,
         deviceId,
@@ -250,6 +251,17 @@ const StudentSignup = () => {
                   autoComplete="tel"
                   {...register('phone')}
                 />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-bold">Country</label>
+                <input
+                  type="text"
+                  className={`form-control ${errors.country ? 'is-invalid' : ''}`}
+                  autoComplete="country-name"
+                  {...register('country', { required: 'Country is required' })}
+                />
+                {errors.country && <div className="invalid-feedback">{errors.country.message}</div>}
               </div>
 
               <div className="mb-3">

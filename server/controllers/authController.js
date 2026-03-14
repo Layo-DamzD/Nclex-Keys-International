@@ -187,7 +187,7 @@ const claimLatestPublicTestResultForUser = async (user) => {
 // ===== STUDENT =====
 const registerStudent = async (req, res) => {
   try {
-    const { name, email, password, program, phone, examDate, deviceId, deviceLabel, accessCode } = req.body;
+    const { name, email, password, program, phone, country, examDate, deviceId, deviceLabel, accessCode } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
@@ -197,6 +197,10 @@ const registerStudent = async (req, res) => {
       return res.status(403).json({
         message: `Message ${SIGNUP_ACCESS_HELP_NUMBER} on WhatsApp to get your access code.`
       });
+    }
+
+    if (!String(country || '').trim()) {
+      return res.status(400).json({ message: 'Country is required' });
     }
 
     const normalizedDeviceId = normalizeDeviceId(deviceId);
@@ -216,6 +220,7 @@ const registerStudent = async (req, res) => {
       role: 'student',
       program,
       phone,
+      country: String(country || '').trim(),
       examDate: examDate || null,
       trustedDevices
     });
@@ -230,6 +235,7 @@ const registerStudent = async (req, res) => {
       email: user.email,
       role: user.role,
       examDate: user.examDate,
+      country: user.country,
       token: generateToken(user._id)
     });
   } catch (error) {
@@ -291,6 +297,7 @@ const loginStudent = async (req, res) => {
       email: user.email,
       role: user.role,
       examDate: user.examDate,
+      country: user.country,
       token: generateToken(user._id)
     });
   } catch (error) {
