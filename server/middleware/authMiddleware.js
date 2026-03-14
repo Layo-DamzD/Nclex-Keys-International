@@ -1,6 +1,16 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 
+const STUDENT_SUBSCRIPTION_DAYS = 30;
+
+const isStudentSubscriptionExpired = (user) => {
+  if (!user || user.role !== 'student') return false;
+  const createdAt = user.createdAt ? new Date(user.createdAt) : null;
+  if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
+  const expiry = new Date(createdAt.getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
+  return Date.now() > expiry.getTime();
+};
+
 const protect = async (req, res, next) => {
   let token;
 
@@ -14,8 +24,13 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'Not authorized' });
       }
 
+      if (isStudentSubscriptionExpired(req.user) && req.user.status !== 'inactive') {
+        await User.updateOne({ _id: req.user._id }, { $set: { status: 'inactive' } });
+        req.user.status = 'inactive';
+      }
+
       if (req.user.status && req.user.status !== 'active') {
-        return res.status(403).json({ message: 'Account is inactive' });
+        return res.status(403).json({ message: 'Your subscription has expired. Please renew to continue.' });
       }
 
       next();

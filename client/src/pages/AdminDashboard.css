@@ -1846,3 +1846,21 @@ html[data-app-theme='dark'] .admin-sidebar-overlay {
 html[data-app-theme='dark'] .admin-sidebar-floating-open-btn {
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.45);
 }
+
+
+.admin-dashboard-page .sidebar-nav .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-dashboard-page .admin-sidebar-item-badge {
+  margin-left: auto;
+  background: #dc2626;
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+}

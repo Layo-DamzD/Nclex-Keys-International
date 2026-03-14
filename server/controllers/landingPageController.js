@@ -283,6 +283,40 @@ const getPublicLandingPageConfig = async (req, res) => {
   }
 };
 
+
+const getFullCountryName = (value = '', locale = 'en') => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.length !== 2) return raw;
+
+  const code = raw.toUpperCase();
+  try {
+    if (typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
+      const names = new Intl.DisplayNames([locale], { type: 'region' });
+      const resolved = names.of(code);
+      if (resolved && resolved.toLowerCase() !== code.toLowerCase()) return resolved;
+    }
+  } catch {
+    // Fall back to static mapping below.
+  }
+
+  return COUNTRY_CODE_FALLBACK_MAP[code] || code;
+};
+
+const COUNTRY_CODE_FALLBACK_MAP = {
+  US: 'United States', CA: 'Canada', GB: 'United Kingdom', AU: 'Australia', NZ: 'New Zealand',
+  NG: 'Nigeria', GH: 'Ghana', KE: 'Kenya', ZA: 'South Africa', IN: 'India', PK: 'Pakistan',
+  PH: 'Philippines', BD: 'Bangladesh', CN: 'China', JP: 'Japan', KR: 'South Korea',
+  AE: 'United Arab Emirates', SA: 'Saudi Arabia', QA: 'Qatar', KW: 'Kuwait', EG: 'Egypt',
+  MA: 'Morocco', DZ: 'Algeria', ET: 'Ethiopia', UG: 'Uganda', TZ: 'Tanzania',
+  FR: 'France', DE: 'Germany', IT: 'Italy', ES: 'Spain', PT: 'Portugal', IE: 'Ireland',
+  NL: 'Netherlands', BE: 'Belgium', CH: 'Switzerland', AT: 'Austria', SE: 'Sweden',
+  NO: 'Norway', DK: 'Denmark', FI: 'Finland', PL: 'Poland', CZ: 'Czechia',
+  RO: 'Romania', HU: 'Hungary', GR: 'Greece', TR: 'Turkey', RU: 'Russia',
+  UA: 'Ukraine', BR: 'Brazil', AR: 'Argentina', MX: 'Mexico', CL: 'Chile',
+  CO: 'Colombia', PE: 'Peru', VE: 'Venezuela'
+};
+
 const resolveClientIp = (req) => {
   const forwarded = String(req.headers['x-forwarded-for'] || '').trim();
   if (forwarded) return forwarded.split(',')[0].trim();
@@ -300,16 +334,19 @@ const createPublicTestLead = async (req, res) => {
     const browserLocation = req.body?.browserLocation && typeof req.body.browserLocation === 'object'
       ? req.body.browserLocation
       : null;
+    const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
 
     if (!name || !email) {
       return res.status(400).json({ message: 'Name and email are required' });
     }
 
     const ip = resolveClientIp(req);
-    const country =
-      String(req.headers['cf-ipcountry'] || '').trim()
+    const countryRaw =
+      String(req.body?.countryName || '').trim()
+      || String(req.headers['cf-ipcountry'] || '').trim()
       || String(req.headers['x-vercel-ip-country'] || '').trim()
       || 'Unknown';
+    const country = getFullCountryName(countryRaw);
     const region = String(req.headers['x-vercel-ip-country-region'] || '').trim() || '';
     const city = String(req.headers['x-vercel-ip-city'] || '').trim() || '';
     const ua = String(req.get('user-agent') || '').trim();
@@ -325,6 +362,7 @@ const createPublicTestLead = async (req, res) => {
       total,
       score,
       percentage: percent,
+      answers,
       ip: ip || 'Unknown',
       location: locationLine,
       device: ua || 'Unknown',

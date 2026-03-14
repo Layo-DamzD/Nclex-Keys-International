@@ -40,6 +40,7 @@ const testResultSchema = new mongoose.Schema({
   percentage: Number,
   passed: Boolean,
   answers: [answerSchema],
+  proctoring: mongoose.Schema.Types.Mixed,
 });
 
 module.exports = mongoose.model('TestResult', testResultSchema);

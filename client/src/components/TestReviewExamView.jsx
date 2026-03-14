@@ -251,11 +251,14 @@ const TestReviewExamView = ({
         status: getAnswerStatusMeta(item),
         sectionLabel: item.category || item.subcategory || 'General',
         qidLabel: item.qid || item.questionCode || (item.questionId ? String(item.questionId).slice(-6) : `${idx + 1}`),
-        difficultyLabel: item.difficulty ? normalizeTypeLabel(item.difficulty) : '-',
+        difficultyLabel: item.difficulty ? normalizeTypeLabel(item.difficulty) : normalizeTypeLabel(item.type || 'Unknown'),
         marksLabel: formatMarksLabel(item),
-        timeSpentLabel: formatQuestionTimeLabel(item),
+        timeSpentLabel:
+          formatQuestionTimeLabel(item) === '-' && totalQuestions > 0 && Number.isFinite(Number(timeTaken))
+            ? formatQuestionTimeLabel({ timeSpentSeconds: Math.round((Number(timeTaken) * 60) / totalQuestions) })
+            : formatQuestionTimeLabel(item),
       })),
-    [answers]
+    [answers, totalQuestions, timeTaken]
   );
 
   const sectionChartMax = Math.max(
@@ -315,9 +318,6 @@ const TestReviewExamView = ({
           <button type="button" className="exam-toolbar-btn" onClick={goBackFromRuntimeQuestion}>
             <i className="fas fa-arrow-left"></i> Back to Summary
           </button>
-          <button type="button" className="exam-toolbar-btn" onClick={scrollToQuestionList}>
-            <i className="fas fa-list"></i> Navigator
-          </button>
         </div>
 
         <div className="question-container exam-runtime-question-panel">
@@ -334,7 +334,7 @@ const TestReviewExamView = ({
                 return (
                   <div
                     key={`${letter}-${idx}`}
-                    className={`option ${selected ? 'selected' : ''} ${correct ? 'review-correct-option' : ''}`}
+                    className={`option ${selected ? 'selected' : ''} ${correct ? 'review-correct-option' : ''} ${selected && !correct ? 'review-selected-wrong' : ''} ${selected && correct ? 'review-selected-correct' : ''}`}
                   >
                     <span className="option-letter">{letter}</span>
                     <span>{opt}</span>
@@ -378,21 +378,6 @@ const TestReviewExamView = ({
               <strong>Rationale:</strong> {active.rationale}
             </div>
           )}
-        </div>
-
-        <div className="navigation exam-runtime-navigation">
-          <button type="button" className="btn btn-secondary" onClick={goBackFromRuntimeQuestion}>
-            Back
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={goToPrevQuestion} disabled={isFirstQuestion}>
-            Previous
-          </button>
-          <button type="button" className="btn btn-primary" onClick={scrollToQuestionList}>
-            Navigator
-          </button>
-          <button type="button" className="btn btn-primary" onClick={goToNextQuestion} disabled={isLastQuestion}>
-            Next
-          </button>
         </div>
       </div>
     );
@@ -614,10 +599,10 @@ const TestReviewExamView = ({
                           onClick={(e) => {
                             e.stopPropagation();
                             setActiveQuestionIndex(row.index);
-                            if (runtimeMode) openQuestionReviewRuntime(row.index);
+                            openQuestionReviewRuntime(row.index);
                           }}
                         >
-                          {runtimeMode ? 'Review' : 'Preview'}
+                          Review
                         </button>
                       </td>
                     </tr>
@@ -628,21 +613,6 @@ const TestReviewExamView = ({
           )}
         </div>
 
-      </div>
-
-      <div className="navigation exam-runtime-navigation exam-review-runtime-footer">
-        <button type="button" className="btn btn-secondary" onClick={onBack}>
-          Back
-        </button>
-        <button type="button" className="btn btn-secondary" onClick={goToPrevQuestion} disabled={isFirstQuestion}>
-          Previous
-        </button>
-        <button type="button" className="btn btn-primary" onClick={scrollToQuestionList}>
-          Navigator
-        </button>
-        <button type="button" className="btn btn-primary" onClick={goToNextQuestion} disabled={isLastQuestion}>
-          Next
-        </button>
       </div>
     </div>
   );

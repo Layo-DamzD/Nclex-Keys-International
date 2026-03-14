@@ -53,7 +53,14 @@ const {
   saveLandingPageConfig
 } = require('../controllers/landingPageController');
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    // Keep these intentionally high to avoid clipping long rationale imports/uploads.
+    fieldSize: 300 * 1024 * 1024,
+    fileSize: 500 * 1024 * 1024
+  }
+});
 
 // Dashboard stats
 router.get('/stats', protect, adminOnly, getAdminStats);
