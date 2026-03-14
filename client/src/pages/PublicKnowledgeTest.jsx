@@ -429,7 +429,6 @@ const PublicKnowledgeTest = () => {
   const getBrowserCountryName = () => {
     try {
       const locale = Intl.DateTimeFormat().resolvedOptions().locale || navigator.language || '';
-codex/fix-review-function-for-admin-and-students-r6oxeg
       const localeText = String(locale || '');
       // Keep this parser strict/explicit so merge noise cannot break the payload block.
       const regionMatch = localeText.match(/[-_]([A-Za-z]{2})(?:[-_]|$)/);
@@ -464,15 +463,7 @@ codex/fix-review-function-for-admin-and-students-r6oxeg
         answers: serializedAnswers,
         browserLocation,
         countryName: getBrowserCountryName()
-codex/fix-review-function-for-admin-and-students-r6oxeg
-
-
-
-        codex/fix-review-function-for-admin-and-students-9g0yj0
         browserLocation,
-        countryName: getBrowserCountryName()
-        browserLocation
- main
       });
       completeSubmit();
     } catch {
@@ -488,11 +479,7 @@ codex/fix-review-function-for-admin-and-students-r6oxeg
           answers: serializedAnswers,
           browserLocation,
           countryName: getBrowserCountryName()
- codex/fix-review-function-for-admin-and-students-r6oxeg
-
           browserLocation
-
-main
         });
       } catch (leadErr) {
         console.error('Failed to send public test lead:', leadErr);
