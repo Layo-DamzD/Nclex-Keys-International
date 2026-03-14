@@ -8,6 +8,10 @@ const publicTestLeadSchema = new mongoose.Schema(
     total: { type: Number, default: 0 },
     score: { type: Number, default: 0 },
     percentage: { type: Number, default: 0 },
+    answers: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: []
+    },
     ip: { type: String, default: '' },
     location: { type: String, default: '' },
     device: { type: String, default: '' },

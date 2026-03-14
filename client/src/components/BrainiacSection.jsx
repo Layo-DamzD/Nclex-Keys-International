@@ -36,6 +36,17 @@ const DEFAULT_BRAINIAC = {
   ],
 };
 
+const resolveImageUrl = (rawUrl) => {
+  const url = String(rawUrl || '').trim();
+  if (!url) return '';
+  if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('/')) {
+    const base = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+    return base ? `${base}${url}` : url;
+  }
+  return url;
+};
+
 const BrainiacSection = ({
   content = {},
   className = '',
@@ -68,7 +79,7 @@ const BrainiacSection = ({
               <div className="card-body text-center">
                 {tutor.imageUrl ? (
                   <img
-                    src={tutor.imageUrl}
+                    src={resolveImageUrl(tutor.imageUrl)}
                     alt={tutor.name}
                     style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', marginBottom: 16 }}
                   />

@@ -1,5 +1,6 @@
 const User = require('../models/user');
 const PublicTestLead = require('../models/PublicTestLead');
+const TestResult = require('../models/testResult');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -148,11 +149,38 @@ const claimLatestPublicTestResultForUser = async (user) => {
     submittedAt: latestLead.createdAt || new Date()
   };
 
-  const claimAt = new Date();
-  await PublicTestLead.updateMany(
-    { _id: { $in: leads.map((item) => item._id) } },
-    { $set: { claimedBy: user._id, claimedAt: claimAt } }
-  );
+  latestLead.claimedBy = user._id;
+  latestLead.claimedAt = new Date();
+  await latestLead.save();
+
+  const mappedAnswers = Array.isArray(latestLead.answers)
+    ? latestLead.answers.map((item) => ({
+        questionId: undefined,
+        userAnswer: item?.userAnswer,
+        isCorrect: item?.isCorrect === true,
+        correctAnswer: item?.correctAnswer,
+        questionText: item?.questionText || '',
+        options: Array.isArray(item?.options) ? item.options : [],
+        type: item?.type || 'multiple-choice',
+        category: item?.category || 'Public Test',
+        subcategory: item?.subcategory || '',
+        rationale: item?.rationale || ''
+      }))
+    : [];
+
+  if (mappedAnswers.length > 0) {
+    await TestResult.create({
+      student: user._id,
+      testName: 'Public Knowledge Test',
+      date: latestLead.createdAt || new Date(),
+      score: Number(latestLead.score || 0),
+      totalQuestions: Number(latestLead.total || mappedAnswers.length || 0),
+      timeTaken: 0,
+      percentage: Number(latestLead.percentage || 0),
+      passed: Number(latestLead.percentage || 0) >= 50,
+      answers: mappedAnswers
+    });
+  }
   return true;
 };
 

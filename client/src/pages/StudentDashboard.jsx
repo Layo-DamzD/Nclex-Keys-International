@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { enableStudentFcm } from '../services/firebaseMessaging';
@@ -38,6 +39,9 @@ const StudentDashboard = () => {
   const [examCelebrationDismissed, setExamCelebrationDismissed] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [notificationItems, setNotificationItems] = useState([]);
+  const [showPreparedTestAlert, setShowPreparedTestAlert] = useState(false);
+  const [preparedTestCount, setPreparedTestCount] = useState(0);
+  const [showWelcomeCelebration, setShowWelcomeCelebration] = useState(false);
 
   // Calculate days until exam based on user.examDate
   useEffect(() => {
@@ -185,6 +189,50 @@ const StudentDashboard = () => {
     };
   }, [loading, user?._id]);
 
+
+  useEffect(() => {
+    if (loading || !user?._id) return;
+
+    let mounted = true;
+    const checkPreparedTests = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await axios.get('/api/student/available-tests', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const availableTests = Array.isArray(response.data) ? response.data : [];
+        if (!mounted || availableTests.length === 0) return;
+        setPreparedTestCount(availableTests.length);
+        setShowPreparedTestAlert(true);
+      } catch (error) {
+        console.error('Failed to check prepared tests:', error);
+      }
+    };
+
+    checkPreparedTests();
+    return () => {
+      mounted = false;
+    };
+  }, [loading, user?._id]);
+
+  useEffect(() => {
+    if (loading || !user?._id) return;
+
+    const createdAt = user?.createdAt ? new Date(user.createdAt) : null;
+    if (!createdAt || Number.isNaN(createdAt.getTime())) return;
+
+    const accountAgeMs = Date.now() - createdAt.getTime();
+    const isNewSignup = accountAgeMs <= 48 * 60 * 60 * 1000;
+    if (!isNewSignup) return;
+
+    const seenKey = `student-welcome-celebration:${user._id}`;
+    if (localStorage.getItem(seenKey) === 'done') return;
+
+    setShowWelcomeCelebration(true);
+    localStorage.setItem(seenKey, 'done');
+  }, [loading, user?._id, user?.createdAt]);
+
   if (loading) return <div>Loading dashboard...</div>;
 
   return (
@@ -221,6 +269,62 @@ const StudentDashboard = () => {
         onNotificationListChange={setNotificationItems}
       />
       <StudentFeedbackModal open={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
+
+      {showPreparedTestAlert && (
+        <div className="student-notification-popup-overlay" role="dialog" aria-modal="true" aria-label="Prepared tests available">
+          <div className="student-notification-popup-backdrop" onClick={() => setShowPreparedTestAlert(false)} />
+          <div className="student-notification-popup-card">
+            <div className="student-notification-popup-header">
+              <div className="student-notification-popup-icon"><i className="fas fa-bell" /></div>
+              <div>
+                <div className="student-notification-popup-eyebrow">Tutor Update</div>
+                <h3>Prepared test is ready</h3>
+              </div>
+              <button type="button" className="student-notification-popup-close" onClick={() => setShowPreparedTestAlert(false)} aria-label="Close">
+                <i className="fas fa-times" />
+              </button>
+            </div>
+            <div className="student-notification-popup-body">
+              <p>Your tutor has prepared {preparedTestCount > 1 ? `${preparedTestCount} tests` : 'a test'} for you. Open <strong>Take Prepared Test</strong> to start now.</p>
+            </div>
+            <div className="student-notification-popup-footer">
+              <button type="button" className="btn btn-outline-secondary" onClick={() => setShowPreparedTestAlert(false)}>Later</button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setShowPreparedTestAlert(false);
+                  handleSectionChange('prepared-tests');
+                }}
+              >Open Prepared Tests</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWelcomeCelebration && (
+        <div className="student-notification-popup-overlay" role="dialog" aria-modal="true" aria-label="Welcome celebration">
+          <div className="student-notification-popup-backdrop" onClick={() => setShowWelcomeCelebration(false)} />
+          <div className="student-notification-popup-card">
+            <div className="student-notification-popup-header">
+              <div className="student-notification-popup-icon"><i className="fas fa-champagne-glasses" /></div>
+              <div>
+                <div className="student-notification-popup-eyebrow">🎉 Welcome</div>
+                <h3>We are happy to have you on-board!</h3>
+              </div>
+              <button type="button" className="student-notification-popup-close" onClick={() => setShowWelcomeCelebration(false)} aria-label="Close">
+                <i className="fas fa-times" />
+              </button>
+            </div>
+            <div className="student-notification-popup-body">
+              <p>Pop champagne 🍾 — your NCLEX journey starts here. We are excited to support your success.</p>
+            </div>
+            <div className="student-notification-popup-footer">
+              <button type="button" className="btn btn-primary" onClick={() => setShowWelcomeCelebration(false)}>Let&apos;s Go</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!isMobileViewport && sidebarCollapsed && (
         <button
@@ -262,17 +366,6 @@ const StudentDashboard = () => {
 
         {activeSection === 'dashboard' && (
           <div id="dashboard" className="content-section active">
-            {user?.publicTestResult?.total > 0 && (
-              <div className="alert alert-info" role="status" style={{ marginBottom: '16px' }}>
-                <strong>Public Test Result:</strong>
-                {' '}
-                {Number(user.publicTestResult.score || 0)}/{Number(user.publicTestResult.total || 0)}
-                {' '}
-                (
-                {Number(user.publicTestResult.percentage || 0)}
-                %)
-              </div>
-            )}
             <StatsCards />
             <div className="row">
               <div className="col-lg-8">

@@ -14,7 +14,7 @@ const MAX_FCM_TOKENS_PER_STUDENT = 8;
 // @access  Private
 const submitTest = async (req, res) => {
   try {
-    const { testName, results, totalQuestions, timeTaken, passed, isCustomTest = false } = req.body;
+    const { testName, results, totalQuestions, timeTaken, passed, isCustomTest = false, proctoring = null } = req.body;
     const studentId = req.user.id;
 
     const user = await User.findById(studentId);
@@ -94,7 +94,8 @@ const submitTest = async (req, res) => {
       timeTaken,
       percentage: Math.round((enrichedAnswers.filter(r => r.isCorrect).length / totalQuestions) * 100),
       passed,
-      answers: enrichedAnswers
+      answers: enrichedAnswers,
+      proctoring
     });
 
     await testResult.save();
@@ -104,7 +105,7 @@ const submitTest = async (req, res) => {
       student: studentId,
       type: 'test_completed',
       description: `Completed ${testName}`,
-      metadata: { score: testResult.percentage }
+      metadata: { score: testResult.percentage, proctoring }
     });
     await activity.save();
 
@@ -272,7 +273,7 @@ const getAvailableTests = async (req, res) => {
         { assignmentType: 'all' },
         { assignmentType: 'individual', assignedStudents: studentId }
       ]
-    }).select('title description category questions duration passingScore assignmentType');
+    }).select('title description category questions duration passingScore assignmentType proctored');
     const formatted = tests.map(test => ({
       _id: test._id,
       title: test.title,
@@ -281,6 +282,7 @@ const getAvailableTests = async (req, res) => {
       questionCount: test.questions.length,
       duration: test.duration,
       passingScore: test.passingScore,
+      proctored: Boolean(test.proctored)
     }));
     res.json(formatted);
   } catch (error) {
@@ -328,19 +330,23 @@ const formatTimeAgo = (date) => {
   return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
 };
 
-// @desc    Get student dashboard stats (mock for now)
+// @desc    Get student dashboard stats
 // @route   GET /api/student/dashboard/stats
 // @access  Private
 const getDashboardStats = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const stats = {
-      totalTests: 3,
-      avgScore: 81.7,
-      bestScore: 90,
-      videosWatched: 3
-    };
-    res.json(stats);
+    const testResults = await TestResult.find({ student: studentId }).select('percentage');
+
+    const totalTests = testResults.length;
+    const avgScore = totalTests
+      ? Math.round((testResults.reduce((sum, item) => sum + Number(item.percentage || 0), 0) / totalTests) * 10) / 10
+      : 0;
+    const bestScore = totalTests
+      ? Math.max(...testResults.map((item) => Number(item.percentage || 0)))
+      : 0;
+
+    res.json({ totalTests, avgScore, bestScore });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

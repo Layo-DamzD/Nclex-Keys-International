@@ -15,7 +15,8 @@ const testSchema = new mongoose.Schema({
   assignedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now },
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  proctored: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('Test', testSchema);

@@ -56,7 +56,6 @@ const AdminTestReviewPage = () => {
       onBack={() => navigate('/admin/dashboard')}
       backLabel="Back to Admin Dashboard"
       titlePrefix="Student Test Review"
-      runtimeMode
     />
   );
 };

@@ -328,6 +328,53 @@ const PublicKnowledgeTest = () => {
     [score, questions.length]
   );
 
+  const serializedAnswers = useMemo(
+    () =>
+      questions.map((question) => {
+        const userAnswer = answers[question.id];
+        const normalizedCorrectAnswer =
+          question.type === 'multiple-choice'
+            ? question.options.findIndex((opt) => opt === question.correctAnswer)
+            : -1;
+        const normalizedUserAnswer =
+          question.type === 'multiple-choice' && typeof userAnswer === 'string'
+            ? question.options.findIndex((opt) => opt === userAnswer)
+            : -1;
+        const asLetter = (idx) => (idx >= 0 ? String.fromCharCode(65 + idx) : '');
+
+        return {
+          questionText: question.questionText,
+          options: Array.isArray(question.options) ? question.options : [],
+          type: question.type,
+          category: question.category,
+          subcategory: question.subcategory,
+          rationale: question.rationale,
+          correctAnswer:
+            question.type === 'multiple-choice'
+              ? asLetter(normalizedCorrectAnswer)
+              : question.type === 'sata'
+                ? (Array.isArray(question.correctAnswer)
+                    ? question.correctAnswer
+                        .map((answerText) => asLetter(question.options.findIndex((opt) => opt === answerText)))
+                        .filter(Boolean)
+                    : [])
+                : question.correctAnswer,
+          userAnswer:
+            question.type === 'multiple-choice'
+              ? asLetter(normalizedUserAnswer)
+              : question.type === 'sata'
+                ? (Array.isArray(userAnswer)
+                    ? userAnswer
+                        .map((answerText) => asLetter(question.options.findIndex((opt) => opt === answerText)))
+                        .filter(Boolean)
+                    : [])
+                : userAnswer ?? '',
+          isCorrect: isCorrectAnswer(question, userAnswer),
+        };
+      }),
+    [answers, questions]
+  );
+
   const onPickOption = (question, option) => {
     if (submitted) return;
     if (question.type === 'sata') {
@@ -393,6 +440,7 @@ const PublicKnowledgeTest = () => {
         total: questions.length,
         score,
         percentage,
+        answers: serializedAnswers,
         browserLocation
       });
       completeSubmit();
@@ -406,6 +454,7 @@ const PublicKnowledgeTest = () => {
           total: questions.length,
           score,
           percentage,
+          answers: serializedAnswers,
           browserLocation
         });
       } catch (leadErr) {
