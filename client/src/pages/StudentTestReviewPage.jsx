@@ -55,7 +55,6 @@ const StudentTestReviewPage = () => {
       onBack={() => navigate('/dashboard?section=previous-tests')}
       backLabel="Back to list"
       titlePrefix="Test Review"
-      runtimeMode
     />
   );
 };

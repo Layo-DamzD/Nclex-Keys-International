@@ -1,5 +1,6 @@
 const User = require('../models/user');
 const PublicTestLead = require('../models/PublicTestLead');
+const TestResult = require('../models/testResult');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -148,18 +149,45 @@ const claimLatestPublicTestResultForUser = async (user) => {
     submittedAt: latestLead.createdAt || new Date()
   };
 
-  const claimAt = new Date();
-  await PublicTestLead.updateMany(
-    { _id: { $in: leads.map((item) => item._id) } },
-    { $set: { claimedBy: user._id, claimedAt: claimAt } }
-  );
+  latestLead.claimedBy = user._id;
+  latestLead.claimedAt = new Date();
+  await latestLead.save();
+
+  const mappedAnswers = Array.isArray(latestLead.answers)
+    ? latestLead.answers.map((item) => ({
+        questionId: undefined,
+        userAnswer: item?.userAnswer,
+        isCorrect: item?.isCorrect === true,
+        correctAnswer: item?.correctAnswer,
+        questionText: item?.questionText || '',
+        options: Array.isArray(item?.options) ? item.options : [],
+        type: item?.type || 'multiple-choice',
+        category: item?.category || 'Public Test',
+        subcategory: item?.subcategory || '',
+        rationale: item?.rationale || ''
+      }))
+    : [];
+
+  if (mappedAnswers.length > 0) {
+    await TestResult.create({
+      student: user._id,
+      testName: 'Public Knowledge Test',
+      date: latestLead.createdAt || new Date(),
+      score: Number(latestLead.score || 0),
+      totalQuestions: Number(latestLead.total || mappedAnswers.length || 0),
+      timeTaken: 0,
+      percentage: Number(latestLead.percentage || 0),
+      passed: Number(latestLead.percentage || 0) >= 50,
+      answers: mappedAnswers
+    });
+  }
   return true;
 };
 
 // ===== STUDENT =====
 const registerStudent = async (req, res) => {
   try {
-    const { name, email, password, program, phone, examDate, deviceId, deviceLabel, accessCode } = req.body;
+    const { name, email, password, program, phone, country, examDate, deviceId, deviceLabel, accessCode } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
@@ -169,6 +197,10 @@ const registerStudent = async (req, res) => {
       return res.status(403).json({
         message: `Message ${SIGNUP_ACCESS_HELP_NUMBER} on WhatsApp to get your access code.`
       });
+    }
+
+    if (!String(country || '').trim()) {
+      return res.status(400).json({ message: 'Country is required' });
     }
 
     const normalizedDeviceId = normalizeDeviceId(deviceId);
@@ -188,6 +220,7 @@ const registerStudent = async (req, res) => {
       role: 'student',
       program,
       phone,
+      country: String(country || '').trim(),
       examDate: examDate || null,
       trustedDevices
     });
@@ -202,6 +235,7 @@ const registerStudent = async (req, res) => {
       email: user.email,
       role: user.role,
       examDate: user.examDate,
+      country: user.country,
       token: generateToken(user._id)
     });
   } catch (error) {
@@ -263,6 +297,7 @@ const loginStudent = async (req, res) => {
       email: user.email,
       role: user.role,
       examDate: user.examDate,
+      country: user.country,
       token: generateToken(user._id)
     });
   } catch (error) {

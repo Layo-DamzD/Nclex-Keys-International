@@ -14,9 +14,9 @@ app.set('trust proxy', true);
 
 // Middleware
 app.use(cors());
-// Increase payload limits for landing-page studio saves (embedded/base64 images).
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+// Allow very large request payloads so long rationales and rich uploads are not truncated.
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 const logger = require('./middleware/Logger');
 app.use(logger);

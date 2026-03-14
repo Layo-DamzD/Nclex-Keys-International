@@ -7,7 +7,8 @@ const AdminSidebar = ({
   collapsed,
   toggleSidebar,
   userRole,
-  isMobileViewport = false
+  isMobileViewport = false,
+  sectionBadges = {}
 }) => {
   const navigate = useNavigate();
 
@@ -140,7 +141,10 @@ const AdminSidebar = ({
                     onClick={() => handleSectionClick(item.id)}
                   >
                     <i className={`fas fa-${item.icon}`}></i>
-                    {item.label}
+                    <span>{item.label}</span>
+                    {sectionBadges[item.id] ? (
+                      <span className="admin-sidebar-item-badge">{sectionBadges[item.id]}</span>
+                    ) : null}
                   </button>
                 </li>
               ))}

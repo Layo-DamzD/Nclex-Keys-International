@@ -25,6 +25,7 @@ const CreateTest = () => {
     passingScore: 70,
     assignmentType: userRole === 'superadmin' ? 'all' : 'individual', // 'all' or 'individual'
     assignedStudents: [],
+    proctored: false,
   });
 
   // Fetch students for individual assignment
@@ -76,8 +77,8 @@ const CreateTest = () => {
   };
 
   const handleTestDataChange = (e) => {
-    const { name, value } = e.target;
-    setTestData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setTestData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleAssignmentTypeChange = (type) => {

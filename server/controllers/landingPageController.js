@@ -300,6 +300,7 @@ const createPublicTestLead = async (req, res) => {
     const browserLocation = req.body?.browserLocation && typeof req.body.browserLocation === 'object'
       ? req.body.browserLocation
       : null;
+    const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
 
     if (!name || !email) {
       return res.status(400).json({ message: 'Name and email are required' });
@@ -325,6 +326,7 @@ const createPublicTestLead = async (req, res) => {
       total,
       score,
       percentage: percent,
+      answers,
       ip: ip || 'Unknown',
       location: locationLine,
       device: ua || 'Unknown',

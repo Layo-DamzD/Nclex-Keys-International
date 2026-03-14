@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { COUNTRIES } from '../constants/Countries';
 
 const DEVICE_STORAGE_KEY = 'nclexkeys:student-device-id';
 const getOrCreateDeviceId = () => {
@@ -172,6 +173,7 @@ const StudentSignup = () => {
         password: data.password,
         program: data.program,
         phone: data.phone,
+        country: data.country,
         examDate: data.examDate || null,
         accessCode: data.accessCode,
         deviceId,
@@ -250,6 +252,21 @@ const StudentSignup = () => {
                   autoComplete="tel"
                   {...register('phone')}
                 />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-bold">Country</label>
+                <select
+                  className={`form-control ${errors.country ? 'is-invalid' : ''}`}
+                  autoComplete="country-name"
+                  {...register('country', { required: 'Country is required' })}
+                >
+                  <option value="">Select country</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
+                </select>
+                {errors.country && <div className="invalid-feedback">{errors.country.message}</div>}
               </div>
 
               <div className="mb-3">

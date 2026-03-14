@@ -6,6 +6,7 @@ const AvailableTests = () => {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [proctorWarningTest, setProctorWarningTest] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,6 +50,10 @@ const AvailableTests = () => {
         tutorMode: false,
         totalQuestions: questions.length,
         timeLimit: test.duration,
+        testName: test.title,
+        testId: test._id,
+        fromPreparedTest: true,
+        proctored: Boolean(test.proctored),
       };
 
       navigate('/test-session', { state: { questions, settings } });
@@ -88,7 +93,10 @@ const AvailableTests = () => {
           <div className="test-card" key={test._id}>
             <div className="d-flex justify-content-between align-items-start mb-2">
               <h4>{test.title}</h4>
-              <span className="badge bg-primary">{test.category}</span>
+              <div className="d-flex gap-2">
+                <span className="badge bg-primary">{test.category}</span>
+                {test.proctored && <span className="badge bg-warning text-dark">Proctored</span>}
+              </div>
             </div>
             <p className="text-muted">{test.description}</p>
             <div className="test-meta">
@@ -96,12 +104,59 @@ const AvailableTests = () => {
               <span><i className="fas fa-clock me-1"></i>{test.duration} min</span>
               <span><i className="fas fa-trophy me-1"></i>Pass: {test.passingScore}%</span>
             </div>
-            <button className="start-test-btn" onClick={() => handleStartTest(test._id)}>
+            <button
+              className="start-test-btn"
+              onClick={() => {
+                if (test.proctored) {
+                  setProctorWarningTest(test);
+                  return;
+                }
+                handleStartTest(test._id);
+              }}
+            >
               <i className="fas fa-play me-1"></i>Start Test
             </button>
           </div>
         ))
       )}
+
+
+      {proctorWarningTest && (
+        <div className="student-notification-popup-overlay" role="dialog" aria-modal="true" aria-label="Proctored test warning">
+          <div className="student-notification-popup-backdrop" onClick={() => setProctorWarningTest(null)} />
+          <div className="student-notification-popup-card">
+            <div className="student-notification-popup-header">
+              <div className="student-notification-popup-icon"><i className="fas fa-shield-alt" /></div>
+              <div>
+                <div className="student-notification-popup-eyebrow">Proctored Test</div>
+                <h3>Read before you continue</h3>
+              </div>
+            </div>
+            <div className="student-notification-popup-body">
+              <ul style={{ marginBottom: 0, paddingLeft: '18px' }}>
+                <li>Fullscreen is required throughout this test.</li>
+                <li>Switching tabs, minimizing, or exiting fullscreen will trigger violations.</li>
+                <li>Camera and microphone access are required.</li>
+                <li>Periodic webcam snapshots will be captured for proctoring review.</li>
+                <li>Repeated violations may auto-submit your test.</li>
+              </ul>
+            </div>
+            <div className="student-notification-popup-footer">
+              <button type="button" className="btn btn-outline-secondary" onClick={() => setProctorWarningTest(null)}>Cancel</button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  const testId = proctorWarningTest?._id;
+                  setProctorWarningTest(null);
+                  if (testId) handleStartTest(testId);
+                }}
+              >I Understand, Start Test</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
