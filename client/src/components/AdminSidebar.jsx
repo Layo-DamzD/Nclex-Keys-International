@@ -148,6 +148,7 @@ const AdminSidebar = ({
                     className={`nav-link ${activeSection === item.id ? 'active' : ''}`}
                     onClick={() => handleSectionClick(item.id)}
                   >
+ codex/fix-review-function-for-admin-and-students-r6oxeg
                     <span className="admin-sidebar-icon-wrap">
                       <i className={`fas fa-${item.icon}`}></i>
                       {badgeValue ? (
@@ -159,6 +160,12 @@ const AdminSidebar = ({
                     <span>{item.label}</span>
                     {badgeValue ? (
                       <span className="admin-sidebar-item-badge" aria-hidden="true">{badgeValue}</span>
+
+                    <i className={`fas fa-${item.icon}`}></i>
+                    <span>{item.label}</span>
+                    {sectionBadges[item.id] ? (
+                      <span className="admin-sidebar-item-badge">{sectionBadges[item.id]}</span>
+main
                     ) : null}
                   </button>
                 </li>

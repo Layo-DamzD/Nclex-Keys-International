@@ -57,8 +57,20 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     // Keep these intentionally high to avoid clipping long rationale imports/uploads.
+< codex/fix-review-function-for-admin-and-students-r6oxeg
     fieldSize: 300 * 1024 * 1024,
     fileSize: 500 * 1024 * 1024
+
+
+    fieldSize: 300 * 1024 * 1024,
+    fileSize: 500 * 1024 * 1024
+0
+    fieldSize: 300 * 1024 * 1024,
+    fileSize: 500 * 1024 * 1024
+
+    fieldSize: 50 * 1024 * 1024,
+    fileSize: 200 * 1024 * 1024
+ main
   }
 });
 

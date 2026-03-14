@@ -387,6 +387,7 @@ const StudentDashboard = () => {
                 Your subscription is expiring in {subscriptionDaysLeft} day{subscriptionDaysLeft === 1 ? '' : 's'}.
               </div>
             )}
+main
             <StatsCards />
             <div className="row">
               <div className="col-lg-8">

@@ -315,6 +315,15 @@ const COUNTRY_CODE_FALLBACK_MAP = {
   RO: 'Romania', HU: 'Hungary', GR: 'Greece', TR: 'Turkey', RU: 'Russia',
   UA: 'Ukraine', BR: 'Brazil', AR: 'Argentina', MX: 'Mexico', CL: 'Chile',
   CO: 'Colombia', PE: 'Peru', VE: 'Venezuela'
+codex/fix-review-function-for-admin-and-students-r6oxeg
+
+  try {
+    const names = new Intl.DisplayNames([locale], { type: 'region' });
+    return names.of(raw.toUpperCase()) || raw;
+  } catch {
+    return raw;
+  }
+main
 };
 
 const resolveClientIp = (req) => {

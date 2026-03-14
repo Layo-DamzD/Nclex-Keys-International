@@ -429,12 +429,17 @@ const PublicKnowledgeTest = () => {
   const getBrowserCountryName = () => {
     try {
       const locale = Intl.DateTimeFormat().resolvedOptions().locale || navigator.language || '';
+codex/fix-review-function-for-admin-and-students-r6oxeg
       const localeText = String(locale || '');
       // Keep this parser strict/explicit so merge noise cannot break the payload block.
       const regionMatch = localeText.match(/[-_]([A-Za-z]{2})(?:[-_]|$)/);
       const regionCode = regionMatch ? String(regionMatch[1]).toUpperCase() : '';
       if (!regionCode) return null;
       const displayNames = new Intl.DisplayNames([localeText], { type: 'region' });
+      const regionMatch = String(locale).match(/[-_]([A-Z]{2})/i);
+      const regionCode = regionMatch ? regionMatch[1].toUpperCase() : '';
+      if (!regionCode) return null;
+      const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
       return displayNames.of(regionCode) || null;
     } catch {
       return null;
@@ -459,6 +464,15 @@ const PublicKnowledgeTest = () => {
         answers: serializedAnswers,
         browserLocation,
         countryName: getBrowserCountryName()
+codex/fix-review-function-for-admin-and-students-r6oxeg
+
+
+
+        codex/fix-review-function-for-admin-and-students-9g0yj0
+        browserLocation,
+        countryName: getBrowserCountryName()
+        browserLocation
+ main
       });
       completeSubmit();
     } catch {
@@ -474,6 +488,11 @@ const PublicKnowledgeTest = () => {
           answers: serializedAnswers,
           browserLocation,
           countryName: getBrowserCountryName()
+ codex/fix-review-function-for-admin-and-students-r6oxeg
+
+          browserLocation
+
+main
         });
       } catch (leadErr) {
         console.error('Failed to send public test lead:', leadErr);
