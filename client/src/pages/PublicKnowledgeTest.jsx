@@ -328,6 +328,53 @@ const PublicKnowledgeTest = () => {
     [score, questions.length]
   );
 
+  const serializedAnswers = useMemo(
+    () =>
+      questions.map((question) => {
+        const userAnswer = answers[question.id];
+        const normalizedCorrectAnswer =
+          question.type === 'multiple-choice'
+            ? question.options.findIndex((opt) => opt === question.correctAnswer)
+            : -1;
+        const normalizedUserAnswer =
+          question.type === 'multiple-choice' && typeof userAnswer === 'string'
+            ? question.options.findIndex((opt) => opt === userAnswer)
+            : -1;
+        const asLetter = (idx) => (idx >= 0 ? String.fromCharCode(65 + idx) : '');
+
+        return {
+          questionText: question.questionText,
+          options: Array.isArray(question.options) ? question.options : [],
+          type: question.type,
+          category: question.category,
+          subcategory: question.subcategory,
+          rationale: question.rationale,
+          correctAnswer:
+            question.type === 'multiple-choice'
+              ? asLetter(normalizedCorrectAnswer)
+              : question.type === 'sata'
+                ? (Array.isArray(question.correctAnswer)
+                    ? question.correctAnswer
+                        .map((answerText) => asLetter(question.options.findIndex((opt) => opt === answerText)))
+                        .filter(Boolean)
+                    : [])
+                : question.correctAnswer,
+          userAnswer:
+            question.type === 'multiple-choice'
+              ? asLetter(normalizedUserAnswer)
+              : question.type === 'sata'
+                ? (Array.isArray(userAnswer)
+                    ? userAnswer
+                        .map((answerText) => asLetter(question.options.findIndex((opt) => opt === answerText)))
+                        .filter(Boolean)
+                    : [])
+                : userAnswer ?? '',
+          isCorrect: isCorrectAnswer(question, userAnswer),
+        };
+      }),
+    [answers, questions]
+  );
+
   const onPickOption = (question, option) => {
     if (submitted) return;
     if (question.type === 'sata') {
@@ -378,6 +425,22 @@ const PublicKnowledgeTest = () => {
       );
     });
 
+
+  const getBrowserCountryName = () => {
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale || navigator.language || '';
+      const localeText = String(locale || '');
+      // Keep this parser strict/explicit so merge noise cannot break the payload block.
+      const regionMatch = localeText.match(/[-_]([A-Za-z]{2})(?:[-_]|$)/);
+      const regionCode = regionMatch ? String(regionMatch[1]).toUpperCase() : '';
+      if (!regionCode) return null;
+      const displayNames = new Intl.DisplayNames([localeText], { type: 'region' });
+      return displayNames.of(regionCode) || null;
+    } catch {
+      return null;
+    }
+  };
+
   const onConfirmEmailAndSubmit = async () => {
     const name = String(submitName || '').trim();
     const email = String(submitEmail || '').trim();
@@ -393,10 +456,12 @@ const PublicKnowledgeTest = () => {
         total: questions.length,
         score,
         percentage,
-        browserLocation
+        answers: serializedAnswers,
+        browserLocation,
+        countryName: getBrowserCountryName()
       });
       completeSubmit();
-    } catch (error) {
+    } catch {
       try {
         const browserLocation = await getBrowserLocation();
         await axios.post('/api/content/public-test/lead', {
@@ -406,7 +471,9 @@ const PublicKnowledgeTest = () => {
           total: questions.length,
           score,
           percentage,
-          browserLocation
+          answers: serializedAnswers,
+          browserLocation,
+          countryName: getBrowserCountryName()
         });
       } catch (leadErr) {
         console.error('Failed to send public test lead:', leadErr);

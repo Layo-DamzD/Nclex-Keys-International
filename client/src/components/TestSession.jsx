@@ -128,6 +128,16 @@ const TestSession = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatText, setChatText] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const isProctored = Boolean(settings?.proctored && settings?.fromPreparedTest);
+  const [proctoringReady, setProctoringReady] = useState(!isProctored);
+  const [proctoringError, setProctoringError] = useState('');
+  const [proctoringViolations, setProctoringViolations] = useState(0);
+  const [proctoringEvents, setProctoringEvents] = useState([]);
+  const [snapshotCount, setSnapshotCount] = useState(0);
+  const proctorVideoRef = useRef(null);
+  const proctorStreamRef = useRef(null);
+  const proctorSnapshotTimerRef = useRef(null);
+  const proctorSubmittingRef = useRef(false);
 
   // Case study state
   const [caseIndex, setCaseIndex] = useState(0);
@@ -168,9 +178,90 @@ const TestSession = () => {
     };
   }, []);
 
+
+  const appendProctorEvent = (type, detail = '') => {
+    const evt = {
+      type,
+      detail,
+      at: new Date().toISOString()
+    };
+    setProctoringEvents((prev) => [...prev.slice(-49), evt]);
+  };
+
+  const captureProctorSnapshot = () => {
+    const video = proctorVideoRef.current;
+    if (!video || video.videoWidth <= 0 || video.videoHeight <= 0) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setSnapshotCount((prev) => prev + 1);
+    appendProctorEvent('snapshot', 'Periodic webcam snapshot captured');
+  };
+
+  const requestFullscreen = async () => {
+    if (document.fullscreenElement) return true;
+    const target = document.documentElement;
+    if (!target?.requestFullscreen) return false;
+    try {
+      await target.requestFullscreen();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const registerViolation = (reason) => {
+    appendProctorEvent('violation', reason);
+    setProctoringViolations((prev) => {
+      const next = prev + 1;
+      if (next >= 3 && !proctorSubmittingRef.current) {
+        proctorSubmittingRef.current = true;
+        window.alert('Proctoring violation limit reached. Your test will be submitted now.');
+        handleSubmit();
+      } else {
+        window.alert(`Proctoring warning (${next}/3): ${reason}`);
+      }
+      return next;
+    });
+  };
+
+  const beginProctoredSession = async () => {
+    if (!isProctored) {
+      setProctoringReady(true);
+      return;
+    }
+
+    setProctoringError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: true
+      });
+      proctorStreamRef.current = stream;
+      if (proctorVideoRef.current) {
+        proctorVideoRef.current.srcObject = stream;
+        await proctorVideoRef.current.play().catch(() => {});
+      }
+
+      const fullScreenOk = await requestFullscreen();
+      if (!fullScreenOk) {
+        throw new Error('Fullscreen permission is required for proctored tests.');
+      }
+
+      appendProctorEvent('start', 'Proctored session started');
+      setProctoringReady(true);
+    } catch (error) {
+      setProctoringError(error?.message || 'Camera, microphone, and fullscreen access are required.');
+      setProctoringReady(false);
+    }
+  };
+
   // Timer effect
   useEffect(() => {
-    if (settings.timed && timeLeft !== null && timeLeft > 0 && !submitted && !isPaused) {
+    if (settings.timed && timeLeft !== null && timeLeft > 0 && !submitted && !isPaused && proctoringReady) {
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -183,10 +274,10 @@ const TestSession = () => {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [settings.timed, timeLeft, submitted, isPaused]);
+  }, [settings.timed, timeLeft, submitted, isPaused, proctoringReady]);
 
   useEffect(() => {
-    if (!questions.length || submitted) {
+    if (!questions.length || submitted || (isProctored && !proctoringReady)) {
       setIsBooting(false);
       return;
     }
@@ -205,7 +296,56 @@ const TestSession = () => {
     }, 90);
 
     return () => clearInterval(timer);
-  }, [questions.length, submitted]);
+  }, [questions.length, submitted, isProctored, proctoringReady]);
+
+
+  useEffect(() => {
+    if (!isProctored || !proctoringReady || submitted) return undefined;
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        registerViolation('Tab switch/minimize detected.');
+      }
+    };
+
+    const onBlur = () => {
+      registerViolation('Window focus lost.');
+    };
+
+    const onFullscreen = () => {
+      if (!document.fullscreenElement) {
+        registerViolation('Exited fullscreen mode.');
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('fullscreenchange', onFullscreen);
+
+    proctorSnapshotTimerRef.current = window.setInterval(() => {
+      captureProctorSnapshot();
+    }, 30000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('fullscreenchange', onFullscreen);
+      if (proctorSnapshotTimerRef.current) {
+        window.clearInterval(proctorSnapshotTimerRef.current);
+        proctorSnapshotTimerRef.current = null;
+      }
+    };
+  }, [isProctored, proctoringReady, submitted]);
+
+  useEffect(() => () => {
+    if (proctorSnapshotTimerRef.current) {
+      window.clearInterval(proctorSnapshotTimerRef.current);
+    }
+    if (proctorStreamRef.current) {
+      proctorStreamRef.current.getTracks().forEach((track) => track.stop());
+      proctorStreamRef.current = null;
+    }
+  }, []);
 
   // Initialize drag for non‑case drag-drop
   useEffect(() => {
@@ -564,18 +704,36 @@ const TestSession = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post('/api/student/submit-test', {
-        testName: 'Custom Test',
+        testName: settings?.testName || 'Custom Test',
         answers: { ...answers, ...caseAnswers },
         results: allResults,
         totalQuestions: allResults.length,
         timeTaken: settings.timed ? (settings.totalQuestions * 60 - timeLeft) / 60 : 0,
         passed: allResults.filter(r => r.isCorrect).length / allResults.length >= 0.7,
-        isCustomTest: true,
+        isCustomTest: !Boolean(settings?.fromPreparedTest),
+        proctoring: isProctored ? {
+          enabled: true,
+          violations: proctoringViolations,
+          snapshotCount,
+          events: proctoringEvents
+        } : null,
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch (error) {
       console.error('Submit failed:', error);
+    } finally {
+      if (proctorSnapshotTimerRef.current) {
+        window.clearInterval(proctorSnapshotTimerRef.current);
+        proctorSnapshotTimerRef.current = null;
+      }
+      if (proctorStreamRef.current) {
+        proctorStreamRef.current.getTracks().forEach((track) => track.stop());
+        proctorStreamRef.current = null;
+      }
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
     }
   };
 
@@ -585,6 +743,31 @@ const TestSession = () => {
     if (submitted) return;
     setShowCalculator(false);
     setIsPaused((prev) => !prev);
+  }
+
+
+  if (isProctored && !proctoringReady) {
+    return (
+      <div className="exam-boot-screen">
+        <div className="exam-boot-card" style={{ maxWidth: 760, textAlign: 'left' }}>
+          <h3 style={{ marginBottom: 10 }}>Proctored Test Requirements</h3>
+          <p style={{ marginBottom: 10 }}>Before this prepared test starts, you must complete the checks below:</p>
+          <ul style={{ marginBottom: 14 }}>
+            <li>Stay in fullscreen for the entire test.</li>
+            <li>Do not switch tabs, apps, or minimize the browser.</li>
+            <li>Allow camera and microphone access.</li>
+            <li>Periodic webcam snapshots are captured.</li>
+            <li>3 violations will auto-submit your test.</li>
+          </ul>
+          {proctoringError && <div className="alert alert-danger">{proctoringError}</div>}
+          <div className="d-flex gap-2">
+            <button type="button" className="btn btn-secondary" onClick={() => navigate(dashboardReturnPath)}>Cancel</button>
+            <button type="button" className="btn btn-primary" onClick={beginProctoredSession}>Start Proctoring Check</button>
+          </div>
+          <video ref={proctorVideoRef} autoPlay muted playsInline style={{ width: 1, height: 1, opacity: 0, position: 'absolute', pointerEvents: 'none' }} />
+        </div>
+      </div>
+    );
   }
 
   if (isBooting) {
@@ -1250,7 +1433,8 @@ const TestSession = () => {
         </div>
       )}
       <CalculatorModal show={showCalculator} onClose={() => setShowCalculator(false)} />
-      <div style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 1200 }}>
+      <video ref={proctorVideoRef} autoPlay muted playsInline style={{ width: 1, height: 1, opacity: 0, position: 'fixed', left: -9999, top: -9999, pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', right: 14, bottom: 76, zIndex: 1200 }}>
         <button
           type="button"
           className="btn btn-primary"

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { COUNTRIES } from '../constants/Countries';
 
 const DEVICE_STORAGE_KEY = 'nclexkeys:student-device-id';
 const getOrCreateDeviceId = () => {
@@ -142,6 +143,8 @@ const StudentSignup = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [signupError, setSignupError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const deviceId = useMemo(() => getOrCreateDeviceId(), []);
   const deviceLabel = useMemo(() => getDeviceLabel(), []);
@@ -172,6 +175,7 @@ const StudentSignup = () => {
         password: data.password,
         program: data.program,
         phone: data.phone,
+        country: data.country,
         examDate: data.examDate || null,
         accessCode: data.accessCode,
         deviceId,
@@ -253,6 +257,21 @@ const StudentSignup = () => {
               </div>
 
               <div className="mb-3">
+                <label className="form-label fw-bold">Country</label>
+                <select
+                  className={`form-control ${errors.country ? 'is-invalid' : ''}`}
+                  autoComplete="country-name"
+                  {...register('country', { required: 'Country is required' })}
+                >
+                  <option value="">Select country</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
+                </select>
+                {errors.country && <div className="invalid-feedback">{errors.country.message}</div>}
+              </div>
+
+              <div className="mb-3">
                 <label className="form-label fw-bold">Program</label>
                 <select
                   className={`form-control ${errors.program ? 'is-invalid' : ''}`}
@@ -288,26 +307,46 @@ const StudentSignup = () => {
               <div className="row">
                 <div className="col-md-6 mb-3">
                   <label className="form-label fw-bold">Password</label>
-                  <input
-                    type="password"
-                    className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-                    autoComplete="new-password"
-                    {...register('password', { required: 'Password is required', minLength: { value: 8, message: 'Minimum 8 characters' } })}
-                  />
-                  {errors.password && <div className="invalid-feedback">{errors.password.message}</div>}
+                  <div className="input-group">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                      autoComplete="new-password"
+                      {...register('password', { required: 'Password is required', minLength: { value: 8, message: 'Minimum 8 characters' } })}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} />
+                    </button>
+                    {errors.password && <div className="invalid-feedback d-block">{errors.password.message}</div>}
+                  </div>
                 </div>
                 <div className="col-md-6 mb-3">
                   <label className="form-label fw-bold">Confirm Password</label>
-                  <input
-                    type="password"
-                    className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
-                    autoComplete="new-password"
-                    {...register('confirmPassword', {
-                      required: 'Please confirm password',
-                      validate: value => value === password || 'Passwords do not match'
-                    })}
-                  />
-                  {errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword.message}</div>}
+                  <div className="input-group">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                      autoComplete="new-password"
+                      {...register('confirmPassword', {
+                        required: 'Please confirm password',
+                        validate: value => value === password || 'Passwords do not match'
+                      })}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    >
+                      <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`} />
+                    </button>
+                    {errors.confirmPassword && <div className="invalid-feedback d-block">{errors.confirmPassword.message}</div>}
+                  </div>
                 </div>
               </div>
 

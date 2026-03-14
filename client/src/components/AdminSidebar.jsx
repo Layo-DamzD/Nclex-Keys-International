@@ -7,7 +7,8 @@ const AdminSidebar = ({
   collapsed,
   toggleSidebar,
   userRole,
-  isMobileViewport = false
+  isMobileViewport = false,
+  sectionBadges = {}
 }) => {
   const navigate = useNavigate();
 
@@ -85,6 +86,12 @@ const AdminSidebar = ({
 
   const navGroups = userRole === 'superadmin' ? superAdminNavGroups : regularAdminNavGroups;
 
+  const getBadgeValue = (sectionId) => {
+    const count = Number(sectionBadges?.[sectionId] || 0);
+    if (!Number.isFinite(count) || count <= 0) return null;
+    return count > 99 ? '99+' : String(count);
+  };
+
   const handleSectionClick = (sectionId) => {
     onSectionChange(sectionId);
     if (isMobileViewport && !collapsed) {
@@ -133,17 +140,30 @@ const AdminSidebar = ({
           <div className="nav-group" key={idx}>
             <h3>{group.title}</h3>
             <ul className="nav flex-column">
-              {group.items.map(item => (
+              {group.items.map((item) => {
+                const badgeValue = getBadgeValue(item.id);
+                return (
                 <li className="nav-item" key={item.id}>
                   <button
                     className={`nav-link ${activeSection === item.id ? 'active' : ''}`}
                     onClick={() => handleSectionClick(item.id)}
                   >
-                    <i className={`fas fa-${item.icon}`}></i>
-                    {item.label}
+                    <span className="admin-sidebar-icon-wrap">
+                      <i className={`fas fa-${item.icon}`}></i>
+                      {badgeValue ? (
+                        <span className="admin-sidebar-icon-badge" aria-label={`${item.label} unread count ${badgeValue}`}>
+                          {badgeValue}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span>{item.label}</span>
+                    {badgeValue ? (
+                      <span className="admin-sidebar-item-badge" aria-hidden="true">{badgeValue}</span>
+                    ) : null}
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
         ))}

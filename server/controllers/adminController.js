@@ -732,7 +732,8 @@ const createAdminTest = async (req, res) => {
       duration,
       passingScore = 70,
       assignmentType = 'individual',
-      assignedStudents = []
+      assignedStudents = [],
+      proctored = false
     } = req.body;
     let studentsForAssignment = [];
 
@@ -804,8 +805,42 @@ const createAdminTest = async (req, res) => {
       passingScore: Number(passingScore),
       assignmentType,
       assignedStudents: assignmentType === 'individual' ? studentsForAssignment : [],
-      createdBy: req.user._id
+      createdBy: req.user._id,
+      proctored: Boolean(proctored)
     });
+
+
+    if (assignmentType === 'individual' && studentsForAssignment.length > 0) {
+      const now = new Date();
+      const noticeTitle = 'Prepared Test Available';
+      const noticeDetail = `Your tutor has prepared a new test for you: ${String(title).trim()}`;
+      const activities = studentsForAssignment.map((studentId) => ({
+        student: studentId,
+        type: 'notification',
+        text: noticeTitle,
+        detail: noticeDetail,
+        description: noticeTitle,
+        metadata: {
+          message: noticeDetail,
+          testId: test._id,
+          testTitle: String(title).trim(),
+          sentBy: req.user.id,
+          sentAt: now.toISOString()
+        },
+        createdAt: now
+      }));
+
+      try {
+        await Activity.insertMany(activities);
+      } catch (insertError) {
+        const fallback = activities.map((item) => ({
+          ...item,
+          type: 'achievement',
+          metadata: { ...(item.metadata || {}), isNotification: true }
+        }));
+        await Activity.insertMany(fallback);
+      }
+    }
 
     res.status(201).json({ message: 'Test created successfully', test });
   } catch (error) {
