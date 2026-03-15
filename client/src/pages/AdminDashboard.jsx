@@ -99,11 +99,6 @@ const AdminDashboard = () => {
             'student-feedback': 'NEW'
           });
         }
-      
-          catch (error) {
-        console.error('Failed to load sidebar badges:', error);
-      }
-    };
 
     fetchSidebarBadges();
     const intervalId = window.setInterval(fetchSidebarBadges, 30000);
