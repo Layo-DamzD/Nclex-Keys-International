@@ -83,6 +83,7 @@ const AdminDashboard = () => {
             'admin-approval': pendingApprovals,
             'student-feedback': unreadFeedback,
             'exam-support': unreadSupport
+          });
 
 
         const response = await axios.get('/api/admin/users/admins', {
