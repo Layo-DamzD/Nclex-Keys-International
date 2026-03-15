@@ -40,18 +40,21 @@ const AdminDashboard = () => {
   const [sidebarBadges, setSidebarBadges] = useState({});
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
-  const handleSectionChange = useCallback((sectionId) => {
-    setActiveSection(sectionId);
-    if (isMobileViewport) {
-      setSidebarCollapsed(true);
-    }
-  }, [isMobileViewport]);
+
+  const handleSectionChange = useCallback(
+    (sectionId) => {
+      setActiveSection(sectionId);
+      if (isMobileViewport) {
+        setSidebarCollapsed(true);
+      }
+    },
+    [isMobileViewport]
+  );
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
-
 
   useEffect(() => {
     if (userRole !== 'superadmin') {
@@ -60,23 +63,40 @@ const AdminDashboard = () => {
     }
 
     let mounted = true;
+
     const fetchSidebarBadges = async () => {
       try {
         const token = sessionStorage.getItem('adminToken');
         if (!token) return;
-        
+
         const [adminsRes, feedbackRes, supportRes] = await Promise.all([
-          axios.get('/api/admin/users/admins', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('/api/admin/feedback', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('/api/admin/exam-support/conversations', { headers: { Authorization: `Bearer ${token}` } })
+          axios.get('/api/admin/users/admins', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('/api/admin/feedback', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('/api/admin/exam-support/conversations', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
         ]);
 
         const admins = Array.isArray(adminsRes.data) ? adminsRes.data : [];
         const feedback = Array.isArray(feedbackRes.data) ? feedbackRes.data : [];
         const supportConversations = Array.isArray(supportRes.data) ? supportRes.data : [];
-        const pendingApprovals = admins.filter((item) => item?.role !== 'superadmin' && item?.approved !== true).length;
-        const unreadFeedback = feedback.filter((item) => String(item?.status || '').toLowerCase() === 'new').length;
-        const unreadSupport = supportConversations.reduce((sum, item) => sum + Number(item?.unreadAdminCount || 0), 0);
+
+        const pendingApprovals = admins.filter(
+          (item) => item?.role !== 'superadmin' && item?.approved !== true
+        ).length;
+
+        const unreadFeedback = feedback.filter(
+          (item) => String(item?.status || '').toLowerCase() === 'new'
+        ).length;
+
+        const unreadSupport = supportConversations.reduce(
+          (sum, item) => sum + Number(item?.unreadAdminCount || 0),
+          0
+        );
 
         if (mounted) {
           setSidebarBadges({
@@ -84,29 +104,20 @@ const AdminDashboard = () => {
             'student-feedback': unreadFeedback,
             'exam-support': unreadSupport
           });
-
-
-        const response = await axios.get('/api/admin/users/admins', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const admins = Array.isArray(response.data) ? response.data : [];
-        const pendingApprovals = admins.filter((item) => item?.role !== 'superadmin' && item?.approved !== true).length;
-        if (mounted) {
-          setSidebarBadges({
-            'admin-approval': pendingApprovals,
-            'landing-page': 'PRO',
-            logs: 'SYS',
-            'student-feedback': 'NEW'
-          });
         }
+      } catch (error) {
+        console.error('Failed to fetch sidebar badges:', error);
+      }
+    };
 
     fetchSidebarBadges();
     const intervalId = window.setInterval(fetchSidebarBadges, 30000);
+
     return () => {
       mounted = false;
       window.clearInterval(intervalId);
     };
-  } [userRole];
+  }, [userRole]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -131,7 +142,7 @@ const AdminDashboard = () => {
       const token = sessionStorage.getItem('adminToken');
       const response = await axios.get('/api/admin/questions/export', {
         headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob',
+        responseType: 'blob'
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -149,7 +160,9 @@ const AdminDashboard = () => {
 
   return (
     <div
-      className={`admin-dashboard-page admin-container ${userRole === 'admin' ? 'admin-regular' : ''} ${isMobileViewport ? 'admin-mobile' : 'admin-desktop'}`}
+      className={`admin-dashboard-page admin-container ${
+        userRole === 'admin' ? 'admin-regular' : ''
+      } ${isMobileViewport ? 'admin-mobile' : 'admin-desktop'}`}
       style={{ display: 'flex', minHeight: '100vh', width: '100%' }}
     >
       {isMobileViewport && !sidebarCollapsed && (
@@ -160,6 +173,7 @@ const AdminDashboard = () => {
           aria-label="Close admin sidebar"
         />
       )}
+
       <AdminSidebar
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
@@ -191,22 +205,26 @@ const AdminDashboard = () => {
           <i className="fas fa-bars"></i>
         </button>
       )}
-      
+
+      <main
         className={`main-content ${isMobileViewport ? 'admin-mobile-main-content' : ''}`}
         style={{
           flex: 1,
-          marginLeft: isMobileViewport ? '0' : (sidebarCollapsed ? '0' : '280px'),
+          marginLeft: isMobileViewport ? '0' : sidebarCollapsed ? '0' : '280px',
           transition: 'margin-left 0.3s',
           padding: isMobileViewport ? '14px' : '30px'
         }}
       >
         <div className="header">
           <div>
-            <h1>Welcome to <span>Nclex Keys</span> Admin</h1>
+            <h1>
+              Welcome to <span>Nclex Keys</span> Admin
+            </h1>
             <p style={{ color: '#64748b', marginTop: '8px' }}>
               {userRole === 'superadmin' ? 'Super Admin' : 'Admin'} Dashboard
             </p>
           </div>
+
           <div className="user-info">
             <PwaInstallButton
               variant="admin-header"
@@ -214,14 +232,17 @@ const AdminDashboard = () => {
               label="Install App"
               compactLabel="Install"
             />
+
             <div className="time-display">
               <div className="time">
-                {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                {now.toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
               </div>
-              <div className="date">
-                {now.toLocaleDateString('en-GB')}
-              </div>
+              <div className="date">{now.toLocaleDateString('en-GB')}</div>
             </div>
+
             {isThemeEnabled && (
               <button
                 type="button"
@@ -233,106 +254,120 @@ const AdminDashboard = () => {
                 <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
               </button>
             )}
+
             <div className="user-profile-meta">
               <div className="user-name">{user.name || 'Admin'}</div>
-              <div className="user-role-label">{userRole === 'superadmin' ? 'Super Admin' : 'Admin'}</div>
+              <div className="user-role-label">
+                {userRole === 'superadmin' ? 'Super Admin' : 'Admin'}
+              </div>
             </div>
-            <div className="user-avatar">
-              {user.name?.charAt(0) || 'A'}
-            </div>
+
+            <div className="user-avatar">{user.name?.charAt(0) || 'A'}</div>
           </div>
         </div>
 
         {activeSection === 'dashboard' && (
           <div className="section active">
             <AdminStats />
-            <QuickActions 
-              onSectionChange={handleSectionChange} 
-              userRole={userRole} 
-              onExport={handleExport} 
+            <QuickActions
+              onSectionChange={handleSectionChange}
+              userRole={userRole}
+              onExport={handleExport}
             />
             <RecentQuestions />
           </div>
         )}
+
         {activeSection === 'questions' && (
-        <div className="section active">
+          <div className="section active">
             <ManageQuestions onSectionChange={handleSectionChange} />
-        </div>
+          </div>
         )}
+
         {activeSection === 'upload' && (
-        <div className="section active">
+          <div className="section active">
             <UploadQuestion />
-        </div>
+          </div>
         )}
-           {activeSection === 'case-studies' && (
-        <div className="section active">
-            <CaseStudyBuilder/>
-        </div>
+
+        {activeSection === 'case-studies' && (
+          <div className="section active">
+            <CaseStudyBuilder />
+          </div>
         )}
+
         {activeSection === 'create-test' && (
-        <div className="section active">
+          <div className="section active">
             <CreateTest />
-        </div>
+          </div>
         )}
+
         {activeSection === 'landing-page' && userRole === 'superadmin' && (
           <div className="section active">
             <LandingPageStudio />
           </div>
         )}
+
         {activeSection === 'analytics' && (
-        <div className="section active">
+          <div className="section active">
             <UsageAnalytics />
-        </div>
+          </div>
         )}
+
         {activeSection === 'category-stats' && (
-        <div className="section active">
+          <div className="section active">
             <CategoryStats />
-        </div>
+          </div>
         )}
+
         {activeSection === 'all-students' && (
-        <div className="section active">
+          <div className="section active">
             <AllStudents />
-        </div>
+          </div>
         )}
+
         {activeSection === 'progress-report' && (
-        <div className="section active">
+          <div className="section active">
             <ProgressReport />
-        </div>
+          </div>
         )}
+
         {activeSection === 'exam-support' && (
-        <div className="section active">
+          <div className="section active">
             <ExamSupportChat />
-        </div>
+          </div>
         )}
+
         {activeSection === 'content-management' && (
-        <div className="section active">
+          <div className="section active">
             <ContentManagement />
-        </div>
+          </div>
         )}
+
         {activeSection === 'admin-approval' && userRole === 'superadmin' && (
-        <div className="section active">
+          <div className="section active">
             <AdminApproval />
-        </div>
+          </div>
         )}
 
         {activeSection === 'logs' && userRole === 'superadmin' && (
-        <div className="section active">
+          <div className="section active">
             <SystemLogs />
-        </div>
+          </div>
         )}
 
         {activeSection === 'student-feedback' && userRole === 'superadmin' && (
-        <div className="section active">
+          <div className="section active">
             <StudentFeedback />
-        </div>
+          </div>
         )}
 
         {activeSection === 'settings' && (
           <div className="section active">
             <AdminSettings />
           </div>
-        )
-     </main>
+        )}
+      </main>
     </div>
   );
 };
