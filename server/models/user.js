@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
   },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   createdAt: { type: Date, default: Date.now },
+  subscriptionStartDate: { type: Date, default: Date.now },
   program: { type: String, enum: ['NCLEX-RN', 'NCLEX-PN'] },
   phone: String,
   country: String,

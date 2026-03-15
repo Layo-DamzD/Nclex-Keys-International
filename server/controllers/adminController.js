@@ -879,6 +879,60 @@ const getStudents = async (req, res) => {
   }
 };
 
+// @desc    Create a new student account by an admin
+// @route   POST /api/admin/students
+// @access  Private (admin only)
+const createStudentByAdmin = async (req, res) => {
+  try {
+    const { name, email, password, program, phone, country, examDate, lastPaymentDate } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
+    let subscriptionStartDate = new Date();
+    if (lastPaymentDate) {
+      const parsedDate = new Date(lastPaymentDate);
+      if (!isNaN(parsedDate.getTime())) {
+        subscriptionStartDate = parsedDate;
+      }
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: 'student',
+      status: 'active',
+      approved: true,
+      program,
+      phone,
+      country,
+      examDate,
+      subscriptionStartDate: subscriptionStartDate
+    });
+
+    res.status(201).json({
+      message: 'Student account created successfully',
+      student: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        status: user.status,
+        subscriptionStartDate: user.subscriptionStartDate
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Toggle student status (activate/deactivate)
 // @route   PUT /api/admin/students/:id/toggle-status
 // @access  Private (super admin only)
@@ -896,6 +950,12 @@ const toggleStudentStatus = async (req, res) => {
 
     // Toggle status
     student.status = student.status === 'active' ? 'inactive' : 'active';
+    
+    // If activating, reset the subscription timer
+    if (student.status === 'active') {
+      student.subscriptionStartDate = new Date();
+    }
+
     await student.save();
 
     res.json({ 
@@ -2003,6 +2063,7 @@ module.exports = {
   createQuestion,
   bulkImportQuestions,
   getStudents,
+  createStudentByAdmin,
   createAdminTest,
   toggleStudentStatus,
   sendNotification,

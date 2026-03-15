@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { formatStudentDisplayId } from '../../utils/studentId';
+import CreateStudentModal from './CreateStudentModal';
 
 const AllStudents = () => {
   const user = JSON.parse(sessionStorage.getItem('adminUser') || '{}');
@@ -28,12 +29,20 @@ const AllStudents = () => {
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [notifyStatus, setNotifyStatus] = useState('');
+  const [isCreateModalOpen, setCreateModalOpen] = useState(false);
 
   const formatDateTime = (value) => {
     if (!value) return 'N/A';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return 'N/A';
     return date.toLocaleString();
+  };
+
+  const handleStudentCreated = () => {
+    setCreateModalOpen(false);
+    fetchStudents();
+    setActionStatusType('success');
+    setActionStatus('Student created successfully!');
   };
 
   useEffect(() => {
@@ -260,11 +269,22 @@ const AllStudents = () => {
 
   return (
     <div className="all-students">
-      <div className="header all-students-header" style={{ marginBottom: '20px' }}>
-        <h1>{isSuperAdmin ? 'All Students' : 'Your Students'}</h1>
-        <p style={{ color: '#64748b' }}>
-          {isSuperAdmin ? 'Manage student accounts and profiles' : 'Manage students assigned to your account'}
-        </p>
+      <CreateStudentModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onStudentCreated={handleStudentCreated}
+      />
+      <div className="header all-students-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+            <h1>{isSuperAdmin ? 'All Students' : 'Your Students'}</h1>
+            <p style={{ color: '#64748b' }}>
+              {isSuperAdmin ? 'Manage student accounts and profiles' : 'Manage students assigned to your account'}
+            </p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setCreateModalOpen(true)}>
+            <i className="fas fa-plus me-2"></i>
+            Create Student
+        </button>
       </div>
 
       {actionStatus && (

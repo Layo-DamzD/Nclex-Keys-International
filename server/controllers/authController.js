@@ -30,9 +30,9 @@ const STUDENT_SUBSCRIPTION_DAYS = 30;
 
 const isStudentSubscriptionExpired = (user) => {
   if (!user || user.role !== 'student') return false;
-  const createdAt = user.createdAt ? new Date(user.createdAt) : null;
-  if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
-  const expiry = new Date(createdAt.getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
+  const startDate = user.subscriptionStartDate ? new Date(user.subscriptionStartDate) : null;
+  if (!startDate || Number.isNaN(startDate.getTime())) return false;
+  const expiry = new Date(startDate.getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
   return Date.now() > expiry.getTime();
 };
 
@@ -232,7 +232,8 @@ const registerStudent = async (req, res) => {
       phone,
       country: String(country || '').trim(),
       examDate: examDate || null,
-      trustedDevices
+      trustedDevices,
+      subscriptionStartDate: new Date()
     });
     const claimedLead = await claimLatestPublicTestResultForUser(user);
     if (claimedLead) {
@@ -246,7 +247,7 @@ const registerStudent = async (req, res) => {
       role: user.role,
       examDate: user.examDate,
       country: user.country,
-      subscriptionExpiresAt: new Date(new Date(user.createdAt).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
+      subscriptionExpiresAt: new Date(new Date(user.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
       token: generateToken(user._id)
     });
   } catch (error) {
@@ -314,7 +315,7 @@ const loginStudent = async (req, res) => {
       role: user.role,
       examDate: user.examDate,
       country: user.country,
-      subscriptionExpiresAt: new Date(new Date(user.createdAt).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
+      subscriptionExpiresAt: new Date(new Date(user.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
       token: generateToken(user._id)
     });
   } catch (error) {

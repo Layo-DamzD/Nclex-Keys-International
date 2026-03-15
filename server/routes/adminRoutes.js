@@ -14,6 +14,7 @@ const {
   bulkImportQuestions,
   getStudents,
   createAdminTest,
+  createStudentByAdmin,
   toggleStudentStatus,
   sendNotification,
   deleteStudent,
@@ -90,6 +91,7 @@ router.post('/questions/bulk-import', protect, adminOnly, upload.single('file'),
 
 // Student management routes
 router.get('/students', protect, adminOnly, getStudents);
+router.post('/students', protect, adminOnly, createStudentByAdmin);
 router.put('/students/:id/toggle-status', protect, superAdminOnly, toggleStudentStatus);
 router.delete('/students/:id', protect, superAdminOnly, deleteStudent);
 router.post('/students/notify', protect, adminOnly, sendNotification);
