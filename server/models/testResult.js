@@ -11,6 +11,7 @@ const answerSchema = new mongoose.Schema({
   category: String,     
   subcategory: String, 
   rationale: String,
+  rationaleImageUrl: String,
   highlightStart: Number,
   highlightEnd: Number,
   scenario: String,

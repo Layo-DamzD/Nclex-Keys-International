@@ -65,7 +65,7 @@ const submitTest = async (req, res) => {
 
     const questionIds = [...new Set(results.map((r) => String(r.questionId)).filter(Boolean))];
     const questionDocs = await Question.find({ _id: { $in: questionIds } })
-      .select('_id type category subcategory questionText options rationale hotspotImageUrl hotspotTargets clozeTemplate clozeBlanks');
+      .select('_id type category subcategory questionText options rationale rationaleImageUrl hotspotImageUrl hotspotTargets clozeTemplate clozeBlanks');
     const questionMap = new Map(questionDocs.map((q) => [String(q._id), q]));
 
     const enrichedAnswers = results.map((result) => {
@@ -78,6 +78,7 @@ const submitTest = async (req, res) => {
         questionText: result.questionText || q?.questionText,
         options: result.options || q?.options,
         rationale: result.rationale || q?.rationale,
+        rationaleImageUrl: result.rationaleImageUrl || q?.rationaleImageUrl,
         hotspotImageUrl: result.hotspotImageUrl || q?.hotspotImageUrl,
         hotspotTargets: result.hotspotTargets || q?.hotspotTargets,
         clozeTemplate: result.clozeTemplate || q?.clozeTemplate,
@@ -236,6 +237,7 @@ const generateTest = async (req, res) => {
       type: q.type,
       questionText: q.questionText,
       options: q.options,
+      rationaleImageUrl: q.rationaleImageUrl,
       hotspotImageUrl: q.hotspotImageUrl,
       hotspotTargets: q.hotspotTargets,
       clozeTemplate: q.clozeTemplate,

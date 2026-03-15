@@ -118,6 +118,7 @@ const TestSession = () => {
   const [timeLeft, setTimeLeft] = useState(settings.timed ? settings.totalQuestions * 60 : null);
   const [submitted, setSubmitted] = useState(false);
   const [results, setResults] = useState([]);
+  const [submittedResultId, setSubmittedResultId] = useState('');
   const [showReview, setShowReview] = useState(false);
   const [filter, setFilter] = useState('all');
   const [showCalculator, setShowCalculator] = useState(false);
@@ -641,6 +642,7 @@ const TestSession = () => {
             options: subQ.options,
             type: subQ.type,
             rationale: subQ.rationale,
+            rationaleImageUrl: subQ.rationaleImageUrl,
             scenario: q.scenario,
             highlightStart: subQ.highlightStart,
             highlightEnd: subQ.highlightEnd,
@@ -685,6 +687,7 @@ const TestSession = () => {
           options: q.options,
           type: q.type,
           rationale: q.rationale,
+          rationaleImageUrl: q.rationaleImageUrl,
           highlightStart: q.highlightStart,
           highlightEnd: q.highlightEnd,
           category: q.category,
@@ -703,7 +706,7 @@ const TestSession = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/student/submit-test', {
+      const submitResponse = await axios.post('/api/student/submit-test', {
         testName: settings?.testName || 'Custom Test',
         answers: { ...answers, ...caseAnswers },
         results: allResults,
@@ -720,6 +723,10 @@ const TestSession = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      const createdResultId = submitResponse?.data?.testResult?._id;
+      if (createdResultId) {
+        setSubmittedResultId(createdResultId);
+      }
     } catch (error) {
       console.error('Submit failed:', error);
     } finally {
@@ -831,8 +838,17 @@ const TestSession = () => {
 
         <div className="action-buttons d-flex justify-content-between align-items-center mt-4">
           <div>
-            <button className="btn btn-primary me-2" onClick={() => setShowReview(!showReview)}>
-              {showReview ? 'Hide Review' : 'Review Answers'}
+            <button
+              className="btn btn-primary me-2"
+              onClick={() => {
+                if (submittedResultId) {
+                  navigate(`/test-review/${submittedResultId}`);
+                  return;
+                }
+                setShowReview(!showReview);
+              }}
+            >
+              {submittedResultId ? 'Open Test Summary & Review' : showReview ? 'Hide Review' : 'Review Answers'}
             </button>
             <button className="btn btn-secondary" onClick={() => navigate(dashboardReturnPath)}>
               Back to Dashboard
@@ -916,9 +932,14 @@ const TestSession = () => {
                       }</p>
                     </div>
                   </div>
-                  {item.rationale && (
+                  {(item.rationale || item.rationaleImageUrl) && (
                     <div className="rationale mt-2">
-                      <strong>Rationale:</strong> {item.rationale}
+                      {item.rationale && (<><strong>Rationale:</strong> {item.rationale}</>)}
+                      {item.rationaleImageUrl && (
+                        <div className="mt-2">
+                          <img src={item.rationaleImageUrl} alt="Rationale visual" style={{ maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #dbeafe' }} />
+                        </div>
+                      )}
                     </div>
                   )}
                   <span className={`badge ${item.isCorrect ? 'bg-success' : 'bg-danger'}`}>

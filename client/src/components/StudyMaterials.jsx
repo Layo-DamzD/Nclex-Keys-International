@@ -37,10 +37,27 @@ const StudyMaterials = () => {
     }
   };
 
-  const handleDownload = (fileUrl) => {
-    // If files are stored locally, you might need to fetch with authorization
-    // For now, assume they are public URLs or use a download endpoint
-    window.open(fileUrl, '_blank');
+  const handleDownload = async (fileUrl, title = 'study-material') => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(fileUrl, {
+        responseType: 'blob',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      const guessedExt = String(fileUrl || '').split('.').pop() || 'pdf';
+      link.href = blobUrl;
+      link.setAttribute('download', `${String(title || 'study-material').replace(/[^a-z0-9_-]/gi, '_')}.${guessedExt}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Failed to download material:', error);
+      window.alert('Could not download this material right now. Please try again.');
+    }
   };
 
   if (loading) return <div className="text-center py-5">Loading materials...</div>;
@@ -79,7 +96,7 @@ const StudyMaterials = () => {
                 <div className="card-footer bg-transparent">
                   <button 
                     className="btn btn-primary w-100"
-                    onClick={() => handleDownload(material.fileUrl)}
+                    onClick={() => handleDownload(material.fileUrl, material.title)}
                   >
                     <i className="fas fa-download me-2"></i>Download
                   </button>

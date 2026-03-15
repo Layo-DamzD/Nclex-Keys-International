@@ -2997,6 +2997,23 @@ html[data-app-theme='dark'] .calculator-buttons button:hover {
   visibility: visible !important;
 }
 
+.exam-review-row-action,
+.exam-review-row-action:focus,
+.exam-review-row-action:hover {
+  color: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
+
+html[data-app-theme='dark'] .exam-review-row-action,
+html[data-app-theme='dark'] .exam-review-row-action:focus,
+html[data-app-theme='dark'] .exam-review-row-action:hover {
+  color: #93c5fd !important;
+  border-color: #60a5fa !important;
+  background: #0f172a !important;
+}
+
 .exam-review-status {
   display: inline-flex;
   align-items: center;
@@ -10894,4 +10911,21 @@ html[data-app-theme='dark'] .brainiac-page .landing-public-page {
   .public-test-question {
     font-size: 1.05rem;
   }
+}
+
+
+html[data-app-theme='dark'] .student-device-panel {
+  background: #0f172a !important;
+  border-top-color: #334155 !important;
+  color: #e2e8f0;
+}
+
+html[data-app-theme='dark'] .student-device-panel table,
+html[data-app-theme='dark'] .student-device-panel th,
+html[data-app-theme='dark'] .student-device-panel td {
+  color: #e2e8f0;
+}
+
+html[data-app-theme='dark'] .student-device-panel thead {
+  background: #1e293b !important;
 }

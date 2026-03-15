@@ -39,6 +39,16 @@ const ensureStudentInScopeForAdmin = (user, studentId) => {
   return scopedIds.includes(String(studentId));
 };
 
+const STUDENT_SUBSCRIPTION_DAYS = 30;
+
+const isStudentSubscriptionExpired = (student) => {
+  if (!student) return false;
+  const start = student.subscriptionStartDate ? new Date(student.subscriptionStartDate) : null;
+  if (!start || Number.isNaN(start.getTime())) return false;
+  const expiry = new Date(start.getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
+  return Date.now() > expiry.getTime();
+};
+
 // @desc    Get admin dashboard stats
 // @route   GET /api/admin/stats
 // @access  Private (admin only)
@@ -220,6 +230,7 @@ const createQuestion = async (req, res) => {
       options: req.body?.options,
       correctAnswer: req.body?.correctAnswer,
       rationale: req.body?.rationale,
+      rationaleImageUrl: req.body?.rationaleImageUrl,
       difficulty: req.body?.difficulty,
       highlightStart: req.body?.highlightStart,
       highlightEnd: req.body?.highlightEnd,
@@ -949,10 +960,11 @@ const toggleStudentStatus = async (req, res) => {
     }
 
     // Toggle status
-    student.status = student.status === 'active' ? 'inactive' : 'active';
-    
-    // If activating, reset the subscription timer
-    if (student.status === 'active') {
+    const nextStatus = student.status === 'active' ? 'inactive' : 'active';
+    student.status = nextStatus;
+
+    // If account was auto-deactivated due expired subscription, give a fresh cycle on reactivation.
+    if (nextStatus === 'active' && isStudentSubscriptionExpired(student)) {
       student.subscriptionStartDate = new Date();
     }
 
@@ -960,7 +972,8 @@ const toggleStudentStatus = async (req, res) => {
 
     res.json({ 
       message: `Student ${student.status === 'active' ? 'activated' : 'deactivated'} successfully`,
-      status: student.status 
+      status: student.status,
+      subscriptionStartDate: student.subscriptionStartDate
     });
   } catch (error) {
     console.error(error);
@@ -1228,6 +1241,7 @@ const getStudentProgress = async (req, res) => {
           ? [...student.trustedDevices]
               .sort((a, b) => new Date(b?.lastUsedAt || 0).getTime() - new Date(a?.lastUsedAt || 0).getTime())
               .map((d) => ({
+                recordId: d?._id || null,
                 deviceId: d?.deviceId || '',
                 label: d?.label || 'Unknown Device',
                 verifiedAt: d?.verifiedAt || null,
@@ -1657,6 +1671,38 @@ const clearStudentDeviceHistory = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+// @desc    Remove one trusted device for a student
+// @route   DELETE /api/admin/students/:id/devices/:deviceRecordId
+// @access  Private (admin only)
+const removeStudentDevice = async (req, res) => {
+  try {
+    const { id, deviceRecordId } = req.params;
+
+    if (!ensureStudentInScopeForAdmin(req.user, id)) {
+      return res.status(403).json({ message: 'You can only manage your students' });
+    }
+
+    const student = await User.findById(id);
+    if (!student || student.role !== 'student') {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const beforeCount = Array.isArray(student.trustedDevices) ? student.trustedDevices.length : 0;
+    student.trustedDevices = (student.trustedDevices || []).filter((device) => String(device?._id || '') !== String(deviceRecordId));
+
+    if (student.trustedDevices.length === beforeCount) {
+      return res.status(404).json({ message: 'Device record not found' });
+    }
+
+    await student.save();
+    return res.json({ message: 'Student device removed successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 

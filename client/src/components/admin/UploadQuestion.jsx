@@ -26,6 +26,7 @@ const UploadQuestion = () => {
   const [options, setOptions] = useState(['', '', '', '']);
   const [correctAnswer, setCorrectAnswer] = useState('');
   const [rationale, setRationale] = useState('');
+  const [rationaleImageUrl, setRationaleImageUrl] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
   const [highlightStart, setHighlightStart] = useState(0);
   const [highlightEnd, setHighlightEnd] = useState(0);
@@ -50,6 +51,7 @@ const UploadQuestion = () => {
   const [bulkFile, setBulkFile] = useState(null);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkStatus, setBulkStatus] = useState('');
+  const [assetUploading, setAssetUploading] = useState('');
 
   useEffect(() => {
     if (!editingQuestion) return;
@@ -61,6 +63,7 @@ const UploadQuestion = () => {
     setOptions(editingQuestion.options || ['', '', '', '']);
     setCorrectAnswer(editingQuestion.correctAnswer || '');
     setRationale(editingQuestion.rationale || '');
+    setRationaleImageUrl(editingQuestion.rationaleImageUrl || '');
     setDifficulty(editingQuestion.difficulty || 'medium');
     setHighlightStart(editingQuestion.highlightStart || 0);
     setHighlightEnd(editingQuestion.highlightEnd || 0);
@@ -117,6 +120,37 @@ const UploadQuestion = () => {
   };
 
   const addOption = () => setOptions((prev) => [...prev, '']);
+
+  const uploadAsset = async (file, targetField) => {
+    if (!file) return;
+    try {
+      setAssetUploading(targetField);
+      const token = sessionStorage.getItem('adminToken');
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await axios.post('/api/admin/content/upload', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      const uploadedUrl = String(res?.data?.fileUrl || '').trim();
+      if (!uploadedUrl) {
+        setError('Upload succeeded but no file URL was returned');
+        return;
+      }
+      if (targetField === 'hotspot') {
+        setHotspotImageUrl(uploadedUrl);
+      } else if (targetField === 'rationale') {
+        setRationaleImageUrl(uploadedUrl);
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to upload image');
+    } finally {
+      setAssetUploading('');
+    }
+  };
+
   const removeOption = (index) => {
     if (options.length > 2) setOptions((prev) => prev.filter((_, i) => i !== index));
   };
@@ -129,6 +163,7 @@ const UploadQuestion = () => {
     setOptions(['', '', '', '']);
     setCorrectAnswer('');
     setRationale('');
+    setRationaleImageUrl('');
     setDifficulty('medium');
     setHighlightStart(0);
     setHighlightEnd(0);
@@ -280,6 +315,7 @@ const UploadQuestion = () => {
       subcategory,
       questionText,
       rationale,
+      rationaleImageUrl,
       difficulty,
     };
 
@@ -306,8 +342,6 @@ const UploadQuestion = () => {
       questionData.correctAnswer = correctAnswer;
     } else if (type === 'highlight') {
       questionData.correctAnswer = correctAnswer;
-      questionData.highlightStart = highlightStart;
-      questionData.highlightEnd = highlightEnd;
     } else if (type === 'drag-drop') {
       const items = dragDropItems.filter((item) => item.trim() !== '');
       if (items.length < 2) {
@@ -573,27 +607,8 @@ const UploadQuestion = () => {
                 required
               />
             </div>
-            <div className="upload-grid-two">
-              <div className="form-group">
-                <label className="form-label">Highlight Start Index</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={highlightStart}
-                  onChange={(e) => setHighlightStart(Number(e.target.value))}
-                  min="0"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Highlight End Index</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={highlightEnd}
-                  onChange={(e) => setHighlightEnd(Number(e.target.value))}
-                  min="0"
-                />
-              </div>
+            <div className="form-group">
+              <small className="text-muted">Enter the exact text fragment the student should highlight (no index numbers needed).</small>
             </div>
             <div className="form-group">
               <label className="form-label">Correct Answer (highlighted text)</label>
@@ -746,8 +761,42 @@ const UploadQuestion = () => {
               className="form-control"
               value={hotspotImageUrl}
               onChange={(e) => setHotspotImageUrl(e.target.value)}
-              placeholder="https://.../image.png"
+              placeholder="https://.../image.png or /api/uploads/..."
             />
+            <div className="mt-2">
+              <label className="form-label">Upload Hotspot Image</label>
+              <input
+                type="file"
+                className="form-control"
+                accept="image/*"
+                onChange={(e) => uploadAsset(e.target.files?.[0], 'hotspot')}
+              />
+              {assetUploading === 'hotspot' && <small className="text-muted">Uploading image...</small>}
+            </div>
+            {hotspotImageUrl && (
+              <div className="mt-3">
+                <small className="text-muted d-block mb-2">Tap/click image to place the selected target.</small>
+                <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}
+                  onClick={(e) => {
+                    const selectedId = String(correctAnswer || '').trim();
+                    if (!selectedId) return;
+                    const target = hotspotTargets.find((t) => String(t.id) === selectedId);
+                    if (!target) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                    setHotspotTargets((prev) => prev.map((t) => (
+                      String(t.id) === selectedId ? { ...t, x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) } : t
+                    )));
+                  }}
+                >
+                  <img src={hotspotImageUrl} alt="Hotspot source" style={{ maxWidth: '420px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  {hotspotTargets.map((t, idx) => (
+                    <span key={`dot-${idx}`} style={{ position: 'absolute', left: `${t.x}%`, top: `${t.y}%`, transform: 'translate(-50%, -50%)', width: `${Math.max(10, Number(t.radius || 6) * 2)}px`, height: `${Math.max(10, Number(t.radius || 6) * 2)}px`, borderRadius: '999px', border: '2px solid #ef4444', background: 'rgba(239,68,68,0.2)' }} />
+                  ))}
+                </div>
+              </div>
+            )}
             <small className="text-muted d-block mt-2">Target coordinates use percentages (x/y from 0 to 100).</small>
 
             <div className="upload-row-header mt-3">
@@ -908,6 +957,13 @@ const UploadQuestion = () => {
         <div className="form-group">
           <label className="form-label">Rationale/Explanation</label>
           <textarea className="form-control" rows="3" value={rationale} onChange={(e) => setRationale(e.target.value)} required />
+          <div className="mt-2">
+            <label className="form-label">Rationale Image (optional)</label>
+            <input type="url" className="form-control mb-2" value={rationaleImageUrl} onChange={(e) => setRationaleImageUrl(e.target.value)} placeholder="https://.../rationale.png or /api/uploads/..." />
+            <input type="file" className="form-control" accept="image/*" onChange={(e) => uploadAsset(e.target.files?.[0], 'rationale')} />
+            {assetUploading === 'rationale' && <small className="text-muted">Uploading image...</small>}
+            {rationaleImageUrl && <img src={rationaleImageUrl} alt="Rationale preview" style={{ marginTop: '10px', maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }} />}
+          </div>
         </div>
 
         <div className="form-group">

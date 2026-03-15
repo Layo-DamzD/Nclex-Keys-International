@@ -1854,7 +1854,6 @@ html[data-app-theme='dark'] .admin-sidebar-floating-open-btn {
   gap: 8px;
 }
 
-codex/fix-review-function-for-admin-and-students-r6oxeg
 .admin-dashboard-page .admin-sidebar-icon-wrap {
   position: relative;
   width: 20px;
@@ -1879,7 +1878,6 @@ codex/fix-review-function-for-admin-and-students-r6oxeg
   padding: 0 4px;
 }
 
-main
 .admin-dashboard-page .admin-sidebar-item-badge {
   margin-left: auto;
   background: #dc2626;
@@ -1890,9 +1888,7 @@ main
   font-weight: 700;
   line-height: 1.2;
 }
-codex/fix-review-function-for-admin-and-students-r6oxeg
 
 .admin-dashboard-page .sidebar.collapsed .admin-sidebar-item-badge {
   display: none;
 }
-main
