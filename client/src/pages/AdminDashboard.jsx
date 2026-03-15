@@ -331,8 +331,8 @@ const AdminDashboard = () => {
           <div className="section active">
             <AdminSettings />
           </div>
-        )}
-      </main>
+        )
+     </main>
     </div>
   );
 };
