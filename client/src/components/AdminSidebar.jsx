@@ -28,7 +28,7 @@ const AdminSidebar = ({
         { id: 'upload', icon: 'cloud-upload-alt', label: 'Upload Questions' },
         { id: 'case-studies', icon: 'folder-open', label: 'Case Studies' },
         { id: 'create-test', icon: 'plus-circle', label: 'Create Test' },
-        { id: 'landing-page', icon: 'edit', label: 'Edit Landing Page' },
+        { id: 'landing-page', icon: 'edit', label: 'Edit Landing Page' }
       ]
     },
     {
@@ -39,7 +39,7 @@ const AdminSidebar = ({
         { id: 'all-students', icon: 'users', label: 'Your Students' },
         { id: 'progress-report', icon: 'chart-bar', label: 'Progress Report' },
         { id: 'content-management', icon: 'folder', label: 'Content Management' },
-        { id: 'exam-support', icon: 'comments', label: 'Exam Support Chat' },
+        { id: 'exam-support', icon: 'comments', label: 'Exam Support Chat' }
       ]
     },
     {
@@ -48,7 +48,7 @@ const AdminSidebar = ({
         { id: 'admin-approval', icon: 'user-check', label: 'Admin Approval' },
         { id: 'logs', icon: 'history', label: 'System Logs' },
         { id: 'student-feedback', icon: 'comment-dots', label: 'Student Feedback' },
-        { id: 'settings', icon: 'cog', label: 'Settings' },
+        { id: 'settings', icon: 'cog', label: 'Settings' }
       ]
     }
   ];
@@ -62,7 +62,7 @@ const AdminSidebar = ({
         { id: 'questions', icon: 'question-circle', label: 'Manage Questions' },
         { id: 'upload', icon: 'cloud-upload-alt', label: 'Upload Questions' },
         { id: 'case-studies', icon: 'folder-open', label: 'Case Studies' },
-        { id: 'create-test', icon: 'plus-circle', label: 'Create Test' },
+        { id: 'create-test', icon: 'plus-circle', label: 'Create Test' }
       ]
     },
     {
@@ -73,14 +73,12 @@ const AdminSidebar = ({
         { id: 'all-students', icon: 'users', label: 'All Students' },
         { id: 'progress-report', icon: 'chart-bar', label: 'Progress Report' },
         { id: 'content-management', icon: 'folder', label: 'Content Management' },
-        { id: 'exam-support', icon: 'comments', label: 'Exam Support Chat' },
+        { id: 'exam-support', icon: 'comments', label: 'Exam Support Chat' }
       ]
     },
     {
       title: 'System',
-      items: [
-        { id: 'settings', icon: 'cog', label: 'Settings' }
-      ]
+      items: [{ id: 'settings', icon: 'cog', label: 'Settings' }]
     }
   ];
 
@@ -120,6 +118,7 @@ const AdminSidebar = ({
         >
           <i className={`fas fa-chevron-${collapsed ? 'right' : 'left'}`}></i>
         </button>
+
         <div className="logo">
           <div className="logo-icon" style={{ padding: 0, overflow: 'hidden', background: '#fff' }}>
             <img
@@ -142,38 +141,40 @@ const AdminSidebar = ({
             <ul className="nav flex-column">
               {group.items.map((item) => {
                 const badgeValue = getBadgeValue(item.id);
+
                 return (
-                <li className="nav-item" key={item.id}>
-                  <button
-                    className={`nav-link ${activeSection === item.id ? 'active' : ''}`}
-                    onClick={() => handleSectionClick(item.id)}
-                  >
- codex/fix-review-function-for-admin-and-students-r6oxeg
-                    <span className="admin-sidebar-icon-wrap">
-                      <i className={`fas fa-${item.icon}`}></i>
+                  <li className="nav-item" key={item.id}>
+                    <button
+                      className={`nav-link ${activeSection === item.id ? 'active' : ''}`}
+                      onClick={() => handleSectionClick(item.id)}
+                    >
+                      <span className="admin-sidebar-icon-wrap">
+                        <i className={`fas fa-${item.icon}`}></i>
+                        {badgeValue ? (
+                          <span
+                            className="admin-sidebar-icon-badge"
+                            aria-label={`${item.label} unread count ${badgeValue}`}
+                          >
+                            {badgeValue}
+                          </span>
+                        ) : null}
+                      </span>
+
+                      <span>{item.label}</span>
+
                       {badgeValue ? (
-                        <span className="admin-sidebar-icon-badge" aria-label={`${item.label} unread count ${badgeValue}`}>
+                        <span className="admin-sidebar-item-badge" aria-hidden="true">
                           {badgeValue}
                         </span>
                       ) : null}
-                    </span>
-                    <span>{item.label}</span>
-                    {badgeValue ? (
-                      <span className="admin-sidebar-item-badge" aria-hidden="true">{badgeValue}</span>
-
-                    <i className={`fas fa-${item.icon}`}></i>
-                    <span>{item.label}</span>
-                    {sectionBadges[item.id] ? (
-                      <span className="admin-sidebar-item-badge">{sectionBadges[item.id]}</span>
-main
-                    ) : null}
-                  </button>
-                </li>
+                    </button>
+                  </li>
                 );
               })}
             </ul>
           </div>
         ))}
+
         <button className="nav-link text-danger" onClick={handleLogout}>
           <i className="fas fa-sign-out-alt"></i> Logout
         </button>
