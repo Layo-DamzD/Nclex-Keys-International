@@ -429,9 +429,7 @@ const PublicKnowledgeTest = () => {
   const getBrowserCountryName = () => {
     try {
       const locale = Intl.DateTimeFormat().resolvedOptions().locale || navigator.language || '';
-codex/fix-review-function-for-admin-and-students-r6oxeg
       const localeText = String(locale || '');
-      // Keep this parser strict/explicit so merge noise cannot break the payload block.
       const regionMatch = localeText.match(/[-_]([A-Za-z]{2})(?:[-_]|$)/);
       const regionCode = regionMatch ? String(regionMatch[1]).toUpperCase() : '';
       if (!regionCode) return null;
