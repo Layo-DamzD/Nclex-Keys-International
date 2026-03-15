@@ -464,15 +464,7 @@ codex/fix-review-function-for-admin-and-students-r6oxeg
         answers: serializedAnswers,
         browserLocation,
         countryName: getBrowserCountryName()
-codex/fix-review-function-for-admin-and-students-r6oxeg
 
-
-
-        codex/fix-review-function-for-admin-and-students-9g0yj0
-        browserLocation,
-        countryName: getBrowserCountryName()
-        browserLocation
- main
       });
       completeSubmit();
     } catch {
@@ -487,12 +479,8 @@ codex/fix-review-function-for-admin-and-students-r6oxeg
           percentage,
           answers: serializedAnswers,
           browserLocation,
-          countryName: getBrowserCountryName()
- codex/fix-review-function-for-admin-and-students-r6oxeg
-
+          countryName: getBrowserCountryName(),
           browserLocation
-
-main
         });
       } catch (leadErr) {
         console.error('Failed to send public test lead:', leadErr);
