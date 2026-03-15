@@ -474,8 +474,7 @@ const PublicKnowledgeTest = () => {
           percentage,
           answers: serializedAnswers,
           browserLocation,
-          countryName: getBrowserCountryName(),
-          browserLocation
+          countryName: getBrowserCountryName()
         });
       } catch (leadErr) {
         console.error('Failed to send public test lead:', leadErr);
