@@ -430,14 +430,11 @@ const PublicKnowledgeTest = () => {
     try {
       const locale = Intl.DateTimeFormat().resolvedOptions().locale || navigator.language || '';
       const localeText = String(locale || '');
-      const regionMatch = localeText.match(/[-_]([A-Za-z]{2})(?:[-_]|$)/);
+      const regionMatch = String(locale).match(/[-_]([A-Za-z]{2})(?:[-_]|$)/);
       const regionCode = regionMatch ? String(regionMatch[1]).toUpperCase() : '';
       if (!regionCode) return null;
       const displayNames = new Intl.DisplayNames([localeText], { type: 'region' });
-      const regionMatch = String(locale).match(/[-_]([A-Z]{2})/i);
-      const regionCode = regionMatch ? regionMatch[1].toUpperCase() : '';
       if (!regionCode) return null;
-      const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
       return displayNames.of(regionCode) || null;
     } catch {
       return null;
