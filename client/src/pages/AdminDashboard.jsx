@@ -99,7 +99,8 @@ const AdminDashboard = () => {
             'student-feedback': 'NEW'
           });
         }
-      } catch (error) {
+      
+          catch (error) {
         console.error('Failed to load sidebar badges:', error);
       }
     };
