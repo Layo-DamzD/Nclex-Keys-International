@@ -106,7 +106,7 @@ const AdminDashboard = () => {
       mounted = false;
       window.clearInterval(intervalId);
     };
-  } [userRole]);
+  } [userRole];
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
