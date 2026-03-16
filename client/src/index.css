@@ -2303,11 +2303,36 @@ html[data-app-theme='dark'] body.app-theme-active {
   background: #0f172a;
   color: #e5e7eb;
 }
+
+
+html[data-app-theme='dark'] body.app-theme-active p,
+html[data-app-theme='dark'] body.app-theme-active span,
+html[data-app-theme='dark'] body.app-theme-active label,
+html[data-app-theme='dark'] body.app-theme-active li,
+html[data-app-theme='dark'] body.app-theme-active td,
+html[data-app-theme='dark'] body.app-theme-active th,
+html[data-app-theme='dark'] body.app-theme-active input,
+html[data-app-theme='dark'] body.app-theme-active textarea,
+html[data-app-theme='dark'] body.app-theme-active select,
+html[data-app-theme='dark'] body.app-theme-active button,
+html[data-app-theme='dark'] body.app-theme-active small {
+  color: #e5e7eb;
+}
+
+html[data-app-theme='dark'] body.app-theme-active .text-muted {
+  color: #cbd5e1 !important;
+}
+
 html[data-app-theme='dark'] .theme-toggle-btn {
   background: #1e293b;
-  border-color: #334155;
+  border-color: #93c5fd;
   color: #f8fafc;
-  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.28);
+  box-shadow: 0 0 0 1px rgba(191, 219, 254, 0.7), 0 6px 16px rgba(2, 6, 23, 0.28);
+}
+
+html[data-app-theme='dark'] .theme-toggle-btn:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 1px rgba(219, 234, 254, 0.95), 0 10px 22px rgba(2, 6, 23, 0.34);
 }
 
 html[data-app-theme='dark'] .theme-toggle-btn:hover {
