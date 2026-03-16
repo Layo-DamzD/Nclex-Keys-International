@@ -974,10 +974,9 @@ const toggleStudentStatus = async (req, res) => {
       student.subscriptionStartDate = new Date();
     }
 
-    await student.save();
-
+    await student.save()
     res.json({ 
-      message: `Student ${student.status === 'active' ? 'activated' : 'deactivated'} successfully`,
+      message: `Student ${student.status === 'active' ? 'activated' : 'deactivated'} successfully`
       status: student.status,
       approved: student.approved,
       subscriptionStartDate: student.subscriptionStartDate
