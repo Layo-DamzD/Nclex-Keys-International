@@ -1707,6 +1707,10 @@ hr {
   padding-right: 100px;
 }
 
+.rationale-text-block {
+  white-space: pre-line;
+}
+
 .rationale {
   background: #f8fafc;
   padding: 15px;
@@ -10961,4 +10965,8 @@ html[data-app-theme='dark'] .student-device-panel thead {
   .exam-review-table-wrap {
     overflow-x: auto;
   }
+}
+
+html[data-app-theme='dark'] .rationale-text-block {
+  white-space: pre-line;
 }

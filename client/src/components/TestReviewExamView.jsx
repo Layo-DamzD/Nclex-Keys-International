@@ -382,7 +382,7 @@ const TestReviewExamView = ({
 
           {(active.rationale || active.rationaleImageUrl) && (
             <div className="exam-review-rationale-box exam-review-rationale-runtime">
-              {active.rationale && (<><strong>Rationale:</strong> {active.rationale}</>)}
+              {active.rationale && (<div className="rationale-text-block"><strong>Rationale:</strong> {active.rationale}</div>)}
               {active.rationaleImageUrl && (
                 <div className="mt-2">
                   <img src={active.rationaleImageUrl} alt="Rationale visual" style={{ maxWidth: '320px', width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1' }} />

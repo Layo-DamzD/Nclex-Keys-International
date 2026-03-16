@@ -987,7 +987,7 @@ const TestSession = () => {
                   </div>
                   {(item.rationale || item.rationaleImageUrl) && (
                     <div className="rationale mt-2">
-                      {item.rationale && (<><strong>Rationale:</strong> {item.rationale}</>)}
+                      {item.rationale && (<div className="rationale-text-block"><strong>Rationale:</strong> {item.rationale}</div>)}
                       {item.rationaleImageUrl && (
                         <div className="mt-2">
                           <img src={item.rationaleImageUrl} alt="Rationale visual" style={{ maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #dbeafe' }} />

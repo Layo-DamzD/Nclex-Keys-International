@@ -535,7 +535,7 @@ const ManageQuestions = ({ onSectionChange }) => {
                   </div>
                 )}
                 <p><strong>Correct Answer:</strong> {formatAnswerForPreview(previewQuestion)}</p>
-                <p><strong>Rationale:</strong> {previewQuestion.rationale || 'N/A'}</p>
+                <p style={{ whiteSpace: 'pre-line' }}><strong>Rationale:</strong> {previewQuestion.rationale || 'N/A'}</p>
               </div>
               <div className="modal-footer d-flex justify-content-between align-items-center w-100">
                 <div className="d-flex align-items-center gap-2">
