@@ -19,7 +19,7 @@ const DEFAULT_HOME_CONFIG = {
       badgeText: '97% First-Time Pass Rate',
       titleBefore: 'Unlock Your ',
       titleHighlight: 'NCLEX Success',
-      titleHighlightColor: '#dc2626',
+      titleHighlightColor: '#86efac',
       titleAfter: ' with Expert Coaching',
       description:
         'NCLEX KEYS International provides comprehensive training for nursing graduates to pass the NCLEX-RN/PN exams with confidence. Join thousands of successful nurses.',
@@ -525,7 +525,7 @@ const LandingPageStudio = () => {
           <label>Badge Text<input value={hero.badgeText || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.badgeText = e.target.value; })} /></label>
           <label>Title (Before Highlight)<input value={hero.titleBefore || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleBefore = e.target.value; })} /></label>
           <label>Title Highlight<input value={hero.titleHighlight || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleHighlight = e.target.value; })} /></label>
-          <label>Title Highlight Color<input type="color" value={hero.titleHighlightColor || '#dc2626'} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleHighlightColor = e.target.value; })} /></label>
+          <label>Title Highlight Color<input type="color" value={hero.titleHighlightColor || '#86efac'} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleHighlightColor = e.target.value; })} /></label>
           <label>Title (After Highlight)<input value={hero.titleAfter || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleAfter = e.target.value; })} /></label>
           <label>Description<textarea rows={4} value={hero.description || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.description = e.target.value; })} /></label>
           <label>Features (one per line)<textarea rows={4} value={(hero.features || []).join('\n')} onChange={(e) => mutateConfig((next) => { next.sections.hero.features = parseLines(e.target.value); })} /></label>

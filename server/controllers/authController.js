@@ -268,6 +268,12 @@ const loginStudent = async (req, res) => {
       await user.save();
     }
 
+    if (!user.approved) {
+      return res.status(403).json({
+        message: 'Your student account is awaiting superadmin verification. Please contact support.'
+      });
+    }
+
     if (user.status !== 'active') {
       return res.status(403).json({
         message: 'Your subscription has expired. Kindly renew your subscription to continue enjoying the service.'

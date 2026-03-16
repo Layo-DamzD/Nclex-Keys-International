@@ -919,8 +919,8 @@ const createStudentByAdmin = async (req, res) => {
       email,
       password,
       role: 'student',
-      status: 'active',
-      approved: true,
+      status: 'inactive',
+      approved: false,
       program,
       phone,
       country,
@@ -929,12 +929,13 @@ const createStudentByAdmin = async (req, res) => {
     });
 
     res.status(201).json({
-      message: 'Student account created successfully',
+      message: 'Student account created and sent for superadmin verification',
       student: {
         _id: user._id,
         name: user.name,
         email: user.email,
         status: user.status,
+        approved: user.approved,
         subscriptionStartDate: user.subscriptionStartDate
       }
     });
@@ -963,16 +964,21 @@ const toggleStudentStatus = async (req, res) => {
     const nextStatus = student.status === 'active' ? 'inactive' : 'active';
     student.status = nextStatus;
 
+    // Superadmin activation also verifies newly created student accounts.
+    if (nextStatus === 'active') {
+      student.approved = true;
+    }
+
     // If account was auto-deactivated due expired subscription, give a fresh cycle on reactivation.
     if (nextStatus === 'active' && isStudentSubscriptionExpired(student)) {
       student.subscriptionStartDate = new Date();
     }
 
-    await student.save();
-
+    await student.save()
     res.json({ 
-      message: `Student ${student.status === 'active' ? 'activated' : 'deactivated'} successfully`,
+      message: `Student ${student.status === 'active' ? 'activated' : 'deactivated'} successfully`
       status: student.status,
+      approved: student.approved,
       subscriptionStartDate: student.subscriptionStartDate
     });
   } catch (error) {

@@ -10970,3 +10970,49 @@ html[data-app-theme='dark'] .student-device-panel thead {
 html[data-app-theme='dark'] .rationale-text-block {
   white-space: pre-line;
 }
+
+
+.lamp-login-screen-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  border: 0;
+  width: 100%;
+  background: rgba(2, 6, 23, 0.96);
+  color: #e2e8f0;
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  transition: opacity 0.9s ease;
+}
+
+.lamp-login-screen-cover.fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lamp-login-page.intro-dismissed .lamp-login-stage-copy {
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.hero-section .nki-hero-cta-btn {
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+}
+
+.hero-section .nki-hero-cta-btn:hover {
+  background: #15803d !important;
+  border-color: #15803d !important;
+}
+
+@media (min-width: 992px) {
+  .nki-hero-cta-btn-desktop {
+    font-size: 1.5rem !important;
+    padding: 22px 58px !important;
+    border-radius: 16px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+}
