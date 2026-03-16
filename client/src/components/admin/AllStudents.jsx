@@ -22,6 +22,8 @@ const AllStudents = () => {
   const [studentHistoryLoadingById, setStudentHistoryLoadingById] = useState({});
   const [studentHistoryErrorById, setStudentHistoryErrorById] = useState({});
   const [clearingDevicesById, setClearingDevicesById] = useState({});
+  const [removingDeviceByKey, setRemovingDeviceByKey] = useState({});
+  const [selectedDeviceRecordsByStudent, setSelectedDeviceRecordsByStudent] = useState({});
 
   // Notification state
   const [notifyTitle, setNotifyTitle] = useState('');
@@ -261,6 +263,70 @@ const AllStudents = () => {
       setActionStatus(message);
     } finally {
       setClearingDevicesById((prev) => ({ ...prev, [studentId]: false }));
+    }
+  };
+
+
+  const handleToggleDeviceSelection = (studentId, recordId) => {
+    if (!studentId || !recordId) return;
+    setSelectedDeviceRecordsByStudent((prev) => {
+      const current = Array.isArray(prev[studentId]) ? prev[studentId] : [];
+      const exists = current.includes(recordId);
+      return {
+        ...prev,
+        [studentId]: exists ? current.filter((id) => id !== recordId) : [...current, recordId],
+      };
+    });
+  };
+
+  const handleRemoveSingleDevice = async (studentId, recordId) => {
+    if (!studentId || !recordId) return;
+    const key = `${studentId}:${recordId}`;
+    try {
+      setRemovingDeviceByKey((prev) => ({ ...prev, [key]: true }));
+      const token = sessionStorage.getItem('adminToken');
+      await axios.delete(`/api/admin/students/${studentId}/devices/${recordId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setStudentProgressById((prev) => {
+        const existing = prev[studentId];
+        if (!existing) return prev;
+        const trustedDevices = (existing.student?.trustedDevices || []).filter((device) => String(device.recordId || '') !== String(recordId));
+        return {
+          ...prev,
+          [studentId]: {
+            ...existing,
+            student: {
+              ...(existing.student || {}),
+              trustedDevices
+            }
+          }
+        };
+      });
+
+      setSelectedDeviceRecordsByStudent((prev) => ({
+        ...prev,
+        [studentId]: (prev[studentId] || []).filter((id) => id !== recordId)
+      }));
+
+      setActionStatusType('success');
+      setActionStatus('Student device removed successfully');
+    } catch (err) {
+      const message = err?.response?.data?.message || 'Failed to remove student device';
+      setActionStatusType('danger');
+      setActionStatus(message);
+    } finally {
+      setRemovingDeviceByKey((prev) => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleRemoveSelectedDevices = async (studentId) => {
+    const selectedIds = selectedDeviceRecordsByStudent[studentId] || [];
+    if (!selectedIds.length) return;
+    for (const recordId of selectedIds) {
+      // eslint-disable-next-line no-await-in-loop
+      await handleRemoveSingleDevice(studentId, recordId);
     }
   };
 
@@ -507,7 +573,7 @@ const AllStudents = () => {
                   {expandedStudent === student._id && (
                     <tr>
                       <td colSpan="8" style={{ padding: '0' }}>
-                        <div className="student-history-panel" style={{ background: '#f8fafc', padding: '20px', borderTop: '2px solid #e2e8f0' }}>
+                        <div className="student-history-panel student-device-panel" style={{ background: '#f8fafc', padding: '20px', borderTop: '2px solid #e2e8f0' }}>
                           <div className="student-history-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '15px', flexWrap: 'wrap' }}>
                             <h4 style={{ margin: 0 }}>Student Device Details for {student.name}</h4>
                             <button
@@ -534,42 +600,76 @@ const AllStudents = () => {
                               <div style={{ marginBottom: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>
                                   <strong>Device Login Records</strong>
-                                  <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-danger"
-                                    onClick={() => handleClearStudentDevices(student._id)}
-                                    disabled={Boolean(clearingDevicesById[student._id])}
-                                  >
-                                    {clearingDevicesById[student._id] ? 'Clearing...' : 'Clear Device Records'}
-                                  </button>
+                                  <div className="d-flex gap-2">
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-outline-danger"
+                                      onClick={() => handleRemoveSelectedDevices(student._id)}
+                                      disabled={!((selectedDeviceRecordsByStudent[student._id] || []).length)}
+                                    >
+                                      Delete Selected
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-outline-danger"
+                                      onClick={() => handleClearStudentDevices(student._id)}
+                                      disabled={Boolean(clearingDevicesById[student._id])}
+                                    >
+                                      {clearingDevicesById[student._id] ? 'Clearing...' : 'Clear Device Records'}
+                                    </button>
+                                  </div>
                                 </div>
 
                                 <div style={{ overflowX: 'auto' }}>
                                   <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '620px' }}>
                                     <thead style={{ background: '#f8fafc' }}>
                                       <tr>
+                                        <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Select</th>
                                         <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Label</th>
                                         <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Device ID</th>
                                         <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Verified</th>
                                         <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Last Used</th>
+                                        <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>Action</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {trustedDevices.length === 0 ? (
                                         <tr>
-                                          <td colSpan="4" style={{ padding: '12px', color: '#64748b' }}>No saved student devices.</td>
+                                          <td colSpan="6" style={{ padding: '12px', color: '#64748b' }}>No saved student devices.</td>
                                         </tr>
                                       ) : (
-                                        trustedDevices.map((device, idx) => (
-                                          <tr key={`${device.deviceId || 'device'}-${idx}`}>
-                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{device.label || 'Unknown Device'}</td>
-                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontFamily: 'monospace', fontSize: '12px' }}>
-                                              {device.deviceId || 'N/A'}
-                                            </td>
-                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{formatDateTime(device.verifiedAt)}</td>
-                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{formatDateTime(device.lastUsedAt)}</td>
-                                          </tr>
-                                        ))
+                                        trustedDevices.map((device, idx) => {
+                                          const recordId = String(device.recordId || '');
+                                          const rowKey = `${student._id}:${recordId || idx}`;
+                                          return (
+                                            <tr key={`${device.deviceId || 'device'}-${idx}`}>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                                                <input
+                                                  type="checkbox"
+                                                  checked={(selectedDeviceRecordsByStudent[student._id] || []).includes(recordId)}
+                                                  onChange={() => handleToggleDeviceSelection(student._id, recordId)}
+                                                  disabled={!recordId}
+                                                />
+                                              </td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{device.label || 'Unknown Device'}</td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontFamily: 'monospace', fontSize: '12px' }}>
+                                                {device.deviceId || 'N/A'}
+                                              </td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{formatDateTime(device.verifiedAt)}</td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{formatDateTime(device.lastUsedAt)}</td>
+                                              <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                                                <button
+                                                  type="button"
+                                                  className="btn btn-sm btn-outline-danger"
+                                                  disabled={!recordId || Boolean(removingDeviceByKey[rowKey])}
+                                                  onClick={() => handleRemoveSingleDevice(student._id, recordId)}
+                                                >
+                                                  {removingDeviceByKey[rowKey] ? 'Removing...' : 'Delete'}
+                                                </button>
+                                              </td>
+                                            </tr>
+                                          );
+                                        })
                                       )}
                                     </tbody>
                                   </table>

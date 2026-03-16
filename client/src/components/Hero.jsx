@@ -14,7 +14,7 @@ const DEFAULT_CONTENT = {
   videoUrl: 'https://www.youtube.com/embed/7ILVwUsfrAc',
   gradientStart: '#0d6efd',
   gradientEnd: '#6f42c1',
-  titleHighlightColor: '#dc2626',
+  titleHighlightColor: '#86efac',
 };
 
 const Hero = ({ content = {} }) => {
@@ -63,7 +63,7 @@ const Hero = ({ content = {} }) => {
               ))}
             </div>
             <div className="cta-buttons">
-              <Link to={data.ctaUrl} className="btn btn-primary btn-lg px-5 py-3 nki-hero-cta-btn">
+              <Link to={data.ctaUrl} className="btn btn-primary btn-lg px-5 py-3 nki-hero-cta-btn nki-hero-cta-btn-desktop">
                 <i className="fas fa-user-plus me-2"></i>{data.ctaText}
               </Link>
             </div>

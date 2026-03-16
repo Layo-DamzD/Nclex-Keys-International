@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import Countries from '../../constants/Countries';
+import { COUNTRIES } from '../../constants/Countries';
 
 const CreateStudentModal = ({ isOpen, onClose, onStudentCreated }) => {
   const [formData, setFormData] = useState({
@@ -84,7 +84,7 @@ const CreateStudentModal = ({ isOpen, onClose, onStudentCreated }) => {
                 <label>Country</label>
                 <select name="country" value={formData.country} onChange={handleChange} required className="form-control">
                   <option value="">Select Country</option>
-                  {Countries.map(c => <option key={c.code} value={c.name}>{c.name}</option>)}
+                  {COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
                 </select>
               </div>
               <div className="form-group">

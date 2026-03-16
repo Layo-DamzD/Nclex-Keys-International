@@ -21,6 +21,7 @@ const {
   getStudentList,
   getStudentProgress,
   clearStudentDeviceHistory,
+  removeStudentDevice,
   getTestResultForReview,
   getStudyMaterials,
   createStudyMaterial,
@@ -58,22 +59,11 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     // Keep these intentionally high to avoid clipping long rationale imports/uploads.
-< codex/fix-review-function-for-admin-and-students-r6oxeg
-    fieldSize: 300 * 1024 * 1024,
-    fileSize: 500 * 1024 * 1024
-
-
-    fieldSize: 300 * 1024 * 1024,
-    fileSize: 500 * 1024 * 1024
-0
-    fieldSize: 300 * 1024 * 1024,
-    fileSize: 500 * 1024 * 1024
-
     fieldSize: 50 * 1024 * 1024,
     fileSize: 200 * 1024 * 1024
- main
   }
 });
+
 
 // Dashboard stats
 router.get('/stats', protect, adminOnly, getAdminStats);
@@ -107,6 +97,7 @@ router.put('/landing-page/:pageKey', protect, superAdminOnly, saveLandingPageCon
 router.get('/students/list', protect, adminOnly, getStudentList);
 router.get('/students/:studentId/progress', protect, adminOnly, getStudentProgress);
 router.delete('/students/:id/devices', protect, adminOnly, clearStudentDeviceHistory);
+router.delete('/students/:id/devices/:deviceRecordId', protect, adminOnly, removeStudentDevice);
 router.get('/test-results/:resultId', protect, adminOnly, getTestResultForReview);
 
 // Content management routes

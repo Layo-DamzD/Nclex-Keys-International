@@ -3,37 +3,8 @@ import React from 'react';
 const DEFAULT_BRAINIAC = {
   header: {
     title: 'Meet Our Brainiacs',
-    subtitle: 'Coming soon - Our expert tutors will be displayed here!',
-  },
-  tutors: [
-    {
-      id: 'brainiac-1',
-      name: 'Dr. Sarah Johnson',
-      role: 'PhD, Nursing Education',
-      bio: 'Specializes in Pharmacology and Critical Care',
-      iconClass: 'fa-user-graduate',
-      colorClass: 'text-primary',
-      imageUrl: '',
-    },
-    {
-      id: 'brainiac-2',
-      name: 'Prof. Michael Chen',
-      role: 'MSN, RN',
-      bio: 'Expert in Medical-Surgical Nursing',
-      iconClass: 'fa-user-md',
-      colorClass: 'text-success',
-      imageUrl: '',
-    },
-    {
-      id: 'brainiac-3',
-      name: 'Dr. Amanda Rodriguez',
-      role: 'DNP, APRN',
-      bio: 'Pediatric and Maternal-Child Health Specialist',
-      iconClass: 'fa-user-nurse',
-      colorClass: 'text-info',
-      imageUrl: '',
-    },
-  ],
+    subtitle: 'Meet the tutors guiding your NCLEX success.',
+  },  tutors: [],
 };
 
 const resolveImageUrl = (rawUrl) => {
@@ -41,6 +12,7 @@ const resolveImageUrl = (rawUrl) => {
   if (!url) return '';
   if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
   if (url.startsWith('/')) {
+    if (url.startsWith('/api/')) return url;
     const base = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
     return base ? `${base}${url}` : url;
   }

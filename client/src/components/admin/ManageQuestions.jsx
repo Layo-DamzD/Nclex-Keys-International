@@ -419,20 +419,18 @@ const ManageQuestions = ({ onSectionChange }) => {
                   >
                     {previewLoading ? 'Loading...' : 'Preview'}
                   </button>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    style={{ marginRight: '8px' }}
+                    onClick={() => handleEdit(q)}
+                    type="button"
+                  >
+                    Edit
+                  </button>
                   {isSuperAdmin && (
-                    <>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        style={{ marginRight: '8px' }}
-                        onClick={() => handleEdit(q)}
-                        type="button"
-                      >
-                        Edit
-                      </button>
-                      <button className="btn btn-sm btn-danger" onClick={() => handleDelete(q._id)} type="button">
-                        Delete
-                      </button>
-                    </>
+                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(q._id)} type="button">
+                      Delete
+                    </button>
                   )}
                 </td>
               </tr>
@@ -535,7 +533,7 @@ const ManageQuestions = ({ onSectionChange }) => {
                   </div>
                 )}
                 <p><strong>Correct Answer:</strong> {formatAnswerForPreview(previewQuestion)}</p>
-                <p><strong>Rationale:</strong> {previewQuestion.rationale || 'N/A'}</p>
+                <p style={{ whiteSpace: 'pre-line' }}><strong>Rationale:</strong> {previewQuestion.rationale || 'N/A'}</p>
               </div>
               <div className="modal-footer d-flex justify-content-between align-items-center w-100">
                 <div className="d-flex align-items-center gap-2">
