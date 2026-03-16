@@ -10929,3 +10929,36 @@ html[data-app-theme='dark'] .student-device-panel td {
 html[data-app-theme='dark'] .student-device-panel thead {
   background: #1e293b !important;
 }
+
+
+@media (max-width: 768px) {
+  .test-session .test-header,
+  .exam-review-topbar {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .test-session .question-container,
+  .exam-runtime-question-panel,
+  .exam-review-card {
+    padding: 12px;
+  }
+
+  .test-session .options .option,
+  .exam-runtime-question-panel .option {
+    padding: 10px;
+    font-size: 0.92rem;
+  }
+
+  .exam-review-report-grid,
+  .exam-review-layout,
+  .exam-review-overview,
+  .exam-review-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .exam-review-table-wrap {
+    overflow-x: auto;
+  }
+}

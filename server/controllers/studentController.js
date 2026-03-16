@@ -86,16 +86,24 @@ const submitTest = async (req, res) => {
       };
     });
 
+    const earnedScore = enrichedAnswers.reduce((sum, row) => (
+      sum + Number(row?.earnedMarks ?? (row?.isCorrect === true ? 1 : 0))
+    ), 0);
+    const possibleScore = enrichedAnswers.reduce((sum, row) => (
+      sum + Number(row?.totalMarks ?? 1)
+    ), 0) || Math.max(Number(totalQuestions) || 0, 1);
+    const computedPercentage = Math.round((earnedScore / possibleScore) * 100);
+
     // Save test result with full answer details
     const testResult = new TestResult({
       student: studentId,
       testName,
       date: new Date(),
-      score: enrichedAnswers.filter(r => r.isCorrect).length,
+      score: Number(earnedScore.toFixed(2)),
       totalQuestions,
       timeTaken,
-      percentage: Math.round((enrichedAnswers.filter(r => r.isCorrect).length / totalQuestions) * 100),
-      passed,
+      percentage: computedPercentage,
+      passed: typeof passed === 'boolean' ? passed : computedPercentage >= 70,
       answers: enrichedAnswers,
       proctoring
     });

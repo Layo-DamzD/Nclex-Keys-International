@@ -119,6 +119,7 @@ const TestSession = () => {
   const [submitted, setSubmitted] = useState(false);
   const [results, setResults] = useState([]);
   const [submittedResultId, setSubmittedResultId] = useState('');
+  const [submitReviewError, setSubmitReviewError] = useState('');
   const [showReview, setShowReview] = useState(false);
   const [filter, setFilter] = useState('all');
   const [showCalculator, setShowCalculator] = useState(false);
@@ -602,6 +603,33 @@ const TestSession = () => {
     return expectedKeys.every((key) => String(userAnswer?.[key] || '').trim() === String(correctAnswer[key] || '').trim());
   };
 
+  const evaluateSataAnswer = (userAnswer, correctAnswer) => {
+    const user = Array.isArray(userAnswer)
+      ? [...new Set(userAnswer.map((v) => String(v || '').trim()).filter(Boolean))]
+      : [];
+    const correct = Array.isArray(correctAnswer)
+      ? [...new Set(correctAnswer.map((v) => String(v || '').trim()).filter(Boolean))]
+      : [];
+
+    const totalMarks = Math.max(correct.length, 1);
+    const correctPicked = user.filter((choice) => correct.includes(choice)).length;
+    const wrongPicked = user.filter((choice) => !correct.includes(choice)).length;
+    const earnedMarks = Math.max(correctPicked - wrongPicked, 0);
+
+    let isCorrect = false;
+    if (earnedMarks >= totalMarks) {
+      isCorrect = true;
+    } else if (earnedMarks > 0) {
+      isCorrect = 'partial';
+    }
+
+    return {
+      isCorrect,
+      earnedMarks,
+      totalMarks,
+    };
+  };
+
   async function handleSubmit() {
     if (submitted) return;
     setIsPaused(false);
@@ -617,9 +645,8 @@ const TestSession = () => {
           if (subQ.type === 'multiple-choice') {
             isCorrect = userAnswer === subQ.correctAnswer;
           } else if (subQ.type === 'sata') {
-            const user = Array.isArray(userAnswer) ? [...userAnswer].sort() : [];
-            const correct = Array.isArray(subQ.correctAnswer) ? [...subQ.correctAnswer].sort() : [];
-            isCorrect = user.length === correct.length && user.every((v, i) => v === correct[i]);
+            const sata = evaluateSataAnswer(userAnswer, subQ.correctAnswer);
+            isCorrect = sata.isCorrect;
           } else if (subQ.type === 'fill-blank') {
             isCorrect = isFillBlankCorrect(userAnswer, subQ.correctAnswer);
           } else if (subQ.type === 'highlight') {
@@ -633,10 +660,16 @@ const TestSession = () => {
           } else if (subQ.type === 'cloze-dropdown') {
             isCorrect = isClozeDropdownCorrect(userAnswer, subQ.correctAnswer);
           }
+          const sataScoreMeta = subQ.type === 'sata'
+            ? evaluateSataAnswer(userAnswer, subQ.correctAnswer)
+            : { earnedMarks: isCorrect === true ? 1 : 0, totalMarks: 1 };
+
           allResults.push({
             questionId: subQ._id,
             userAnswer,
             isCorrect,
+            earnedMarks: sataScoreMeta.earnedMarks,
+            totalMarks: sataScoreMeta.totalMarks,
             correctAnswer: subQ.correctAnswer,
             questionText: subQ.questionText,
             options: subQ.options,
@@ -662,9 +695,8 @@ const TestSession = () => {
         if (q.type === 'multiple-choice') {
           isCorrect = userAnswer === q.correctAnswer;
         } else if (q.type === 'sata') {
-          const user = Array.isArray(userAnswer) ? [...userAnswer].sort() : [];
-          const correct = Array.isArray(q.correctAnswer) ? [...q.correctAnswer].sort() : [];
-          isCorrect = user.length === correct.length && user.every((v, i) => v === correct[i]);
+          const sata = evaluateSataAnswer(userAnswer, q.correctAnswer);
+          isCorrect = sata.isCorrect;
         } else if (q.type === 'fill-blank') {
           isCorrect = isFillBlankCorrect(userAnswer, q.correctAnswer);
         } else if (q.type === 'highlight') {
@@ -678,10 +710,16 @@ const TestSession = () => {
         } else if (q.type === 'cloze-dropdown') {
           isCorrect = isClozeDropdownCorrect(userAnswer, q.correctAnswer);
         }
+        const sataScoreMeta = q.type === 'sata'
+          ? evaluateSataAnswer(userAnswer, q.correctAnswer)
+          : { earnedMarks: isCorrect === true ? 1 : 0, totalMarks: 1 };
+
         allResults.push({
           questionId: q._id,
           userAnswer,
           isCorrect,
+          earnedMarks: sataScoreMeta.earnedMarks,
+          totalMarks: sataScoreMeta.totalMarks,
           correctAnswer: q.correctAnswer,
           questionText: q.questionText,
           options: q.options,
@@ -704,6 +742,9 @@ const TestSession = () => {
 
     setResults(allResults);
 
+    const earnedTotal = allResults.reduce((sum, row) => sum + Number(row?.earnedMarks ?? (row?.isCorrect === true ? 1 : 0)), 0);
+    const possibleTotal = allResults.reduce((sum, row) => sum + Number(row?.totalMarks ?? 1), 0) || 1;
+
     try {
       const token = localStorage.getItem('token');
       const submitResponse = await axios.post('/api/student/submit-test', {
@@ -712,7 +753,7 @@ const TestSession = () => {
         results: allResults,
         totalQuestions: allResults.length,
         timeTaken: settings.timed ? (settings.totalQuestions * 60 - timeLeft) / 60 : 0,
-        passed: allResults.filter(r => r.isCorrect).length / allResults.length >= 0.7,
+        passed: (earnedTotal / possibleTotal) >= 0.7,
         isCustomTest: !Boolean(settings?.fromPreparedTest),
         proctoring: isProctored ? {
           enabled: true,
@@ -726,9 +767,13 @@ const TestSession = () => {
       const createdResultId = submitResponse?.data?.testResult?._id;
       if (createdResultId) {
         setSubmittedResultId(createdResultId);
+        setSubmitReviewError('');
+      } else {
+        setSubmitReviewError('Could not open summary automatically. Please use Previous Tests from dashboard.');
       }
     } catch (error) {
       console.error('Submit failed:', error);
+      setSubmitReviewError('Submit saved locally but server review id was not created.');
     } finally {
       if (proctorSnapshotTimerRef.current) {
         window.clearInterval(proctorSnapshotTimerRef.current);
@@ -798,16 +843,19 @@ const TestSession = () => {
 
   // --- Submitted view (results) ---
   if (submitted) {
-    const correctCount = results.filter(r => r.isCorrect).length;
-    const incorrectCount = results.length - correctCount;
-    const percentage = Math.round((correctCount / results.length) * 100);
+    const correctCount = results.filter((r) => r.isCorrect === true).length;
+    const partialCount = results.filter((r) => r.isCorrect === 'partial').length;
+    const incorrectCount = results.length - correctCount - partialCount;
+    const earnedTotal = results.reduce((sum, row) => sum + Number(row?.earnedMarks ?? (row?.isCorrect === true ? 1 : 0)), 0);
+    const possibleTotal = results.reduce((sum, row) => sum + Number(row?.totalMarks ?? 1), 0) || 1;
+    const percentage = Math.round((earnedTotal / possibleTotal) * 100);
     const passed = percentage >= 70;
 
     const chartData = {
-      labels: ['Correct', 'Incorrect'],
+      labels: ['Correct', 'Partial', 'Incorrect'],
       datasets: [{
-        data: [correctCount, incorrectCount],
-        backgroundColor: ['#28a745', '#dc3545'],
+        data: [correctCount, partialCount, Math.max(incorrectCount, 0)],
+        backgroundColor: ['#28a745', '#f59e0b', '#dc3545'],
         borderWidth: 0,
       }],
     };
@@ -818,8 +866,9 @@ const TestSession = () => {
     };
 
     const filtered = results.filter(r => {
-      if (filter === 'correct') return r.isCorrect;
-      if (filter === 'incorrect') return !r.isCorrect;
+      if (filter === 'correct') return r.isCorrect === true;
+      if (filter === 'partial') return r.isCorrect === 'partial';
+      if (filter === 'incorrect') return r.isCorrect === false;
       return true;
     });
 
@@ -832,7 +881,7 @@ const TestSession = () => {
           </div>
           <div className="score-text">
             <h2 className={passed ? 'text-success' : 'text-danger'}>{percentage}%</h2>
-            <p>Correct: {correctCount} / {results.length}</p>
+            <p>Marks: {earnedTotal.toFixed(2)} / {possibleTotal}</p>
           </div>
         </div>
 
@@ -841,27 +890,31 @@ const TestSession = () => {
             <button
               className="btn btn-primary me-2"
               onClick={() => {
-                if (submittedResultId) {
-                  navigate(`/test-review/${submittedResultId}`);
+                if (!submittedResultId) {
+                  window.alert('Review summary is still being prepared. Please try again in a moment.');
                   return;
                 }
-                setShowReview(!showReview);
+                navigate(`/test-review/${submittedResultId}`);
               }}
+              disabled={!submittedResultId}
             >
-              {submittedResultId ? 'Open Test Summary & Review' : showReview ? 'Hide Review' : 'Review Answers'}
+              Open Test Summary & Review
             </button>
             <button className="btn btn-secondary" onClick={() => navigate(dashboardReturnPath)}>
               Back to Dashboard
             </button>
           </div>
-          {showReview && (
+          {false && (
             <div className="filter-buttons">
               <button className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-outline-primary'} me-2`} onClick={() => setFilter('all')}>All ({results.length})</button>
               <button className={`btn btn-sm ${filter === 'correct' ? 'btn-success' : 'btn-outline-success'} me-2`} onClick={() => setFilter('correct')}>Correct ({correctCount})</button>
-              <button className={`btn btn-sm ${filter === 'incorrect' ? 'btn-danger' : 'btn-outline-danger'}`} onClick={() => setFilter('incorrect')}>Incorrect ({incorrectCount})</button>
+              <button className={`btn btn-sm ${filter === 'partial' ? 'btn-warning' : 'btn-outline-warning'} me-2`} onClick={() => setFilter('partial')}>Partial ({partialCount})</button>
+              <button className={`btn btn-sm ${filter === 'incorrect' ? 'btn-danger' : 'btn-outline-danger'}`} onClick={() => setFilter('incorrect')}>Incorrect ({Math.max(incorrectCount, 0)})</button>
             </div>
           )}
         </div>
+
+        {submitReviewError && <div className="alert alert-warning mt-3">{submitReviewError}</div>}
 
         {showReview && (
           <div className="review-list mt-4">
@@ -942,8 +995,8 @@ const TestSession = () => {
                       )}
                     </div>
                   )}
-                  <span className={`badge ${item.isCorrect ? 'bg-success' : 'bg-danger'}`}>
-                    {item.isCorrect ? 'Correct' : 'Incorrect'}
+                  <span className={`badge ${item.isCorrect === true ? 'bg-success' : item.isCorrect === 'partial' ? 'bg-warning text-dark' : 'bg-danger'}`}>
+                    {item.isCorrect === true ? 'Correct' : item.isCorrect === 'partial' ? `Partial (${Number(item.earnedMarks || 0)}/${Number(item.totalMarks || 1)})` : 'Incorrect'}
                   </span>
                 </div>
               </div>

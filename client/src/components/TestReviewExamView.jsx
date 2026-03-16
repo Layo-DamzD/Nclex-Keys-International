@@ -143,6 +143,7 @@ const TestReviewExamView = ({
 }) => {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [questionRuntimeMode, setQuestionRuntimeMode] = useState(false);
+  const [runtimeBooting, setRuntimeBooting] = useState(false);
 
   useEffect(() => {
     const blockEvent = (event) => {
@@ -174,6 +175,7 @@ const TestReviewExamView = ({
   useEffect(() => {
     setActiveQuestionIndex(0);
     setQuestionRuntimeMode(false);
+    setRuntimeBooting(false);
   }, [testResult?._id, testResult?.date]);
 
   const answers = Array.isArray(testResult?.answers) ? testResult.answers : [];
@@ -291,11 +293,16 @@ const TestReviewExamView = ({
 
   const openQuestionReviewRuntime = (index) => {
     setActiveQuestionIndex(index);
-    setQuestionRuntimeMode(true);
+    setRuntimeBooting(true);
+    window.setTimeout(() => {
+      setQuestionRuntimeMode(true);
+      setRuntimeBooting(false);
+    }, 850);
   };
 
   const goBackFromRuntimeQuestion = () => {
     setQuestionRuntimeMode(false);
+    setRuntimeBooting(false);
     setTimeout(() => {
       scrollToQuestionList();
     }, 0);
@@ -387,6 +394,24 @@ const TestReviewExamView = ({
       </div>
     );
   };
+
+
+  if (runtimeMode && runtimeBooting) {
+    return (
+      <div className="exam-boot-screen">
+        <div className="exam-boot-card">
+          <div className="exam-boot-top">
+            <div className="exam-boot-title">Loading review interface...</div>
+            <div className="exam-boot-percent">100%</div>
+          </div>
+          <div className="exam-boot-bar">
+            <div className="exam-boot-bar-fill" style={{ width: '100%' }}></div>
+          </div>
+          <div className="exam-boot-subtitle">Generating dedicated question pool</div>
+        </div>
+      </div>
+    );
+  }
 
   if (runtimeMode && questionRuntimeMode) {
     return renderQuestionReviewRuntime();

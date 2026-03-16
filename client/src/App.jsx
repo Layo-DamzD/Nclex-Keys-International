@@ -73,6 +73,11 @@ function App() {
               <AdminTestReviewPage />
             </AdminRoute>
           } />
+          <Route path="/admin/review/:resultId" element={
+            <AdminRoute>
+              <AdminTestReviewPage />
+            </AdminRoute>
+          } />
           </Routes>
         </AppThemeProvider>
       </BrowserRouter>
