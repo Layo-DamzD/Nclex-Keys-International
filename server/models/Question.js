@@ -37,6 +37,7 @@ const caseStudyQuestionSchema = new mongoose.Schema({
   options: [String],
   correctAnswer: mongoose.Schema.Types.Mixed,
   rationale: { type: String, default: '' },
+  rationaleImageUrl: { type: String, default: '' },
   difficulty: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },
   highlightStart: Number,
   highlightEnd: Number,
@@ -66,6 +67,7 @@ const questionSchema = new mongoose.Schema({
   options: [String],
   correctAnswer: mongoose.Schema.Types.Mixed,
   rationale: String,
+  rationaleImageUrl: String,
   difficulty: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },
   
   // Usage statistics

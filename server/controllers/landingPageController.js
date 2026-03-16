@@ -11,37 +11,9 @@ const getDefaultConfig = (pageKey) => {
       mode: 'structured',
       header: {
         title: 'Meet Our Brainiacs',
-        subtitle: 'Coming soon - Our expert tutors will be displayed here!',
+        subtitle: 'Meet the tutors guiding your NCLEX success.',
       },
-      tutors: [
-        {
-          id: 'brainiac-1',
-          name: 'Dr. Sarah Johnson',
-          role: 'PhD, Nursing Education',
-          bio: 'Specializes in Pharmacology and Critical Care',
-          iconClass: 'fa-user-graduate',
-          colorClass: 'text-primary',
-          imageUrl: '',
-        },
-        {
-          id: 'brainiac-2',
-          name: 'Prof. Michael Chen',
-          role: 'MSN, RN',
-          bio: 'Expert in Medical-Surgical Nursing',
-          iconClass: 'fa-user-md',
-          colorClass: 'text-success',
-          imageUrl: '',
-        },
-        {
-          id: 'brainiac-3',
-          name: 'Dr. Amanda Rodriguez',
-          role: 'DNP, APRN',
-          bio: 'Pediatric and Maternal-Child Health Specialist',
-          iconClass: 'fa-user-nurse',
-          colorClass: 'text-info',
-          imageUrl: '',
-        },
-      ],
+      tutors: [],
     };
   }
 
@@ -111,7 +83,7 @@ const getDefaultConfig = (pageKey) => {
           },
           {
             icon: 'fa-gears',
-            title: 'Customised Study Plan',
+            title: 'Customized Study Plan',
             text: 'Personalized preparation roadmap focused on your weak areas and exam goals.',
           },
         ],
@@ -202,11 +174,11 @@ const getLandingPageConfig = async (req, res) => {
     return res.status(400).json({ message: 'Invalid page key' });
   }
 
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
 
-  try {
+try {
     const doc = await LandingPageConfig.findOne({ pageKey }).lean();
     if (!doc) {
       return res.json({
@@ -262,11 +234,9 @@ const getPublicLandingPageConfig = async (req, res) => {
     return res.status(400).json({ message: 'Invalid page key' });
   }
 
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
 
-  try {
+try {
     const doc = await LandingPageConfig.findOne({ pageKey }).lean();
     if (!doc) {
       return res.json({ pageKey, hasSavedConfig: false, config: null });
@@ -315,15 +285,6 @@ const COUNTRY_CODE_FALLBACK_MAP = {
   RO: 'Romania', HU: 'Hungary', GR: 'Greece', TR: 'Turkey', RU: 'Russia',
   UA: 'Ukraine', BR: 'Brazil', AR: 'Argentina', MX: 'Mexico', CL: 'Chile',
   CO: 'Colombia', PE: 'Peru', VE: 'Venezuela'
-codex/fix-review-function-for-admin-and-students-r6oxeg
-
-  try {
-    const names = new Intl.DisplayNames([locale], { type: 'region' });
-    return names.of(raw.toUpperCase()) || raw;
-  } catch {
-    return raw;
-  }
-main
 };
 
 const resolveClientIp = (req) => {

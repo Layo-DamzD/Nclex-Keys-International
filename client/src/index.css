@@ -1707,6 +1707,10 @@ hr {
   padding-right: 100px;
 }
 
+.rationale-text-block {
+  white-space: pre-line;
+}
+
 .rationale {
   background: #f8fafc;
   padding: 15px;
@@ -2995,6 +2999,23 @@ html[data-app-theme='dark'] .calculator-buttons button:hover {
   border-width: 2px;
   opacity: 1 !important;
   visibility: visible !important;
+}
+
+.exam-review-row-action,
+.exam-review-row-action:focus,
+.exam-review-row-action:hover {
+  color: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
+
+html[data-app-theme='dark'] .exam-review-row-action,
+html[data-app-theme='dark'] .exam-review-row-action:focus,
+html[data-app-theme='dark'] .exam-review-row-action:hover {
+  color: #93c5fd !important;
+  border-color: #60a5fa !important;
+  background: #0f172a !important;
 }
 
 .exam-review-status {
@@ -10893,5 +10914,105 @@ html[data-app-theme='dark'] .brainiac-page .landing-public-page {
 
   .public-test-question {
     font-size: 1.05rem;
+  }
+}
+
+
+html[data-app-theme='dark'] .student-device-panel {
+  background: #0f172a !important;
+  border-top-color: #334155 !important;
+  color: #e2e8f0;
+}
+
+html[data-app-theme='dark'] .student-device-panel table,
+html[data-app-theme='dark'] .student-device-panel th,
+html[data-app-theme='dark'] .student-device-panel td {
+  color: #e2e8f0;
+}
+
+html[data-app-theme='dark'] .student-device-panel thead {
+  background: #1e293b !important;
+}
+
+
+@media (max-width: 768px) {
+  .test-session .test-header,
+  .exam-review-topbar {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .test-session .question-container,
+  .exam-runtime-question-panel,
+  .exam-review-card {
+    padding: 12px;
+  }
+
+  .test-session .options .option,
+  .exam-runtime-question-panel .option {
+    padding: 10px;
+    font-size: 0.92rem;
+  }
+
+  .exam-review-report-grid,
+  .exam-review-layout,
+  .exam-review-overview,
+  .exam-review-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .exam-review-table-wrap {
+    overflow-x: auto;
+  }
+}
+
+html[data-app-theme='dark'] .rationale-text-block {
+  white-space: pre-line;
+}
+
+
+.lamp-login-screen-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  border: 0;
+  width: 100%;
+  background: rgba(2, 6, 23, 0.96);
+  color: #e2e8f0;
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  transition: opacity 0.9s ease;
+}
+
+.lamp-login-screen-cover.fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lamp-login-page.intro-dismissed .lamp-login-stage-copy {
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.hero-section .nki-hero-cta-btn {
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+}
+
+.hero-section .nki-hero-cta-btn:hover {
+  background: #15803d !important;
+  border-color: #15803d !important;
+}
+
+@media (min-width: 992px) {
+  .nki-hero-cta-btn-desktop {
+    font-size: 1.5rem !important;
+    padding: 22px 58px !important;
+    border-radius: 16px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
   }
 }

@@ -37,6 +37,7 @@ const StudentLogin = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [lampOn, setLampOn] = useState(false);
+  const [introDismissed, setIntroDismissed] = useState(false);
   const navigate = useNavigate();
   const { refreshUser } = useUser();
   const deviceId = useMemo(() => getOrCreateDeviceId(), []);
@@ -52,6 +53,14 @@ const StudentLogin = () => {
     : '';
 
   const toggleLamp = () => setLampOn((prev) => !prev);
+
+  const handleLampStart = () => {
+    if (lampOn) return;
+    setLampOn(true);
+    window.setTimeout(() => {
+      setIntroDismissed(true);
+    }, 850);
+  };
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -75,9 +84,21 @@ const StudentLogin = () => {
   };
 
   return (
-    <div className={`lamp-login-page ${lampOn ? 'lamp-on' : 'lamp-off'}`}>
+    <div className={`lamp-login-page ${lampOn ? 'lamp-on' : 'lamp-off'} ${introDismissed ? 'intro-dismissed' : ''}`}>
       <div className="lamp-login-bg-noise" aria-hidden="true" />
       <div className="lamp-login-vignette" aria-hidden="true" />
+
+      {!introDismissed && (
+        <button
+          type="button"
+          className={`lamp-login-screen-cover ${lampOn ? 'fading' : ''}`}
+          onClick={handleLampStart}
+          aria-label={lampOn ? 'Opening login form' : 'Turn on lamp and open login form'}
+        >
+          <span>{lampOn ? 'Opening login...' : 'Tap lamp to turn on and continue'}</span>
+        </button>
+      )}
+
 
       <div className="lamp-login-layout">
         <div className="lamp-login-stage">
@@ -89,7 +110,7 @@ const StudentLogin = () => {
             <button
               type="button"
               className="lamp-login-chain"
-              onClick={toggleLamp}
+              onClick={handleLampStart}
               aria-label={lampOn ? 'Turn lamp off' : 'Turn lamp on'}
               title={lampOn ? 'Turn lamp off' : 'Turn lamp on'}
             >
@@ -110,7 +131,7 @@ const StudentLogin = () => {
             <button
               type="button"
               className="lamp-login-toggle-cta"
-              onClick={toggleLamp}
+              onClick={handleLampStart}
               aria-label={lampOn ? 'Turn lamp off' : 'Turn lamp on'}
             >
               {lampOn ? 'Turn lamp off' : 'Turn on the lamp'}
@@ -118,7 +139,7 @@ const StudentLogin = () => {
           </div>
         </div>
 
-        <div className={`lamp-login-card ${lampOn ? 'is-visible' : 'is-hidden'}`} aria-hidden={!lampOn}>
+        <div className={`lamp-login-card ${introDismissed ? 'is-visible' : 'is-hidden'}`} aria-hidden={!introDismissed}>
           <div className="lamp-login-card-glow" aria-hidden="true" />
 
           <div className="lamp-login-header">

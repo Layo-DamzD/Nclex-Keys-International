@@ -19,7 +19,7 @@ const DEFAULT_HOME_CONFIG = {
       badgeText: '97% First-Time Pass Rate',
       titleBefore: 'Unlock Your ',
       titleHighlight: 'NCLEX Success',
-      titleHighlightColor: '#dc2626',
+      titleHighlightColor: '#86efac',
       titleAfter: ' with Expert Coaching',
       description:
         'NCLEX KEYS International provides comprehensive training for nursing graduates to pass the NCLEX-RN/PN exams with confidence. Join thousands of successful nurses.',
@@ -74,7 +74,7 @@ const DEFAULT_HOME_CONFIG = {
         },
         {
           icon: 'fa-gears',
-          title: 'Customised Study Plan',
+          title: 'Customized Study Plan',
           text: 'Personalized preparation roadmap focused on your weak areas and exam goals.',
         },
       ],
@@ -225,6 +225,7 @@ const resolveMediaUrl = (rawUrl) => {
   if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
   if (url.startsWith('//')) return `${window.location.protocol}${url}`;
   const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
+  if (url.startsWith('/api/')) return url;
   if (url.startsWith('/')) return apiBase ? `${apiBase}${url}` : url;
   return apiBase ? `${apiBase}/${url}` : url;
 };
@@ -524,7 +525,7 @@ const LandingPageStudio = () => {
           <label>Badge Text<input value={hero.badgeText || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.badgeText = e.target.value; })} /></label>
           <label>Title (Before Highlight)<input value={hero.titleBefore || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleBefore = e.target.value; })} /></label>
           <label>Title Highlight<input value={hero.titleHighlight || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleHighlight = e.target.value; })} /></label>
-          <label>Title Highlight Color<input type="color" value={hero.titleHighlightColor || '#dc2626'} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleHighlightColor = e.target.value; })} /></label>
+          <label>Title Highlight Color<input type="color" value={hero.titleHighlightColor || '#86efac'} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleHighlightColor = e.target.value; })} /></label>
           <label>Title (After Highlight)<input value={hero.titleAfter || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleAfter = e.target.value; })} /></label>
           <label>Description<textarea rows={4} value={hero.description || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.description = e.target.value; })} /></label>
           <label>Features (one per line)<textarea rows={4} value={(hero.features || []).join('\n')} onChange={(e) => mutateConfig((next) => { next.sections.hero.features = parseLines(e.target.value); })} /></label>

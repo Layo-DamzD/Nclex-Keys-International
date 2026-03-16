@@ -4,7 +4,7 @@ const normalizeCardTitle = (title = '') => {
   const raw = String(title || '').trim();
   if (!raw) return raw;
   if (['custom study plan', 'customized study plan', 'customised study plan'].includes(raw.toLowerCase())) {
-    return 'Customised Study Plan';
+    return 'Customized Study Plan';
   }
   return raw;
 };
@@ -71,7 +71,7 @@ const DEFAULT_CONTENT = {
     },
     {
       icon: 'fa-gears',
-      title: 'Customised Study Plan',
+      title: 'Customized Study Plan',
       text: 'Personalized preparation roadmap focused on your weak areas and exam goals.',
     },
   ],

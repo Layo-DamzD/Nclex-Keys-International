@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const answerSchema = new mongoose.Schema({
   questionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Question' },
   userAnswer: mongoose.Schema.Types.Mixed,
-  isCorrect: Boolean,
+  isCorrect: mongoose.Schema.Types.Mixed,
+  earnedMarks: Number,
+  totalMarks: Number,
   correctAnswer: mongoose.Schema.Types.Mixed,
   questionText: String,
   options: [String],
@@ -11,6 +13,7 @@ const answerSchema = new mongoose.Schema({
   category: String,     
   subcategory: String, 
   rationale: String,
+  rationaleImageUrl: String,
   highlightStart: Number,
   highlightEnd: Number,
   scenario: String,

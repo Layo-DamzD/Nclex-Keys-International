@@ -332,7 +332,7 @@ const sendAdminAccessCodeEmail = async ({
 
 
 const sendExamSupportUsageEmail = async ({
-  to = process.env.EXAM_SUPPORT_ALERT_TO || 'nclexkeysintl.academy@gmail.com',
+  to = 'nclexkeysintl.academy@gmail.com',
   studentName,
   studentEmail,
   sessionId,
