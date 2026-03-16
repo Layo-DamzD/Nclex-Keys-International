@@ -95,7 +95,7 @@ const StudentLogin = () => {
           onClick={handleLampStart}
           aria-label={lampOn ? 'Opening login form' : 'Turn on lamp and open login form'}
         >
-          <span>{lampOn ? 'Opening login...' : 'Tap lamp to turn on and continue'}</span>
+          <span>{lampOn ? 'Opening login...' : 'Tap to continue'}</span>
         </button>
       )}
 
@@ -123,10 +123,10 @@ const StudentLogin = () => {
           <div className="lamp-login-light-haze" />
           <div className="lamp-login-stage-copy">
             <div className="lamp-login-subtitle">
-              {lampOn ? 'Lamp is on' : 'Turn on the lamp'}
+              {lampOn ? 'Lamp is on' : 'Tap to continue'}
             </div>
             <p className="lamp-login-hint">
-              {lampOn ? 'You can sign in now.' : 'Tap the button or pull the chain to continue.'}
+              {lampOn ? 'You can sign in now.' : 'Tap to continue.'}
             </p>
             <button
               type="button"
@@ -134,7 +134,7 @@ const StudentLogin = () => {
               onClick={handleLampStart}
               aria-label={lampOn ? 'Turn lamp off' : 'Turn lamp on'}
             >
-              {lampOn ? 'Turn lamp off' : 'Turn on the lamp'}
+              {lampOn ? 'Turn lamp off' : 'Tap to continue'}
             </button>
           </div>
         </div>

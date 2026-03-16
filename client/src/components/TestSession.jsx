@@ -120,8 +120,8 @@ const TestSession = () => {
   const [results, setResults] = useState([]);
   const [submittedResultId, setSubmittedResultId] = useState('');
   const [submitReviewError, setSubmitReviewError] = useState('');
-  const [showReview, setShowReview] = useState(false);
-  const [filter, setFilter] = useState('all');
+  const [showReview] = useState(false);
+  const [filter] = useState('all');
   const [showCalculator, setShowCalculator] = useState(false);
   const [isBooting, setIsBooting] = useState(true);
   const [bootProgress, setBootProgress] = useState(0);
@@ -754,7 +754,7 @@ const TestSession = () => {
         totalQuestions: allResults.length,
         timeTaken: settings.timed ? (settings.totalQuestions * 60 - timeLeft) / 60 : 0,
         passed: (earnedTotal / possibleTotal) >= 0.7,
-        isCustomTest: !Boolean(settings?.fromPreparedTest),
+        isCustomTest: !settings?.fromPreparedTest,
         proctoring: isProctored ? {
           enabled: true,
           violations: proctoringViolations,
@@ -904,14 +904,6 @@ const TestSession = () => {
               Back to Dashboard
             </button>
           </div>
-          {false && (
-            <div className="filter-buttons">
-              <button className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-outline-primary'} me-2`} onClick={() => setFilter('all')}>All ({results.length})</button>
-              <button className={`btn btn-sm ${filter === 'correct' ? 'btn-success' : 'btn-outline-success'} me-2`} onClick={() => setFilter('correct')}>Correct ({correctCount})</button>
-              <button className={`btn btn-sm ${filter === 'partial' ? 'btn-warning' : 'btn-outline-warning'} me-2`} onClick={() => setFilter('partial')}>Partial ({partialCount})</button>
-              <button className={`btn btn-sm ${filter === 'incorrect' ? 'btn-danger' : 'btn-outline-danger'}`} onClick={() => setFilter('incorrect')}>Incorrect ({Math.max(incorrectCount, 0)})</button>
-            </div>
-          )}
         </div>
 
         {submitReviewError && <div className="alert alert-warning mt-3">{submitReviewError}</div>}
