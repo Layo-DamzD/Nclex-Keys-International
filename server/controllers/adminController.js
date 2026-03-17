@@ -283,48 +283,111 @@ const bulkImportQuestions = async (req, res) => {
     }
 
     const csvText = req.file.buffer.toString();
-    const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
-    const rowCount = Math.max(0, lines.length - 1);
-    
-    if (lines.length < 2) {
+
+    const parseCsv = (text = '') => {
+      const rows = [];
+      let row = [];
+      let cell = '';
+      let inQuotes = false;
+
+      const pushCell = () => {
+        row.push(cell.trim());
+        cell = '';
+      };
+
+      const pushRow = () => {
+        if (row.some((entry) => String(entry || '').trim() !== '')) {
+          rows.push(row);
+        }
+        row = [];
+      };
+
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+        const nextChar = text[i + 1];
+
+        if (inQuotes) {
+          if (char === '"') {
+            if (nextChar === '"') {
+              cell += '"';
+              i += 1;
+              continue;
+            }
+            if (nextChar === ',' || nextChar === '\n' || nextChar === '\r' || nextChar === undefined) {
+              inQuotes = false;
+              continue;
+            }
+          }
+          cell += char;
+          continue;
+        }
+
+        if (char === '"' && cell.length === 0) {
+          inQuotes = true;
+          continue;
+        }
+
+        if (char === ',') {
+          pushCell();
+          continue;
+        }
+
+        if (char === '\n' || char === '\r') {
+          if (char === '\r' && nextChar === '\n') {
+            i += 1;
+          }
+          pushCell();
+          pushRow();
+          continue;
+        }
+
+        cell += char;
+      }
+
+      pushCell();
+      pushRow();
+      return rows;
+    };
+
+    const rows = parseCsv(csvText);
+    const rowCount = Math.max(0, rows.length - 1);
+
+    if (rows.length < 2) {
       return res.status(400).json({ message: 'CSV file is empty or invalid' });
     }
 
-    const parseCsvLine = (line = '') => {
-      const result = [];
-      let current = '';
-      let inQuotes = false;
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const requiredHeaders = ['type', 'category', 'subcategory', 'questiontext'];
 
-      for (let i = 0; i < line.length; i += 1) {
-        const char = line[i];
-        const nextChar = line[i + 1];
+    const normalizeImportedText = (value) => String(value || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\\r\\n/g, '\n')
+      .replace(/\\n/g, '\n');
 
-        if (char === '"' && inQuotes && nextChar === '"') {
-          current += '"';
-          i += 1;
-          continue;
-        }
-
-        if (char === '"') {
-          inQuotes = !inQuotes;
-          continue;
-        }
-
-        if (char === ',' && !inQuotes) {
-          result.push(current.trim());
-          current = '';
-          continue;
-        }
-
-        current += char;
+    const normalizeValuesForHeaders = (values = []) => {
+      const normalized = [...values];
+      if (normalized.length === headers.length) return normalized;
+      if (normalized.length < headers.length) {
+        normalized.push(...Array(headers.length - normalized.length).fill(''));
+        return normalized;
       }
 
-      result.push(current.trim());
-      return result;
+      const rationaleIndex = headers.indexOf('rationale');
+      if (rationaleIndex >= 0) {
+        const overflow = normalized.length - headers.length;
+        const endIndex = Math.min(normalized.length, rationaleIndex + overflow + 1);
+        const mergedRationale = normalized.slice(rationaleIndex, endIndex).join(', ');
+        const rebuilt = [
+          ...normalized.slice(0, rationaleIndex),
+          mergedRationale,
+          ...normalized.slice(endIndex),
+        ];
+        return rebuilt.slice(0, headers.length);
+      }
+
+      return normalized.slice(0, headers.length);
     };
 
-    const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase().trim());
-    const requiredHeaders = ['type', 'category', 'subcategory', 'questiontext'];
     const missing = requiredHeaders.filter(h => !headers.includes(h));
     if (missing.length > 0) {
       return res.status(400).json({ message: `Missing headers: ${missing.join(', ')}` });
@@ -335,11 +398,8 @@ const bulkImportQuestions = async (req, res) => {
     let inserted = 0;
     let updated = 0;
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCsvLine(lines[i]);
-      if (values.length < headers.length) {
-        values.push(...Array(headers.length - values.length).fill(''));
-      }
+    for (let i = 1; i < rows.length; i += 1) {
+      const values = normalizeValuesForHeaders(rows[i]);
 
       const row = {};
       headers.forEach((h, idx) => {
@@ -397,10 +457,10 @@ const bulkImportQuestions = async (req, res) => {
         type: row.type,
         category: row.category,
         subcategory: row.subcategory,
-        questionText: row.questiontext,
+        questionText: normalizeImportedText(row.questiontext),
         options,
         correctAnswer,
-        rationale: row.rationale || '',
+        rationale: normalizeImportedText(row.rationale),
         difficulty: row.difficulty || 'medium',
       };
 
