@@ -28,8 +28,8 @@ const UploadQuestion = () => {
   const [rationale, setRationale] = useState('');
   const [rationaleImageUrl, setRationaleImageUrl] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
-  const [highlightStart, setHighlightStart] = useState(0);
-  const [highlightEnd, setHighlightEnd] = useState(0);
+  const [, setHighlightStart] = useState(0);
+  const [, setHighlightEnd] = useState(0);
   const [dragDropItems, setDragDropItems] = useState(['', '', '', '']);
   const [matrixColumns, setMatrixColumns] = useState(['Column 1', 'Column 2', 'Column 3']);
   const [matrixRows, setMatrixRows] = useState([
@@ -104,7 +104,7 @@ const UploadQuestion = () => {
     if (type === 'cloze-dropdown') return;
     if (typeof correctAnswer === 'string' || Array.isArray(correctAnswer)) return;
     setCorrectAnswer('');
-  }, [type]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [type, correctAnswer]);
 
   const handleCategoryChange = (e) => {
     setCategory(e.target.value);

@@ -325,7 +325,6 @@ const AllStudents = () => {
     const selectedIds = selectedDeviceRecordsByStudent[studentId] || [];
     if (!selectedIds.length) return;
     for (const recordId of selectedIds) {
-      // eslint-disable-next-line no-await-in-loop
       await handleRemoveSingleDevice(studentId, recordId);
     }
   };
