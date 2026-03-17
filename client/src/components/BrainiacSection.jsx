@@ -1,4 +1,5 @@
 import React from 'react';
+import axios from 'axios';
 
 const DEFAULT_BRAINIAC = {
   header: {
@@ -11,12 +12,13 @@ const resolveImageUrl = (rawUrl) => {
   const url = String(rawUrl || '').trim();
   if (!url) return '';
   if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
-  if (url.startsWith('/')) {
-    if (url.startsWith('/api/')) return url;
-    const base = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
-    return base ? `${base}${url}` : url;
-  }
-  return url;
+  if (url.startsWith('//')) return `${window.location.protocol}${url}`;
+
+  const base = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+
+  if (url.startsWith('/api/')) return url;
+  if (url.startsWith('/')) return base ? `${base}${url}` : url;
+  return base ? `${base}/${url}` : url;
 };
 
 const BrainiacSection = ({

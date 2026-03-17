@@ -123,7 +123,7 @@ const exportQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getQuestions = async (req, res) => {
   try {
-    const { category, subcategory, type } = req.query;
+    const { category, subcategory, type, difficulty } = req.query;
     const rawPage = Number(req.query.page || 1);
     const rawLimit = String(req.query.limit || '10').trim().toLowerCase();
     const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
@@ -134,6 +134,7 @@ const getQuestions = async (req, res) => {
     if (category) filter.category = category;
     if (subcategory) filter.subcategory = subcategory;
     if (type) filter.type = type;
+    if (difficulty) filter.difficulty = String(difficulty).toLowerCase();
 
     const total = await Question.countDocuments(filter);
     let query = Question.find(filter)

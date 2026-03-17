@@ -3,7 +3,7 @@ import React from 'react';
 const normalizeCardTitle = (title = '') => {
   const raw = String(title || '').trim();
   if (!raw) return raw;
-  if (['custom study plan', 'customized study plan', 'customised study plan'].includes(raw.toLowerCase())) {
+  if (['custom study plan', 'custom study plans', 'customized study plan', 'customized study plans', 'customised study plan', 'customised study plans'].includes(raw.toLowerCase())) {
     return 'Customized Study Plan';
   }
   return raw;
@@ -15,15 +15,12 @@ const normalizeCard = (card = {}) => ({
   text: String(card.text || '').trim()
 });
 
-const cardUniqKey = (card = {}) => {
-  const title = String(card.title || '').trim().toLowerCase();
-  const text = String(card.text || '').trim().toLowerCase();
-  return `${title}::${text}`;
-};
+const cardUniqKey = (card = {}) => String(card.title || '').trim().toLowerCase();
 
 const mergeUniqueCards = (baseCards = [], incomingCards = []) => {
   const merged = [];
   const seen = new Set();
+
   [...baseCards, ...incomingCards]
     .map((card) => normalizeCard(card))
     .forEach((card) => {
@@ -32,6 +29,7 @@ const mergeUniqueCards = (baseCards = [], incomingCards = []) => {
       seen.add(key);
       merged.push(card);
     });
+
   return merged;
 };
 

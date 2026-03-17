@@ -35,7 +35,9 @@ const useLandingPageContent = (pageKey) => {
     const load = async () => {
       if (!cached) setLoading(true);
       try {
-        const res = await axios.get(`/api/content/landing-page/${pageKey}`);
+        const res = await axios.get(`/api/content/landing-page/${pageKey}`, {
+          timeout: 5000,
+        });
         if (!active) return;
 
         const isObjectPayload = res && res.data && typeof res.data === 'object' && !Array.isArray(res.data);

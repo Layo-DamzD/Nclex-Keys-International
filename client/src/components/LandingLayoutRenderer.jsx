@@ -1,4 +1,5 @@
 import React from 'react';
+import axios from 'axios';
 import './LandingLayoutRenderer.css';
 
 const defaultTextStyle = {
@@ -6,6 +7,20 @@ const defaultTextStyle = {
   fontWeight: 600,
   color: '#0f172a',
   align: 'left',
+};
+
+
+const resolveMediaUrl = (rawUrl) => {
+  const url = String(rawUrl || '').trim();
+  if (!url) return '';
+  if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('//')) return `${window.location.protocol}${url}`;
+
+  const base = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+
+  if (url.startsWith('/api/')) return url;
+  if (url.startsWith('/')) return base ? `${base}${url}` : url;
+  return base ? `${base}/${url}` : url;
 };
 
 const getBlockStyle = (block) => ({
@@ -76,7 +91,7 @@ const renderImageBlock = (block) => {
     );
   }
 
-  return <img src={block.src} alt={block.alt || 'Landing'} className="landing-block-image" />;
+  return <img src={resolveMediaUrl(block.src)} alt={block.alt || 'Landing'} className="landing-block-image" />;
 };
 
 const renderCardBlock = (block) => {
@@ -84,7 +99,7 @@ const renderCardBlock = (block) => {
   return (
     <div className="landing-block-card" style={{ borderTopColor: accent }}>
       {block.imageUrl ? (
-        <img src={block.imageUrl} alt={block.title || 'Card'} className="landing-block-card-image" />
+        <img src={resolveMediaUrl(block.imageUrl)} alt={block.title || 'Card'} className="landing-block-card-image" />
       ) : (
         <div className="landing-block-card-icon" style={{ background: `${accent}18`, color: accent }}>
           <i className="fas fa-user-graduate" />

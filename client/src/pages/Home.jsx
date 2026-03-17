@@ -39,7 +39,7 @@ const Home = () => {
   return (
     <>
       <Navbar />
-      {loading ? null : isStructured ? (
+      {isStructured ? (
         <>{order.map(renderStructuredSection)}</>
       ) : hasSavedConfig && config ? (
         <div className="landing-public-page">
