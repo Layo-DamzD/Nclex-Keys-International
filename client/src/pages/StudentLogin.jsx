@@ -52,7 +52,6 @@ const StudentLogin = () => {
     )}`
     : '';
 
-  const toggleLamp = () => setLampOn((prev) => !prev);
 
   const handleLampStart = () => {
     if (lampOn) return;

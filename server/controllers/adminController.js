@@ -2149,5 +2149,6 @@ module.exports = {
   updateAdminProfileSettings,
   updateAdminPasswordSettings,
   clearAdminDeviceSettings,
-  clearStudentDeviceHistory
+  clearStudentDeviceHistory,
+  removeStudentDevice
 };
