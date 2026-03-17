@@ -224,8 +224,6 @@ const TestReviewExamView = ({
   const timeTaken = testResult?.timeTaken;
   const timeTakenLabel = formatMinutesLabel(timeTaken);
   const active = answers[activeQuestionIndex];
-  const isFirstQuestion = activeQuestionIndex <= 0;
-  const isLastQuestion = activeQuestionIndex >= Math.max(answers.length - 1, 0);
   const candidateName =
     testResult?.studentName ||
     testResult?.userName ||
@@ -267,14 +265,6 @@ const TestReviewExamView = ({
     1,
     ...summary.sections.map((row) => row.correct + row.partiallyCorrect + row.incorrect + row.unanswered)
   );
-
-  const goToPrevQuestion = () => {
-    setActiveQuestionIndex((prev) => Math.max(prev - 1, 0));
-  };
-
-  const goToNextQuestion = () => {
-    setActiveQuestionIndex((prev) => Math.min(prev + 1, Math.max(answers.length - 1, 0)));
-  };
 
   const scrollToQuestionList = () => {
     if (typeof document === 'undefined') return;
