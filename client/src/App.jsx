@@ -22,6 +22,7 @@ import AdminSignup from './pages/AdminSignup';
 import AdminTestReviewPage from './pages/AdminTestReviewPage';
 import { AppThemeProvider } from './context/AppThemeContext';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
+import CookieConsentBanner from './components/CookieConsentBanner';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
       <BrowserRouter>
         <AppThemeProvider>
           <PwaInstallPrompt />
+          <CookieConsentBanner />
           <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />

@@ -15,7 +15,7 @@ const CreateTest = () => {
   const [studentsError, setStudentsError] = useState('');
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [questions, setQuestions] = useState([]);
-  const [filters, setFilters] = useState({ category: '', subcategory: '', type: '' });
+  const [filters, setFilters] = useState({ category: '', subcategory: '', type: '', difficulty: '' });
 
   const [testData, setTestData] = useState({
     title: '',
@@ -66,6 +66,7 @@ const CreateTest = () => {
         ...(filters.category && { category: filters.category }),
         ...(filters.subcategory && { subcategory: filters.subcategory }),
         ...(filters.type && { type: filters.type }),
+        ...(filters.difficulty && { difficulty: filters.difficulty }),
       });
       const response = await axios.get(`/api/admin/questions?${params}`, {
         headers: { Authorization: `Bearer ${adminToken}` }
@@ -291,7 +292,7 @@ const CreateTest = () => {
         {/* Question Filters */}
         <div className="form-group">
           <label className="form-label">Filter Questions</label>
-          <div className="upload-grid-three">
+          <div className="upload-grid-four" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px' }}>
             <select
               className="form-control"
               value={filters.category}
@@ -329,6 +330,17 @@ const CreateTest = () => {
               <option value="cloze-dropdown">Cloze Dropdown</option>
               <option value="case-study">Case Study</option>
             </select>
+            <select
+              className="form-control"
+              value={filters.difficulty}
+              onChange={(e) => setFilters({ ...filters, difficulty: e.target.value })}
+            >
+              <option value="">All Toughness</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+
           </div>
         </div>
 
@@ -351,7 +363,7 @@ const CreateTest = () => {
                   <label className="form-check-label" htmlFor={`q-${q._id}`}>
                     <strong>[{q.type}]</strong> {q.questionText.substring(0, 100)}...
                     <br />
-                    <small className="text-muted">{q.category} › {q.subcategory}</small>
+                    <small className="text-muted">{q.category} › {q.subcategory} • {String(q.difficulty || 'medium').toUpperCase()}</small>
                   </label>
                 </div>
               ))

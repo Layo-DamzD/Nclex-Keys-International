@@ -144,6 +144,7 @@ const TestReviewExamView = ({
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [questionRuntimeMode, setQuestionRuntimeMode] = useState(false);
   const [runtimeBooting, setRuntimeBooting] = useState(false);
+  const [activeSummaryTab, setActiveSummaryTab] = useState('results');
 
   useEffect(() => {
     const blockEvent = (event) => {
@@ -176,6 +177,7 @@ const TestReviewExamView = ({
     setActiveQuestionIndex(0);
     setQuestionRuntimeMode(false);
     setRuntimeBooting(false);
+    setActiveSummaryTab('results');
   }, [testResult?._id, testResult?.date]);
 
   const answers = Array.isArray(testResult?.answers) ? testResult.answers : [];
@@ -261,6 +263,70 @@ const TestReviewExamView = ({
     [answers, totalQuestions, timeTaken]
   );
 
+  const analysisBlocks = useMemo(() => {
+    const bySubject = {};
+    const bySystem = {};
+
+    answers.forEach((item) => {
+      const subjectKey = item.category || 'General';
+      const systemKey = item.subcategory || item.category || 'General';
+      const isCorrect = item?.isCorrect === true;
+
+      if (!bySubject[subjectKey]) bySubject[subjectKey] = { name: subjectKey, total: 0, correct: 0 };
+      if (!bySystem[systemKey]) bySystem[systemKey] = { name: systemKey, total: 0, correct: 0 };
+
+      bySubject[subjectKey].total += 1;
+      bySystem[systemKey].total += 1;
+
+      if (isCorrect) {
+        bySubject[subjectKey].correct += 1;
+        bySystem[systemKey].correct += 1;
+      }
+    });
+
+    const sortRows = (obj) =>
+      Object.values(obj)
+        .map((row) => ({
+          ...row,
+          pct: row.total ? Math.round((row.correct / row.total) * 100) : 0,
+        }))
+        .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+    return {
+      subjects: sortRows(bySubject),
+      systems: sortRows(bySystem),
+    };
+  }, [answers]);
+
+  const difficultyMeter = useMemo(() => {
+    const weight = { easy: 1, medium: 2, hard: 3 };
+    const vals = answers
+      .map((item) => weight[String(item?.difficulty || '').toLowerCase()])
+      .filter(Boolean);
+    if (!vals.length) return { score: 50, label: 'Medium' };
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const score = Math.round(((avg - 1) / 2) * 100);
+    const label = avg < 1.67 ? 'Easy' : avg < 2.34 ? 'Medium' : 'Hard';
+    return { score, label };
+  }, [answers]);
+
+  const answerChangeSummary = useMemo(() => {
+    const out = {
+      correctToIncorrect: 0,
+      incorrectToCorrect: 0,
+      incorrectToIncorrect: 0,
+    };
+
+    answers.forEach((item) => {
+      const changeType = String(item?.answerChangeType || item?.changeType || '').toLowerCase();
+      if (changeType === 'correct-to-incorrect') out.correctToIncorrect += 1;
+      else if (changeType === 'incorrect-to-correct') out.incorrectToCorrect += 1;
+      else if (changeType === 'incorrect-to-incorrect') out.incorrectToIncorrect += 1;
+    });
+
+    return out;
+  }, [answers]);
+
   const sectionChartMax = Math.max(
     1,
     ...summary.sections.map((row) => row.correct + row.partiallyCorrect + row.incorrect + row.unanswered)
@@ -335,8 +401,6 @@ const TestReviewExamView = ({
                   >
                     <span className="option-letter">{letter}</span>
                     <span>{opt}</span>
-                    {selected && <span className="exam-review-option-chip your-answer">Your answer</span>}
-                    {correct && <span className="exam-review-option-chip correct-answer">Correct</span>}
                   </div>
                 );
               })}
@@ -434,6 +498,23 @@ const TestReviewExamView = ({
           {actions && <div className="exam-review-actions">{actions}</div>}
         </div>
 
+        <div className="exam-review-summary-tabs" role="tablist" aria-label="Summary tabs">
+          <button
+            type="button"
+            className={`exam-review-summary-tab ${activeSummaryTab === 'results' ? 'active' : ''}`}
+            onClick={() => setActiveSummaryTab('results')}
+          >
+            Test Results
+          </button>
+          <button
+            type="button"
+            className={`exam-review-summary-tab ${activeSummaryTab === 'analysis' ? 'active' : ''}`}
+            onClick={() => setActiveSummaryTab('analysis')}
+          >
+            Test Analysis
+          </button>
+        </div>
+
         <div className="exam-review-summary-hero">
           <div className="exam-review-summary-hero-head">
             <h4>Review Exam</h4>
@@ -451,6 +532,60 @@ const TestReviewExamView = ({
             <span className="exam-review-score-progress-tag">{percent}%</span>
           </div>
         </div>
+
+        <div className="exam-review-insight-strip">
+          <div className="exam-review-insight-card">
+            <span>Point Scored</span>
+            <strong>{score}/{totalQuestions}</strong>
+            <div className="exam-review-insight-progress"><i style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} /></div>
+          </div>
+          <div className="exam-review-insight-card">
+            <span>Difficulty Level</span>
+            <strong>{difficultyMeter.label}</strong>
+            <div className="exam-review-insight-meter"><i style={{ left: `${difficultyMeter.score}%` }} /></div>
+          </div>
+          <div className="exam-review-insight-card">
+            <span>Answer Changes</span>
+            <strong>{answerChangeSummary.correctToIncorrect + answerChangeSummary.incorrectToCorrect + answerChangeSummary.incorrectToIncorrect}</strong>
+            <small>C→I: {answerChangeSummary.correctToIncorrect} · I→C: {answerChangeSummary.incorrectToCorrect} · I→I: {answerChangeSummary.incorrectToIncorrect}</small>
+          </div>
+          <div className="exam-review-insight-card">
+            <span>Time Settings</span>
+            <strong>{timeTakenLabel}</strong>
+            <small>Mode: {testResult?.mode || 'Timed'} · Pool: {totalQuestions} Qs</small>
+          </div>
+        </div>
+
+        {activeSummaryTab === 'analysis' ? (
+          <div className="exam-review-analysis-board">
+            <div className="exam-review-analysis-table-wrap">
+              <h4>Subjects</h4>
+              <table className="exam-review-table compact">
+                <thead><tr><th>Name</th><th>Total</th><th>Correct</th><th>Accuracy</th></tr></thead>
+                <tbody>
+                  {analysisBlocks.subjects.map((row) => (
+                    <tr key={`subject-${row.name}`}>
+                      <td>{row.name}</td><td>{row.total}</td><td>{row.correct}</td><td>{row.pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="exam-review-analysis-table-wrap">
+              <h4>Systems</h4>
+              <table className="exam-review-table compact">
+                <thead><tr><th>Name</th><th>Total</th><th>Correct</th><th>Accuracy</th></tr></thead>
+                <tbody>
+                  {analysisBlocks.systems.map((row) => (
+                    <tr key={`system-${row.name}`}>
+                      <td>{row.name}</td><td>{row.total}</td><td>{row.correct}</td><td>{row.pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
 
         <div className="exam-review-report-grid">
           <div className="exam-review-report-metrics">
