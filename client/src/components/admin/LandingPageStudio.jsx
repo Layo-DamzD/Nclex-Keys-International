@@ -181,7 +181,7 @@ const coerceStructuredConfig = (pageKey, incoming) => {
         ...(baseSections.testimonials || {}),
         ...(incomingSections.testimonials || {}),
         items:
-          Array.isArray(incomingSections.testimonials?.items) && incomingSections.testimonials.items.length
+          Array.isArray(incomingSections.testimonials?.items)
             ? clone(incomingSections.testimonials.items)
             : clone(baseSections.testimonials?.items || []),
       },

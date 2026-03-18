@@ -1,23 +1,11 @@
 import React from 'react';
 import axios from 'axios';
 
-const DEFAULT_TESTIMONIALS = [
-  {
-    id: 'default-success-story',
-    name: 'NCLEX KEYS Graduate',
-    role: 'RN Candidate',
-    text: 'The coaching structure made the exam finally click for me and I passed with confidence.',
-    avatar: '',
-    imageUrl: '',
-    imageOnly: false,
-    rating: 5,
-  },
-];
 const BLOCKED_LEGACY_NAMES = new Set(['maria santos', 'john adebayo', 'sarah chen']);
 
 const Testimonials = ({ content = {} }) => {
   const hasExplicitItems = Array.isArray(content?.items);
-  const providedItems = hasExplicitItems && content.items.length ? content.items : DEFAULT_TESTIMONIALS;
+  const providedItems = hasExplicitItems ? content.items : [];
   const testimonials = providedItems.filter((item) => {
     const name = String(item?.name || '').trim().toLowerCase();
     return !BLOCKED_LEGACY_NAMES.has(name);
