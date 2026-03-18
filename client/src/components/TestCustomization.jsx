@@ -139,22 +139,23 @@ const TestCustomization = () => {
 
       return {
         total: totals.total + total,
-        unused: totals.unused + unused,
+        available: totals.available + unused,
         used: totals.used + used,
         omitted: totals.omitted + omitted,
       };
-    }, { total: 0, unused: 0, used: 0, omitted: 0 });
+    }, { total: 0, available: 0, used: 0, omitted: 0 });
   }, [selectedSubcategoryPairs, subcategoryCounts, availableSubcategoryCounts]);
 
-  const questionRangeMin = selectedStats.unused > 0 && selectedStats.unused < 10 ? 1 : 10;
-  const questionRangeMax = Math.max(questionRangeMin, Math.min(selectedStats.unused || 150, 150));
+  const questionRangeMin = selectedStats.available > 0 && selectedStats.available < 10 ? 1 : 10;
+  const questionRangeMax = Math.max(questionRangeMin, Math.min(selectedStats.available || 150, 150));
+  const remainingAfterSelection = Math.max(selectedStats.available - questionCount, 0);
 
   useEffect(() => {
-    if (selectedStats.unused === 0) return;
+    if (selectedStats.available === 0) return;
     if (questionCount > questionRangeMax || questionCount < questionRangeMin) {
       setQuestionCount(Math.min(questionRangeMax, Math.max(questionRangeMin, questionCount)));
     }
-  }, [questionCount, questionRangeMax, questionRangeMin, selectedStats.unused]);
+  }, [questionCount, questionRangeMax, questionRangeMin, selectedStats.available]);
 
   const toggleCategory = (category) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
@@ -186,8 +187,8 @@ const TestCustomization = () => {
       setError('Select at least one subcategory');
       return;
     }
-    if (selectedStats.unused === 0) {
-      setError('No unused questions are available in the selected subcategories.');
+    if (selectedStats.available === 0) {
+      setError('No available questions remain in the selected subcategories.');
       return;
     }
     setLoading(true);
@@ -223,9 +224,11 @@ const TestCustomization = () => {
       <form onSubmit={handleSubmit}>
         <div className="exam-review-filter-strip mb-4">
           {[
-            { key: 'unused', label: 'Unused', count: selectedStats.unused },
+            { key: 'total', label: 'Total', count: selectedStats.total },
+            { key: 'available', label: 'Available', count: selectedStats.available },
             { key: 'used', label: 'Used', count: selectedStats.used },
             { key: 'omitted', label: 'Omitted', count: selectedStats.omitted },
+            { key: 'remaining', label: 'Remaining', count: remainingAfterSelection },
           ].map((item) => (
             <div key={item.key} className="exam-review-filter-pill active">
               <input type="checkbox" checked readOnly />
@@ -234,7 +237,7 @@ const TestCustomization = () => {
             </div>
           ))}
           <div className="exam-review-filter-total">
-            Total Available <strong>{selectedStats.total}</strong>
+            This Test Uses <strong>{Math.min(questionCount, selectedStats.available)}</strong>
           </div>
         </div>
 
@@ -312,7 +315,7 @@ const TestCustomization = () => {
               onChange={(e) => setQuestionCount(Number(e.target.value))}
             />
             <small className="text-muted">
-              Unused questions are removed from future custom tests after the student submits the exam.
+              Available questions are removed from future custom tests after the student submits the exam.
             </small>
           </div>
 
