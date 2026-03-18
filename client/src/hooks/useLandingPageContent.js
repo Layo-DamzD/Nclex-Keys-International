@@ -21,12 +21,15 @@ const writeCache = (key, payload) => {
   }
 };
 
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 const useLandingPageContent = (pageKey) => {
-  const cacheKey = `landing-page-cache:v4:${pageKey}`;
+  const cacheKey = `landing-page-cache:v5:${pageKey}`;
   const cached = readCache(cacheKey);
 
   const [config, setConfig] = useState(cached?.config || null);
   const [hasSavedConfig, setHasSavedConfig] = useState(Boolean(cached?.hasSavedConfig));
+  const isCacheFresh = cached?.cachedAt && Date.now() - cached.cachedAt < CACHE_TTL_MS;
   const [loading, setLoading] = useState(!cached);
 
   useEffect(() => {
@@ -37,11 +40,6 @@ const useLandingPageContent = (pageKey) => {
       try {
         const res = await axios.get(`/api/content/landing-page/${pageKey}`, {
           timeout: 5000,
-          params: { _t: Date.now() },
-          headers: {
-            'Cache-Control': 'no-cache',
-            Pragma: 'no-cache',
-          },
         });
         if (!active) return;
 
@@ -67,12 +65,13 @@ const useLandingPageContent = (pageKey) => {
       }
     };
 
-    load();
+    if (!isCacheFresh) load();
+    else setLoading(false);
 
     return () => {
       active = false;
     };
-  }, [pageKey]);
+  }, [isCacheFresh, pageKey]);
 
   return { config, hasSavedConfig, loading };
 };
