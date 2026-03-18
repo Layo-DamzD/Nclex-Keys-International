@@ -11,13 +11,14 @@ const caseStudySchema = new mongoose.Schema({
     required: true 
   },
   sections: [{
+    sectionId: String,
     title: String,
     content: String
   }], // For additional patient data (vitals, labs, etc.)
   questions: [{
     type: { 
       type: String, 
-      enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown'],
+      enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'bowtie'],
       required: true 
     },
     questionText: String,
@@ -33,6 +34,7 @@ const caseStudySchema = new mongoose.Schema({
       correctColumn: Number
     }],
     // For bowtie questions
+    visibleSectionIds: [String],
     bowtieCondition: [String],
     bowtieActions: [String],
     bowtieParameters: [String],

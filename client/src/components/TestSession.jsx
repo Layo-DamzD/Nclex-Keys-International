@@ -123,6 +123,7 @@ const TestSession = () => {
   const [showReview] = useState(false);
   const [filter] = useState('all');
   const [showCalculator, setShowCalculator] = useState(false);
+  const [activeCaseTabByQuestion, setActiveCaseTabByQuestion] = useState({});
   const [isBooting, setIsBooting] = useState(true);
   const [bootProgress, setBootProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -596,6 +597,11 @@ const TestSession = () => {
     if (!userAnswer || !correctAnswer) return false;
     return String(userAnswer).trim() === String(correctAnswer).trim();
   };
+  const isBowtieCorrect = (userAnswer, correctAnswer) => {
+    if (!userAnswer || !correctAnswer || typeof userAnswer !== 'object' || typeof correctAnswer !== 'object') return false;
+    const requiredKeys = ['condition', 'actionLeft', 'actionRight', 'parameterLeft', 'parameterRight'];
+    return requiredKeys.every((key) => String(userAnswer?.[key] || '').trim() === String(correctAnswer?.[key] || '').trim());
+  };
   const isClozeDropdownCorrect = (userAnswer, correctAnswer) => {
     if (!userAnswer || !correctAnswer || typeof correctAnswer !== 'object') return false;
     const expectedKeys = Object.keys(correctAnswer);
@@ -657,6 +663,8 @@ const TestSession = () => {
             isCorrect = isMatrixCorrect(userAnswer, subQ.matrixRows);
           } else if (subQ.type === 'hotspot') {
             isCorrect = isHotspotCorrect(userAnswer, subQ.correctAnswer);
+          } else if (subQ.type === 'bowtie') {
+            isCorrect = isBowtieCorrect(userAnswer, subQ.correctAnswer);
           } else if (subQ.type === 'cloze-dropdown') {
             isCorrect = isClozeDropdownCorrect(userAnswer, subQ.correctAnswer);
           }
@@ -707,6 +715,8 @@ const TestSession = () => {
           isCorrect = isMatrixCorrect(userAnswer, q.matrixRows);
         } else if (q.type === 'hotspot') {
           isCorrect = isHotspotCorrect(userAnswer, q.correctAnswer);
+        } else if (q.type === 'bowtie') {
+          isCorrect = isBowtieCorrect(userAnswer, q.correctAnswer);
         } else if (q.type === 'cloze-dropdown') {
           isCorrect = isClozeDropdownCorrect(userAnswer, q.correctAnswer);
         }
@@ -1008,6 +1018,16 @@ const TestSession = () => {
     const subQId = subQ._id;
     const dragKey = `${currentQ._id}-${subQId}`;
     const dragList = caseDragItems[dragKey];
+    const visibleSections = (currentQ.sections || []).filter((section, index) => {
+      const sectionId = section?.sectionId || `section-${index + 1}`;
+      const allowed = Array.isArray(subQ?.visibleSectionIds) ? subQ.visibleSectionIds : [];
+      return allowed.length === 0 || allowed.includes(sectionId);
+    });
+    const activeCaseTab = activeCaseTabByQuestion[subQId] || 'scenario';
+    const selectedSection = visibleSections.find((section, index) => {
+      const sectionId = section?.sectionId || `section-${index + 1}`;
+      return sectionId === activeCaseTab;
+    });
 
     return (
       <div className="test-session case-study-session app-no-copy" style={{ position: 'relative' }}>
@@ -1026,16 +1046,39 @@ const TestSession = () => {
         <div className="case-study-layout row">
           {/* Left panel – patient data */}
           <div className="col-md-5 patient-data-panel">
-            <div className="scenario-box p-3 mb-3 bg-light border rounded">
-              <h5>Scenario</h5>
-              <p>{currentQ.scenario}</p>
+            <div className="d-flex flex-wrap gap-2 mb-3">
+              <button
+                type="button"
+                className={`btn btn-sm ${activeCaseTab === 'scenario' ? 'btn-primary' : 'btn-outline-primary'}`}
+                onClick={() => setActiveCaseTabByQuestion((prev) => ({ ...prev, [subQId]: 'scenario' }))}
+              >
+                Patient Info
+              </button>
+              {visibleSections.map((section, index) => {
+                const sectionId = section?.sectionId || `section-${index + 1}`;
+                return (
+                  <button
+                    key={sectionId}
+                    type="button"
+                    className={`btn btn-sm ${activeCaseTab === sectionId ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => setActiveCaseTabByQuestion((prev) => ({ ...prev, [subQId]: sectionId }))}
+                  >
+                    {section.title}
+                  </button>
+                );
+              })}
             </div>
-            {currentQ.sections?.map((section, i) => (
-              <div key={i} className="section-box p-3 mb-3 bg-white border rounded">
-                <h6>{section.title}</h6>
-                <p>{section.content}</p>
+            {activeCaseTab === 'scenario' ? (
+              <div className="scenario-box p-3 mb-3 bg-light border rounded">
+                <h5>Scenario</h5>
+                <p>{currentQ.scenario}</p>
               </div>
-            ))}
+            ) : selectedSection ? (
+              <div className="section-box p-3 mb-3 bg-white border rounded">
+                <h6>{selectedSection.title}</h6>
+                <p>{selectedSection.content}</p>
+              </div>
+            ) : null}
           </div>
 
           {/* Right panel – current question */}
@@ -1084,6 +1127,68 @@ const TestSession = () => {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {subQ.type === 'bowtie' && (
+                <div className="bowtie-runtime">
+                  <div className="row g-3 align-items-center mb-4">
+                    <div className="col-12 col-md-4">
+                      <select
+                        className="form-control"
+                        value={caseAnswers[subQId]?.actionLeft || ''}
+                        disabled={isPaused}
+                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), actionLeft: e.target.value })}
+                      >
+                        <option value="">Action to Take</option>
+                        {(subQ.bowtieActions || []).filter(Boolean).map((opt) => <option key={`al-${opt}`} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-12 col-md-4">
+                      <select
+                        className="form-control"
+                        value={caseAnswers[subQId]?.condition || ''}
+                        disabled={isPaused}
+                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), condition: e.target.value })}
+                      >
+                        <option value="">Potential Condition</option>
+                        {(subQ.bowtieCondition || []).filter(Boolean).map((opt) => <option key={`c-${opt}`} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-12 col-md-4">
+                      <select
+                        className="form-control"
+                        value={caseAnswers[subQId]?.parameterLeft || ''}
+                        disabled={isPaused}
+                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), parameterLeft: e.target.value })}
+                      >
+                        <option value="">Parameter to Monitor</option>
+                        {(subQ.bowtieParameters || []).filter(Boolean).map((opt) => <option key={`pl-${opt}`} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-12 col-md-4">
+                      <select
+                        className="form-control"
+                        value={caseAnswers[subQId]?.actionRight || ''}
+                        disabled={isPaused}
+                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), actionRight: e.target.value })}
+                      >
+                        <option value="">Action to Take</option>
+                        {(subQ.bowtieActions || []).filter(Boolean).map((opt) => <option key={`ar-${opt}`} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-12 col-md-4 offset-md-4">
+                      <select
+                        className="form-control"
+                        value={caseAnswers[subQId]?.parameterRight || ''}
+                        disabled={isPaused}
+                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), parameterRight: e.target.value })}
+                      >
+                        <option value="">Parameter to Monitor</option>
+                        {(subQ.bowtieParameters || []).filter(Boolean).map((opt) => <option key={`pr-${opt}`} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1616,5 +1721,4 @@ const TestSession = () => {
 };
 
 export default TestSession;
-
 

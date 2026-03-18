@@ -21,6 +21,7 @@ const clozeBlankSchema = new mongoose.Schema({
 }, { _id: false });
 
 const caseStudySectionSchema = new mongoose.Schema({
+  sectionId: { type: String, default: '' },
   title: { type: String, default: '' },
   content: { type: String, default: '' }
 }, { _id: false });
@@ -28,7 +29,7 @@ const caseStudySectionSchema = new mongoose.Schema({
 const caseStudyQuestionSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown'],
+    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'bowtie'],
     required: true
   },
   category: { type: String, default: '' },
@@ -44,6 +45,10 @@ const caseStudyQuestionSchema = new mongoose.Schema({
   matrixRows: [matrixRowSchema],
   matrixColumns: [String]
   ,
+  visibleSectionIds: [String],
+  bowtieCondition: [String],
+  bowtieActions: [String],
+  bowtieParameters: [String],
   // Hotspot-specific fields
   hotspotImageUrl: String,
   hotspotTargets: [hotspotTargetSchema],
