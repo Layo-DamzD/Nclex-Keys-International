@@ -292,7 +292,7 @@ const bulkImportQuestions = async (req, res) => {
       let inQuotes = false;
 
       const pushCell = () => {
-        row.push(cell.trim());
+        row.push(cell.replace(/\r/g, '').trim());
         cell = '';
       };
 
@@ -307,33 +307,22 @@ const bulkImportQuestions = async (req, res) => {
         const char = text[i];
         const nextChar = text[i + 1];
 
-        if (inQuotes) {
-          if (char === '"') {
-            if (nextChar === '"') {
-              cell += '"';
-              i += 1;
-              continue;
-            }
-            if (nextChar === ',' || nextChar === '\n' || nextChar === '\r' || nextChar === undefined) {
-              inQuotes = false;
-              continue;
-            }
+        if (char === '"') {
+          if (inQuotes && nextChar === '"') {
+            cell += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
           }
-          cell += char;
           continue;
         }
 
-        if (char === '"' && cell.length === 0) {
-          inQuotes = true;
-          continue;
-        }
-
-        if (char === ',') {
+        if (char === ',' && !inQuotes) {
           pushCell();
           continue;
         }
 
-        if (char === '\n' || char === '\r') {
+        if ((char === '\n' || char === '\r') && !inQuotes) {
           if (char === '\r' && nextChar === '\n') {
             i += 1;
           }
@@ -980,17 +969,17 @@ const createStudentByAdmin = async (req, res) => {
       email,
       password,
       role: 'student',
-      status: 'inactive',
-      approved: false,
+      status: 'active',
+      approved: true,
       program,
       phone,
       country,
       examDate,
-      subscriptionStartDate: subscriptionStartDate
+      subscriptionStartDate,
     });
 
     res.status(201).json({
-      message: 'Student account created and sent for superadmin verification',
+      message: 'Student account created and activated successfully',
       student: {
         _id: user._id,
         name: user.name,

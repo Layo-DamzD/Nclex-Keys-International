@@ -145,6 +145,7 @@ const TestReviewExamView = ({
   const [questionRuntimeMode, setQuestionRuntimeMode] = useState(false);
   const [runtimeBooting, setRuntimeBooting] = useState(false);
   const [activeSummaryTab, setActiveSummaryTab] = useState('results');
+  const [answerFilter, setAnswerFilter] = useState('all');
 
   useEffect(() => {
     const blockEvent = (event) => {
@@ -178,6 +179,7 @@ const TestReviewExamView = ({
     setQuestionRuntimeMode(false);
     setRuntimeBooting(false);
     setActiveSummaryTab('results');
+    setAnswerFilter('all');
   }, [testResult?._id, testResult?.date]);
 
   const answers = Array.isArray(testResult?.answers) ? testResult.answers : [];
@@ -262,6 +264,14 @@ const TestReviewExamView = ({
       })),
     [answers, totalQuestions, timeTaken]
   );
+
+  const filteredReviewRows = useMemo(() => reviewRows.filter((row) => {
+    if (answerFilter === 'all') return true;
+    if (answerFilter === 'correct') return row.status.tone === 'correct';
+    if (answerFilter === 'incorrect') return row.status.tone === 'incorrect';
+    if (answerFilter === 'unanswered') return row.status.tone === 'unanswered';
+    return true;
+  }), [answerFilter, reviewRows]);
 
   const analysisBlocks = useMemo(() => {
     const bySubject = {};
@@ -367,6 +377,18 @@ const TestReviewExamView = ({
   const renderQuestionReviewRuntime = () => {
     if (!active) return null;
     const runtimeStatus = getAnswerStatusMeta(active);
+    const optionPercent = (choiceLetter) => {
+      const raw = active?.optionStats?.[choiceLetter]
+        ?? active?.choicePercentages?.[choiceLetter]
+        ?? active?.percentages?.[choiceLetter];
+      const num = Number(raw);
+      return Number.isFinite(num) && num > 0 ? ` (${num}%)` : '';
+    };
+    const reviewStats = [
+      { label: 'Scored / Max', value: formatMarksLabel(active) },
+      { label: 'Scoring Rule', value: active?.scoringRule || 'Standard' },
+      { label: 'Time Spent', value: formatQuestionTimeLabel(active) },
+    ];
 
     return (
       <div className="test-session exam-runtime-skin exam-review-question-runtime app-no-copy">
@@ -381,61 +403,93 @@ const TestReviewExamView = ({
           <button type="button" className="exam-toolbar-btn" onClick={goBackFromRuntimeQuestion}>
             <i className="fas fa-arrow-left"></i> Back to Summary
           </button>
+          <button
+            type="button"
+            className="exam-toolbar-btn"
+            onClick={() => setActiveQuestionIndex((prev) => Math.max(0, prev - 1))}
+            disabled={activeQuestionIndex === 0}
+          >
+            <i className="fas fa-arrow-left"></i> Previous
+          </button>
+          <button type="button" className="exam-toolbar-btn" onClick={scrollToQuestionList}>
+            <i className="fas fa-map"></i> Navigator
+          </button>
+          <button
+            type="button"
+            className="exam-toolbar-btn"
+            onClick={() => setActiveQuestionIndex((prev) => Math.min(answers.length - 1, prev + 1))}
+            disabled={activeQuestionIndex >= answers.length - 1}
+          >
+            Next <i className="fas fa-arrow-right"></i>
+          </button>
         </div>
 
-        <div className="question-container exam-runtime-question-panel">
-          <p className="question-text">{active.questionText || 'No question text'}</p>
+        <div className="question-container exam-runtime-question-panel exam-review-runtime-split">
+          <div className="exam-review-runtime-question-column">
+            <p className="question-text">{active.questionText || 'No question text'}</p>
 
-          {Array.isArray(active.options) && active.options.length > 0 && (
-            <div className="options">
-              {active.options.map((opt, idx) => {
-                const letter = String.fromCharCode(65 + idx);
-                const userAns = active.userAnswer;
-                const correctAns = active.correctAnswer;
-                const selected = Array.isArray(userAns) ? userAns.includes(letter) : userAns === letter;
-                const correct = Array.isArray(correctAns) ? correctAns.includes(letter) : correctAns === letter;
-                return (
-                  <div
-                    key={`${letter}-${idx}`}
-                    className={`option ${selected ? 'selected' : ''} ${correct ? 'review-correct-option' : ''} ${selected && !correct ? 'review-selected-wrong' : ''} ${selected && correct ? 'review-selected-correct' : ''}`}
-                  >
-                    <span className="option-letter">{letter}</span>
-                    <span>{opt}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+            {Array.isArray(active.options) && active.options.length > 0 && (
+              <div className="exam-review-runtime-option-list">
+                {active.options.map((opt, idx) => {
+                  const letter = String.fromCharCode(65 + idx);
+                  const userAns = active.userAnswer;
+                  const correctAns = active.correctAnswer;
+                  const selected = Array.isArray(userAns) ? userAns.includes(letter) : userAns === letter;
+                  const correct = Array.isArray(correctAns) ? correctAns.includes(letter) : correctAns === letter;
+                  return (
+                    <div
+                      key={`${letter}-${idx}`}
+                      className={`exam-review-runtime-option-row ${selected ? 'selected' : ''} ${correct ? 'correct' : ''} ${selected && !correct ? 'wrong' : ''}`}
+                    >
+                      <span className="exam-review-runtime-option-indicator" />
+                      <span className="exam-review-runtime-option-number">{idx + 1}.</span>
+                      <span className="exam-review-runtime-option-text">{opt}{optionPercent(letter)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-          {active.type === 'hotspot' && (
-            <div className="mt-3">
-              <div className="label mb-1">Hotspot Target</div>
-              <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
-              <div className="small text-muted mt-1">Correct: {formatCorrectAnswer(active)}</div>
-            </div>
-          )}
+            {active.type === 'hotspot' && (
+              <div className="mt-3">
+                <div className="label mb-1">Hotspot Target</div>
+                <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
+                <div className="small text-muted mt-1">Correct: {formatCorrectAnswer(active)}</div>
+              </div>
+            )}
 
-          {active.type === 'cloze-dropdown' && (
-            <div className="mt-3">
-              <div className="label mb-1">Cloze Responses</div>
-              <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
-              <div className="small text-muted mt-1">Correct: {formatCorrectAnswer(active)}</div>
-            </div>
-          )}
+            {active.type === 'cloze-dropdown' && (
+              <div className="mt-3">
+                <div className="label mb-1">Cloze Responses</div>
+                <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
+                <div className="small text-muted mt-1">Correct: {formatCorrectAnswer(active)}</div>
+              </div>
+            )}
 
-          <div className="exam-review-answer-grid exam-review-answer-grid-runtime">
-            <div>
-              <div className="label">Your answer</div>
-              <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
-            </div>
-            <div>
-              <div className="label">Correct answer</div>
-              <div className="value">{formatCorrectAnswer(active)}</div>
+            <div className="exam-review-runtime-stats">
+              {reviewStats.map((item) => (
+                <div key={item.label} className="exam-review-runtime-stat-card">
+                  <strong>{item.value}</strong>
+                  <span>{item.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {(active.rationale || active.rationaleImageUrl) && (
+          <div className="exam-review-runtime-explanation-column">
+            <div className="exam-review-runtime-explanation-tab">Explanation</div>
             <div className="exam-review-rationale-box exam-review-rationale-runtime">
+              <div className="exam-review-answer-grid exam-review-answer-grid-runtime">
+                <div>
+                  <div className="label">Your answer</div>
+                  <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
+                </div>
+                <div>
+                  <div className="label">Correct answer</div>
+                  <div className="value">{formatCorrectAnswer(active)}</div>
+                </div>
+              </div>
+
               {active.rationale && (<div className="rationale-text-block"><strong>Rationale:</strong> {active.rationale}</div>)}
               {active.rationaleImageUrl && (
                 <div className="mt-2">
@@ -443,7 +497,7 @@ const TestReviewExamView = ({
                 </div>
               )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     );
@@ -513,6 +567,26 @@ const TestReviewExamView = ({
           >
             Test Analysis
           </button>
+        </div>
+
+        <div className="exam-review-filter-strip">
+          {[
+            { key: 'all', label: 'Unused', count: reviewRows.length },
+            { key: 'incorrect', label: 'Incorrect', count: summary.incorrect },
+            { key: 'unanswered', label: 'Omitted', count: summary.unanswered },
+            { key: 'correct', label: 'Correct', count: summary.correct },
+          ].map((item) => (
+            <label key={item.key} className={`exam-review-filter-pill ${answerFilter === item.key ? 'active' : ''}`}>
+              <input
+                type="checkbox"
+                checked={answerFilter === item.key}
+                onChange={() => setAnswerFilter((prev) => (prev === item.key ? 'all' : item.key))}
+              />
+              <span>{item.label}</span>
+              <strong>{item.count}</strong>
+            </label>
+          ))}
+          <div className="exam-review-filter-total">Total Available <strong>{reviewRows.length}</strong></div>
         </div>
 
         <div className="exam-review-summary-hero">
@@ -712,7 +786,7 @@ const TestReviewExamView = ({
 
         <div className="exam-review-questions">
           <h4>Question Review</h4>
-          {reviewRows.length === 0 ? (
+          {filteredReviewRows.length === 0 ? (
             <p className="text-muted mb-0">No question review data available.</p>
           ) : (
             <div className="exam-review-table-wrap exam-review-table-wrap-report">
@@ -730,7 +804,7 @@ const TestReviewExamView = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {reviewRows.map((row) => (
+                  {filteredReviewRows.map((row) => (
                     <tr
                       key={`${row.questionId || 'q'}-${row.index}`}
                       className={row.index === activeQuestionIndex ? 'active' : ''}

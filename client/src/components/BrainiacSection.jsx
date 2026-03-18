@@ -8,17 +8,34 @@ const DEFAULT_BRAINIAC = {
   },  tutors: [],
 };
 
-const resolveImageUrl = (rawUrl) => {
+const resolveImageCandidates = (rawUrl) => {
   const url = String(rawUrl || '').trim();
-  if (!url) return '';
-  if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
-  if (url.startsWith('//')) return `${window.location.protocol}${url}`;
+  if (!url) return [];
+  if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return [url];
+  if (url.startsWith('//')) return [`${window.location.protocol}${url}`];
 
   const base = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  const origin = typeof window !== 'undefined' ? window.location.origin.replace(/\/+$/, '') : '';
+  const candidates = [];
+  const pushUnique = (value) => { if (value && !candidates.includes(value)) candidates.push(value); };
 
-  if (url.startsWith('/api/')) return url;
-  if (url.startsWith('/')) return base ? `${base}${url}` : url;
-  return base ? `${base}/${url}` : url;
+  if (url.startsWith('/')) {
+    pushUnique(base ? `${base}${url}` : url);
+    pushUnique(origin ? `${origin}${url}` : '');
+    pushUnique(url);
+  } else {
+    pushUnique(base ? `${base}/${url}` : url);
+    pushUnique(origin ? `${origin}/${url}` : '');
+    pushUnique(url);
+  }
+
+  const uploadMatch = url.match(/(?:^|\/)api\/uploads\/([^/?#]+)/i) || url.match(/(?:^|\/)uploads\/([^/?#]+)/i);
+  if (uploadMatch?.[1]) {
+    pushUnique(origin ? `${origin}/api/uploads/${uploadMatch[1]}` : '');
+    pushUnique(base ? `${base}/api/uploads/${uploadMatch[1]}` : '');
+  }
+
+  return candidates.filter(Boolean);
 };
 
 const BrainiacSection = ({
@@ -32,6 +49,16 @@ const BrainiacSection = ({
 }) => {
   const header = { ...DEFAULT_BRAINIAC.header, ...(content.header || {}) };
   const tutors = Array.isArray(content.tutors) && content.tutors.length ? content.tutors : DEFAULT_BRAINIAC.tutors;
+
+  const handleImageFallback = (event) => {
+    const target = event.currentTarget;
+    const raw = target.getAttribute('data-raw-src') || '';
+    const currentIndex = Number(target.getAttribute('data-fallback-index') || '0');
+    const candidates = resolveImageCandidates(raw);
+    if (currentIndex + 1 >= candidates.length) return;
+    target.setAttribute('data-fallback-index', String(currentIndex + 1));
+    target.src = candidates[currentIndex + 1];
+  };
 
   return (
     <div className={className}>
@@ -53,8 +80,11 @@ const BrainiacSection = ({
               <div className="card-body text-center">
                 {tutor.imageUrl ? (
                   <img
-                    src={resolveImageUrl(tutor.imageUrl)}
+                    src={resolveImageCandidates(tutor.imageUrl)[0] || ''}
                     alt={tutor.name}
+                    data-raw-src={tutor.imageUrl || ''}
+                    data-fallback-index="0"
+                    onError={handleImageFallback}
                     style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', marginBottom: 16 }}
                   />
                 ) : (
