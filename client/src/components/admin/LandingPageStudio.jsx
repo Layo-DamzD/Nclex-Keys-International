@@ -181,7 +181,7 @@ const coerceStructuredConfig = (pageKey, incoming) => {
         ...(baseSections.testimonials || {}),
         ...(incomingSections.testimonials || {}),
         items:
-          Array.isArray(incomingSections.testimonials?.items)
+          Array.isArray(incomingSections.testimonials?.items) && incomingSections.testimonials.items.length
             ? clone(incomingSections.testimonials.items)
             : clone(baseSections.testimonials?.items || []),
       },
@@ -243,6 +243,7 @@ const LandingPageStudio = () => {
   const [selectedTutorIndex, setSelectedTutorIndex] = useState(0);
 
   const pageLabel = pageKey === 'brainiac' ? 'Meet Our Brainiacs' : 'Home Landing Page';
+  const getPageLabel = (key) => (key === 'brainiac' ? 'Meet Our Brainiacs' : 'Home Landing Page');
 
   const loadConfig = async (nextPageKey) => {
     setLoading(true);
@@ -269,11 +270,19 @@ const LandingPageStudio = () => {
       console.error('Landing page studio load failed:', err);
       const statusCode = err?.response?.status;
       const message = err?.response?.data?.message || err.message || 'Failed to load editor data';
-      setError(
-        statusCode === 404
-          ? `404: ${message}. Restart the backend so the landing page routes load.`
-          : `${statusCode ? `${statusCode}: ` : ''}${message}`
-      );
+      if (statusCode === 404) {
+        const nextConfig = getFallbackConfig(nextPageKey);
+        setConfig(nextConfig);
+        setStatus(`${getPageLabel(nextPageKey)} route returned 404, so the editor loaded the current default layout instead.`);
+        if (nextPageKey === 'home') {
+          setSelectedKey(nextConfig.sectionOrder?.[0] || 'hero');
+        } else {
+          setSelectedKey('header');
+          setSelectedTutorIndex(0);
+        }
+        return;
+      }
+      setError(`${statusCode ? `${statusCode}: ` : ''}${message}`);
     } finally {
       setLoading(false);
     }
