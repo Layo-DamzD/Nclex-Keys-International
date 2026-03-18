@@ -123,6 +123,39 @@ const TestCustomization = () => {
     return cols;
   }, []);
 
+  const selectedStats = useMemo(() => {
+    const selectedPairs = selectedSubcategoryPairs.length > 0
+      ? selectedSubcategoryPairs
+      : Object.entries(CATEGORIES).flatMap(([category, subcategories]) => (
+          subcategories.map((subcategory) => getPairKey(category, subcategory))
+        ));
+
+    return selectedPairs.reduce((totals, pairKey) => {
+      const [category, subcategory] = pairKey.split(':::');
+      const total = getSubcategoryCount(category, subcategory);
+      const unused = getAvailableSubcategoryCount(category, subcategory);
+      const used = Math.max(total - unused, 0);
+      const omitted = total > 0 && unused === 0 ? total : 0;
+
+      return {
+        total: totals.total + total,
+        unused: totals.unused + unused,
+        used: totals.used + used,
+        omitted: totals.omitted + omitted,
+      };
+    }, { total: 0, unused: 0, used: 0, omitted: 0 });
+  }, [selectedSubcategoryPairs, subcategoryCounts, availableSubcategoryCounts]);
+
+  const questionRangeMin = selectedStats.unused > 0 && selectedStats.unused < 10 ? 1 : 10;
+  const questionRangeMax = Math.max(questionRangeMin, Math.min(selectedStats.unused || 150, 150));
+
+  useEffect(() => {
+    if (selectedStats.unused === 0) return;
+    if (questionCount > questionRangeMax || questionCount < questionRangeMin) {
+      setQuestionCount(Math.min(questionRangeMax, Math.max(questionRangeMin, questionCount)));
+    }
+  }, [questionCount, questionRangeMax, questionRangeMin, selectedStats.unused]);
+
   const toggleCategory = (category) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
   };
@@ -151,6 +184,10 @@ const TestCustomization = () => {
     e.preventDefault();
     if (selectedSubcategoryPairs.length === 0) {
       setError('Select at least one subcategory');
+      return;
+    }
+    if (selectedStats.unused === 0) {
+      setError('No unused questions are available in the selected subcategories.');
       return;
     }
     setLoading(true);
@@ -184,6 +221,23 @@ const TestCustomization = () => {
       {error && <div className="alert alert-danger">{error}</div>}
       {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
       <form onSubmit={handleSubmit}>
+        <div className="exam-review-filter-strip mb-4">
+          {[
+            { key: 'unused', label: 'Unused', count: selectedStats.unused },
+            { key: 'used', label: 'Used', count: selectedStats.used },
+            { key: 'omitted', label: 'Omitted', count: selectedStats.omitted },
+          ].map((item) => (
+            <div key={item.key} className="exam-review-filter-pill active">
+              <input type="checkbox" checked readOnly />
+              <span>{item.label}</span>
+              <strong>{item.count}</strong>
+            </div>
+          ))}
+          <div className="exam-review-filter-total">
+            Total Available <strong>{selectedStats.total}</strong>
+          </div>
+        </div>
+
         <div className="categories-section">
           <label>Categories & Subcategories</label>
           <div className="category-grid">
@@ -251,12 +305,15 @@ const TestCustomization = () => {
             <input
               type="range"
               className="form-range"
-              min="10"
-              max="150"
-              step="5"
+              min={questionRangeMin}
+              max={questionRangeMax}
+              step={questionRangeMax <= 10 ? 1 : 5}
               value={questionCount}
               onChange={(e) => setQuestionCount(Number(e.target.value))}
             />
+            <small className="text-muted">
+              Unused questions are removed from future custom tests after the student submits the exam.
+            </small>
           </div>
 
           <div className="mode-controls">
