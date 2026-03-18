@@ -1,7 +1,7 @@
 /* global importScripts */
 /* Unified service worker: installable PWA caching + Firebase background messaging */
 
-const SW_VERSION = 'nki-app-sw-v2';
+const SW_VERSION = 'nki-app-sw-v3';
 const APP_SHELL_CACHE = `${SW_VERSION}-shell`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1']);
@@ -111,18 +111,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  const isStaticAsset =
+  const isScriptLikeAsset =
     request.destination === 'script' ||
     request.destination === 'style' ||
-    request.destination === 'image' ||
     request.destination === 'font' ||
     request.destination === 'manifest' ||
-    /\.(?:js|css|png|jpg|jpeg|svg|webp|woff2?|json)$/i.test(requestUrl.pathname);
+    /\.(?:js|css|woff2?|json)$/i.test(requestUrl.pathname);
 
-  if (!isStaticAsset) return;
+  const isImageAsset =
+    request.destination === 'image' ||
+    /\.(?:png|jpg|jpeg|svg|webp|gif)$/i.test(requestUrl.pathname);
+
+  if (!isScriptLikeAsset && !isImageAsset) return;
 
   event.respondWith(
     (async () => {
+      if (isScriptLikeAsset) {
+        try {
+          const freshResponse = await fetch(request, { cache: 'no-store' });
+          return cachePutSafe(RUNTIME_CACHE, request, freshResponse.clone());
+        } catch {
+          return (await caches.match(request)) || (await caches.match('/'));
+        }
+      }
+
       const cached = await caches.match(request);
       const networkPromise = fetch(request)
         .then((response) => cachePutSafe(RUNTIME_CACHE, request, response))

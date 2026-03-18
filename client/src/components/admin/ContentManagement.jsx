@@ -139,6 +139,39 @@ const ContentManagement = () => {
     }
   };
 
+  const handleDownload = async (fileUrl, title = 'study-material') => {
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.get(fileUrl, {
+        responseType: 'blob',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      const blobUrl = window.URL.createObjectURL(
+        new Blob([response.data], {
+          type: response.headers?.['content-type'] || 'application/pdf',
+        })
+      );
+      const extension = String(response.headers?.['content-type'] || '').includes('pdf')
+        ? 'pdf'
+        : (String(fileUrl || '').split('.').pop() || 'pdf');
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute(
+        'download',
+        `${String(title || 'study-material').replace(/[^a-z0-9_-]/gi, '_')}.${extension}`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Failed to download material:', error);
+      window.alert('Could not download this material right now. Please try again.');
+    }
+  };
+
   const getFileIcon = (fileType) => {
     const icons = {
       pdf: 'fa-file-pdf',
@@ -270,14 +303,13 @@ const ContentManagement = () => {
                     </p>
                   </div>
                   <div className="card-footer bg-transparent d-flex justify-content-between">
-                    <a
-                      href={material.fileUrl}
+                    <button
+                      type="button"
                       className="btn btn-primary btn-sm"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      onClick={() => handleDownload(material.fileUrl, material.title)}
                     >
                       <i className="fas fa-download me-2"></i>Download
-                    </a>
+                    </button>
                     <div>
                       <button
                         className="btn btn-sm btn-outline-secondary me-2"

@@ -12,6 +12,7 @@ const CASE_STUDY_TYPES = [
 const QUESTION_TYPES = [
   { value: 'multiple-choice', label: 'Multiple Choice' },
   { value: 'sata', label: 'SATA' },
+  { value: 'bowtie', label: 'Bowtie' },
   { value: 'fill-blank', label: 'Fill in the Blank' },
   { value: 'highlight', label: 'Highlight' },
   { value: 'drag-drop', label: 'Drag & Drop' },
@@ -20,6 +21,7 @@ const QUESTION_TYPES = [
 
 
 const CaseStudyBuilder = () => {
+  const createSectionId = () => `section-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams(); // for editing
@@ -51,6 +53,10 @@ const CaseStudyBuilder = () => {
     questionText: '',
     options: ['', '', '', ''],
     correctAnswer: '',
+    visibleSectionIds: [],
+    bowtieCondition: ['', '', '', ''],
+    bowtieActions: ['', '', '', ''],
+    bowtieParameters: ['', '', '', ''],
     rationale: '',
     difficulty: 'medium',
     highlightStart: 0,
@@ -64,6 +70,10 @@ const CaseStudyBuilder = () => {
     questionText: '',
     options: ['', '', '', ''],
     correctAnswer: '',
+    visibleSectionIds: [],
+    bowtieCondition: ['', '', '', ''],
+    bowtieActions: ['', '', '', ''],
+    bowtieParameters: ['', '', '', ''],
     rationale: '',
     difficulty: 'medium',
     highlightStart: 0,
@@ -83,7 +93,15 @@ const CaseStudyBuilder = () => {
       const response = await axios.get(`/api/admin/case-studies/${editingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setCaseStudy(response.data);
+      setCaseStudy({
+        ...response.data,
+        sections: Array.isArray(response.data?.sections)
+          ? response.data.sections.map((section, index) => ({
+              ...section,
+              sectionId: section?.sectionId || `section-${index + 1}`
+            }))
+          : []
+      });
       if (Array.isArray(response.data?.questions) && response.data.questions.length > 0) {
         const firstQuestion = response.data.questions[0];
         setCurrentQuestion({
@@ -115,7 +133,7 @@ const CaseStudyBuilder = () => {
     }
     setCaseStudy(prev => ({
       ...prev,
-      sections: [...prev.sections, newSection]
+      sections: [...prev.sections, { ...newSection, sectionId: createSectionId() }]
     }));
     setNewSection({ title: '', content: '' });
   };
@@ -178,6 +196,7 @@ const CaseStudyBuilder = () => {
       ...currentQuestion,
       category: caseStudy.category,
       subcategory: caseStudy.subcategory,
+      visibleSectionIds: Array.isArray(currentQuestion.visibleSectionIds) ? currentQuestion.visibleSectionIds : [],
     };
 
     if (editingQuestionIndex >= 0) {
@@ -225,6 +244,10 @@ const CaseStudyBuilder = () => {
       options: Array.isArray(nextQuestion.options) && nextQuestion.options.length ? nextQuestion.options : ['', '', '', ''],
       highlightStart: Number(nextQuestion.highlightStart || 0),
       highlightEnd: Number(nextQuestion.highlightEnd || 0),
+      visibleSectionIds: Array.isArray(nextQuestion.visibleSectionIds) ? nextQuestion.visibleSectionIds : [],
+      bowtieCondition: Array.isArray(nextQuestion.bowtieCondition) && nextQuestion.bowtieCondition.length ? nextQuestion.bowtieCondition : ['', '', '', ''],
+      bowtieActions: Array.isArray(nextQuestion.bowtieActions) && nextQuestion.bowtieActions.length ? nextQuestion.bowtieActions : ['', '', '', ''],
+      bowtieParameters: Array.isArray(nextQuestion.bowtieParameters) && nextQuestion.bowtieParameters.length ? nextQuestion.bowtieParameters : ['', '', '', ''],
       matrixColumns: Array.isArray(nextQuestion.matrixColumns) ? nextQuestion.matrixColumns : [],
       matrixRows: Array.isArray(nextQuestion.matrixRows) ? nextQuestion.matrixRows : [],
     });
@@ -234,7 +257,10 @@ const CaseStudyBuilder = () => {
   };
 
   const openNewQuestionTab = () => {
-    setCurrentQuestion(getEmptyQuestion());
+    setCurrentQuestion({
+      ...getEmptyQuestion(),
+      visibleSectionIds: caseStudy.sections.slice(0, 1).map((section) => section.sectionId).filter(Boolean)
+    });
     setEditingQuestionIndex(-1);
     setActiveQuestionTab('new');
     setActiveTab('questions');
@@ -585,6 +611,131 @@ const CaseStudyBuilder = () => {
                 </div>
               )}
 
+              {currentQuestion.type === 'bowtie' && (
+                <div className="form-group">
+                  <label className="form-label">Bowtie Choices</label>
+                  <div className="row g-3">
+                    <div className="col-md-4">
+                      <label className="form-label">Potential Conditions</label>
+                      {currentQuestion.bowtieCondition.map((opt, idx) => (
+                        <input
+                          key={`condition-${idx}`}
+                          type="text"
+                          className="form-control mb-2"
+                          value={opt}
+                          onChange={(e) => {
+                            const next = [...currentQuestion.bowtieCondition];
+                            next[idx] = e.target.value;
+                            handleQuestionChange('bowtieCondition', next);
+                          }}
+                          placeholder={`Condition option ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Actions to Take</label>
+                      {currentQuestion.bowtieActions.map((opt, idx) => (
+                        <input
+                          key={`action-${idx}`}
+                          type="text"
+                          className="form-control mb-2"
+                          value={opt}
+                          onChange={(e) => {
+                            const next = [...currentQuestion.bowtieActions];
+                            next[idx] = e.target.value;
+                            handleQuestionChange('bowtieActions', next);
+                          }}
+                          placeholder={`Action option ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Parameters to Monitor</label>
+                      {currentQuestion.bowtieParameters.map((opt, idx) => (
+                        <input
+                          key={`parameter-${idx}`}
+                          type="text"
+                          className="form-control mb-2"
+                          value={opt}
+                          onChange={(e) => {
+                            const next = [...currentQuestion.bowtieParameters];
+                            next[idx] = e.target.value;
+                            handleQuestionChange('bowtieParameters', next);
+                          }}
+                          placeholder={`Parameter option ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="row g-3 mt-1">
+                    <div className="col-md-4">
+                      <label className="form-label">Correct Condition</label>
+                      <select
+                        className="form-control"
+                        value={currentQuestion.correctAnswer?.condition || ''}
+                        onChange={(e) => handleQuestionChange('correctAnswer', {
+                          ...(currentQuestion.correctAnswer || {}),
+                          condition: e.target.value
+                        })}
+                      >
+                        <option value="">Select correct condition</option>
+                        {currentQuestion.bowtieCondition.filter(Boolean).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Correct Actions (2)</label>
+                      <select className="form-control mb-2" value={currentQuestion.correctAnswer?.actionLeft || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), actionLeft: e.target.value })}>
+                        <option value="">Action slot 1</option>
+                        {currentQuestion.bowtieActions.filter(Boolean).map((opt) => <option key={`left-${opt}`} value={opt}>{opt}</option>)}
+                      </select>
+                      <select className="form-control" value={currentQuestion.correctAnswer?.actionRight || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), actionRight: e.target.value })}>
+                        <option value="">Action slot 2</option>
+                        {currentQuestion.bowtieActions.filter(Boolean).map((opt) => <option key={`right-${opt}`} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Correct Parameters (2)</label>
+                      <select className="form-control mb-2" value={currentQuestion.correctAnswer?.parameterLeft || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), parameterLeft: e.target.value })}>
+                        <option value="">Parameter slot 1</option>
+                        {currentQuestion.bowtieParameters.filter(Boolean).map((opt) => <option key={`pl-${opt}`} value={opt}>{opt}</option>)}
+                      </select>
+                      <select className="form-control" value={currentQuestion.correctAnswer?.parameterRight || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), parameterRight: e.target.value })}>
+                        <option value="">Parameter slot 2</option>
+                        {currentQuestion.bowtieParameters.filter(Boolean).map((opt) => <option key={`pr-${opt}`} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {caseStudy.sections.length > 0 && (
+                <div className="form-group">
+                  <label className="form-label">Visible Patient Tabs for this Question</label>
+                  <div className="row g-2">
+                    {caseStudy.sections.map((section) => (
+                      <div key={section.sectionId} className="col-md-4">
+                        <label className="form-label d-flex align-items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={currentQuestion.visibleSectionIds.includes(section.sectionId)}
+                            onChange={(e) => {
+                              const nextIds = e.target.checked
+                                ? [...currentQuestion.visibleSectionIds, section.sectionId]
+                                : currentQuestion.visibleSectionIds.filter((id) => id !== section.sectionId);
+                              handleQuestionChange('visibleSectionIds', nextIds);
+                            }}
+                          />
+                          <span>{section.title}</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <small className="text-muted">
+                    Example: show Nurses&apos; Notes only on question 3, Lab Results on question 2, etc.
+                  </small>
+                </div>
+              )}
+
               {/* Correct Answer for MC */}
               {currentQuestion.type === 'multiple-choice' && (
                 <div className="form-group">
@@ -710,4 +861,3 @@ const CaseStudyBuilder = () => {
 };
 
 export default CaseStudyBuilder;
-

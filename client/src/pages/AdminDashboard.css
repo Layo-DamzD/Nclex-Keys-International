@@ -1892,3 +1892,20 @@ html[data-app-theme='dark'] .admin-sidebar-floating-open-btn {
 .admin-dashboard-page .sidebar.collapsed .admin-sidebar-item-badge {
   display: none;
 }
+
+
+.admin-dashboard-page.admin-regular .sidebar {
+  background: linear-gradient(180deg, #1d4ed8, #2563eb);
+}
+
+.admin-dashboard-page.admin-super .sidebar {
+  background: linear-gradient(180deg, #334155, #475569);
+}
+
+.admin-dashboard-page.admin-super .nav-link.active {
+  color: #334155;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page.admin-super .sidebar {
+  background: linear-gradient(180deg, #1f2937, #334155);
+}

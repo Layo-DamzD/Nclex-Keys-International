@@ -247,6 +247,7 @@ const registerStudent = async (req, res) => {
       role: user.role,
       examDate: user.examDate,
       country: user.country,
+      subscriptionStartDate: user.subscriptionStartDate,
       subscriptionExpiresAt: new Date(new Date(user.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
       token: generateToken(user._id)
     });
@@ -266,12 +267,6 @@ const loginStudent = async (req, res) => {
     if (isStudentSubscriptionExpired(user) && user.status !== 'inactive') {
       user.status = 'inactive';
       await user.save();
-    }
-
-    if (!user.approved) {
-      return res.status(403).json({
-        message: 'Your student account is awaiting superadmin verification. Please contact support.'
-      });
     }
 
     if (user.status !== 'active') {
@@ -321,6 +316,7 @@ const loginStudent = async (req, res) => {
       role: user.role,
       examDate: user.examDate,
       country: user.country,
+      subscriptionStartDate: user.subscriptionStartDate,
       subscriptionExpiresAt: new Date(new Date(user.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
       token: generateToken(user._id)
     });

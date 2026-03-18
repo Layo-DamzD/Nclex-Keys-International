@@ -4323,8 +4323,121 @@ html[data-app-theme='dark'] .exam-runtime-skin .option:hover {
   z-index: 1;
 }
 
+.exam-review-runtime-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 40%);
+  gap: 28px;
+  align-items: start;
+}
+
+.exam-review-runtime-question-column,
+.exam-review-runtime-explanation-column {
+  min-width: 0;
+}
+
+.exam-review-runtime-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.exam-review-runtime-option-row {
+  display: grid;
+  grid-template-columns: 20px 36px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+}
+
+.exam-review-runtime-option-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 2px solid #cbd5e1;
+  background: #fff;
+}
+
+.exam-review-runtime-option-row.selected .exam-review-runtime-option-indicator {
+  border-color: #93c5fd;
+  box-shadow: inset 0 0 0 5px #dbeafe;
+}
+
+.exam-review-runtime-option-row.correct .exam-review-runtime-option-indicator {
+  border-color: #22c55e;
+}
+
+.exam-review-runtime-option-row.wrong .exam-review-runtime-option-indicator {
+  border-color: #f97316;
+}
+
+.exam-review-runtime-option-number {
+  font-size: 1.05rem;
+}
+
+.exam-review-runtime-option-text {
+  font-size: 1.02rem;
+  line-height: 1.65;
+}
+
+.exam-review-runtime-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.exam-review-runtime-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.exam-review-runtime-stat-card strong {
+  font-size: 1.15rem;
+  color: #0f172a;
+}
+
+.exam-review-runtime-stat-card span {
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.exam-review-runtime-explanation-tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid #dbe3ee;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: #fff;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.exam-review-runtime-explanation-column .exam-review-rationale-runtime {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
 @media (max-width: 768px) {
   .exam-review-question-runtime .exam-review-answer-grid-runtime {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-review-runtime-split {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-review-runtime-stats {
     grid-template-columns: 1fr;
   }
 }
@@ -11181,4 +11294,77 @@ html[data-app-theme='dark'] .rationale-text-block {
 @media (max-width: 1024px) {
   .exam-review-insight-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .exam-review-analysis-board { grid-template-columns: 1fr; }
+}
+.exam-review-filter-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 20px;
+  margin: 0 0 18px;
+  border: 1px solid #dbe3ee;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.exam-review-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #475569;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.exam-review-filter-pill input {
+  width: 18px;
+  height: 18px;
+  accent-color: #60a5fa;
+}
+
+.exam-review-filter-pill strong,
+.exam-review-filter-total strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 3px 10px;
+  border: 1px solid #93c5fd;
+  border-radius: 999px;
+  color: #2563eb;
+  font-size: 0.9rem;
+  background: #eff6ff;
+}
+
+.exam-review-filter-pill.active span {
+  color: #0f172a;
+}
+
+.exam-review-filter-total {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-style: italic;
+}
+
+html[data-app-theme='dark'] .exam-review-filter-strip {
+  background: #111827;
+  border-color: #334155;
+}
+
+html[data-app-theme='dark'] .exam-review-filter-pill {
+  color: #cbd5e1;
+}
+
+html[data-app-theme='dark'] .exam-review-filter-pill strong,
+html[data-app-theme='dark'] .exam-review-filter-total strong {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(96, 165, 250, 0.45);
+  color: #93c5fd;
+}
+
+html[data-app-theme='dark'] .exam-review-filter-total {
+  color: #cbd5e1;
 }

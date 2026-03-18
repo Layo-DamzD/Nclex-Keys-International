@@ -26,13 +26,12 @@ const Brainiac = () => {
             </div>
           </div>
         ) : (
-          <div className="container mt-5 pt-5">
-            <h1 className="text-center mb-4">Meet Our Brainiacs</h1>
-            <p className="text-center lead mb-5">No Brainiac profiles published yet.</p>
+          <div className="landing-public-page">
+            <div className="landing-public-scroll" />
           </div>
         )}
       </main>
-      <Footer content={footerContent} />
+      {homeContent?.hasSavedConfig ? <Footer content={footerContent} /> : null}
     </div>
   );
 };

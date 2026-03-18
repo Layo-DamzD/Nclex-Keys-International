@@ -152,6 +152,7 @@ const AdminDashboard = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Export failed:', error);
       alert('Failed to export data');
@@ -160,9 +161,7 @@ const AdminDashboard = () => {
 
   return (
     <div
-      className={`admin-dashboard-page admin-container ${
-        userRole === 'admin' ? 'admin-regular' : ''
-      } ${isMobileViewport ? 'admin-mobile' : 'admin-desktop'}`}
+      className={`admin-dashboard-page admin-container ${userRole === 'admin' ? 'admin-regular' : 'admin-super'} ${isMobileViewport ? 'admin-mobile' : 'admin-desktop'}`}
       style={{ display: 'flex', minHeight: '100vh', width: '100%' }}
     >
       {isMobileViewport && !sidebarCollapsed && (

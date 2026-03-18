@@ -60,19 +60,24 @@ const StudentDashboard = () => {
   }, [user?.examDate]);
 
   useEffect(() => {
-    if (!user?.createdAt) {
+    const startRaw = user?.subscriptionStartDate || user?.createdAt;
+    if (!startRaw) {
       setSubscriptionDaysLeft(null);
       return;
     }
-    const createdAt = new Date(user.createdAt);
-    if (Number.isNaN(createdAt.getTime())) {
+    const startDate = new Date(startRaw);
+    if (Number.isNaN(startDate.getTime())) {
       setSubscriptionDaysLeft(null);
       return;
     }
-    const expiryDate = new Date(createdAt.getTime() + (30 * 24 * 60 * 60 * 1000));
-    const diffDays = Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    setSubscriptionDaysLeft(diffDays);
-  }, [user?.createdAt]);
+
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfPayment = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const elapsedDays = Math.max(0, Math.floor((startOfToday.getTime() - startOfPayment.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysLeft = Math.max(0, 30 - elapsedDays);
+    setSubscriptionDaysLeft(daysLeft);
+  }, [user?.subscriptionStartDate, user?.createdAt]);
 
   useEffect(() => {
     if (loading) return;
@@ -384,10 +389,9 @@ const StudentDashboard = () => {
           <div id="dashboard" className="content-section active">
             {subscriptionDaysLeft !== null && subscriptionDaysLeft >= 0 && (
               <div className="alert alert-warning" style={{ fontWeight: 800, fontSize: '1.05rem', borderWidth: '2px' }}>
-                Your subscription is expiring in {subscriptionDaysLeft} day{subscriptionDaysLeft === 1 ? '' : 's'}.
+                Your subscription ends in {subscriptionDaysLeft} day{subscriptionDaysLeft === 1 ? '' : 's'}.
               </div>
             )}
-main
             <StatsCards />
             <div className="row">
               <div className="col-lg-8">

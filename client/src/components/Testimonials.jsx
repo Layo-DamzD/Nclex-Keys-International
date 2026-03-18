@@ -1,12 +1,12 @@
 import React from 'react';
 import axios from 'axios';
 
-const DEFAULT_TESTIMONIALS = [];
 const BLOCKED_LEGACY_NAMES = new Set(['maria santos', 'john adebayo', 'sarah chen']);
 
 const Testimonials = ({ content = {} }) => {
   const hasExplicitItems = Array.isArray(content?.items);
-  const testimonials = (hasExplicitItems ? content.items : DEFAULT_TESTIMONIALS).filter((item) => {
+  const providedItems = hasExplicitItems ? content.items : [];
+  const testimonials = providedItems.filter((item) => {
     const name = String(item?.name || '').trim().toLowerCase();
     return !BLOCKED_LEGACY_NAMES.has(name);
   });
