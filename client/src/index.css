@@ -10915,6 +10915,22 @@ html[data-app-theme='dark'] .brainiac-page .landing-public-page {
   color: #0f172a;
 }
 
+
+.brainiac-page .brainiac-editor-selectable h1,
+.brainiac-page .brainiac-editor-selectable p,
+.brainiac-page .card h5,
+.brainiac-page .card p,
+.brainiac-page .card .text-muted {
+  color: #0f172a !important;
+}
+
+.brainiac-page .card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+
 .public-test-page {
   min-height: 100vh;
   padding: 110px 0 40px;
