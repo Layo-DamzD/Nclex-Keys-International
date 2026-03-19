@@ -778,6 +778,7 @@ const TestSession = () => {
       if (createdResultId) {
         setSubmittedResultId(createdResultId);
         setSubmitReviewError('');
+        navigate(`/test-review/${createdResultId}`);
       } else {
         setSubmitReviewError('Could not open summary automatically. Please use Previous Tests from dashboard.');
       }
@@ -1721,4 +1722,3 @@ const TestSession = () => {
 };
 
 export default TestSession;
-

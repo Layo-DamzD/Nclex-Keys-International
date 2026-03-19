@@ -10,7 +10,7 @@ const getFirebasePublicConfig = () => ({
 
 const buildAppServiceWorkerUrl = () => {
   const params = new URLSearchParams();
-  params.set('swv', '3');
+  params.set('swv', '4');
 
   const firebaseConfig = getFirebasePublicConfig();
   Object.entries(firebaseConfig).forEach(([key, value]) => {

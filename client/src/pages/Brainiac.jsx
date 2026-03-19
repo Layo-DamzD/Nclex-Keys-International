@@ -26,12 +26,12 @@ const Brainiac = () => {
             </div>
           </div>
         ) : (
-          <div className="landing-public-page">
-            <div className="landing-public-scroll" />
+          <div className="container mt-5 pt-5">
+            <BrainiacSection />
           </div>
         )}
       </main>
-      {homeContent?.hasSavedConfig ? <Footer content={footerContent} /> : null}
+      <Footer content={footerContent} />
     </div>
   );
 };

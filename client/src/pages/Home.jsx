@@ -48,11 +48,14 @@ const Home = () => {
           </div>
         </div>
       ) : (
-        <main className="landing-public-page">
-          <div className="landing-public-scroll" />
-        </main>
+        <>
+          <Hero />
+          <Stats />
+          <Program />
+          <Testimonials />
+        </>
       )}
-      {!loading && isStructured ? <Footer content={sections.footer} /> : null}
+      {!loading ? <Footer content={isStructured ? sections.footer : undefined} /> : null}
     </>
   );
 };

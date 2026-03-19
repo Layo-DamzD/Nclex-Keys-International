@@ -21,7 +21,7 @@ const writeCache = (key, payload) => {
   }
 };
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 60 * 1000;
 
 const useLandingPageContent = (pageKey) => {
   const cacheKey = `landing-page-cache:v5:${pageKey}`;
@@ -60,6 +60,10 @@ const useLandingPageContent = (pageKey) => {
       } catch (error) {
         if (!active) return;
         console.error(`Failed to load landing page config for ${pageKey}:`, error);
+        if (!cached) {
+          setHasSavedConfig(false);
+          setConfig(null);
+        }
       } finally {
         if (active) setLoading(false);
       }

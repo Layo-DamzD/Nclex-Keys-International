@@ -27,6 +27,8 @@ const {
   submitCATAnswer,
   checkWeeklyReview,
   markReviewDone,
+  getPublicTestReviewStatus,
+  markPublicTestReviewReviewed,
   submitStudentFeedback,
   getExamSupportMessages,
   sendExamSupportMessage
@@ -57,6 +59,8 @@ router.post('/cat/start', protect, startCATSession);
 router.post('/cat/answer', protect, submitCATAnswer);
 router.get('/check-weekly-review', protect, checkWeeklyReview);
 router.post('/mark-review-done', protect, markReviewDone);
+router.get('/public-test-review-status', protect, getPublicTestReviewStatus);
+router.post('/public-test-review-reviewed', protect, markPublicTestReviewReviewed);
 router.post('/feedback', protect, submitStudentFeedback);
 router.get('/exam-support/messages', protect, getExamSupportMessages);
 router.post('/exam-support/messages', protect, sendExamSupportMessage);

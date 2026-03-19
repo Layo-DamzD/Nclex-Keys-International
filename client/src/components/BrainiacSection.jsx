@@ -85,7 +85,14 @@ const BrainiacSection = ({
                     data-raw-src={tutor.imageUrl || ''}
                     data-fallback-index="0"
                     onError={handleImageFallback}
-                    style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', marginBottom: 16 }}
+                    style={{
+                      width: '100%',
+                      maxWidth: tutor.imageDisplayMode === 'circle' ? 90 : 260,
+                      height: tutor.imageDisplayMode === 'circle' ? 90 : 'auto',
+                      borderRadius: tutor.imageDisplayMode === 'circle' ? '50%' : 12,
+                      objectFit: 'cover',
+                      marginBottom: 16
+                    }}
                   />
                 ) : (
                   <i className={`fas ${tutor.iconClass || 'fa-user'} fa-4x mb-3 ${tutor.colorClass || 'text-primary'}`}></i>
