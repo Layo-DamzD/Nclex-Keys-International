@@ -11437,6 +11437,7 @@ html[data-app-theme='dark'] .exam-review-filter-total {
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 
+
 .testimonial-mobile-list {
   display: grid;
   gap: 16px;
@@ -11445,3 +11446,4 @@ html[data-app-theme='dark'] .exam-review-filter-total {
 .testimonial-mobile-item {
   min-width: 0;
 }
+
