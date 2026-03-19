@@ -12,8 +12,14 @@ const TestCustomization = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
-  const [availableSubcategoryCounts, setAvailableSubcategoryCounts] = useState({});
+  const [usedSubcategoryCounts, setUsedSubcategoryCounts] = useState({});
+  const [omittedSubcategoryCounts, setOmittedSubcategoryCounts] = useState({});
   const [countLoadError, setCountLoadError] = useState('');
+  const [visibleSummary, setVisibleSummary] = useState({
+    available: true,
+    used: true,
+    omitted: true,
+  });
   const navigate = useNavigate();
 
   const handleTimedToggle = (checked) => {
@@ -57,8 +63,11 @@ const TestCustomization = () => {
   const getSubcategoryCount = (category, subcategory) =>
     subcategoryCounts?.[normalizeKey(category)]?.[normalizeKey(subcategory)] || 0;
 
-  const getAvailableSubcategoryCount = (category, subcategory) =>
-    availableSubcategoryCounts?.[normalizeKey(category)]?.[normalizeKey(subcategory)] || 0;
+  const getUsedSubcategoryCount = (category, subcategory) =>
+    usedSubcategoryCounts?.[normalizeKey(category)]?.[normalizeKey(subcategory)] || 0;
+
+  const getOmittedSubcategoryCount = (category, subcategory) =>
+    omittedSubcategoryCounts?.[normalizeKey(category)]?.[normalizeKey(subcategory)] || 0;
 
   const normalizeNestedCounts = (rawNestedCounts = {}) =>
     Object.entries(rawNestedCounts).reduce((acc, [category, subMap]) => {
@@ -82,12 +91,14 @@ const TestCustomization = () => {
         const response = await axios.get('/api/student/subcategory-counts', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const availableRawNestedCounts = response.data?.countsByCategorySubcategory || {};
         const totalRawNestedCounts =
-          response.data?.totalCountsByCategorySubcategory || availableRawNestedCounts;
+          response.data?.totalCountsByCategorySubcategory || response.data?.countsByCategorySubcategory || {};
+        const usedRawNestedCounts = response.data?.usedCountsByCategorySubcategory || {};
+        const omittedRawNestedCounts = response.data?.omittedCountsByCategorySubcategory || {};
 
-        setAvailableSubcategoryCounts(normalizeNestedCounts(availableRawNestedCounts));
         setSubcategoryCounts(normalizeNestedCounts(totalRawNestedCounts));
+        setUsedSubcategoryCounts(normalizeNestedCounts(usedRawNestedCounts));
+        setOmittedSubcategoryCounts(normalizeNestedCounts(omittedRawNestedCounts));
       } catch (err) {
         console.error('Failed to load subcategory counts', err);
         setCountLoadError('Could not load question counts');
@@ -106,14 +117,14 @@ const TestCustomization = () => {
     );
   }, [subcategoryCounts]);
 
-  const availableCategoryTotals = useMemo(() => {
+  const usedCategoryTotals = useMemo(() => {
     return Object.fromEntries(
       Object.entries(CATEGORIES).map(([category, subcats]) => [
         category,
-        subcats.reduce((sum, sub) => sum + getAvailableSubcategoryCount(category, sub), 0)
+        subcats.reduce((sum, sub) => sum + getUsedSubcategoryCount(category, sub), 0)
       ])
     );
-  }, [availableSubcategoryCounts]);
+  }, [usedSubcategoryCounts]);
 
   const categoryColumns = useMemo(() => {
     const cols = [[], [], []];
@@ -132,30 +143,26 @@ const TestCustomization = () => {
 
     return selectedPairs.reduce((totals, pairKey) => {
       const [category, subcategory] = pairKey.split(':::');
-      const total = getSubcategoryCount(category, subcategory);
-      const unused = getAvailableSubcategoryCount(category, subcategory);
-      const used = Math.max(total - unused, 0);
-      const omitted = total > 0 && unused === 0 ? total : 0;
+      const available = getSubcategoryCount(category, subcategory);
+      const used = getUsedSubcategoryCount(category, subcategory);
+      const omitted = getOmittedSubcategoryCount(category, subcategory);
 
       return {
-        total: totals.total + total,
-        available: totals.available + unused,
+        available: totals.available + available,
         used: totals.used + used,
         omitted: totals.omitted + omitted,
       };
-    }, { total: 0, available: 0, used: 0, omitted: 0 });
-  }, [selectedSubcategoryPairs, subcategoryCounts, availableSubcategoryCounts]);
+    }, { available: 0, used: 0, omitted: 0 });
+  }, [selectedSubcategoryPairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts]);
 
-  const questionRangeMin = selectedStats.available > 0 && selectedStats.available < 10 ? 1 : 10;
-  const questionRangeMax = Math.max(questionRangeMin, Math.min(selectedStats.available || 150, 150));
-  const remainingAfterSelection = Math.max(selectedStats.available - questionCount, 0);
+  const questionRangeMin = 5;
+  const questionRangeMax = 150;
 
   useEffect(() => {
-    if (selectedStats.available === 0) return;
     if (questionCount > questionRangeMax || questionCount < questionRangeMin) {
       setQuestionCount(Math.min(questionRangeMax, Math.max(questionRangeMin, questionCount)));
     }
-  }, [questionCount, questionRangeMax, questionRangeMin, selectedStats.available]);
+  }, [questionCount, questionRangeMax, questionRangeMin]);
 
   const toggleCategory = (category) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
@@ -188,7 +195,15 @@ const TestCustomization = () => {
       return;
     }
     if (selectedStats.available === 0) {
-      setError('No available questions remain in the selected subcategories.');
+      setError('No questions are available in the selected subcategories.');
+      return;
+    }
+    if (questionCount < questionRangeMin || questionCount > questionRangeMax) {
+      setError(`Question count must be between ${questionRangeMin} and ${questionRangeMax}.`);
+      return;
+    }
+    if (questionCount > selectedStats.available) {
+      setError(`Only ${selectedStats.available} questions match your current category/subcategory selection.`);
       return;
     }
     setLoading(true);
@@ -224,16 +239,21 @@ const TestCustomization = () => {
       <form onSubmit={handleSubmit}>
         <div className="exam-review-filter-strip mb-4">
           {[
-            { key: 'total', label: 'Total', count: selectedStats.total },
             { key: 'available', label: 'Available', count: selectedStats.available },
             { key: 'used', label: 'Used', count: selectedStats.used },
             { key: 'omitted', label: 'Omitted', count: selectedStats.omitted },
-            { key: 'remaining', label: 'Remaining', count: remainingAfterSelection },
           ].map((item) => (
-            <div key={item.key} className="exam-review-filter-pill active">
-              <input type="checkbox" checked readOnly />
+            <div key={item.key} className={`exam-review-filter-pill ${visibleSummary[item.key] ? 'active' : ''}`}>
+              <input
+                type="checkbox"
+                checked={visibleSummary[item.key]}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setVisibleSummary((prev) => ({ ...prev, [item.key]: checked }));
+                }}
+              />
               <span>{item.label}</span>
-              <strong>{item.count}</strong>
+              <strong>{visibleSummary[item.key] ? item.count : '-'}</strong>
             </div>
           ))}
           <div className="exam-review-filter-total">
@@ -254,7 +274,7 @@ const TestCustomization = () => {
                         {category}
                         <span
                           className="subcategory-count-pill category-total"
-                          title={`Available for custom test: ${availableCategoryTotals[category] || 0}`}
+                          title={`Used in your custom tests: ${usedCategoryTotals[category] || 0}`}
                         >
                           {categoryTotals[category] || 0}
                         </span>
@@ -286,7 +306,7 @@ const TestCustomization = () => {
                               <span>{sub}</span>
                               <span
                                 className="subcategory-count-pill"
-                                title={`Available for custom test: ${getAvailableSubcategoryCount(category, sub)}`}
+                                title={`Used in your custom tests: ${getUsedSubcategoryCount(category, sub)}`}
                               >
                                 {getSubcategoryCount(category, sub)}
                               </span>
@@ -310,13 +330,10 @@ const TestCustomization = () => {
               className="form-range"
               min={questionRangeMin}
               max={questionRangeMax}
-              step={questionRangeMax <= 10 ? 1 : 5}
+              step={1}
               value={questionCount}
               onChange={(e) => setQuestionCount(Number(e.target.value))}
             />
-            <small className="text-muted">
-              Available questions are removed from future custom tests after the student submits the exam.
-            </small>
           </div>
 
           <div className="mode-controls">
