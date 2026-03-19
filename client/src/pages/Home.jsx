@@ -42,11 +42,15 @@ const Home = () => {
       {isStructured ? (
         <>{order.map(renderStructuredSection)}</>
       ) : hasSavedConfig && config ? (
-        <div className="landing-public-page">
-          <div className="landing-public-scroll">
-            <LandingLayoutRenderer config={config} />
+        <>
+          <Hero content={sections.hero} />
+          <div className="landing-public-page">
+            <div className="landing-public-scroll">
+              <LandingLayoutRenderer config={config} />
+            </div>
           </div>
-        </div>
+          <Testimonials content={sections.testimonials || { items: [] }} />
+        </>
       ) : (
         <>
           <Hero />

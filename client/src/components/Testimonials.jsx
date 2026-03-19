@@ -3,16 +3,44 @@ import axios from 'axios';
 
 const BLOCKED_LEGACY_NAMES = new Set(['maria santos', 'john adebayo', 'sarah chen']);
 
+const DEFAULT_TESTIMONIALS = {
+  heading: 'Success Stories',
+  subheading: 'Hear from our graduates who passed NCLEX',
+  items: [
+    {
+      id: 'default-success-1',
+      name: 'Recent Graduate',
+      role: 'NCLEX-RN Passer',
+      text: 'Nclex Keys gave me the structure and confidence I needed to pass on my first attempt.',
+      rating: 5,
+    },
+    {
+      id: 'default-success-2',
+      name: 'International Nurse',
+      role: 'First-Time Pass',
+      text: 'The coaching style and exam drills made difficult questions feel manageable on test day.',
+      rating: 5,
+    },
+    {
+      id: 'default-success-3',
+      name: 'Program Alumni',
+      role: 'Licensed Nurse',
+      text: 'I stayed accountable, improved weak areas, and achieved my NCLEX goal with this program.',
+      rating: 5,
+    },
+  ],
+};
+
 const Testimonials = ({ content = {} }) => {
-  const hasExplicitItems = Array.isArray(content?.items);
-  const providedItems = hasExplicitItems ? content.items : [];
+  const providedItems = Array.isArray(content?.items) && content.items.length
+    ? content.items
+    : DEFAULT_TESTIMONIALS.items;
   const testimonials = providedItems.filter((item) => {
     const name = String(item?.name || '').trim().toLowerCase();
     return !BLOCKED_LEGACY_NAMES.has(name);
   });
-  if (testimonials.length === 0) return null;
-  const heading = content.heading || 'Success Stories';
-  const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
+  const heading = content.heading || DEFAULT_TESTIMONIALS.heading;
+  const subheading = content.subheading || DEFAULT_TESTIMONIALS.subheading;
   const resolveMediaCandidates = (rawUrl) => {
     const original = String(rawUrl || '').trim();
     if (!original) return [];
