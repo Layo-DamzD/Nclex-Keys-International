@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const DEFAULT_CONTENT = {
@@ -38,9 +38,12 @@ const Hero = ({ content = {} }) => {
   const data = { ...DEFAULT_CONTENT, ...content };
   const features = Array.isArray(data.features) && data.features.length ? data.features : DEFAULT_CONTENT.features;
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
-  const videoId = useMemo(() => extractYouTubeId(data.videoUrl), [data.videoUrl]);
+  const videoId = extractYouTubeId(data.videoUrl);
   const thumbnailUrl = videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '';
   const shouldUseLiteEmbed = Boolean(videoId);
+  const embedUrl = videoId
+    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`
+    : data.videoUrl;
 
   return (
     <section id="home" className="hero-section" style={{ 
@@ -112,8 +115,7 @@ const Hero = ({ content = {} }) => {
                       className="nki-hero-video-poster"
                       src={thumbnailUrl}
                       alt="Watch NCLEX success story"
-                      loading="eager"
-                      fetchPriority="high"
+                      loading="lazy"
                     />
                   ) : null}
                   <span className="nki-hero-video-overlay">
@@ -128,7 +130,7 @@ const Hero = ({ content = {} }) => {
                   className="nki-hero-video-embed"
                   width="100%" 
                   height="380" 
-                  src={data.videoUrl} 
+                  src={embedUrl} 
                   title="NCLEX Success Story" 
                   frameBorder="0" 
                   loading="lazy"
