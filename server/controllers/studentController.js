@@ -22,6 +22,17 @@ const submitTest = async (req, res) => {
     if (!Array.isArray(user.customTestUsedQuestions)) {
       user.customTestUsedQuestions = [];
     }
+    if (!Array.isArray(user.customTestOmittedQuestions)) {
+      user.customTestOmittedQuestions = [];
+    }
+
+    const isAnswered = (answer) => {
+      if (answer === undefined || answer === null) return false;
+      if (typeof answer === 'string') return answer.trim().length > 0;
+      if (Array.isArray(answer)) return answer.length > 0;
+      if (typeof answer === 'object') return Object.keys(answer).length > 0;
+      return true;
+    };
 
     // Track seen and incorrect questions
     for (const result of results) {
@@ -33,9 +44,19 @@ const submitTest = async (req, res) => {
         user.seenQuestions.push(qid);
       }
 
-      // For Create Test availability, exclude only questions already used in custom tests.
+      // Track Create Test analytics per student without removing global availability.
       if (isCustomTest && !user.customTestUsedQuestions.some((id) => String(id) === qidStr)) {
         user.customTestUsedQuestions.push(qid);
+      }
+
+      if (isCustomTest) {
+        const omitted = !isAnswered(result?.userAnswer);
+        const hasOmitted = user.customTestOmittedQuestions.some((id) => String(id) === qidStr);
+        if (omitted && !hasOmitted) {
+          user.customTestOmittedQuestions.push(qid);
+        } else if (!omitted && hasOmitted) {
+          user.customTestOmittedQuestions = user.customTestOmittedQuestions.filter((id) => String(id) !== qidStr);
+        }
       }
 
       // Handle incorrect questions
@@ -144,8 +165,9 @@ const getCategories = async (req, res) => {
 // @access  Private
 const getSubcategoryCounts = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('customTestUsedQuestions');
+    const user = await User.findById(req.user.id).select('customTestUsedQuestions customTestOmittedQuestions');
     const customUsedIds = user?.customTestUsedQuestions || [];
+    const customOmittedIds = user?.customTestOmittedQuestions || [];
 
     const buildCountsFromRows = (rows) => rows.reduce((acc, row) => {
       const category = row?._id?.category;
@@ -172,23 +194,25 @@ const getSubcategoryCounts = async (req, res) => {
     };
 
     const totalRows = await Question.aggregate([groupStage]);
-
-    let availableRows = totalRows;
-    if (customUsedIds.length > 0) {
-      availableRows = await Question.aggregate([
-        { $match: { _id: { $nin: customUsedIds } } },
-        groupStage
-      ]);
-    }
-
-    const availableCounts = buildCountsFromRows(availableRows);
     const totalCounts = buildCountsFromRows(totalRows);
+    const usedRows = customUsedIds.length > 0
+      ? await Question.aggregate([{ $match: { _id: { $in: customUsedIds } } }, groupStage])
+      : [];
+    const omittedRows = customOmittedIds.length > 0
+      ? await Question.aggregate([{ $match: { _id: { $in: customOmittedIds } } }, groupStage])
+      : [];
+    const usedCounts = buildCountsFromRows(usedRows);
+    const omittedCounts = buildCountsFromRows(omittedRows);
 
     res.json({
-      countsByCategorySubcategory: availableCounts.countsByCategorySubcategory,
-      countsBySubcategory: availableCounts.countsBySubcategory,
+      countsByCategorySubcategory: totalCounts.countsByCategorySubcategory,
+      countsBySubcategory: totalCounts.countsBySubcategory,
       totalCountsByCategorySubcategory: totalCounts.countsByCategorySubcategory,
-      totalCountsBySubcategory: totalCounts.countsBySubcategory
+      totalCountsBySubcategory: totalCounts.countsBySubcategory,
+      usedCountsByCategorySubcategory: usedCounts.countsByCategorySubcategory,
+      usedCountsBySubcategory: usedCounts.countsBySubcategory,
+      omittedCountsByCategorySubcategory: omittedCounts.countsByCategorySubcategory,
+      omittedCountsBySubcategory: omittedCounts.countsBySubcategory
     });
   } catch (error) {
     console.error(error);
@@ -202,9 +226,6 @@ const getSubcategoryCounts = async (req, res) => {
 const generateTest = async (req, res) => {
   try {
     const { subcategories, selections, questionCount, timed, tutorMode } = req.body;
-    const user = await User.findById(req.user.id).select('customTestUsedQuestions');
-    const customUsedIds = user?.customTestUsedQuestions || [];
-
     const parsedSelections = Array.isArray(selections)
       ? selections.filter((item) => item?.category && item?.subcategory)
       : [];
@@ -221,17 +242,10 @@ const generateTest = async (req, res) => {
       return res.status(400).json({ message: 'Select at least one subcategory' });
     }
 
-    // Exclude questions already used in this student's previous custom tests only.
-    // Do not use seenQuestions here because prepared tests/reviews should not affect
-    // custom-test availability.
-    if (customUsedIds.length > 0) {
-      query._id = { $nin: customUsedIds };
-    }
-
-    const availableCount = await Question.countDocuments(query);
-    if (availableCount < questionCount) {
+    const matchingCount = await Question.countDocuments(query);
+    if (matchingCount < questionCount) {
         return res.status(400).json({
-        message: `Only ${availableCount} questions available for custom tests in selected categories/subcategories.`
+        message: `Only ${matchingCount} questions match your selected categories/subcategories.`
       });
     }
 

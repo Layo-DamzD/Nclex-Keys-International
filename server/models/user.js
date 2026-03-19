@@ -29,10 +29,12 @@ const userSchema = new mongoose.Schema({
   luxandPersonId: { type: String },
   faceEnrolledAt: { type: Date },
   seenQuestions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
-  // Tracks questions already used in student's custom (Create Test) exams only.
+  // Tracks questions attempted in student's custom (Create Test) exams.
   // This is separate from seenQuestions because students can "see" questions in
-  // prepared tests/reviews without wanting to exhaust custom-test availability.
+  // prepared tests/reviews without custom-test analytics being affected.
   customTestUsedQuestions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
+  // Tracks questions omitted (left unanswered) in student's custom tests.
+  customTestOmittedQuestions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
   // Web push tokens (Firebase Cloud Messaging) for this student across browsers/devices.
   // Keep this simple as strings so legacy records remain compatible.
   fcmTokens: [{ type: String }],

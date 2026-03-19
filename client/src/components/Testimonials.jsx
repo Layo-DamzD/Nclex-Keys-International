@@ -1,15 +1,11 @@
 import React from 'react';
 import axios from 'axios';
 
-const BLOCKED_LEGACY_NAMES = new Set(['maria santos', 'john adebayo', 'sarah chen']);
 
 const Testimonials = ({ content = {} }) => {
   const hasExplicitItems = Array.isArray(content?.items);
   const providedItems = hasExplicitItems ? content.items : [];
-  const testimonials = providedItems.filter((item) => {
-    const name = String(item?.name || '').trim().toLowerCase();
-    return !BLOCKED_LEGACY_NAMES.has(name);
-  });
+  const testimonials = providedItems;
   if (testimonials.length === 0) return null;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
