@@ -1,9 +1,28 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 const BLOCKED_LEGACY_NAMES = new Set(['maria santos', 'john adebayo', 'sarah chen']);
 
+const MOBILE_BREAKPOINT = '(max-width: 767.98px)';
+
 const Testimonials = ({ content = {} }) => {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+    return window.matchMedia(MOBILE_BREAKPOINT).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mediaQuery = window.matchMedia(MOBILE_BREAKPOINT);
+    const sync = (event) => setIsMobile(event.matches);
+    setIsMobile(mediaQuery.matches);
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', sync);
+      return () => mediaQuery.removeEventListener('change', sync);
+    }
+    mediaQuery.addListener(sync);
+    return () => mediaQuery.removeListener(sync);
+  }, []);
   const hasExplicitItems = Array.isArray(content?.items);
   const providedItems = hasExplicitItems ? content.items : [];
   const testimonials = providedItems.filter((item) => {
@@ -78,6 +97,98 @@ const Testimonials = ({ content = {} }) => {
     target.src = candidates[index + 1];
   };
 
+
+  const renderTestimonialCard = (testimonial, index) => {
+    if (testimonial.imageOnly && (testimonial.imageUrl || testimonial.avatar)) {
+      return (
+        <div
+          className="testimonial-card testimonial-card-image-only"
+          style={{
+            background: 'white',
+            padding: '0',
+            borderRadius: '0',
+            boxShadow: '0 5px 20px rgba(0,0,0,0.05)',
+            textAlign: 'center',
+          }}
+        >
+          <img
+            src={firstMediaUrl(testimonial.imageUrl || testimonial.avatar)}
+            data-raw-src={testimonial.imageUrl || testimonial.avatar || ''}
+            data-fallback-index="0"
+            onError={handleImageFallback}
+            alt={testimonial.name || 'Success story'}
+            loading={index === 0 ? 'eager' : 'lazy'}
+            style={{
+              width: '100%',
+              maxHeight: '620px',
+              objectFit: 'contain',
+              objectPosition: 'center',
+              backgroundColor: '#ffffff',
+              borderRadius: '0',
+              display: 'block'
+            }}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className="testimonial-card"
+        style={{
+          background: 'white',
+          padding: '30px',
+          borderRadius: '20px',
+          boxShadow: '0 5px 20px rgba(0,0,0,0.05)',
+          textAlign: 'center',
+        }}
+      >
+        {(testimonial.avatar || testimonial.imageUrl || testimonial.name || testimonial.role) && (
+          <div className="testimonial-header d-flex align-items-center justify-content-center mb-4">
+            {(testimonial.avatar || testimonial.imageUrl) && (
+              <img
+                src={firstMediaUrl(testimonial.avatar || testimonial.imageUrl)}
+                data-raw-src={testimonial.avatar || testimonial.imageUrl || ''}
+                data-fallback-index="0"
+                onError={handleImageFallback}
+                alt={testimonial.name || 'Success story'}
+                loading={index === 0 ? 'eager' : 'lazy'}
+                style={{ width: '60px', height: '60px', borderRadius: '50%', marginRight: '15px', objectFit: 'cover' }}
+              />
+            )}
+            {(testimonial.name || testimonial.role) && (
+              <div>
+                {testimonial.name ? <h5>{testimonial.name}</h5> : null}
+                {testimonial.role ? <small>{testimonial.role}</small> : null}
+              </div>
+            )}
+          </div>
+        )}
+        {testimonial.text ? (
+          <p className="testimonial-text" style={{ fontStyle: 'italic', color: '#457b9d' }}>
+            "{testimonial.text}"
+          </p>
+        ) : null}
+        {Number.isFinite(Number(testimonial.rating)) && Number(testimonial.rating) > 0 ? (
+          <div className="rating mt-3" style={{ color: '#ffc107' }}>
+            {[...Array(5)].map((_, i) => (
+              <i
+                key={i}
+                className={`fas fa-star${
+                  i >= Math.floor(testimonial.rating || 0)
+                    ? testimonial.rating % 1 !== 0 && i === Math.floor(testimonial.rating)
+                      ? '-half-alt'
+                      : ''
+                    : ''
+                }`}
+              ></i>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <section
       id="success"
@@ -89,112 +200,39 @@ const Testimonials = ({ content = {} }) => {
           <h2 style={{ fontFamily: "'Roboto Slab', serif", color: '#1d3557' }}>{heading}</h2>
           <p style={{ color: '#457b9d' }}>{subheading}</p>
         </div>
-        <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-aos="fade-up">
-          <div className="carousel-inner">
+        {isMobile ? (
+          <div className="testimonial-mobile-list" data-aos="fade-up">
             {testimonials.map((testimonial, index) => (
-              <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
-                <div className="row justify-content-center">
-                  <div className="col-md-8">
-                    {testimonial.imageOnly && (testimonial.imageUrl || testimonial.avatar) ? (
-                      <div
-                        className="testimonial-card testimonial-card-image-only"
-                        style={{
-                          background: 'white',
-                          padding: '0',
-                          borderRadius: '0',
-                          boxShadow: '0 5px 20px rgba(0,0,0,0.05)',
-                          textAlign: 'center',
-                        }}
-                      >
-                        <img
-                          src={firstMediaUrl(testimonial.imageUrl || testimonial.avatar)}
-                          data-raw-src={testimonial.imageUrl || testimonial.avatar || ''}
-                          data-fallback-index="0"
-                          onError={handleImageFallback}
-                          alt={testimonial.name || 'Success story'}
-                          style={{
-                            width: '100%',
-                            maxHeight: '620px',
-                            objectFit: 'contain',
-                            objectPosition: 'center',
-                            backgroundColor: '#ffffff',
-                            borderRadius: '0',
-                            display: 'block'
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className="testimonial-card"
-                        style={{
-                          background: 'white',
-                          padding: '30px',
-                          borderRadius: '20px',
-                          boxShadow: '0 5px 20px rgba(0,0,0,0.05)',
-                          textAlign: 'center',
-                        }}
-                      >
-                        {(testimonial.avatar || testimonial.imageUrl || testimonial.name || testimonial.role) && (
-                          <div className="testimonial-header d-flex align-items-center justify-content-center mb-4">
-                            {(testimonial.avatar || testimonial.imageUrl) && (
-                              <img
-                                src={firstMediaUrl(testimonial.avatar || testimonial.imageUrl)}
-                                data-raw-src={testimonial.avatar || testimonial.imageUrl || ''}
-                                data-fallback-index="0"
-                                onError={handleImageFallback}
-                                alt={testimonial.name || 'Success story'}
-                                style={{ width: '60px', height: '60px', borderRadius: '50%', marginRight: '15px', objectFit: 'cover' }}
-                              />
-                            )}
-                            {(testimonial.name || testimonial.role) && (
-                              <div>
-                                {testimonial.name ? <h5>{testimonial.name}</h5> : null}
-                                {testimonial.role ? <small>{testimonial.role}</small> : null}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {testimonial.text ? (
-                          <p className="testimonial-text" style={{ fontStyle: 'italic', color: '#457b9d' }}>
-                            "{testimonial.text}"
-                          </p>
-                        ) : null}
-                        {Number.isFinite(Number(testimonial.rating)) && Number(testimonial.rating) > 0 ? (
-                          <div className="rating mt-3" style={{ color: '#ffc107' }}>
-                            {[...Array(5)].map((_, i) => (
-                              <i
-                                key={i}
-                                className={`fas fa-star${
-                                  i >= Math.floor(testimonial.rating || 0)
-                                    ? testimonial.rating % 1 !== 0 && i === Math.floor(testimonial.rating)
-                                      ? '-half-alt'
-                                      : ''
-                                    : ''
-                                }`}
-                              ></i>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                </div>
+              <div className="testimonial-mobile-item" key={testimonial.id || index}>
+                {renderTestimonialCard(testimonial, index)}
               </div>
             ))}
           </div>
-          {testimonials.length > 1 && (
-            <>
-              <button className="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
-                <span className="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span className="visually-hidden">Previous</span>
-              </button>
-              <button className="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
-                <span className="carousel-control-next-icon" aria-hidden="true"></span>
-                <span className="visually-hidden">Next</span>
-              </button>
-            </>
-          )}
-        </div>
+        ) : (
+          <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-aos="fade-up">
+            <div className="carousel-inner">
+              {testimonials.map((testimonial, index) => (
+                <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
+                  <div className="row justify-content-center">
+                    <div className="col-md-8">{renderTestimonialCard(testimonial, index)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {testimonials.length > 1 && (
+              <>
+                <button className="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
+                  <span className="carousel-control-prev-icon" aria-hidden="true"></span>
+                  <span className="visually-hidden">Previous</span>
+                </button>
+                <button className="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
+                  <span className="carousel-control-next-icon" aria-hidden="true"></span>
+                  <span className="visually-hidden">Next</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
