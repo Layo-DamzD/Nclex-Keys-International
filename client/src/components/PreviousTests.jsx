@@ -14,7 +14,10 @@ const PreviousTests = () => {
         const response = await axios.get('/api/student/test-history', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setTests(response.data);
+        const allTests = Array.isArray(response.data) ? response.data : [];
+        setTests(
+          allTests.filter((test) => !String(test?.testName || '').toLowerCase().includes('public knowledge test'))
+        );
       } catch (error) {
         console.error('Error fetching test history:', error);
       } finally {
@@ -58,12 +61,10 @@ const PreviousTests = () => {
             </thead>
             <tbody>
               {tests.map((test) => {
-                const isPublicTest = String(test.testName || '').toLowerCase().includes('public knowledge test');
                 return (
                 <tr key={test._id}>
                   <td>
                     {test.testName}
-                    {isPublicTest && <span className="badge bg-info ms-2">Public</span>}
                   </td>
                   <td>{new Date(test.date).toLocaleDateString()}</td>
                   <td>{test.score}/{test.totalQuestions}</td>

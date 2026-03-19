@@ -989,6 +989,75 @@ const markReviewDone = async (req, res) => {
   }
 };
 
+// @desc    Get public test review status for popup flow
+// @route   GET /api/student/public-test-review-status
+// @access  Private
+const getPublicTestReviewStatus = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const user = await User.findById(studentId).select('publicTestResult');
+    if (!user) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const submittedAt = user?.publicTestResult?.submittedAt ? new Date(user.publicTestResult.submittedAt) : null;
+    if (!submittedAt || Number.isNaN(submittedAt.getTime())) {
+      return res.json({ hasReview: false, needsPrompt: false });
+    }
+
+    const reviewedAt = user?.publicTestResult?.reviewedAt ? new Date(user.publicTestResult.reviewedAt) : null;
+    const isReviewed = Boolean(reviewedAt && !Number.isNaN(reviewedAt.getTime()));
+
+    const latestPublicReview = await TestResult.findOne({
+      student: studentId,
+      testName: /public knowledge test/i
+    })
+      .sort({ date: -1, createdAt: -1 })
+      .select('_id date testName percentage');
+
+    return res.json({
+      hasReview: true,
+      needsPrompt: !isReviewed,
+      reviewed: isReviewed,
+      submittedAt,
+      reviewedAt: isReviewed ? reviewedAt : null,
+      percentage: Number(user?.publicTestResult?.percentage || 0),
+      reviewResultId: latestPublicReview?._id || null
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Mark public test review as reviewed
+// @route   POST /api/student/public-test-review-reviewed
+// @access  Private
+const markPublicTestReviewReviewed = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const user = await User.findById(studentId).select('publicTestResult');
+    if (!user) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const submittedAt = user?.publicTestResult?.submittedAt ? new Date(user.publicTestResult.submittedAt) : null;
+    if (!submittedAt || Number.isNaN(submittedAt.getTime())) {
+      return res.status(400).json({ message: 'No public test result to review' });
+    }
+
+    user.publicTestResult = {
+      ...user.publicTestResult,
+      reviewedAt: new Date()
+    };
+    await user.save();
+    return res.json({ marked: true });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Register/update a student's web push (FCM) token
 // @route   POST /api/student/fcm-token
 // @access  Private
@@ -1200,6 +1269,8 @@ module.exports = {
   submitCATAnswer,
   checkWeeklyReview, 
   markReviewDone,
+  getPublicTestReviewStatus,
+  markPublicTestReviewReviewed,
   submitStudentFeedback,
   getExamSupportMessages,
   sendExamSupportMessage

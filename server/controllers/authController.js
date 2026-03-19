@@ -1,6 +1,7 @@
 const User = require('../models/user');
 const PublicTestLead = require('../models/PublicTestLead');
 const TestResult = require('../models/testResult');
+const Activity = require('../models/Activity');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -156,7 +157,8 @@ const claimLatestPublicTestResultForUser = async (user) => {
     total: Number(latestLead.total || 0),
     attempted: Number(latestLead.attempted || 0),
     percentage: Number(latestLead.percentage || 0),
-    submittedAt: latestLead.createdAt || new Date()
+    submittedAt: latestLead.createdAt || new Date(),
+    reviewedAt: null
   };
 
   latestLead.claimedBy = user._id;
@@ -179,7 +181,7 @@ const claimLatestPublicTestResultForUser = async (user) => {
     : [];
 
   if (mappedAnswers.length > 0) {
-    await TestResult.create({
+    const createdReview = await TestResult.create({
       student: user._id,
       testName: 'Public Knowledge Test',
       date: latestLead.createdAt || new Date(),
@@ -190,6 +192,23 @@ const claimLatestPublicTestResultForUser = async (user) => {
       passed: Number(latestLead.percentage || 0) >= 50,
       answers: mappedAnswers
     });
+
+    try {
+      await Activity.create({
+        student: user._id,
+        type: 'notification',
+        text: 'Public test result matched to your account',
+        detail: 'Open Previous Tests to review your public test summary.',
+        description: 'Public test result available',
+        metadata: {
+          isNotification: true,
+          score: Number(latestLead.percentage || 0),
+          reviewResultId: createdReview?._id
+        }
+      });
+    } catch (activityError) {
+      console.error('Failed to create activity for public test review:', activityError);
+    }
   }
   return true;
 };

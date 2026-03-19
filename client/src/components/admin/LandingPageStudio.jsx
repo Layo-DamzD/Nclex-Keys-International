@@ -97,7 +97,7 @@ const DEFAULT_HOME_CONFIG = {
     testimonials: {
       heading: 'Success Stories',
       subheading: 'Hear from our graduates who passed NCLEX',
-      items: [{ id: 1, name: 'NCLEX KEYS Graduate', role: 'RN Candidate', text: 'The coaching structure made the exam finally click for me and I passed with confidence.', avatar: '', imageUrl: '', imageOnly: false, rating: 5 }],
+      items: [{ id: 1, name: 'NCLEX KEYS Graduate', role: 'RN Candidate', text: 'The coaching structure made the exam finally click for me and I passed with confidence.', avatar: '', imageUrl: '', imageOnly: false, imageWithCaption: false, imageDisplayMode: 'standard', rating: 5 }],
     },
     footer: {
       brandLinkUrl: '/',
@@ -142,7 +142,10 @@ const coerceStructuredConfig = (pageKey, incoming) => {
       ...clone(incoming),
       mode: 'structured',
       header: { ...(base.header || {}), ...(incoming.header || {}) },
-      tutors: Array.isArray(incoming.tutors) ? clone(incoming.tutors) : clone(base.tutors || []),
+      tutors: (Array.isArray(incoming.tutors) ? clone(incoming.tutors) : clone(base.tutors || [])).map((tutor) => ({
+        ...tutor,
+        imageDisplayMode: tutor?.imageDisplayMode === 'circle' ? 'circle' : 'full',
+      })),
     };
   }
 
@@ -182,7 +185,12 @@ const coerceStructuredConfig = (pageKey, incoming) => {
         ...(incomingSections.testimonials || {}),
         items:
           Array.isArray(incomingSections.testimonials?.items)
-            ? clone(incomingSections.testimonials.items)
+            ? clone(incomingSections.testimonials.items).map((item) => ({
+                ...item,
+                imageDisplayMode:
+                  item?.imageDisplayMode
+                  || (item?.imageWithCaption ? 'imageWithCaption' : item?.imageOnly ? 'imageOnly' : 'standard'),
+              }))
             : clone(baseSections.testimonials?.items || []),
       },
       footer: {
@@ -419,6 +427,7 @@ const LandingPageStudio = () => {
         iconClass: 'fa-user-graduate',
         colorClass: 'text-primary',
         imageUrl: '',
+        imageDisplayMode: 'full',
       });
       next.tutors = tutors;
     });
@@ -444,6 +453,8 @@ const LandingPageStudio = () => {
         avatar: '',
         imageUrl: '',
         imageOnly: false,
+        imageWithCaption: false,
+        imageDisplayMode: 'standard',
         rating: 5,
       });
       next.sections.testimonials.items = items;
@@ -636,12 +647,28 @@ const LandingPageStudio = () => {
                 <label className="landing-studio-inline-checkbox">
                   <input
                     type="checkbox"
-                    checked={Boolean(item.imageOnly)}
+                    checked={Boolean((item.imageDisplayMode || '').trim() ? item.imageDisplayMode === 'imageOnly' : item.imageOnly)}
                     onChange={(e) => mutateConfig((next) => {
-                      next.sections.testimonials.items[index].imageOnly = e.target.checked;
+                      const checked = e.target.checked;
+                      next.sections.testimonials.items[index].imageOnly = checked;
+                      next.sections.testimonials.items[index].imageWithCaption = false;
+                      next.sections.testimonials.items[index].imageDisplayMode = checked ? 'imageOnly' : 'standard';
                     })}
                   />
                   <span>Full image success story (no text required)</span>
+                </label>
+                <label className="landing-studio-inline-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(item.imageDisplayMode === 'imageWithCaption' || item.imageWithCaption)}
+                    onChange={(e) => mutateConfig((next) => {
+                      const checked = e.target.checked;
+                      next.sections.testimonials.items[index].imageWithCaption = checked;
+                      next.sections.testimonials.items[index].imageOnly = false;
+                      next.sections.testimonials.items[index].imageDisplayMode = checked ? 'imageWithCaption' : 'standard';
+                    })}
+                  />
+                  <span>Full image with caption</span>
                 </label>
               </div>
               <div className="landing-studio-upload-block">
@@ -689,18 +716,18 @@ const LandingPageStudio = () => {
                   <div className="landing-studio-upload-hint">Upload an image for avatar/full-image story card.</div>
                 )}
               </div>
-              {!item.imageOnly && (
+              {!['imageOnly', 'imageWithCaption'].includes(item.imageDisplayMode || (item.imageOnly ? 'imageOnly' : 'standard')) && (
               <div className="landing-studio-two-col">
                 <label>Name<input value={item.name || ''} onChange={(e) => mutateConfig((next) => { next.sections.testimonials.items[index].name = e.target.value; })} /></label>
                 <label>Role<input value={item.role || ''} onChange={(e) => mutateConfig((next) => { next.sections.testimonials.items[index].role = e.target.value; })} /></label>
               </div>
               )}
-              {!item.imageOnly && (
+              {!['imageOnly', 'imageWithCaption'].includes(item.imageDisplayMode || (item.imageOnly ? 'imageOnly' : 'standard')) && (
                 <label>Text<textarea rows={3} value={item.text || ''} onChange={(e) => mutateConfig((next) => { next.sections.testimonials.items[index].text = e.target.value; })} /></label>
               )}
               <div className="landing-studio-two-col">
                 <label>Rating<input type="number" step="0.5" min="0" max="5" value={item.rating ?? 5} onChange={(e) => mutateConfig((next) => { next.sections.testimonials.items[index].rating = Number(e.target.value); })} /></label>
-                {item.imageOnly ? (
+                {(item.imageDisplayMode === 'imageOnly' || item.imageDisplayMode === 'imageWithCaption' || item.imageOnly) ? (
                   <label>Alt / Caption (optional)<input value={item.name || ''} onChange={(e) => mutateConfig((next) => { next.sections.testimonials.items[index].name = e.target.value; })} /></label>
                 ) : (
                   <label>Image Display Mode<input value="Uploaded image" readOnly /></label>
@@ -778,6 +805,16 @@ const LandingPageStudio = () => {
             <label>Icon Class<input value={tutor.iconClass || ''} onChange={(e) => mutateConfig((next) => { next.tutors[selectedTutorIndex].iconClass = e.target.value; })} /></label>
             <label>Color Class<input value={tutor.colorClass || ''} onChange={(e) => mutateConfig((next) => { next.tutors[selectedTutorIndex].colorClass = e.target.value; })} /></label>
           </div>
+          <label>
+            Photo Shape
+            <select
+              value={tutor.imageDisplayMode || 'full'}
+              onChange={(e) => mutateConfig((next) => { next.tutors[selectedTutorIndex].imageDisplayMode = e.target.value; })}
+            >
+              <option value="full">Full photo</option>
+              <option value="circle">Circle photo</option>
+            </select>
+          </label>
           <div className="landing-studio-upload-block">
             <div className="landing-studio-upload-row">
               <input

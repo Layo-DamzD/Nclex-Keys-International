@@ -1,28 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import axios from 'axios';
 
 const BLOCKED_LEGACY_NAMES = new Set(['maria santos', 'john adebayo', 'sarah chen']);
 
-const MOBILE_BREAKPOINT = '(max-width: 767.98px)';
-
 const Testimonials = ({ content = {} }) => {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-    return window.matchMedia(MOBILE_BREAKPOINT).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
-    const mediaQuery = window.matchMedia(MOBILE_BREAKPOINT);
-    const sync = (event) => setIsMobile(event.matches);
-    setIsMobile(mediaQuery.matches);
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', sync);
-      return () => mediaQuery.removeEventListener('change', sync);
-    }
-    mediaQuery.addListener(sync);
-    return () => mediaQuery.removeListener(sync);
-  }, []);
   const hasExplicitItems = Array.isArray(content?.items);
   const providedItems = hasExplicitItems ? content.items : [];
   const testimonials = providedItems.filter((item) => {
@@ -99,7 +80,9 @@ const Testimonials = ({ content = {} }) => {
 
 
   const renderTestimonialCard = (testimonial, index) => {
-    if (testimonial.imageOnly && (testimonial.imageUrl || testimonial.avatar)) {
+    const displayMode = testimonial.imageDisplayMode || (testimonial.imageOnly ? 'imageOnly' : 'standard');
+
+    if ((displayMode === 'imageOnly' || displayMode === 'imageWithCaption') && (testimonial.imageUrl || testimonial.avatar)) {
       return (
         <div
           className="testimonial-card testimonial-card-image-only"
@@ -128,6 +111,13 @@ const Testimonials = ({ content = {} }) => {
               display: 'block'
             }}
           />
+          {displayMode === 'imageWithCaption' ? (
+            <div style={{ padding: '16px 20px', textAlign: 'left' }}>
+              {testimonial.name ? <h5 style={{ marginBottom: 4 }}>{testimonial.name}</h5> : null}
+              {testimonial.role ? <small style={{ color: '#6b7280', display: 'block', marginBottom: 8 }}>{testimonial.role}</small> : null}
+              {testimonial.text ? <p style={{ margin: 0, color: '#457b9d' }}>{testimonial.text}</p> : null}
+            </div>
+          ) : null}
         </div>
       );
     }
@@ -200,39 +190,29 @@ const Testimonials = ({ content = {} }) => {
           <h2 style={{ fontFamily: "'Roboto Slab', serif", color: '#1d3557' }}>{heading}</h2>
           <p style={{ color: '#457b9d' }}>{subheading}</p>
         </div>
-        {isMobile ? (
-          <div className="testimonial-mobile-list" data-aos="fade-up">
+        <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-aos="fade-up">
+          <div className="carousel-inner">
             {testimonials.map((testimonial, index) => (
-              <div className="testimonial-mobile-item" key={testimonial.id || index}>
-                {renderTestimonialCard(testimonial, index)}
+              <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
+                <div className="row justify-content-center">
+                  <div className="col-md-8">{renderTestimonialCard(testimonial, index)}</div>
+                </div>
               </div>
             ))}
           </div>
-        ) : (
-          <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-aos="fade-up">
-            <div className="carousel-inner">
-              {testimonials.map((testimonial, index) => (
-                <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
-                  <div className="row justify-content-center">
-                    <div className="col-md-8">{renderTestimonialCard(testimonial, index)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {testimonials.length > 1 && (
-              <>
-                <button className="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
-                  <span className="carousel-control-prev-icon" aria-hidden="true"></span>
-                  <span className="visually-hidden">Previous</span>
-                </button>
-                <button className="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
-                  <span className="carousel-control-next-icon" aria-hidden="true"></span>
-                  <span className="visually-hidden">Next</span>
-                </button>
-              </>
-            )}
-          </div>
-        )}
+          {testimonials.length > 1 && (
+            <>
+              <button className="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
+                <span className="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span className="visually-hidden">Previous</span>
+              </button>
+              <button className="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
+                <span className="carousel-control-next-icon" aria-hidden="true"></span>
+                <span className="visually-hidden">Next</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </section>
   );

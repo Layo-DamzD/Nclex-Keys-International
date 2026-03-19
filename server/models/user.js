@@ -68,7 +68,8 @@ const userSchema = new mongoose.Schema({
     total: { type: Number, default: 0 },
     attempted: { type: Number, default: 0 },
     percentage: { type: Number, default: 0 },
-    submittedAt: { type: Date, default: null }
+    submittedAt: { type: Date, default: null },
+    reviewedAt: { type: Date, default: null }
   }
 });
 

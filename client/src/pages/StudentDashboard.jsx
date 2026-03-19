@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { enableStudentFcm } from '../services/firebaseMessaging';
 import StudentSidebar from '../components/StudentSidebar';
@@ -25,6 +25,7 @@ const MOBILE_BREAKPOINT = 992;
 const StudentDashboard = () => {
   const { user, loading, refreshUser } = useUser(); // get user from context
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [isMobileViewport, setIsMobileViewport] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BREAKPOINT : false
@@ -43,6 +44,9 @@ const StudentDashboard = () => {
   const [preparedTestCount, setPreparedTestCount] = useState(0);
   const [showWelcomeCelebration, setShowWelcomeCelebration] = useState(false);
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState(null);
+  const [showPublicTestPrompt, setShowPublicTestPrompt] = useState(false);
+  const [publicTestSubmittedAtIso, setPublicTestSubmittedAtIso] = useState('');
+  const [publicReviewResultId, setPublicReviewResultId] = useState('');
 
   // Calculate days until exam based on user.examDate
   useEffect(() => {
@@ -254,6 +258,53 @@ const StudentDashboard = () => {
     localStorage.setItem(seenKey, 'done');
   }, [loading, user?._id, user?.createdAt]);
 
+  useEffect(() => {
+    if (loading || !user?._id) return;
+    let mounted = true;
+    const loadPublicReviewStatus = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await axios.get('/api/student/public-test-review-status', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!mounted) return;
+
+        const submittedAt = response?.data?.submittedAt ? new Date(response.data.submittedAt) : null;
+        if (!response?.data?.hasReview || !submittedAt || Number.isNaN(submittedAt.getTime())) {
+          setPublicTestSubmittedAtIso('');
+          setPublicReviewResultId('');
+          setShowPublicTestPrompt(false);
+          return;
+        }
+
+        const submittedAtIso = submittedAt.toISOString();
+        setPublicTestSubmittedAtIso(submittedAtIso);
+        setPublicReviewResultId(String(response?.data?.reviewResultId || ''));
+
+        if (!response?.data?.needsPrompt) {
+          setShowPublicTestPrompt(false);
+          return;
+        }
+
+        const deferredThisSessionKey = `student-public-test-later:${user._id}:${submittedAtIso}`;
+        if (sessionStorage.getItem(deferredThisSessionKey) === 'later') {
+          setShowPublicTestPrompt(false);
+          return;
+        }
+
+        setShowPublicTestPrompt(true);
+      } catch (error) {
+        console.error('Failed to load public test review status:', error);
+      }
+    };
+
+    loadPublicReviewStatus();
+    return () => {
+      mounted = false;
+    };
+  }, [loading, user?._id]);
+
   if (loading) return <div>Loading dashboard...</div>;
 
   return (
@@ -342,6 +393,73 @@ const StudentDashboard = () => {
             </div>
             <div className="student-notification-popup-footer">
               <button type="button" className="btn btn-primary" onClick={() => setShowWelcomeCelebration(false)}>Let&apos;s Go</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPublicTestPrompt && (
+        <div className="student-notification-popup-overlay" role="dialog" aria-modal="true" aria-label="Public test result available">
+          <div
+            className="student-notification-popup-backdrop"
+            onClick={() => {
+              if (publicTestSubmittedAtIso) {
+                sessionStorage.setItem(`student-public-test-later:${user._id}:${publicTestSubmittedAtIso}`, 'later');
+              }
+              setShowPublicTestPrompt(false);
+            }}
+          />
+          <div className="student-notification-popup-card">
+            <div className="student-notification-popup-header">
+              <div className="student-notification-popup-icon"><i className="fas fa-chart-line" /></div>
+              <div>
+                <div className="student-notification-popup-eyebrow">Public Test</div>
+                <h3>See your public test result here</h3>
+              </div>
+            </div>
+            <div className="student-notification-popup-body">
+              <p>Your pre-signup public test result is ready. Review it now in full exam-style format.</p>
+            </div>
+            <div className="student-notification-popup-footer">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => {
+                  if (publicTestSubmittedAtIso) {
+                    sessionStorage.setItem(`student-public-test-later:${user._id}:${publicTestSubmittedAtIso}`, 'later');
+                  }
+                  setShowPublicTestPrompt(false);
+                }}
+              >
+                See later
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={async () => {
+                  const token = localStorage.getItem('token');
+                  if (token) {
+                    try {
+                      await axios.post('/api/student/public-test-review-reviewed', {}, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                    } catch (error) {
+                      console.error('Failed to mark public test review as reviewed:', error);
+                    }
+                  }
+                  if (publicTestSubmittedAtIso) {
+                    sessionStorage.removeItem(`student-public-test-later:${user._id}:${publicTestSubmittedAtIso}`);
+                  }
+                  setShowPublicTestPrompt(false);
+                  if (publicReviewResultId) {
+                    navigate(`/test-review/${publicReviewResultId}`);
+                  } else {
+                    navigate('/dashboard?section=previous-tests');
+                  }
+                }}
+              >
+                Review now
+              </button>
             </div>
           </div>
         </div>

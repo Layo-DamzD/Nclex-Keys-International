@@ -1,7 +1,7 @@
 /* global importScripts */
 /* Unified service worker: installable PWA caching + Firebase background messaging */
 
-const SW_VERSION = 'nki-app-sw-v3';
+const SW_VERSION = 'nki-app-sw-v4';
 const APP_SHELL_CACHE = `${SW_VERSION}-shell`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1']);
@@ -131,7 +131,7 @@ self.addEventListener('fetch', (event) => {
           const freshResponse = await fetch(request, { cache: 'no-store' });
           return cachePutSafe(RUNTIME_CACHE, request, freshResponse.clone());
         } catch {
-          return (await caches.match(request)) || (await caches.match('/'));
+          return await caches.match(request);
         }
       }
 
