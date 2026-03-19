@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const DEFAULT_CONTENT = {
@@ -17,9 +17,30 @@ const DEFAULT_CONTENT = {
   titleHighlightColor: '#86efac',
 };
 
+const extractYouTubeId = (url = '') => {
+  const value = String(url || '').trim();
+  if (!value) return '';
+  const patterns = [
+    /(?:youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/i,
+    /(?:youtube\.com\/watch\?v=)([A-Za-z0-9_-]{6,})/i,
+    /(?:youtu\.be\/)([A-Za-z0-9_-]{6,})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = value.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return '';
+};
+
 const Hero = ({ content = {} }) => {
   const data = { ...DEFAULT_CONTENT, ...content };
   const features = Array.isArray(data.features) && data.features.length ? data.features : DEFAULT_CONTENT.features;
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const videoId = useMemo(() => extractYouTubeId(data.videoUrl), [data.videoUrl]);
+  const thumbnailUrl = videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '';
+  const shouldUseLiteEmbed = Boolean(videoId);
 
   return (
     <section id="home" className="hero-section" style={{ 
@@ -79,16 +100,43 @@ const Hero = ({ content = {} }) => {
               marginLeft: 'auto',       // pushes it to the right
               maxWidth: '100%' 
             }}>
-              <iframe 
-                className="nki-hero-video-embed"
-                width="100%" 
-                height="380" 
-                src={data.videoUrl} 
-                title="NCLEX Success Story" 
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                allowFullScreen
-              ></iframe>
+              {shouldUseLiteEmbed && !isVideoLoaded ? (
+                <button
+                  type="button"
+                  className="nki-hero-video-launch"
+                  onClick={() => setIsVideoLoaded(true)}
+                  aria-label="Play NCLEX success story video"
+                >
+                  {thumbnailUrl ? (
+                    <img
+                      className="nki-hero-video-poster"
+                      src={thumbnailUrl}
+                      alt="Watch NCLEX success story"
+                      loading="eager"
+                      fetchPriority="high"
+                    />
+                  ) : null}
+                  <span className="nki-hero-video-overlay">
+                    <span className="nki-hero-video-play" aria-hidden="true">
+                      <i className="fas fa-play"></i>
+                    </span>
+                    <span className="nki-hero-video-copy">Tap to watch our success story</span>
+                  </span>
+                </button>
+              ) : (
+                <iframe 
+                  className="nki-hero-video-embed"
+                  width="100%" 
+                  height="380" 
+                  src={data.videoUrl} 
+                  title="NCLEX Success Story" 
+                  frameBorder="0" 
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  allowFullScreen
+                ></iframe>
+              )}
             </div>
           </div>
         </div>
