@@ -17,7 +17,6 @@ const resolveImageCandidates = (rawUrl) => {
   const candidates = [];
   const pushUnique = (value) => { if (value && !candidates.includes(value)) candidates.push(value); };
   const stripTrailingSlash = (value) => String(value || '').replace(/\/+$/, '');
-
   const buildUploadVariants = (value) => {
     const normalized = String(value || '').replace(/\\/g, '/');
     const markerIndex = normalized.toLowerCase().indexOf('/uploads/');
@@ -65,15 +64,28 @@ const resolveImageCandidates = (rawUrl) => {
       // ignore parse failures
     }
     pushUnique(convertGoogleDriveUrl(url));
+
+    try {
+      const parsed = new URL(url);
+      if (parsed.pathname.includes('/api/uploads/')) {
+        pushUnique(`${origin}${parsed.pathname}`);
+        pushUnique(`${base}${parsed.pathname}`);
+      }
+    } catch {
+      // ignore parse failures
+    }
+
   } else if (url.startsWith('//')) {
     pushUnique(`${window.location.protocol}${url}`);
   } else if (url.startsWith('/')) {
     pushUnique(origin ? `${origin}${url}` : '');
     pushUnique(base ? `${base}${url}` : '');
+
     if (!url.startsWith('/api/')) {
       pushUnique(origin ? `${origin}/api${url}` : '');
       pushUnique(base ? `${base}/api${url}` : '');
     }
+
     pushUnique(url);
   } else {
     pushUnique(origin ? `${origin}/${url}` : '');

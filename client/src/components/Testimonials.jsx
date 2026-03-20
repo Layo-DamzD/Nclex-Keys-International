@@ -24,6 +24,14 @@ const Testimonials = ({ content = {} }) => {
     content?.testimonials ??
     (Array.isArray(content) ? content : null)
   );
+
+  const normalizeItems = (value) => {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (value && typeof value === 'object') return Object.values(value).filter(Boolean);
+    return [];
+  };
+
+  const testimonials = normalizeItems(content?.items);
   if (testimonials.length === 0) return null;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
