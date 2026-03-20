@@ -6,6 +6,56 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+const resolveMediaCandidates = (rawUrl) => {
+  const value = String(rawUrl || '').trim();
+  if (!value) return [];
+  const normalized = value.replace(/\\/g, '/');
+  const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
+  const origin = window.location.origin.replace(/\/+$/, '');
+  const out = [];
+  const pushUnique = (next) => {
+    const url = String(next || '').trim();
+    if (!url) return;
+    if (!out.includes(url)) out.push(url);
+  };
+
+  if (/^data:/i.test(normalized)) return [normalized];
+  if (/^https?:\/\//i.test(normalized)) {
+    pushUnique(normalized);
+  } else if (normalized.startsWith('/')) {
+    if (normalized.startsWith('/api/')) {
+      pushUnique(apiBase ? `${apiBase}${normalized}` : '');
+    }
+    pushUnique(`${origin}${normalized}`);
+    pushUnique(apiBase ? `${apiBase}${normalized}` : '');
+    pushUnique(normalized);
+  } else {
+    pushUnique(`${origin}/${normalized}`);
+    pushUnique(apiBase ? `${apiBase}/${normalized}` : '');
+    pushUnique(normalized);
+  }
+
+  const uploadMatch = normalized.match(/(?:^|\/)api\/uploads\/([^?#]+)/i) || normalized.match(/(?:^|\/)uploads\/([^?#]+)/i);
+  if (uploadMatch?.[1]) {
+    const suffix = uploadMatch[1].replace(/^\/+/, '');
+    pushUnique(`${origin}/api/uploads/${suffix}`);
+    pushUnique(apiBase ? `${apiBase}/api/uploads/${suffix}` : '');
+  }
+  return out;
+};
+
+const firstMediaUrl = (rawUrl) => resolveMediaCandidates(rawUrl)[0] || '';
+
+const handleImageFallback = (event) => {
+  const target = event.currentTarget;
+  const raw = target.getAttribute('data-raw-src') || '';
+  const index = Number(target.getAttribute('data-fallback-index') || '0');
+  const candidates = resolveMediaCandidates(raw);
+  if (index + 1 >= candidates.length) return;
+  target.setAttribute('data-fallback-index', String(index + 1));
+  target.src = candidates[index + 1];
+};
+
 // --- Calculator Reducer and Component ---
 const calculatorReducer = (state, action) => {
   switch (action.type) {
@@ -1000,7 +1050,7 @@ const TestSession = () => {
                       {item.rationale && (<div className="rationale-text-block"><strong>Rationale:</strong> {item.rationale}</div>)}
                       {item.rationaleImageUrl && (
                         <div className="mt-2">
-                          <img src={item.rationaleImageUrl} alt="Rationale visual" style={{ maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #dbeafe' }} />
+                          <img src={firstMediaUrl(item.rationaleImageUrl)} data-raw-src={item.rationaleImageUrl} data-fallback-index="0" onError={handleImageFallback} alt="Rationale visual" style={{ maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #dbeafe' }} />
                         </div>
                       )}
                     </div>
@@ -1309,7 +1359,10 @@ const TestSession = () => {
                   <p className="mb-2">Click the correct location on the image:</p>
                   <div style={{ position: 'relative', maxWidth: 620 }}>
                     <img
-                      src={subQ.hotspotImageUrl}
+                      src={firstMediaUrl(subQ.hotspotImageUrl)}
+                      data-raw-src={subQ.hotspotImageUrl}
+                      data-fallback-index="0"
+                      onError={handleImageFallback}
                       alt="Hotspot question"
                       style={{ width: '100%', borderRadius: 10, border: '1px solid #cbd5e1' }}
                     />
@@ -1666,7 +1719,10 @@ const TestSession = () => {
             <p className="mb-2">Click the correct location on the image:</p>
             <div style={{ position: 'relative', maxWidth: 680 }}>
               <img
-                src={currentQ.hotspotImageUrl}
+                src={firstMediaUrl(currentQ.hotspotImageUrl)}
+                data-raw-src={currentQ.hotspotImageUrl}
+                data-fallback-index="0"
+                onError={handleImageFallback}
                 alt="Hotspot question"
                 style={{ width: '100%', borderRadius: 10, border: '1px solid #cbd5e1' }}
               />

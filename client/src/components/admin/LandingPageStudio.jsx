@@ -227,16 +227,26 @@ const fileToDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
+function getResolvedApiBase() {
+  return String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+}
+
 const resolveMediaUrl = (rawUrl) => {
   const url = String(rawUrl || '').trim();
   if (!url) return '';
   if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
   if (url.startsWith('//')) return `${window.location.protocol}${url}`;
-  const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
-  if (url.startsWith('/api/')) return url;
-  if (url.startsWith('/')) return apiBase ? `${apiBase}${url}` : url;
-  return apiBase ? `${apiBase}/${url}` : url;
+  if (url.startsWith('/api/')) return getResolvedApiBase() ? `${getResolvedApiBase()}${url}` : url;
+  if (url.startsWith('/')) return getResolvedApiBase() ? `${getResolvedApiBase()}${url}` : url;
+  return getResolvedApiBase() ? `${getResolvedApiBase()}/${url}` : url;
 };
+
+function withCacheBust(rawUrl) {
+  const value = String(rawUrl || '').trim();
+  if (!value) return '';
+  const joiner = value.includes('?') ? '&' : '?';
+  return `${value}${joiner}v=${Date.now()}`;
+}
 
 const LandingPageStudio = () => {
   const token = sessionStorage.getItem('adminToken');
@@ -683,8 +693,9 @@ const LandingPageStudio = () => {
                         embedAsDataUrl: true,
                         onUploaded: (uploadedUrl) =>
                           mutateConfig((next) => {
-                            next.sections.testimonials.items[index].avatar = uploadedUrl;
-                            next.sections.testimonials.items[index].imageUrl = uploadedUrl;
+                            const freshUrl = withCacheBust(uploadedUrl);
+                            next.sections.testimonials.items[index].avatar = freshUrl;
+                            next.sections.testimonials.items[index].imageUrl = freshUrl;
                           })
                       })
                     }
@@ -825,7 +836,7 @@ const LandingPageStudio = () => {
                   onImageInputChange(e, {
                     fieldKey: `brainiac-${selectedTutorIndex}`,
                     onUploaded: (uploadedUrl) =>
-                      mutateConfig((next) => { next.tutors[selectedTutorIndex].imageUrl = uploadedUrl; })
+                      mutateConfig((next) => { next.tutors[selectedTutorIndex].imageUrl = withCacheBust(uploadedUrl); })
                   })
                 }
               />
