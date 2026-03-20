@@ -69,8 +69,13 @@ const useLandingPageContent = (pageKey) => {
       }
     };
 
-    if (!isCacheFresh) load();
-    else setLoading(false);
+    if (isCacheFresh) {
+      setLoading(false);
+      // Still refresh in the background so the public page reflects latest admin edits quickly.
+      load();
+    } else {
+      load();
+    }
 
     return () => {
       active = false;
