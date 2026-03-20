@@ -1,6 +1,30 @@
 import React from 'react';
 import axios from 'axios';
 
+const DEFAULT_TESTIMONIAL_ITEMS = [
+  {
+    id: 'default-1',
+    name: 'Amaka O.',
+    role: 'NCLEX-RN Graduate',
+    text: 'The coaching strategy was clear and practical. I passed my NCLEX on the first attempt.',
+    rating: 5,
+  },
+  {
+    id: 'default-2',
+    name: 'Samuel A.',
+    role: 'International Nurse',
+    text: 'The mentors helped me focus on weak areas and build confidence before exam day.',
+    rating: 5,
+  },
+  {
+    id: 'default-3',
+    name: 'Grace I.',
+    role: 'NCLEX-PN Candidate',
+    text: 'Practice questions and review sessions made a huge difference. Highly recommended.',
+    rating: 4.5,
+  },
+];
+
 const Testimonials = ({ content = {} }) => {
   const parseMaybeJson = (value) => {
     if (typeof value !== 'string') return value;
@@ -24,15 +48,8 @@ const Testimonials = ({ content = {} }) => {
     content?.testimonials ??
     (Array.isArray(content) ? content : null)
   );
+  const displayTestimonials = testimonials.length > 0 ? testimonials : DEFAULT_TESTIMONIAL_ITEMS;
 
-  const normalizeItems = (value) => {
-    if (Array.isArray(value)) return value.filter(Boolean);
-    if (value && typeof value === 'object') return Object.values(value).filter(Boolean);
-    return [];
-  };
-
-  const testimonials = normalizeItems(content?.items);
-  if (testimonials.length === 0) return null;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
   const resolveMediaCandidates = (rawUrl) => {
@@ -214,7 +231,7 @@ const Testimonials = ({ content = {} }) => {
         </div>
         <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-aos="fade-up">
           <div className="carousel-inner">
-            {testimonials.map((testimonial, index) => (
+            {displayTestimonials.map((testimonial, index) => (
               <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
                 <div className="row justify-content-center">
                   <div className="col-md-8">{renderTestimonialCard(testimonial, index)}</div>
@@ -222,7 +239,7 @@ const Testimonials = ({ content = {} }) => {
               </div>
             ))}
           </div>
-          {testimonials.length > 1 && (
+          {displayTestimonials.length > 1 && (
             <>
               <button className="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
                 <span className="carousel-control-prev-icon" aria-hidden="true"></span>
