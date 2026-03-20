@@ -24,6 +24,7 @@ const Testimonials = ({ content = {} }) => {
     content?.testimonials ??
     (Array.isArray(content) ? content : null)
   );
+
   if (testimonials.length === 0) return null;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
@@ -32,7 +33,7 @@ const Testimonials = ({ content = {} }) => {
     if (!original) return [];
 
     const normalized = original.replace(/\\/g, '/');
-    const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
+    const apiBase = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
     const origin = window.location.origin.replace(/\/+$/, '');
     const candidates = [];
 
