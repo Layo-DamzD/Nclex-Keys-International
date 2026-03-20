@@ -232,10 +232,25 @@ const resolveMediaUrl = (rawUrl) => {
   if (!url) return '';
   if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
   if (url.startsWith('//')) return `${window.location.protocol}${url}`;
+
   const resolvedApiBase = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
   if (url.startsWith('/api/')) return resolvedApiBase ? `${resolvedApiBase}${url}` : url;
   if (url.startsWith('/')) return resolvedApiBase ? `${resolvedApiBase}${url}` : url;
   return resolvedApiBase ? `${resolvedApiBase}/${url}` : url;
+};
+
+const withCacheBust = (rawUrl) => {
+  const value = String(rawUrl || '').trim();
+  if (!value) return '';
+  const joiner = value.includes('?') ? '&' : '?';
+  return `${value}${joiner}v=${Date.now()}`;
+
+  const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
+  const apiBase = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  if (url.startsWith('/api/')) return apiBase ? `${apiBase}${url}` : url;
+  if (url.startsWith('/')) return apiBase ? `${apiBase}${url}` : url;
+  return apiBase ? `${apiBase}/${url}` : url;
+
 };
 
 const withCacheBust = (rawUrl) => {
