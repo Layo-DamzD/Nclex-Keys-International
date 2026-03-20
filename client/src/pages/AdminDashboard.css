@@ -1899,13 +1899,18 @@ html[data-app-theme='dark'] .admin-sidebar-floating-open-btn {
 }
 
 .admin-dashboard-page.admin-super .sidebar {
-  background: linear-gradient(180deg, #334155, #475569);
+  /* Super-admin: pink theme */
+  background: linear-gradient(180deg, #db2777, #ec4899);
 }
 
 .admin-dashboard-page.admin-super .nav-link.active {
-  color: #334155;
+  color: #9d174d;
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page.admin-super .sidebar {
-  background: linear-gradient(180deg, #1f2937, #334155);
+  background: linear-gradient(180deg, #be185d, #db2777);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page.admin-super .nav-link.active {
+  color: #be185d;
 }

@@ -228,6 +228,7 @@ const createQuestion = async (req, res) => {
       category: req.body?.category,
       subcategory: req.body?.subcategory,
       questionText: req.body?.questionText,
+      questionImageUrl: req.body?.questionImageUrl,
       options: req.body?.options,
       correctAnswer: req.body?.correctAnswer,
       rationale: req.body?.rationale,

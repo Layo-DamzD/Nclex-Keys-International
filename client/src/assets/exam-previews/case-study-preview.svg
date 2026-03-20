@@ -1,0 +1,19 @@
+<svg width="920" height="420" viewBox="0 0 920 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="920" height="420" rx="20" fill="#F8FAFC"/>
+  <rect x="24" y="24" width="872" height="56" rx="12" fill="#0F766E"/>
+  <text x="44" y="59" fill="white" font-family="Arial" font-size="24" font-weight="700">Case Study Exam Preview</text>
+
+  <rect x="44" y="108" width="336" height="264" rx="16" fill="#ECFEFF" stroke="#22D3EE"/>
+  <text x="64" y="140" fill="#155E75" font-family="Arial" font-size="20" font-weight="700">Patient Data Panel</text>
+  <rect x="64" y="158" width="296" height="58" rx="10" fill="white"/>
+  <rect x="64" y="226" width="296" height="58" rx="10" fill="white"/>
+  <rect x="64" y="294" width="296" height="58" rx="10" fill="white"/>
+
+  <rect x="412" y="108" width="464" height="264" rx="16" fill="#EEF2FF" stroke="#818CF8"/>
+  <text x="432" y="140" fill="#3730A3" font-family="Arial" font-size="20" font-weight="700">Question & Options Panel</text>
+  <rect x="432" y="162" width="424" height="72" rx="10" fill="white"/>
+  <rect x="432" y="248" width="206" height="42" rx="10" fill="white"/>
+  <rect x="650" y="248" width="206" height="42" rx="10" fill="white"/>
+  <rect x="432" y="300" width="206" height="42" rx="10" fill="white"/>
+  <rect x="650" y="300" width="206" height="42" rx="10" fill="white"/>
+</svg>

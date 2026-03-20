@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
+import bowtiePreviewImage from '../../assets/exam-previews/bowtie-preview.svg';
+import caseStudyPreviewImage from '../../assets/exam-previews/case-study-preview.svg';
 
 const CASE_STUDY_TYPES = [
   { value: '6-question', label: 'Layered Case Study' },
@@ -368,6 +370,20 @@ const CaseStudyBuilder = () => {
                   <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Exam View Preview</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+                <div style={{ border: '1px solid #dbe5f0', borderRadius: '12px', padding: '10px', background: '#fff' }}>
+                  <div style={{ fontWeight: 700, marginBottom: '8px' }}>Case Study Layout</div>
+                  <img src={caseStudyPreviewImage} alt="Case study exam layout preview" style={{ width: '100%', borderRadius: '8px' }} />
+                </div>
+                <div style={{ border: '1px solid #dbe5f0', borderRadius: '12px', padding: '10px', background: '#fff' }}>
+                  <div style={{ fontWeight: 700, marginBottom: '8px' }}>Bowtie Layout</div>
+                  <img src={bowtiePreviewImage} alt="Bowtie exam layout preview" style={{ width: '100%', borderRadius: '8px' }} />
+                </div>
+              </div>
             </div>
 
             <div className="form-group">

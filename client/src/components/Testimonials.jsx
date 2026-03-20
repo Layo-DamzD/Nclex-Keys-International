@@ -2,6 +2,29 @@ import React from 'react';
 import axios from 'axios';
 
 const Testimonials = ({ content = {} }) => {
+  const parseMaybeJson = (value) => {
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  };
+
+  const normalizeItems = (value) => {
+    const parsed = parseMaybeJson(value);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    if (parsed && typeof parsed === 'object') return Object.values(parsed).filter(Boolean);
+    return [];
+  };
+
+  const testimonials = normalizeItems(
+    content?.items ??
+    content?.stories ??
+    content?.testimonials ??
+    (Array.isArray(content) ? content : null)
+  );
+
   const normalizeItems = (value) => {
     if (Array.isArray(value)) return value.filter(Boolean);
     if (value && typeof value === 'object') return Object.values(value).filter(Boolean);

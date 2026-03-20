@@ -23,6 +23,7 @@ const UploadQuestion = () => {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [questionText, setQuestionText] = useState('');
+  const [questionImageUrl, setQuestionImageUrl] = useState('');
   const [options, setOptions] = useState(['', '', '', '']);
   const [correctAnswer, setCorrectAnswer] = useState('');
   const [rationale, setRationale] = useState('');
@@ -60,6 +61,7 @@ const UploadQuestion = () => {
     setCategory(editingQuestion.category || '');
     setSubcategory(editingQuestion.subcategory || '');
     setQuestionText(editingQuestion.questionText || '');
+    setQuestionImageUrl(editingQuestion.questionImageUrl || '');
     setOptions(editingQuestion.options || ['', '', '', '']);
     setCorrectAnswer(editingQuestion.correctAnswer || '');
     setRationale(editingQuestion.rationale || '');
@@ -121,6 +123,72 @@ const UploadQuestion = () => {
 
   const addOption = () => setOptions((prev) => [...prev, '']);
 
+  const resolveMediaCandidates = (rawUrl) => {
+    const original = String(rawUrl || '').trim();
+    if (!original) return [];
+    const normalized = original.replace(/\\/g, '/');
+    const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
+    const origin = window.location.origin.replace(/\/+$/, '');
+    const candidates = [];
+
+    const pushUnique = (value) => {
+      const next = String(value || '').trim();
+      if (!next) return;
+      if (!candidates.includes(next)) candidates.push(next);
+    };
+
+    if (/^data:/i.test(normalized)) {
+      pushUnique(normalized);
+      return candidates;
+    }
+
+    if (/^https?:\/\//i.test(normalized)) {
+      pushUnique(normalized);
+      try {
+        const parsed = new URL(normalized);
+        if (parsed.pathname.includes('/uploads/')) {
+          pushUnique(`${origin}${parsed.pathname}`);
+          pushUnique(`${apiBase}${parsed.pathname}`);
+        }
+      } catch {
+        // ignore parse failures
+      }
+    } else if (normalized.startsWith('/')) {
+      pushUnique(`${origin}${normalized}`);
+      pushUnique(`${apiBase}${normalized}`);
+      if (!normalized.startsWith('/api/')) {
+        pushUnique(`${origin}/api${normalized}`);
+        pushUnique(`${apiBase}/api${normalized}`);
+      }
+      pushUnique(normalized);
+    } else {
+      pushUnique(`${origin}/${normalized}`);
+      pushUnique(`${apiBase}/${normalized}`);
+      pushUnique(normalized);
+    }
+
+    const uploadMatch = normalized.match(/(?:^|\/)uploads\/(.+)/i);
+    if (uploadMatch?.[1]) {
+      const suffix = uploadMatch[1].replace(/^\/+/, '');
+      pushUnique(`${origin}/api/uploads/${suffix}`);
+      pushUnique(`${apiBase}/api/uploads/${suffix}`);
+    }
+
+    return candidates;
+  };
+
+  const firstMediaUrl = (rawUrl) => resolveMediaCandidates(rawUrl)[0] || '';
+
+  const handlePreviewImageFallback = (event) => {
+    const target = event.currentTarget;
+    const raw = target.getAttribute('data-raw-src') || '';
+    const index = Number(target.getAttribute('data-fallback-index') || '0');
+    const candidates = resolveMediaCandidates(raw);
+    if (index + 1 >= candidates.length) return;
+    target.setAttribute('data-fallback-index', String(index + 1));
+    target.src = candidates[index + 1];
+  };
+
   const uploadAsset = async (file, targetField) => {
     if (!file) return;
     try {
@@ -143,6 +211,8 @@ const UploadQuestion = () => {
         setHotspotImageUrl(uploadedUrl);
       } else if (targetField === 'rationale') {
         setRationaleImageUrl(uploadedUrl);
+      } else if (targetField === 'question') {
+        setQuestionImageUrl(uploadedUrl);
       }
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to upload image');
@@ -160,6 +230,7 @@ const UploadQuestion = () => {
     setCategory('');
     setSubcategory('');
     setQuestionText('');
+    setQuestionImageUrl('');
     setOptions(['', '', '', '']);
     setCorrectAnswer('');
     setRationale('');
@@ -314,6 +385,7 @@ const UploadQuestion = () => {
       category,
       subcategory,
       questionText,
+      questionImageUrl,
       rationale,
       rationaleImageUrl,
       difficulty,
@@ -358,6 +430,9 @@ const UploadQuestion = () => {
         return;
       }
     } else if (type === 'hotspot') {
+      if (!questionData.questionText || !questionData.questionText.trim()) {
+        questionData.questionText = 'Tap the correct spot on the image.';
+      }
       if (!hotspotImageUrl.trim()) {
         setError('Please provide a hotspot image URL');
         setLoading(false);
@@ -531,10 +606,35 @@ const UploadQuestion = () => {
             rows="4"
             value={questionText}
             onChange={(e) => setQuestionText(e.target.value)}
-            placeholder="Enter the question or clinical scenario..."
-            required
+            placeholder={type === 'hotspot' ? 'Optional text prompt (image can be the question)' : 'Enter the question or clinical scenario...'}
+            required={type !== 'hotspot'}
           />
         </div>
+
+        {(category === 'Adult Health' || category === 'Child Health') && subcategory === 'Cardiovascular' && (
+          <div className="form-group">
+            <label className="form-label">ECG / Question Image (optional)</label>
+            <input
+              type="url"
+              className="form-control mb-2"
+              value={questionImageUrl}
+              onChange={(e) => setQuestionImageUrl(e.target.value)}
+              placeholder="https://.../ecg.png or /api/uploads/..."
+            />
+            <input type="file" className="form-control" accept="image/*" onChange={(e) => uploadAsset(e.target.files?.[0], 'question')} />
+            {assetUploading === 'question' && <small className="text-muted">Uploading ECG image...</small>}
+            {questionImageUrl && (
+              <img
+                src={firstMediaUrl(questionImageUrl)}
+                data-raw-src={questionImageUrl}
+                data-fallback-index="0"
+                onError={handlePreviewImageFallback}
+                alt="Question visual preview"
+                style={{ marginTop: '10px', maxWidth: '320px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+              />
+            )}
+          </div>
+        )}
 
         {(type === 'multiple-choice' || type === 'sata') && (
           <div className="form-group">
@@ -755,7 +855,7 @@ const UploadQuestion = () => {
 
         {type === 'hotspot' && (
           <div className="form-group">
-            <label className="form-label">Hotspot Image URL</label>
+            <label className="form-label">Hotspot Question Image URL</label>
             <input
               type="url"
               className="form-control"
@@ -775,22 +875,42 @@ const UploadQuestion = () => {
             </div>
             {hotspotImageUrl && (
               <div className="mt-3">
-                <small className="text-muted d-block mb-2">Tap/click image to place the selected target.</small>
+                <small className="text-muted d-block mb-2">Click image to place a spot. If no target is selected, a new circle is created automatically.</small>
                 <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}
                   onClick={(e) => {
                     const selectedId = String(correctAnswer || '').trim();
-                    if (!selectedId) return;
-                    const target = hotspotTargets.find((t) => String(t.id) === selectedId);
-                    if (!target) return;
                     const rect = e.currentTarget.getBoundingClientRect();
                     const x = ((e.clientX - rect.left) / rect.width) * 100;
                     const y = ((e.clientY - rect.top) / rect.height) * 100;
+                    const hasSelected = selectedId && hotspotTargets.some((t) => String(t.id) === selectedId);
+                    if (!hasSelected) {
+                      const nextId = `T${hotspotTargets.length + 1}`;
+                      setHotspotTargets((prev) => [
+                        ...prev,
+                        {
+                          id: nextId,
+                          label: `Spot ${prev.length + 1}`,
+                          x: Number(x.toFixed(2)),
+                          y: Number(y.toFixed(2)),
+                          radius: 6,
+                        },
+                      ]);
+                      setCorrectAnswer(nextId);
+                      return;
+                    }
                     setHotspotTargets((prev) => prev.map((t) => (
                       String(t.id) === selectedId ? { ...t, x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) } : t
                     )));
                   }}
                 >
-                  <img src={hotspotImageUrl} alt="Hotspot source" style={{ maxWidth: '420px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  <img
+                    src={firstMediaUrl(hotspotImageUrl)}
+                    data-raw-src={hotspotImageUrl}
+                    data-fallback-index="0"
+                    onError={handlePreviewImageFallback}
+                    alt="Hotspot source"
+                    style={{ maxWidth: '420px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
                   {hotspotTargets.map((t, idx) => (
                     <span key={`dot-${idx}`} style={{ position: 'absolute', left: `${t.x}%`, top: `${t.y}%`, transform: 'translate(-50%, -50%)', width: `${Math.max(10, Number(t.radius || 6) * 2)}px`, height: `${Math.max(10, Number(t.radius || 6) * 2)}px`, borderRadius: '999px', border: '2px solid #ef4444', background: 'rgba(239,68,68,0.2)' }} />
                   ))}
@@ -962,7 +1082,16 @@ const UploadQuestion = () => {
             <input type="url" className="form-control mb-2" value={rationaleImageUrl} onChange={(e) => setRationaleImageUrl(e.target.value)} placeholder="https://.../rationale.png or /api/uploads/..." />
             <input type="file" className="form-control" accept="image/*" onChange={(e) => uploadAsset(e.target.files?.[0], 'rationale')} />
             {assetUploading === 'rationale' && <small className="text-muted">Uploading image...</small>}
-            {rationaleImageUrl && <img src={rationaleImageUrl} alt="Rationale preview" style={{ marginTop: '10px', maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }} />}
+            {rationaleImageUrl && (
+              <img
+                src={firstMediaUrl(rationaleImageUrl)}
+                data-raw-src={rationaleImageUrl}
+                data-fallback-index="0"
+                onError={handlePreviewImageFallback}
+                alt="Rationale preview"
+                style={{ marginTop: '10px', maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+              />
+            )}
           </div>
         </div>
 

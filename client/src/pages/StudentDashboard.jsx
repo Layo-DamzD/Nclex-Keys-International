@@ -244,13 +244,6 @@ const StudentDashboard = () => {
   useEffect(() => {
     if (loading || !user?._id) return;
 
-    const createdAt = user?.createdAt ? new Date(user.createdAt) : null;
-    if (!createdAt || Number.isNaN(createdAt.getTime())) return;
-
-    const accountAgeMs = Date.now() - createdAt.getTime();
-    const isNewSignup = accountAgeMs <= 48 * 60 * 60 * 1000;
-    if (!isNewSignup) return;
-
     const seenKey = `student-welcome-celebration:${user._id}`;
     if (localStorage.getItem(seenKey) === 'done') return;
 
@@ -332,6 +325,8 @@ const StudentDashboard = () => {
         onClose={handleCloseExamCelebration}
         programName={user?.program || 'NCLEX Program'}
         durationMs={15000}
+        countdownDays={daysUntilExamCount}
+        celebrationVideoUrl={import.meta.env.VITE_CELEBRATION_VIDEO_URL || 'https://www.youtube.com/watch?v=7ILVwUsfrAc'}
       />
       <StudentNotificationPopup
         enabled={Boolean(user)}

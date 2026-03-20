@@ -16,6 +16,30 @@ const resolveImageCandidates = (rawUrl) => {
   const origin = typeof window !== 'undefined' ? window.location.origin.replace(/\/+$/, '') : '';
   const candidates = [];
   const pushUnique = (value) => { if (value && !candidates.includes(value)) candidates.push(value); };
+  const stripTrailingSlash = (value) => String(value || '').replace(/\/+$/, '');
+  const buildUploadVariants = (value) => {
+    const normalized = String(value || '').replace(/\\/g, '/');
+    const markerIndex = normalized.toLowerCase().indexOf('/uploads/');
+    if (markerIndex === -1) return;
+
+    const uploadSuffix = normalized.slice(markerIndex + '/uploads/'.length).replace(/^\/+/, '');
+    if (!uploadSuffix) return;
+
+    const safeOrigin = stripTrailingSlash(origin);
+    const safeBase = stripTrailingSlash(base);
+
+    pushUnique(safeOrigin ? `${safeOrigin}/api/uploads/${uploadSuffix}` : '');
+    pushUnique(safeOrigin ? `${safeOrigin}/uploads/${uploadSuffix}` : '');
+    pushUnique(safeBase ? `${safeBase}/api/uploads/${uploadSuffix}` : '');
+    pushUnique(safeBase ? `${safeBase}/uploads/${uploadSuffix}` : '');
+  };
+
+  const convertGoogleDriveUrl = (value) => {
+    const raw = String(value || '');
+    const idMatch = raw.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{10,})/);
+    if (!idMatch?.[1]) return '';
+    return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+  };
 
   if (/^data:/i.test(url)) {
     pushUnique(url);
@@ -24,6 +48,23 @@ const resolveImageCandidates = (rawUrl) => {
 
   if (/^https?:\/\//i.test(url)) {
     pushUnique(url);
+    pushUnique(url.replace(/^http:\/\//i, 'https://'));
+    try {
+      const parsed = new URL(url);
+      const safeOrigin = stripTrailingSlash(origin);
+      if (parsed.pathname.includes('/uploads/')) {
+        buildUploadVariants(parsed.pathname);
+        pushUnique(`${origin}${parsed.pathname}`);
+        pushUnique(`${base}${parsed.pathname}`);
+      }
+      if (safeOrigin && parsed.hostname === window.location.hostname) {
+        pushUnique(`${safeOrigin}${parsed.pathname}${parsed.search || ''}`);
+      }
+    } catch {
+      // ignore parse failures
+    }
+    pushUnique(convertGoogleDriveUrl(url));
+
     try {
       const parsed = new URL(url);
       if (parsed.pathname.includes('/api/uploads/')) {
@@ -33,23 +74,28 @@ const resolveImageCandidates = (rawUrl) => {
     } catch {
       // ignore parse failures
     }
+
   } else if (url.startsWith('//')) {
     pushUnique(`${window.location.protocol}${url}`);
   } else if (url.startsWith('/')) {
     pushUnique(origin ? `${origin}${url}` : '');
     pushUnique(base ? `${base}${url}` : '');
+
+    if (!url.startsWith('/api/')) {
+      pushUnique(origin ? `${origin}/api${url}` : '');
+      pushUnique(base ? `${base}/api${url}` : '');
+    }
+
     pushUnique(url);
   } else {
     pushUnique(origin ? `${origin}/${url}` : '');
     pushUnique(base ? `${base}/${url}` : '');
+    pushUnique(origin ? `${origin}/api/${url}` : '');
+    pushUnique(base ? `${base}/api/${url}` : '');
     pushUnique(url);
   }
 
-  const uploadMatch = url.match(/(?:^|\/)api\/uploads\/([^/?#]+)/i) || url.match(/(?:^|\/)uploads\/([^/?#]+)/i);
-  if (uploadMatch?.[1]) {
-    pushUnique(origin ? `${origin}/api/uploads/${uploadMatch[1]}` : '');
-    pushUnique(base ? `${base}/api/uploads/${uploadMatch[1]}` : '');
-  }
+  buildUploadVariants(url);
 
   return candidates.filter(Boolean);
 };
@@ -71,7 +117,12 @@ const BrainiacSection = ({
     const raw = target.getAttribute('data-raw-src') || '';
     const currentIndex = Number(target.getAttribute('data-fallback-index') || '0');
     const candidates = resolveImageCandidates(raw);
-    if (currentIndex + 1 >= candidates.length) return;
+    if (currentIndex + 1 >= candidates.length) {
+      const fallbackName = encodeURIComponent(target.getAttribute('data-fallback-name') || 'Tutor');
+      target.src = `https://ui-avatars.com/api/?name=${fallbackName}&background=E2E8F0&color=1E293B&size=256&rounded=true`;
+      target.onerror = null;
+      return;
+    }
     target.setAttribute('data-fallback-index', String(currentIndex + 1));
     target.src = candidates[currentIndex + 1];
   };
@@ -99,6 +150,7 @@ const BrainiacSection = ({
                     src={resolveImageCandidates(tutor.imageUrl)[0] || ''}
                     alt={tutor.name}
                     data-raw-src={tutor.imageUrl || ''}
+                    data-fallback-name={tutor.name || 'Tutor'}
                     data-fallback-index="0"
                     onError={handleImageFallback}
                     loading={index === 0 ? 'eager' : 'lazy'}

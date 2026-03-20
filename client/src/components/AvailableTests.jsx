@@ -38,6 +38,7 @@ const AvailableTests = () => {
         _id: q._id,
         type: q.type,
         questionText: q.questionText,
+        questionImageUrl: q.questionImageUrl,
         options: q.options,
         correctAnswer: q.correctAnswer,
         rationale: q.rationale,
