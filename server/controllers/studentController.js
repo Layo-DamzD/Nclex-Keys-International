@@ -361,7 +361,9 @@ const formatTimeAgo = (date) => {
 const getDashboardStats = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const user = await User.findById(studentId).select('seenQuestions');
     const testResults = await TestResult.find({ student: studentId }).select('percentage');
+    const totalQuestionBank = await Question.countDocuments();
 
     const totalTests = testResults.length;
     const avgScore = totalTests
@@ -370,8 +372,9 @@ const getDashboardStats = async (req, res) => {
     const bestScore = totalTests
       ? Math.max(...testResults.map((item) => Number(item.percentage || 0)))
       : 0;
+    const attemptedQuestions = Array.isArray(user?.seenQuestions) ? user.seenQuestions.length : 0;
 
-    res.json({ totalTests, avgScore, bestScore });
+    res.json({ totalTests, avgScore, bestScore, totalQuestionBank, attemptedQuestions });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

@@ -1,11 +1,14 @@
 import React from 'react';
 import axios from 'axios';
 
-
 const Testimonials = ({ content = {} }) => {
-  const hasExplicitItems = Array.isArray(content?.items);
-  const providedItems = hasExplicitItems ? content.items : [];
-  const testimonials = providedItems;
+  const normalizeItems = (value) => {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (value && typeof value === 'object') return Object.values(value).filter(Boolean);
+    return [];
+  };
+
+  const testimonials = normalizeItems(content?.items);
   if (testimonials.length === 0) return null;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
