@@ -123,6 +123,13 @@ const UploadQuestion = () => {
 
   const addOption = () => setOptions((prev) => [...prev, '']);
 
+  const withCacheBust = (rawUrl) => {
+    const value = String(rawUrl || '').trim();
+    if (!value) return '';
+    const joiner = value.includes('?') ? '&' : '?';
+    return `${value}${joiner}v=${Date.now()}`;
+  };
+
   const resolveMediaCandidates = (rawUrl) => {
     const original = String(rawUrl || '').trim();
     if (!original) return [];
@@ -207,12 +214,13 @@ const UploadQuestion = () => {
         setError('Upload succeeded but no file URL was returned');
         return;
       }
+      const freshUrl = withCacheBust(uploadedUrl);
       if (targetField === 'hotspot') {
-        setHotspotImageUrl(uploadedUrl);
+        setHotspotImageUrl(freshUrl);
       } else if (targetField === 'rationale') {
-        setRationaleImageUrl(uploadedUrl);
+        setRationaleImageUrl(freshUrl);
       } else if (targetField === 'question') {
-        setQuestionImageUrl(uploadedUrl);
+        setQuestionImageUrl(freshUrl);
       }
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to upload image');

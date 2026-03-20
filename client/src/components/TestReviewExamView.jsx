@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 
 const normalizeTypeLabel = (type) => {
   if (!type) return 'Unknown';
@@ -131,6 +132,47 @@ const formatCorrectAnswer = (item) => {
   }
 
   return formatAnswerValue(item, item.correctAnswer);
+};
+
+const resolveMediaCandidates = (rawUrl) => {
+  const value = String(rawUrl || '').trim();
+  if (!value) return [];
+  const normalized = value.replace(/\\/g, '/');
+  const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
+  const origin = window.location.origin.replace(/\/+$/, '');
+  const out = [];
+  const pushUnique = (next) => {
+    const url = String(next || '').trim();
+    if (!url) return;
+    if (!out.includes(url)) out.push(url);
+  };
+
+  if (/^data:/i.test(normalized)) return [normalized];
+  if (/^https?:\/\//i.test(normalized)) {
+    pushUnique(normalized);
+  } else if (normalized.startsWith('/')) {
+    if (normalized.startsWith('/api/')) pushUnique(apiBase ? `${apiBase}${normalized}` : '');
+    pushUnique(`${origin}${normalized}`);
+    pushUnique(apiBase ? `${apiBase}${normalized}` : '');
+    pushUnique(normalized);
+  } else {
+    pushUnique(`${origin}/${normalized}`);
+    pushUnique(apiBase ? `${apiBase}/${normalized}` : '');
+    pushUnique(normalized);
+  }
+  return out;
+};
+
+const firstMediaUrl = (rawUrl) => resolveMediaCandidates(rawUrl)[0] || '';
+
+const handleImageFallback = (event) => {
+  const target = event.currentTarget;
+  const raw = target.getAttribute('data-raw-src') || '';
+  const index = Number(target.getAttribute('data-fallback-index') || '0');
+  const candidates = resolveMediaCandidates(raw);
+  if (index + 1 >= candidates.length) return;
+  target.setAttribute('data-fallback-index', String(index + 1));
+  target.src = candidates[index + 1];
 };
 
 const TestReviewExamView = ({
@@ -493,7 +535,7 @@ const TestReviewExamView = ({
               {active.rationale && (<div className="rationale-text-block"><strong>Rationale:</strong> {active.rationale}</div>)}
               {active.rationaleImageUrl && (
                 <div className="mt-2">
-                  <img src={active.rationaleImageUrl} alt="Rationale visual" style={{ maxWidth: '320px', width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                  <img src={firstMediaUrl(active.rationaleImageUrl)} data-raw-src={active.rationaleImageUrl} data-fallback-index="0" onError={handleImageFallback} alt="Rationale visual" style={{ maxWidth: '320px', width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
                 </div>
               )}
             </div>
