@@ -12,6 +12,7 @@ const TestCustomization = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
+  const [categoryMap, setCategoryMap] = useState(CATEGORIES);
   const [usedSubcategoryCounts, setUsedSubcategoryCounts] = useState({});
   const [omittedSubcategoryCounts, setOmittedSubcategoryCounts] = useState({});
   const [countLoadError, setCountLoadError] = useState('');
@@ -83,6 +84,20 @@ const TestCustomization = () => {
       return acc;
     }, {});
 
+
+  const deriveCategoryMapFromCounts = (rawNestedCounts = {}) => {
+    const entries = Object.entries(rawNestedCounts)
+      .map(([category, subMap]) => {
+        const subcategories = Object.keys(subMap || {}).filter(Boolean);
+        return [category, subcategories];
+      })
+      .filter(([category, subcategories]) => category && subcategories.length > 0);
+
+    if (!entries.length) return CATEGORIES;
+
+    return Object.fromEntries(entries);
+  };
+
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -97,6 +112,7 @@ const TestCustomization = () => {
         const omittedRawNestedCounts = response.data?.omittedCountsByCategorySubcategory || {};
 
         setSubcategoryCounts(normalizeNestedCounts(totalRawNestedCounts));
+        setCategoryMap(deriveCategoryMapFromCounts(totalRawNestedCounts));
         setUsedSubcategoryCounts(normalizeNestedCounts(usedRawNestedCounts));
         setOmittedSubcategoryCounts(normalizeNestedCounts(omittedRawNestedCounts));
       } catch (err) {
@@ -110,34 +126,34 @@ const TestCustomization = () => {
 
   const categoryTotals = useMemo(() => {
     return Object.fromEntries(
-      Object.entries(CATEGORIES).map(([category, subcats]) => [
+      Object.entries(categoryMap).map(([category, subcats]) => [
         category,
         subcats.reduce((sum, sub) => sum + getSubcategoryCount(category, sub), 0)
       ])
     );
-  }, [subcategoryCounts]);
+  }, [subcategoryCounts, categoryMap]);
 
   const usedCategoryTotals = useMemo(() => {
     return Object.fromEntries(
-      Object.entries(CATEGORIES).map(([category, subcats]) => [
+      Object.entries(categoryMap).map(([category, subcats]) => [
         category,
         subcats.reduce((sum, sub) => sum + getUsedSubcategoryCount(category, sub), 0)
       ])
     );
-  }, [usedSubcategoryCounts]);
+  }, [usedSubcategoryCounts, categoryMap]);
 
   const categoryColumns = useMemo(() => {
     const cols = [[], [], []];
-    Object.entries(CATEGORIES).forEach((entry, index) => {
+    Object.entries(categoryMap).forEach((entry, index) => {
       cols[index % 3].push(entry);
     });
     return cols;
-  }, []);
+  }, [categoryMap]);
 
   const selectedStats = useMemo(() => {
     const selectedPairs = selectedSubcategoryPairs.length > 0
       ? selectedSubcategoryPairs
-      : Object.entries(CATEGORIES).flatMap(([category, subcategories]) => (
+      : Object.entries(categoryMap).flatMap(([category, subcategories]) => (
           subcategories.map((subcategory) => getPairKey(category, subcategory))
         ));
 
@@ -153,7 +169,7 @@ const TestCustomization = () => {
         omitted: totals.omitted + omitted,
       };
     }, { available: 0, used: 0, omitted: 0 });
-  }, [selectedSubcategoryPairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts]);
+  }, [selectedSubcategoryPairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap]);
 
   const questionRangeMin = 5;
   const questionRangeMax = 150;
