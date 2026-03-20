@@ -24,6 +24,7 @@ const Testimonials = ({ content = {} }) => {
     content?.testimonials ??
     (Array.isArray(content) ? content : null)
   );
+
   if (testimonials.length === 0) return null;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
