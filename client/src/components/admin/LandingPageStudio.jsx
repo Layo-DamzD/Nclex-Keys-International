@@ -232,6 +232,8 @@ const resolveMediaUrl = (rawUrl) => {
   if (!url) return '';
   if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
   if (url.startsWith('//')) return `${window.location.protocol}${url}`;
+
+  const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
   const apiBase = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
   if (url.startsWith('/api/')) return apiBase ? `${apiBase}${url}` : url;
   if (url.startsWith('/')) return apiBase ? `${apiBase}${url}` : url;
