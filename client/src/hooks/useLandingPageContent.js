@@ -21,10 +21,10 @@ const writeCache = (key, payload) => {
   }
 };
 
-const CACHE_TTL_MS = 60 * 1000;
+const CACHE_TTL_MS = 15 * 1000;
 
 const useLandingPageContent = (pageKey) => {
-  const cacheKey = `landing-page-cache:v5:${pageKey}`;
+  const cacheKey = `landing-page-cache:v6:${pageKey}`;
   const cached = readCache(cacheKey);
 
   const [config, setConfig] = useState(cached?.config || null);
@@ -38,7 +38,8 @@ const useLandingPageContent = (pageKey) => {
     const load = async () => {
       try {
         const res = await axios.get(`/api/content/landing-page/${pageKey}`, {
-          timeout: 2500,
+          params: { _t: Date.now() },
+          timeout: 10000,
         });
         if (!active) return;
 
