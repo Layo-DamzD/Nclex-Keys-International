@@ -233,9 +233,16 @@ const resolveMediaUrl = (rawUrl) => {
   if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
   if (url.startsWith('//')) return `${window.location.protocol}${url}`;
   const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
-  if (url.startsWith('/api/')) return url;
+  if (url.startsWith('/api/')) return apiBase ? `${apiBase}${url}` : url;
   if (url.startsWith('/')) return apiBase ? `${apiBase}${url}` : url;
   return apiBase ? `${apiBase}/${url}` : url;
+};
+
+const withCacheBust = (rawUrl) => {
+  const value = String(rawUrl || '').trim();
+  if (!value) return '';
+  const joiner = value.includes('?') ? '&' : '?';
+  return `${value}${joiner}v=${Date.now()}`;
 };
 
 const LandingPageStudio = () => {
@@ -683,8 +690,9 @@ const LandingPageStudio = () => {
                         embedAsDataUrl: true,
                         onUploaded: (uploadedUrl) =>
                           mutateConfig((next) => {
-                            next.sections.testimonials.items[index].avatar = uploadedUrl;
-                            next.sections.testimonials.items[index].imageUrl = uploadedUrl;
+                            const freshUrl = withCacheBust(uploadedUrl);
+                            next.sections.testimonials.items[index].avatar = freshUrl;
+                            next.sections.testimonials.items[index].imageUrl = freshUrl;
                           })
                       })
                     }
@@ -825,7 +833,7 @@ const LandingPageStudio = () => {
                   onImageInputChange(e, {
                     fieldKey: `brainiac-${selectedTutorIndex}`,
                     onUploaded: (uploadedUrl) =>
-                      mutateConfig((next) => { next.tutors[selectedTutorIndex].imageUrl = uploadedUrl; })
+                      mutateConfig((next) => { next.tutors[selectedTutorIndex].imageUrl = withCacheBust(uploadedUrl); })
                   })
                 }
               />
