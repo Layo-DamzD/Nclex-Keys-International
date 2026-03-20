@@ -30,16 +30,15 @@ const useLandingPageContent = (pageKey) => {
   const [config, setConfig] = useState(cached?.config || null);
   const [hasSavedConfig, setHasSavedConfig] = useState(Boolean(cached?.hasSavedConfig));
   const isCacheFresh = cached?.cachedAt && Date.now() - cached.cachedAt < CACHE_TTL_MS;
-  const [loading, setLoading] = useState(!cached);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
-      if (!cached) setLoading(true);
       try {
         const res = await axios.get(`/api/content/landing-page/${pageKey}`, {
-          timeout: 5000,
+          timeout: 2500,
         });
         if (!active) return;
 
@@ -70,7 +69,6 @@ const useLandingPageContent = (pageKey) => {
     };
 
     if (isCacheFresh) {
-      setLoading(false);
       // Still refresh in the background so the public page reflects latest admin edits quickly.
       load();
     } else {

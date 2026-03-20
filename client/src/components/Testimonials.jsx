@@ -1,11 +1,29 @@
 import React from 'react';
 import axios from 'axios';
 
-
 const Testimonials = ({ content = {} }) => {
-  const hasExplicitItems = Array.isArray(content?.items);
-  const providedItems = hasExplicitItems ? content.items : [];
-  const testimonials = providedItems;
+  const parseMaybeJson = (value) => {
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  };
+
+  const normalizeItems = (value) => {
+    const parsed = parseMaybeJson(value);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    if (parsed && typeof parsed === 'object') return Object.values(parsed).filter(Boolean);
+    return [];
+  };
+
+  const testimonials = normalizeItems(
+    content?.items ??
+    content?.stories ??
+    content?.testimonials ??
+    (Array.isArray(content) ? content : null)
+  );
   if (testimonials.length === 0) return null;
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';

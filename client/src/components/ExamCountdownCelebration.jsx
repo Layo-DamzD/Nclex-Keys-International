@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const FIREWORK_COLORS = ['#ffffff', '#f8fafc', '#e2e8f0', '#fef3c7', '#fde68a', '#fdba74', '#fca5a5', '#fb7185'];
 const FIREWORK_RAY_COLORS = ['#ffffff', '#f8fafc', '#fefce8', '#e2e8f0'];
@@ -29,12 +29,39 @@ const ExamCountdownCelebration = ({
   onClose,
   programName = 'NCLEX Program',
   durationMs = 15000,
+  countdownDays = null,
+  celebrationVideoUrl = 'https://www.youtube.com/watch?v=7ILVwUsfrAc',
 }) => {
   const onCloseRef = useRef(onClose);
+  const [showVideoPhase, setShowVideoPhase] = useState(false);
 
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  const fireworkPhaseMs = useMemo(
+    () => Math.max(3000, Math.min(9000, durationMs - 2500)),
+    [durationMs]
+  );
+
+  const resolveYoutubeEmbedUrl = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const patterns = [
+      /(?:youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/i,
+      /(?:youtube\.com\/watch\?v=)([A-Za-z0-9_-]{6,})/i,
+      /(?:youtu\.be\/)([A-Za-z0-9_-]{6,})/i,
+    ];
+    for (const regex of patterns) {
+      const match = raw.match(regex);
+      if (match?.[1]) {
+        return `https://www.youtube-nocookie.com/embed/${match[1]}?autoplay=1&mute=1&rel=0&modestbranding=1`;
+      }
+    }
+    return '';
+  };
+
+  const embedVideoUrl = useMemo(() => resolveYoutubeEmbedUrl(celebrationVideoUrl), [celebrationVideoUrl]);
 
   const fireworkLaunches = useMemo(
     () =>
@@ -118,11 +145,19 @@ const ExamCountdownCelebration = ({
 
   useEffect(() => {
     if (!open) return undefined;
+    setShowVideoPhase(false);
+    const phaseTimer = setTimeout(() => {
+      setShowVideoPhase(true);
+    }, fireworkPhaseMs);
+
     const timer = setTimeout(() => {
       onCloseRef.current?.();
     }, durationMs);
-    return () => clearTimeout(timer);
-  }, [open, durationMs]);
+    return () => {
+      clearTimeout(phaseTimer);
+      clearTimeout(timer);
+    };
+  }, [open, durationMs, fireworkPhaseMs]);
 
   if (!open) return null;
 
@@ -132,7 +167,10 @@ const ExamCountdownCelebration = ({
 
       <div className="exam-celebration-card">
         <div className="exam-celebration-stage" aria-hidden="true">
-          <div className="exam-celebration-fireworks exam-celebration-fireworks--continuous">
+          <div
+            className={`exam-celebration-scene-layer exam-celebration-scene-layer--fireworks ${showVideoPhase ? 'fade-out' : 'fade-in'}`}
+          >
+            <div className="exam-celebration-fireworks exam-celebration-fireworks--continuous">
             {fireworkLaunches.map((launch) => (
               <span
                 key={`launch-${launch.id}`}
@@ -202,26 +240,41 @@ const ExamCountdownCelebration = ({
                 }}
               />
             ))}
+            </div>
+
+            <div className="exam-celebration-heart-core">
+              <div className="exam-celebration-heart-shape" />
+              <div className="exam-celebration-heart-glow" />
+            </div>
+
+            <div className="exam-celebration-floating-hearts">
+              {floatingHearts.map((heart) => (
+                <span
+                  key={heart.id}
+                  className="exam-mini-heart"
+                  style={{
+                    '--fh-x': `${heart.x}px`,
+                    '--fh-delay': `${heart.delay}s`,
+                    '--fh-scale': heart.scale,
+                  }}
+                />
+              ))}
+            </div>
           </div>
 
-          <div className="exam-celebration-heart-core">
-            <div className="exam-celebration-heart-shape" />
-            <div className="exam-celebration-heart-glow" />
-          </div>
-
-          <div className="exam-celebration-floating-hearts">
-            {floatingHearts.map((heart) => (
-              <span
-                key={heart.id}
-                className="exam-mini-heart"
-                style={{
-                  '--fh-x': `${heart.x}px`,
-                  '--fh-delay': `${heart.delay}s`,
-                  '--fh-scale': heart.scale,
-                }}
-              />
-            ))}
-          </div>
+          {embedVideoUrl ? (
+            <div className={`exam-celebration-scene-layer exam-celebration-scene-layer--video ${showVideoPhase ? 'fade-in' : 'fade-out'}`}>
+              <div className="exam-celebration-video-shell">
+                <iframe
+                  src={showVideoPhase ? embedVideoUrl : ''}
+                  title="Welcome celebration video"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="exam-celebration-content">
@@ -232,7 +285,10 @@ const ExamCountdownCelebration = ({
           <p>
             It has already ended in praise. Congratulations!
           </p>
-          <div className="exam-celebration-timer-note">Celebration in progress...</div>
+          <div className="exam-celebration-timer-note">
+            {countdownDays != null ? `${countdownDays} day${countdownDays === 1 ? '' : 's'} to exam` : 'Celebration in progress...'}
+            {embedVideoUrl ? (showVideoPhase ? ' • Welcome video playing' : ' • Fireworks show') : ''}
+          </div>
         </div>
       </div>
     </div>

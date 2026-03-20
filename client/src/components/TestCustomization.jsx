@@ -85,19 +85,6 @@ const TestCustomization = () => {
     }, {});
 
 
-  const deriveCategoryMapFromCounts = (rawNestedCounts = {}) => {
-    const entries = Object.entries(rawNestedCounts)
-      .map(([category, subMap]) => {
-        const subcategories = Object.keys(subMap || {}).filter(Boolean);
-        return [category, subcategories];
-      })
-      .filter(([category, subcategories]) => category && subcategories.length > 0);
-
-    if (!entries.length) return CATEGORIES;
-
-    return Object.fromEntries(entries);
-  };
-
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -112,7 +99,9 @@ const TestCustomization = () => {
         const omittedRawNestedCounts = response.data?.omittedCountsByCategorySubcategory || {};
 
         setSubcategoryCounts(normalizeNestedCounts(totalRawNestedCounts));
-        setCategoryMap(deriveCategoryMapFromCounts(totalRawNestedCounts));
+        // Always show your configured category/subcategory taxonomy,
+        // even when question counts are currently zero.
+        setCategoryMap(CATEGORIES);
         setUsedSubcategoryCounts(normalizeNestedCounts(usedRawNestedCounts));
         setOmittedSubcategoryCounts(normalizeNestedCounts(omittedRawNestedCounts));
       } catch (err) {

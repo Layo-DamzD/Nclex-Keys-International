@@ -10,14 +10,19 @@ import LandingLayoutRenderer from '../components/LandingLayoutRenderer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
 
 const HOME_SECTION_FALLBACK_ORDER = ['hero', 'stats', 'program', 'testimonials'];
+const TESTIMONIAL_SECTION_ALIASES = ['testimonials', 'successStories', 'success', 'successStory'];
 
 const Home = () => {
   const { config, hasSavedConfig, loading } = useLandingPageContent('home');
   const isStructured = hasSavedConfig && config?.mode === 'structured';
   const incomingOrder = Array.isArray(config?.sectionOrder) ? config.sectionOrder : [];
+  const normalizeSectionKey = (sectionKey) => (
+    TESTIMONIAL_SECTION_ALIASES.includes(sectionKey) ? 'testimonials' : sectionKey
+  );
+
   const order = [
     ...new Set(
-      [...incomingOrder, ...HOME_SECTION_FALLBACK_ORDER].filter((sectionKey) =>
+      [...incomingOrder.map(normalizeSectionKey), ...HOME_SECTION_FALLBACK_ORDER].filter((sectionKey) =>
         HOME_SECTION_FALLBACK_ORDER.includes(sectionKey)
       )
     ),
@@ -32,7 +37,15 @@ const Home = () => {
     if (sectionKey === 'hero') return <Hero content={sections.hero} key="hero" />;
     if (sectionKey === 'stats') return <Stats content={sections.stats} key="stats" />;
     if (sectionKey === 'program') return <Program content={sections.program} key="program" />;
-    if (sectionKey === 'testimonials') return <Testimonials content={sections.testimonials || { items: [] }} key="testimonials" />;
+    if (sectionKey === 'testimonials') {
+      const testimonialContent =
+        sections.testimonials ||
+        sections.successStories ||
+        sections.success ||
+        sections.successStory ||
+        { items: [] };
+      return <Testimonials content={testimonialContent} key="testimonials" />;
+    }
     return null;
   };
 

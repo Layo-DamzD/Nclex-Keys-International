@@ -106,7 +106,7 @@ const getDefaultConfig = (pageKey) => {
       testimonials: {
         heading: 'Success Stories',
         subheading: 'Hear from our graduates who passed NCLEX',
-        items: [{ id: 1, name: 'NCLEX KEYS Graduate', role: 'RN Candidate', text: 'The coaching structure made the exam finally click for me and I passed with confidence.', avatar: '', imageUrl: '', imageOnly: false, imageWithCaption: false, imageDisplayMode: 'standard', rating: 5 }],
+        items: [],
       },
       footer: {
         brandLinkUrl: '/',

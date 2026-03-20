@@ -5,7 +5,9 @@ const StatsCards = () => {
   const [stats, setStats] = useState({
     totalTests: 0,
     avgScore: 0,
-    bestScore: 0
+    bestScore: 0,
+    totalQuestionBank: 0,
+    attemptedQuestions: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -32,7 +34,16 @@ const StatsCards = () => {
 
   return (
     <div className="row">
-      <div className="col-md-4 col-sm-6">
+      <div className="col-lg-3 col-md-6 col-sm-6">
+        <div className="stats-card">
+          <div className="stats-icon icon-purple">
+            <i className="fas fa-layer-group"></i>
+          </div>
+          <div className="stats-number">{stats.totalQuestionBank}</div>
+          <p className="text-muted mb-0">Question Bank</p>
+        </div>
+      </div>
+      <div className="col-lg-3 col-md-6 col-sm-6">
         <div className="stats-card">
           <div className="stats-icon icon-blue">
             <i className="fas fa-check-circle"></i>
@@ -41,7 +52,7 @@ const StatsCards = () => {
           <p className="text-muted mb-0">Total Tests Taken</p>
         </div>
       </div>
-      <div className="col-md-4 col-sm-6">
+      <div className="col-lg-3 col-md-6 col-sm-6">
         <div className="stats-card">
           <div className="stats-icon icon-green">
             <i className="fas fa-brain"></i>
@@ -50,13 +61,13 @@ const StatsCards = () => {
           <p className="text-muted mb-0">Average Score</p>
         </div>
       </div>
-      <div className="col-md-4 col-sm-6">
+      <div className="col-lg-3 col-md-6 col-sm-6">
         <div className="stats-card">
           <div className="stats-icon icon-orange">
             <i className="fas fa-trophy"></i>
           </div>
-          <div className="stats-number">{stats.bestScore}%</div>
-          <p className="text-muted mb-0">Best Score</p>
+          <div className="stats-number">{stats.attemptedQuestions}</div>
+          <p className="text-muted mb-0">Questions Attempted</p>
         </div>
       </div>
     </div>

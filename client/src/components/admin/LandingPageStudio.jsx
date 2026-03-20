@@ -97,7 +97,7 @@ const DEFAULT_HOME_CONFIG = {
     testimonials: {
       heading: 'Success Stories',
       subheading: 'Hear from our graduates who passed NCLEX',
-      items: [{ id: 1, name: 'NCLEX KEYS Graduate', role: 'RN Candidate', text: 'The coaching structure made the exam finally click for me and I passed with confidence.', avatar: '', imageUrl: '', imageOnly: false, imageWithCaption: false, imageDisplayMode: 'standard', rating: 5 }],
+      items: [],
     },
     footer: {
       brandLinkUrl: '/',
@@ -644,32 +644,32 @@ const LandingPageStudio = () => {
                 </button>
               </div>
               <div className="landing-studio-checkbox-row">
-                <label className="landing-studio-inline-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={Boolean((item.imageDisplayMode || '').trim() ? item.imageDisplayMode === 'imageOnly' : item.imageOnly)}
-                    onChange={(e) => mutateConfig((next) => {
-                      const checked = e.target.checked;
-                      next.sections.testimonials.items[index].imageOnly = checked;
-                      next.sections.testimonials.items[index].imageWithCaption = false;
-                      next.sections.testimonials.items[index].imageDisplayMode = checked ? 'imageOnly' : 'standard';
-                    })}
-                  />
-                  <span>Full image success story (no text required)</span>
-                </label>
-                <label className="landing-studio-inline-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(item.imageDisplayMode === 'imageWithCaption' || item.imageWithCaption)}
-                    onChange={(e) => mutateConfig((next) => {
-                      const checked = e.target.checked;
-                      next.sections.testimonials.items[index].imageWithCaption = checked;
-                      next.sections.testimonials.items[index].imageOnly = false;
-                      next.sections.testimonials.items[index].imageDisplayMode = checked ? 'imageWithCaption' : 'standard';
-                    })}
-                  />
-                  <span>Full image with caption</span>
-                </label>
+                {[
+                  { mode: 'imageOnly', label: 'Full image with no text' },
+                  { mode: 'imageWithCaption', label: 'Full image with text' },
+                  { mode: 'circleWithText', label: 'Circle image with text' },
+                ].map((choice) => (
+                  <label className="landing-studio-inline-checkbox" key={choice.mode}>
+                    <input
+                      type="radio"
+                      name={`testimonial-display-mode-${index}`}
+                      checked={(() => {
+                        const currentMode = (item.imageDisplayMode || '').trim();
+                        if (currentMode) return currentMode === choice.mode;
+                        if (choice.mode === 'imageOnly') return Boolean(item.imageOnly);
+                        if (choice.mode === 'imageWithCaption') return Boolean(item.imageWithCaption);
+                        return !item.imageOnly && !item.imageWithCaption;
+                      })()}
+                      onChange={() => mutateConfig((next) => {
+                        const target = next.sections.testimonials.items[index];
+                        target.imageOnly = choice.mode === 'imageOnly';
+                        target.imageWithCaption = choice.mode === 'imageWithCaption';
+                        target.imageDisplayMode = choice.mode;
+                      })}
+                    />
+                    <span>{choice.label}</span>
+                  </label>
+                ))}
               </div>
               <div className="landing-studio-upload-block">
                 <div className="landing-studio-upload-row">
@@ -716,13 +716,13 @@ const LandingPageStudio = () => {
                   <div className="landing-studio-upload-hint">Upload an image for avatar/full-image story card.</div>
                 )}
               </div>
-              {!['imageOnly', 'imageWithCaption'].includes(item.imageDisplayMode || (item.imageOnly ? 'imageOnly' : 'standard')) && (
+              {!['imageOnly', 'imageWithCaption'].includes(item.imageDisplayMode || (item.imageOnly ? 'imageOnly' : 'circleWithText')) && (
               <div className="landing-studio-two-col">
                 <label>Name<input value={item.name || ''} onChange={(e) => mutateConfig((next) => { next.sections.testimonials.items[index].name = e.target.value; })} /></label>
                 <label>Role<input value={item.role || ''} onChange={(e) => mutateConfig((next) => { next.sections.testimonials.items[index].role = e.target.value; })} /></label>
               </div>
               )}
-              {!['imageOnly', 'imageWithCaption'].includes(item.imageDisplayMode || (item.imageOnly ? 'imageOnly' : 'standard')) && (
+              {!['imageOnly', 'imageWithCaption'].includes(item.imageDisplayMode || (item.imageOnly ? 'imageOnly' : 'circleWithText')) && (
                 <label>Text<textarea rows={3} value={item.text || ''} onChange={(e) => mutateConfig((next) => { next.sections.testimonials.items[index].text = e.target.value; })} /></label>
               )}
               <div className="landing-studio-two-col">

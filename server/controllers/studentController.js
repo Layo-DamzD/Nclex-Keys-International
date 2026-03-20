@@ -86,7 +86,7 @@ const submitTest = async (req, res) => {
 
     const questionIds = [...new Set(results.map((r) => String(r.questionId)).filter(Boolean))];
     const questionDocs = await Question.find({ _id: { $in: questionIds } })
-      .select('_id type category subcategory questionText options rationale rationaleImageUrl hotspotImageUrl hotspotTargets clozeTemplate clozeBlanks');
+      .select('_id type category subcategory questionText questionImageUrl options rationale rationaleImageUrl hotspotImageUrl hotspotTargets clozeTemplate clozeBlanks');
     const questionMap = new Map(questionDocs.map((q) => [String(q._id), q]));
 
     const enrichedAnswers = results.map((result) => {
@@ -97,6 +97,7 @@ const submitTest = async (req, res) => {
         category: result.category || q?.category,
         subcategory: result.subcategory || q?.subcategory,
         questionText: result.questionText || q?.questionText,
+        questionImageUrl: result.questionImageUrl || q?.questionImageUrl,
         options: result.options || q?.options,
         rationale: result.rationale || q?.rationale,
         rationaleImageUrl: result.rationaleImageUrl || q?.rationaleImageUrl,
@@ -258,6 +259,7 @@ const generateTest = async (req, res) => {
       _id: q._id,
       type: q.type,
       questionText: q.questionText,
+      questionImageUrl: q.questionImageUrl,
       options: q.options,
       rationaleImageUrl: q.rationaleImageUrl,
       hotspotImageUrl: q.hotspotImageUrl,
@@ -361,7 +363,9 @@ const formatTimeAgo = (date) => {
 const getDashboardStats = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const user = await User.findById(studentId).select('seenQuestions');
     const testResults = await TestResult.find({ student: studentId }).select('percentage');
+    const totalQuestionBank = await Question.countDocuments();
 
     const totalTests = testResults.length;
     const avgScore = totalTests
@@ -370,8 +374,9 @@ const getDashboardStats = async (req, res) => {
     const bestScore = totalTests
       ? Math.max(...testResults.map((item) => Number(item.percentage || 0)))
       : 0;
+    const attemptedQuestions = Array.isArray(user?.seenQuestions) ? user.seenQuestions.length : 0;
 
-    res.json({ totalTests, avgScore, bestScore });
+    res.json({ totalTests, avgScore, bestScore, totalQuestionBank, attemptedQuestions });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

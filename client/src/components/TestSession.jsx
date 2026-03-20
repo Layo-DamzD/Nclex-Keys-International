@@ -680,6 +680,7 @@ const TestSession = () => {
             totalMarks: sataScoreMeta.totalMarks,
             correctAnswer: subQ.correctAnswer,
             questionText: subQ.questionText,
+            questionImageUrl: subQ.questionImageUrl,
             options: subQ.options,
             type: subQ.type,
             rationale: subQ.rationale,
@@ -732,6 +733,7 @@ const TestSession = () => {
           totalMarks: sataScoreMeta.totalMarks,
           correctAnswer: q.correctAnswer,
           questionText: q.questionText,
+          questionImageUrl: q.questionImageUrl,
           options: q.options,
           type: q.type,
           rationale: q.rationale,
@@ -928,6 +930,11 @@ const TestSession = () => {
                   <h6>Question {results.indexOf(item) + 1}{item.scenario ? ' (Case Study)' : ''}</h6>
                   {item.scenario && <p className="text-muted small">Scenario: {item.scenario}</p>}
                   <p className="question-text">{item.questionText}</p>
+                  {item.questionImageUrl && (
+                    <div className="mb-2">
+                      <img src={item.questionImageUrl} alt="Question visual" style={{ maxWidth: '320px', width: '100%', borderRadius: '8px', border: '1px solid #dbeafe' }} />
+                    </div>
+                  )}
                   <div className="row">
                     <div className="col-md-6">
                       <p><strong>Your answer:</strong> {
@@ -1086,6 +1093,11 @@ const TestSession = () => {
           <div className="col-md-7 question-panel">
             <div className="question-container">
               <p className="question-text">{subQ.questionText}</p>
+              {subQ.questionImageUrl && (
+                <div className="mb-3">
+                  <img src={subQ.questionImageUrl} alt="Question visual" style={{ maxWidth: '420px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                </div>
+              )}
 
               {subQ.type === 'multiple-choice' && (
                 <div className="options">
@@ -1429,6 +1441,11 @@ const TestSession = () => {
 
       <div className="question-container exam-runtime-question-panel">
         <p className="question-text">{currentQ.questionText}</p>
+        {currentQ.questionImageUrl && (
+          <div className="mb-3">
+            <img src={currentQ.questionImageUrl} alt="Question visual" style={{ maxWidth: '420px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+          </div>
+        )}
 
         {currentQ.type === 'multiple-choice' && (
           <div className="options">
