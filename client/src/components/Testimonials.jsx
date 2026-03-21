@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 // Default testimonials to show when none are provided
@@ -27,11 +27,10 @@ const DEFAULT_TESTIMONIALS = [
 ];
 
 const Testimonials = ({ content = {} }) => {
-  // Debug: Log what we're receiving
-  console.log('[Testimonials] Received content:', content);
-  console.log('[Testimonials] content.items:', content?.items);
-  console.log('[Testimonials] content.items length:', content?.items?.length || 0);
-  
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [direction, setDirection] = useState('next');
+
   const parseMaybeJson = (value) => {
     if (typeof value !== 'string') return value;
     try {
@@ -56,35 +55,60 @@ const Testimonials = ({ content = {} }) => {
     (Array.isArray(content) ? content : null)
   );
   
-  // If no testimonials found, use defaults (DON'T return null!)
+  // If no testimonials found, use defaults
   if (testimonials.length === 0) {
-    console.log('[Testimonials] No testimonials in content, using defaults');
     testimonials = DEFAULT_TESTIMONIALS;
   }
   
-  console.log('[Testimonials] Final testimonials count:', testimonials.length);
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
-  
-  // Auto-slide carousel every 6 seconds
-  const carouselRef = useRef(null);
-  
+
+  // Auto-slide every 6 seconds
   useEffect(() => {
-    if (testimonials.length > 1 && carouselRef.current) {
-      // Initialize Bootstrap carousel with auto-slide
-      const carouselElement = carouselRef.current;
-      const bsCarousel = new window.bootstrap.Carousel(carouselElement, {
-        interval: 6000,
-        wrap: true,
-        ride: 'carousel'
-      });
-      
-      return () => {
-        bsCarousel.dispose();
-      };
-    }
+    if (testimonials.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setDirection('next');
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+        setIsAnimating(false);
+      }, 500);
+    }, 6000);
+
+    return () => clearInterval(interval);
   }, [testimonials.length]);
-  
+
+  const goToSlide = (index) => {
+    if (index === currentIndex || isAnimating) return;
+    setDirection(index > currentIndex ? 'next' : 'prev');
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentIndex(index);
+      setIsAnimating(false);
+    }, 500);
+  };
+
+  const goToPrev = () => {
+    if (isAnimating) return;
+    setDirection('prev');
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+      setIsAnimating(false);
+    }, 500);
+  };
+
+  const goToNext = () => {
+    if (isAnimating) return;
+    setDirection('next');
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+      setIsAnimating(false);
+    }, 500);
+  };
+
   const resolveMediaCandidates = (rawUrl) => {
     const original = String(rawUrl || '').trim();
     if (!original) return [];
@@ -150,7 +174,6 @@ const Testimonials = ({ content = {} }) => {
     target.src = candidates[index + 1];
   };
 
-
   const renderTestimonialCard = (testimonial, index) => {
     const displayMode = testimonial.imageDisplayMode || (testimonial.imageOnly ? 'imageOnly' : 'standard');
 
@@ -161,9 +184,10 @@ const Testimonials = ({ content = {} }) => {
           style={{
             background: 'white',
             padding: '0',
-            borderRadius: '0',
-            boxShadow: '0 5px 20px rgba(0,0,0,0.05)',
+            borderRadius: '20px',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
             textAlign: 'center',
+            overflow: 'hidden',
           }}
         >
           <img
@@ -175,19 +199,18 @@ const Testimonials = ({ content = {} }) => {
             loading={index === 0 ? 'eager' : 'lazy'}
             style={{
               width: '100%',
-              maxHeight: '620px',
-              objectFit: 'contain',
+              maxHeight: '500px',
+              objectFit: 'cover',
               objectPosition: 'center',
               backgroundColor: '#ffffff',
-              borderRadius: '0',
               display: 'block'
             }}
           />
           {displayMode === 'imageWithCaption' ? (
-            <div style={{ padding: '16px 20px', textAlign: 'left' }}>
-              {testimonial.name ? <h5 style={{ marginBottom: 4 }}>{testimonial.name}</h5> : null}
+            <div style={{ padding: '20px 24px', textAlign: 'left' }}>
+              {testimonial.name ? <h5 style={{ marginBottom: 4, color: '#1d3557' }}>{testimonial.name}</h5> : null}
               {testimonial.role ? <small style={{ color: '#6b7280', display: 'block', marginBottom: 8 }}>{testimonial.role}</small> : null}
-              {testimonial.text ? <p style={{ margin: 0, color: '#457b9d' }}>{testimonial.text}</p> : null}
+              {testimonial.text ? <p style={{ margin: 0, color: '#457b9d', fontStyle: 'italic' }}>{testimonial.text}</p> : null}
             </div>
           ) : null}
         </div>
@@ -199,14 +222,27 @@ const Testimonials = ({ content = {} }) => {
         className="testimonial-card"
         style={{
           background: 'white',
-          padding: '30px',
+          padding: '40px',
           borderRadius: '20px',
-          boxShadow: '0 5px 20px rgba(0,0,0,0.05)',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
           textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
+        {/* Decorative quote icon */}
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          fontSize: '60px',
+          color: '#f0f4ff',
+          fontFamily: 'Georgia, serif',
+          lineHeight: 1,
+        }}>"</div>
+        
         {(testimonial.avatar || testimonial.imageUrl || testimonial.name || testimonial.role) && (
-          <div className="testimonial-header d-flex align-items-center justify-content-center mb-4">
+          <div className="testimonial-header d-flex align-items-center justify-content-center mb-4" style={{ position: 'relative', zIndex: 1 }}>
             {(testimonial.avatar || testimonial.imageUrl) && (
               <img
                 src={firstMediaUrl(testimonial.avatar || testimonial.imageUrl)}
@@ -215,24 +251,40 @@ const Testimonials = ({ content = {} }) => {
                 onError={handleImageFallback}
                 alt={testimonial.name || 'Success story'}
                 loading={index === 0 ? 'eager' : 'lazy'}
-                style={{ width: '60px', height: '60px', borderRadius: '50%', marginRight: '15px', objectFit: 'cover' }}
+                style={{ 
+                  width: '70px', 
+                  height: '70px', 
+                  borderRadius: '50%', 
+                  marginRight: '15px', 
+                  objectFit: 'cover',
+                  border: '3px solid #457b9d',
+                  boxShadow: '0 4px 15px rgba(69, 123, 157, 0.3)'
+                }}
               />
             )}
             {(testimonial.name || testimonial.role) && (
-              <div>
-                {testimonial.name ? <h5>{testimonial.name}</h5> : null}
-                {testimonial.role ? <small>{testimonial.role}</small> : null}
+              <div style={{ textAlign: 'left' }}>
+                {testimonial.name ? <h5 style={{ marginBottom: 2, color: '#1d3557', fontWeight: 600 }}>{testimonial.name}</h5> : null}
+                {testimonial.role ? <small style={{ color: '#457b9d', fontWeight: 500 }}>{testimonial.role}</small> : null}
               </div>
             )}
           </div>
         )}
         {testimonial.text ? (
-          <p className="testimonial-text" style={{ fontStyle: 'italic', color: '#457b9d' }}>
+          <p className="testimonial-text" style={{ 
+            fontStyle: 'italic', 
+            color: '#457b9d', 
+            fontSize: '1.1rem', 
+            lineHeight: 1.8,
+            position: 'relative',
+            zIndex: 1,
+            marginBottom: 0
+          }}>
             "{testimonial.text}"
           </p>
         ) : null}
         {Number.isFinite(Number(testimonial.rating)) && Number(testimonial.rating) > 0 ? (
-          <div className="rating mt-3" style={{ color: '#ffc107' }}>
+          <div className="rating mt-3" style={{ color: '#ffc107', fontSize: '1.2rem' }}>
             {[...Array(5)].map((_, i) => (
               <i
                 key={i}
@@ -243,6 +295,7 @@ const Testimonials = ({ content = {} }) => {
                       : ''
                     : ''
                 }`}
+                style={{ margin: '0 2px' }}
               ></i>
             ))}
           </div>
@@ -255,37 +308,195 @@ const Testimonials = ({ content = {} }) => {
     <section
       id="success"
       className="success-section"
-      style={{ background: 'linear-gradient(to bottom, white 0%, #f0f4ff 100%)', padding: '80px 0' }}
+      style={{ 
+        background: 'linear-gradient(135deg, #ffffff 0%, #f0f4ff 50%, #e8f4f8 100%)', 
+        padding: '100px 0',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
     >
-      <div className="container">
+      {/* Animated background elements */}
+      <div style={{
+        position: 'absolute',
+        top: '10%',
+        left: '5%',
+        width: '200px',
+        height: '200px',
+        background: 'radial-gradient(circle, rgba(69, 123, 157, 0.1) 0%, transparent 70%)',
+        borderRadius: '50%',
+        animation: 'float 8s ease-in-out infinite',
+      }}></div>
+      <div style={{
+        position: 'absolute',
+        bottom: '20%',
+        right: '10%',
+        width: '150px',
+        height: '150px',
+        background: 'radial-gradient(circle, rgba(29, 53, 87, 0.08) 0%, transparent 70%)',
+        borderRadius: '50%',
+        animation: 'float 6s ease-in-out infinite reverse',
+      }}></div>
+
+      <div className="container" style={{ position: 'relative', zIndex: 1 }}>
         <div className="section-header text-center mb-5" data-aos="fade-down">
-          <h2 style={{ fontFamily: "'Roboto Slab', serif", color: '#1d3557' }}>{heading}</h2>
-          <p style={{ color: '#457b9d' }}>{subheading}</p>
+          <h2 style={{ 
+            fontFamily: "'Roboto Slab', serif", 
+            color: '#1d3557', 
+            fontSize: '2.5rem',
+            fontWeight: 700,
+            marginBottom: '15px'
+          }}>
+            {heading}
+          </h2>
+          <p style={{ color: '#457b9d', fontSize: '1.1rem' }}>{subheading}</p>
+          
+          {/* Decorative line */}
+          <div style={{
+            width: '80px',
+            height: '4px',
+            background: 'linear-gradient(90deg, #457b9d, #1d3557)',
+            margin: '20px auto 0',
+            borderRadius: '2px',
+          }}></div>
         </div>
-        <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-bs-interval="6000" ref={carouselRef} data-aos="fade-up">
-          <div className="carousel-inner">
-            {testimonials.map((testimonial, index) => (
-              <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
-                <div className="row justify-content-center">
-                  <div className="col-md-8">{renderTestimonialCard(testimonial, index)}</div>
-                </div>
-              </div>
-            ))}
+
+        {/* Carousel Container */}
+        <div style={{
+          position: 'relative',
+          maxWidth: '800px',
+          margin: '0 auto',
+        }}>
+          {/* Main testimonial display */}
+          <div style={{
+            position: 'relative',
+            minHeight: '300px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <div style={{
+              width: '100%',
+              opacity: isAnimating ? 0 : 1,
+              transform: isAnimating 
+                ? `translateX(${direction === 'next' ? '-30px' : '30px'}) scale(0.95)` 
+                : 'translateX(0) scale(1)',
+              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}>
+              {testimonials[currentIndex] && renderTestimonialCard(testimonials[currentIndex], currentIndex)}
+            </div>
           </div>
+
+          {/* Navigation arrows */}
           {testimonials.length > 1 && (
             <>
-              <button className="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
-                <span className="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span className="visually-hidden">Previous</span>
+              <button 
+                onClick={goToPrev}
+                style={{
+                  position: 'absolute',
+                  left: '-60px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'white',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease',
+                  color: '#457b9d',
+                  fontSize: '1.2rem',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#457b9d';
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.color = '#457b9d';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                }}
+              >
+                <i className="fas fa-chevron-left"></i>
               </button>
-              <button className="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
-                <span className="carousel-control-next-icon" aria-hidden="true"></span>
-                <span className="visually-hidden">Next</span>
+              <button 
+                onClick={goToNext}
+                style={{
+                  position: 'absolute',
+                  right: '-60px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'white',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease',
+                  color: '#457b9d',
+                  fontSize: '1.2rem',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#457b9d';
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.color = '#457b9d';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                }}
+              >
+                <i className="fas fa-chevron-right"></i>
               </button>
             </>
           )}
+
+          {/* Dot indicators */}
+          {testimonials.length > 1 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '10px',
+              marginTop: '30px',
+            }}>
+              {testimonials.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  style={{
+                    width: index === currentIndex ? '30px' : '10px',
+                    height: '10px',
+                    borderRadius: '5px',
+                    border: 'none',
+                    background: index === currentIndex 
+                      ? 'linear-gradient(90deg, #457b9d, #1d3557)' 
+                      : 'rgba(69, 123, 157, 0.3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Add CSS animation for floating elements */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-20px); }
+        }
+      `}</style>
     </section>
   );
 };
