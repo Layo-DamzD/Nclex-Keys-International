@@ -15,24 +15,16 @@ const TESTIMONIAL_SECTION_ALIASES = ['testimonials', 'successStories', 'success'
 const Home = () => {
   const { config, hasSavedConfig, loading, error } = useLandingPageContent('home');
   
-  // Debug logging
-  useEffect(() => {
-    console.log('[Home] State:', { hasSavedConfig, loading, error, configMode: config?.mode });
-    if (config?.sections?.program?.cards) {
-      console.log('[Home] Program cards count:', config.sections.program.cards.length);
-    }
-    if (config?.sections?.testimonials?.items) {
-      console.log('[Home] Testimonials count:', config.sections.testimonials.items.length);
-    }
-  }, [config, hasSavedConfig, loading, error]);
-
   // Check if config has structured mode - this should work regardless of hasSavedConfig
   const isStructured = config?.mode === 'structured';
   const incomingOrder = Array.isArray(config?.sectionOrder) ? config.sectionOrder : [];
+  
   const normalizeSectionKey = (sectionKey) => (
     TESTIMONIAL_SECTION_ALIASES.includes(sectionKey) ? 'testimonials' : sectionKey
   );
 
+  // Build order - always include all sections, prioritizing incomingOrder
+  // IMPORTANT: testimonials must always be in the order!
   const order = [
     ...new Set(
       [...incomingOrder.map(normalizeSectionKey), ...HOME_SECTION_FALLBACK_ORDER].filter((sectionKey) =>
@@ -40,13 +32,45 @@ const Home = () => {
       )
     ),
   ];
+  
+  // Ensure testimonials is ALWAYS in the order (in case it got filtered out)
+  if (!order.includes('testimonials')) {
+    order.push('testimonials');
+  }
+  
   const sections = config?.sections || {};
+
+  // Debug logging - AFTER all variables are defined
+  useEffect(() => {
+    console.log('[Home] ====== RENDER ======');
+    console.log('[Home] State:', { hasSavedConfig, loading, error, configMode: config?.mode, isStructured });
+    console.log('[Home] incomingOrder:', incomingOrder);
+    console.log('[Home] order (derived):', order);
+    console.log('[Home] sections keys:', Object.keys(sections));
+    
+    // Check program
+    if (sections?.program?.cards) {
+      console.log('[Home] Program cards count:', sections.program.cards.length);
+    }
+    
+    // Check testimonials in all possible locations
+    const possibleTestimonialKeys = ['testimonials', 'successStories', 'success', 'successStory'];
+    possibleTestimonialKeys.forEach(key => {
+      if (sections[key]?.items) {
+        console.log(`[Home] Found testimonials at sections.${key}.items: ${sections[key].items.length} items`);
+      }
+    });
+    
+    console.log('[Home] sections.testimonials:', sections.testimonials);
+  }, [config, hasSavedConfig, loading, error, isStructured, order, incomingOrder, sections]);
 
   useEffect(() => {
     AOS.refresh(); // Refresh AOS after dynamic content loads
   }, [isStructured, config]);
 
   const renderStructuredSection = (sectionKey) => {
+    console.log('[Home] Rendering section:', sectionKey);
+    
     if (sectionKey === 'hero') return <Hero content={sections.hero} key="hero" />;
     if (sectionKey === 'stats') return <Stats content={sections.stats} key="stats" />;
     if (sectionKey === 'program') return <Program content={sections.program} key="program" />;
@@ -57,6 +81,8 @@ const Home = () => {
         sections.success ||
         sections.successStory ||
         { items: [] };
+      console.log('[Home] Testimonial content being passed:', testimonialContent);
+      console.log('[Home] Testimonial items count:', testimonialContent?.items?.length || 0);
       return <Testimonials content={testimonialContent} key="testimonials" />;
     }
     return null;

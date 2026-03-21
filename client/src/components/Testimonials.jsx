@@ -2,6 +2,11 @@ import React from 'react';
 import axios from 'axios';
 
 const Testimonials = ({ content = {} }) => {
+  // Debug: Log what we're receiving
+  console.log('[Testimonials] Received content:', content);
+  console.log('[Testimonials] content.items:', content?.items);
+  console.log('[Testimonials] content.items length:', content?.items?.length || 0);
+  
   const parseMaybeJson = (value) => {
     if (typeof value !== 'string') return value;
     try {
@@ -24,8 +29,12 @@ const Testimonials = ({ content = {} }) => {
     content?.testimonials ??
     (Array.isArray(content) ? content : null)
   );
-
-  if (testimonials.length === 0) return null;
+  
+  console.log('[Testimonials] Normalized testimonials count:', testimonials.length);
+  if (testimonials.length === 0) {
+    console.log('[Testimonials] No testimonials found, returning null');
+    return null;
+  }
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
   const resolveMediaCandidates = (rawUrl) => {
