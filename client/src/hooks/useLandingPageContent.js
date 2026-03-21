@@ -21,21 +21,22 @@ const writeCache = (key, payload) => {
   }
 };
 
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds - increased to reduce flicker
+const CACHE_TTL_MS = 30 * 1000; // 30 seconds - reduced to ensure fresher data
+const CACHE_VERSION = 'v9'; // Bumped cache version to force fresh load
 
 const useLandingPageContent = (pageKey) => {
-  const cacheKey = `landing-page-cache:v8:${pageKey}`; // bumped cache version
-  const cached = readCache(cacheKey);
-
+  const cacheKey = `landing-page-cache:${CACHE_VERSION}:${pageKey}`;
+  
   const [config, setConfig] = useState(null);
   const [hasSavedConfig, setHasSavedConfig] = useState(false);
   const [loading, setLoading] = useState(true);
-  
-  // Check if cache is still fresh (within TTL)
-  const isCacheFresh = cached?.cachedAt && Date.now() - cached.cachedAt < CACHE_TTL_MS;
 
   useEffect(() => {
     let active = true;
+    
+    // Read cache inside useEffect to avoid stale closures
+    const cached = readCache(cacheKey);
+    const isCacheFresh = cached?.cachedAt && Date.now() - cached.cachedAt < CACHE_TTL_MS;
 
     const load = async () => {
       try {
@@ -81,14 +82,14 @@ const useLandingPageContent = (pageKey) => {
       setConfig(cached.config);
       setLoading(false);
     } else {
-      // Otherwise fetch fresh data
+      // Otherwise fetch fresh data - don't show stale cache to avoid flicker
       load();
     }
 
     return () => {
       active = false;
     };
-  }, [pageKey]);
+  }, [pageKey, cacheKey]);
 
   return { config, hasSavedConfig, loading };
 };
