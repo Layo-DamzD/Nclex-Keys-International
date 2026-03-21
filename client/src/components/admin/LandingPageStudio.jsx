@@ -702,7 +702,7 @@ const LandingPageStudio = () => {
                     onChange={(e) =>
                       onImageInputChange(e, {
                         fieldKey: `testimonial-${index}`,
-                        embedAsDataUrl: true,
+                        embedAsDataUrl: false,
                         onUploaded: (uploadedUrl) =>
                           mutateConfig((next) => {
                             const freshUrl = withCacheBust(uploadedUrl);
