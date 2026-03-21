@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import axios from 'axios';
 
 // Default testimonials to show when none are provided
@@ -65,6 +65,26 @@ const Testimonials = ({ content = {} }) => {
   console.log('[Testimonials] Final testimonials count:', testimonials.length);
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
+  
+  // Auto-slide carousel every 6 seconds
+  const carouselRef = useRef(null);
+  
+  useEffect(() => {
+    if (testimonials.length > 1 && carouselRef.current) {
+      // Initialize Bootstrap carousel with auto-slide
+      const carouselElement = carouselRef.current;
+      const bsCarousel = new window.bootstrap.Carousel(carouselElement, {
+        interval: 6000,
+        wrap: true,
+        ride: 'carousel'
+      });
+      
+      return () => {
+        bsCarousel.dispose();
+      };
+    }
+  }, [testimonials.length]);
+  
   const resolveMediaCandidates = (rawUrl) => {
     const original = String(rawUrl || '').trim();
     if (!original) return [];
@@ -242,7 +262,7 @@ const Testimonials = ({ content = {} }) => {
           <h2 style={{ fontFamily: "'Roboto Slab', serif", color: '#1d3557' }}>{heading}</h2>
           <p style={{ color: '#457b9d' }}>{subheading}</p>
         </div>
-        <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-aos="fade-up">
+        <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-bs-interval="6000" ref={carouselRef} data-aos="fade-up">
           <div className="carousel-inner">
             {testimonials.map((testimonial, index) => (
               <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
