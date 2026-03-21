@@ -1,32 +1,8 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-// Default testimonials to show when API fails
-const DEFAULT_TESTIMONIALS = [
-  {
-    id: 'default-1',
-    name: 'Sarah M.',
-    role: 'RN, Passed NCLEX-RN',
-    text: 'NCLEX Keys gave me the confidence and strategies I needed to pass my NCLEX on the first attempt. The tutors are amazing!',
-    rating: 5
-  },
-  {
-    id: 'default-2',
-    name: 'Michael O.',
-    role: 'PN, Passed NCLEX-PN',
-    text: 'The comprehensive content and personalized study plans made all the difference. Highly recommend!',
-    rating: 5
-  },
-  {
-    id: 'default-3',
-    name: 'Jennifer A.',
-    role: 'RN, Passed NCLEX-RN',
-    text: 'After struggling with other prep courses, NCLEX Keys helped me understand the exam logic and pass with confidence.',
-    rating: 5
-  }
-];
-
 // Default config to use when API fails completely
+// IMPORTANT: testimonials.items is EMPTY - we don't want fake testimonials overriding real ones
 const getDefaultFallbackConfig = (pageKey) => {
   if (pageKey === 'brainiac') {
     return {
@@ -83,7 +59,7 @@ const getDefaultFallbackConfig = (pageKey) => {
       testimonials: {
         heading: 'Success Stories',
         subheading: 'Hear from our graduates who passed NCLEX',
-        items: DEFAULT_TESTIMONIALS
+        items: [] // Empty - let the Testimonials component handle fallback
       }
     }
   };

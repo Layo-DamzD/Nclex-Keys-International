@@ -1,31 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Default testimonials to show when none are provided
-const DEFAULT_TESTIMONIALS = [
-  {
-    id: 'default-1',
-    name: 'Sarah M.',
-    role: 'RN, Passed NCLEX-RN',
-    text: 'NCLEX Keys gave me the confidence and strategies I needed to pass my NCLEX on the first attempt. The tutors are amazing!',
-    rating: 5
-  },
-  {
-    id: 'default-2',
-    name: 'Michael O.',
-    role: 'PN, Passed NCLEX-PN',
-    text: 'The comprehensive content and personalized study plans made all the difference. Highly recommend!',
-    rating: 5
-  },
-  {
-    id: 'default-3',
-    name: 'Jennifer A.',
-    role: 'RN, Passed NCLEX-RN',
-    text: 'After struggling with other prep courses, NCLEX Keys helped me understand the exam logic and pass with confidence.',
-    rating: 5
-  }
-];
-
 const Testimonials = ({ content = {} }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -47,7 +22,7 @@ const Testimonials = ({ content = {} }) => {
     return [];
   };
 
-  // Try to get testimonials from content, fallback to defaults if empty
+  // Get testimonials from content ONLY - no fake defaults
   let testimonials = normalizeItems(
     content?.items ??
     content?.stories ??
@@ -55,9 +30,9 @@ const Testimonials = ({ content = {} }) => {
     (Array.isArray(content) ? content : null)
   );
   
-  // If no testimonials found, use defaults
+  // If no testimonials found, don't render anything
   if (testimonials.length === 0) {
-    testimonials = DEFAULT_TESTIMONIALS;
+    return null;
   }
   
   const heading = content.heading || 'Success Stories';
