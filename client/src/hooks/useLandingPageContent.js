@@ -1,41 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-// Cache key for localStorage
-const CACHE_KEY = 'nclex_landing_page_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-// Get cached config immediately
-const getCachedConfig = (pageKey) => {
-  try {
-    const cached = localStorage.getItem(`${CACHE_KEY}_${pageKey}`);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        console.log('[LandingPage] Using cached config from localStorage');
-        return data;
-      }
-    }
-  } catch (e) {
-    console.log('[LandingPage] Cache read error:', e);
-  }
-  return null;
-};
-
-// Save config to cache
-const setCachedConfig = (pageKey, data) => {
-  try {
-    localStorage.setItem(`${CACHE_KEY}_${pageKey}`, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
-    console.log('[LandingPage] Saved config to cache');
-  } catch (e) {
-    console.log('[LandingPage] Cache write error:', e);
-  }
-};
-
-// Default config when no cache and API fails
+// Default config when API fails
 const getDefaultFallbackConfig = (pageKey) => {
   if (pageKey === 'brainiac') {
     return {
@@ -99,31 +65,22 @@ const getDefaultFallbackConfig = (pageKey) => {
 };
 
 const useLandingPageContent = (pageKey) => {
-  // Initialize IMMEDIATELY with cached data or default - NO LOADING STATE!
-  const [config, setConfig] = useState(() => {
-    const cached = getCachedConfig(pageKey);
-    return cached || getDefaultFallbackConfig(pageKey);
-  });
-  
-  const [hasSavedConfig, setHasSavedConfig] = useState(() => {
-    const cached = getCachedConfig(pageKey);
-    return cached ? true : false;
-  });
-  
-  const [loading, setLoading] = useState(false); // Always false - we show immediately!
+  const [config, setConfig] = useState(() => getDefaultFallbackConfig(pageKey));
+  const [hasSavedConfig, setHasSavedConfig] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       const url = `/api/content/landing-page/${pageKey}`;
-      console.log('[LandingPage] Fetching fresh config in background...');
+      console.log('[LandingPage] Fetching from:', url);
 
       try {
-        // Fast single attempt - 8 seconds max
+        // FAST timeout - only 3 seconds
         const res = await axios.get(url, {
           params: { _t: Date.now() },
-          timeout: 8000,
+          timeout: 3000,
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
@@ -132,31 +89,25 @@ const useLandingPageContent = (pageKey) => {
         
         if (!active) return;
 
-        console.log('[LandingPage] API Response received:', res.data);
+        console.log('[LandingPage] API Response:', res.data);
 
         const isObjectPayload = res && res.data && typeof res.data === 'object' && !Array.isArray(res.data);
         if (!isObjectPayload || (!Object.prototype.hasOwnProperty.call(res.data, 'config') && !Object.prototype.hasOwnProperty.call(res.data, 'hasSavedConfig'))) {
-          throw new Error('Invalid landing-page API payload');
+          throw new Error('Invalid API response');
         }
 
-        // Save to cache
-        const newConfig = res.data.config || null;
-        if (newConfig) {
-          setCachedConfig(pageKey, newConfig);
-        }
-        
-        // Update state with fresh data
         setHasSavedConfig(Boolean(res.data.hasSavedConfig));
-        setConfig(newConfig || getDefaultFallbackConfig(pageKey));
+        setConfig(res.data.config || getDefaultFallbackConfig(pageKey));
         
       } catch (err) {
         if (!active) return;
         console.error('[LandingPage] API failed:', err.message);
-        // Keep showing cached/default config - no changes needed
+        // Keep default config
+      } finally {
+        if (active) setLoading(false);
       }
     };
 
-    // Fetch in background - DON'T block rendering!
     load();
 
     return () => {

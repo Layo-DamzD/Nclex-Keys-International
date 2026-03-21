@@ -34,7 +34,7 @@ const Testimonials = ({ content = {} }) => {
   const heading = content?.heading || 'Success Stories';
   const subheading = content?.subheading || 'Hear from our graduates who passed NCLEX';
 
-  // Auto-slide every 6 seconds
+  // Auto-slide every 4 seconds
   useEffect(() => {
     if (testimonials.length <= 1) return;
     
@@ -45,7 +45,7 @@ const Testimonials = ({ content = {} }) => {
         setCurrentIndex((prev) => (prev + 1) % testimonials.length);
         setIsAnimating(false);
       }, 500);
-    }, 6000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [testimonials.length]);
