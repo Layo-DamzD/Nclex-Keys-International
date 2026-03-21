@@ -384,12 +384,27 @@ const LandingPageStudio = () => {
     setError('');
     setStatus('');
     try {
-      await axios.put(`/api/admin/landing-page/${pageKey}`, config, {
+      // Debug: Log what we're saving
+      console.log('[Studio] Saving config:', {
+        mode: config.mode,
+        sectionOrder: config.sectionOrder,
+        programCards: config.sections?.program?.cards?.length,
+        testimonialsItems: config.sections?.testimonials?.items?.length
+      });
+      
+      const response = await axios.put(`/api/admin/landing-page/${pageKey}`, config, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
+      // Debug: Log the response
+      console.log('[Studio] Save response:', {
+        programCards: response.data?.config?.sections?.program?.cards?.length,
+        testimonialsItems: response.data?.config?.sections?.testimonials?.items?.length
+      });
+      
       setStatus(`${pageLabel} saved`);
     } catch (err) {
-      console.error('Landing page studio save failed:', err);
+      console.error('[Studio] Save failed:', err);
       setError(err?.response?.data?.message || 'Failed to save landing page');
     } finally {
       setSaving(false);
