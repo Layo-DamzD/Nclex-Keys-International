@@ -22,21 +22,17 @@ const Testimonials = ({ content = {} }) => {
     return [];
   };
 
-  // Get testimonials from content ONLY - no fake defaults
-  let testimonials = normalizeItems(
+  // Get testimonials from content
+  const testimonials = normalizeItems(
     content?.items ??
     content?.stories ??
     content?.testimonials ??
     (Array.isArray(content) ? content : null)
   );
   
-  // If no testimonials found, don't render anything
-  if (testimonials.length === 0) {
-    return null;
-  }
-  
-  const heading = content.heading || 'Success Stories';
-  const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
+  // Always render the section even if loading
+  const heading = content?.heading || 'Success Stories';
+  const subheading = content?.subheading || 'Hear from our graduates who passed NCLEX';
 
   // Auto-slide every 6 seconds
   useEffect(() => {
@@ -175,9 +171,9 @@ const Testimonials = ({ content = {} }) => {
             style={{
               width: '100%',
               maxHeight: '500px',
-              objectFit: 'cover',
+              objectFit: 'contain',
               objectPosition: 'center',
-              backgroundColor: '#ffffff',
+              backgroundColor: '#f8f9fa',
               display: 'block'
             }}
           />
@@ -205,7 +201,6 @@ const Testimonials = ({ content = {} }) => {
           overflow: 'hidden',
         }}
       >
-        {/* Decorative quote icon */}
         <div style={{
           position: 'absolute',
           top: '20px',
@@ -290,7 +285,6 @@ const Testimonials = ({ content = {} }) => {
         overflow: 'hidden'
       }}
     >
-      {/* Animated background elements */}
       <div style={{
         position: 'absolute',
         top: '10%',
@@ -325,7 +319,6 @@ const Testimonials = ({ content = {} }) => {
           </h2>
           <p style={{ color: '#457b9d', fontSize: '1.1rem' }}>{subheading}</p>
           
-          {/* Decorative line */}
           <div style={{
             width: '80px',
             height: '4px',
@@ -335,137 +328,147 @@ const Testimonials = ({ content = {} }) => {
           }}></div>
         </div>
 
-        {/* Carousel Container */}
-        <div style={{
-          position: 'relative',
-          maxWidth: '800px',
-          margin: '0 auto',
-        }}>
-          {/* Main testimonial display */}
+        {/* Show testimonials if we have them, otherwise show loading */}
+        {testimonials.length > 0 ? (
           <div style={{
             position: 'relative',
-            minHeight: '300px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            maxWidth: '800px',
+            margin: '0 auto',
           }}>
             <div style={{
-              width: '100%',
-              opacity: isAnimating ? 0 : 1,
-              transform: isAnimating 
-                ? `translateX(${direction === 'next' ? '-30px' : '30px'}) scale(0.95)` 
-                : 'translateX(0) scale(1)',
-              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}>
-              {testimonials[currentIndex] && renderTestimonialCard(testimonials[currentIndex], currentIndex)}
-            </div>
-          </div>
-
-          {/* Navigation arrows */}
-          {testimonials.length > 1 && (
-            <>
-              <button 
-                onClick={goToPrev}
-                style={{
-                  position: 'absolute',
-                  left: '-60px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  background: 'white',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.3s ease',
-                  color: '#457b9d',
-                  fontSize: '1.2rem',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#457b9d';
-                  e.currentTarget.style.color = 'white';
-                  e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'white';
-                  e.currentTarget.style.color = '#457b9d';
-                  e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                }}
-              >
-                <i className="fas fa-chevron-left"></i>
-              </button>
-              <button 
-                onClick={goToNext}
-                style={{
-                  position: 'absolute',
-                  right: '-60px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  background: 'white',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.3s ease',
-                  color: '#457b9d',
-                  fontSize: '1.2rem',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#457b9d';
-                  e.currentTarget.style.color = 'white';
-                  e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'white';
-                  e.currentTarget.style.color = '#457b9d';
-                  e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                }}
-              >
-                <i className="fas fa-chevron-right"></i>
-              </button>
-            </>
-          )}
-
-          {/* Dot indicators */}
-          {testimonials.length > 1 && (
-            <div style={{
+              position: 'relative',
+              minHeight: '300px',
               display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
-              gap: '10px',
-              marginTop: '30px',
             }}>
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToSlide(index)}
-                  style={{
-                    width: index === currentIndex ? '30px' : '10px',
-                    height: '10px',
-                    borderRadius: '5px',
-                    border: 'none',
-                    background: index === currentIndex 
-                      ? 'linear-gradient(90deg, #457b9d, #1d3557)' 
-                      : 'rgba(69, 123, 157, 0.3)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                  }}
-                />
-              ))}
+              <div style={{
+                width: '100%',
+                opacity: isAnimating ? 0 : 1,
+                transform: isAnimating 
+                  ? `translateX(${direction === 'next' ? '-30px' : '30px'}) scale(0.95)` 
+                  : 'translateX(0) scale(1)',
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}>
+                {testimonials[currentIndex] && renderTestimonialCard(testimonials[currentIndex], currentIndex)}
+              </div>
             </div>
-          )}
-        </div>
+
+            {testimonials.length > 1 && (
+              <>
+                <button 
+                  onClick={goToPrev}
+                  style={{
+                    position: 'absolute',
+                    left: '-60px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: 'white',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.3s ease',
+                    color: '#457b9d',
+                    fontSize: '1.2rem',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#457b9d';
+                    e.currentTarget.style.color = 'white';
+                    e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'white';
+                    e.currentTarget.style.color = '#457b9d';
+                    e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                  }}
+                >
+                  <i className="fas fa-chevron-left"></i>
+                </button>
+                <button 
+                  onClick={goToNext}
+                  style={{
+                    position: 'absolute',
+                    right: '-60px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: 'white',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.3s ease',
+                    color: '#457b9d',
+                    fontSize: '1.2rem',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#457b9d';
+                    e.currentTarget.style.color = 'white';
+                    e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'white';
+                    e.currentTarget.style.color = '#457b9d';
+                    e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                  }}
+                >
+                  <i className="fas fa-chevron-right"></i>
+                </button>
+              </>
+            )}
+
+            {testimonials.length > 1 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '10px',
+                marginTop: '30px',
+              }}>
+                {testimonials.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    style={{
+                      width: index === currentIndex ? '30px' : '10px',
+                      height: '10px',
+                      borderRadius: '5px',
+                      border: 'none',
+                      background: index === currentIndex 
+                        ? 'linear-gradient(90deg, #457b9d, #1d3557)' 
+                        : 'rgba(69, 123, 157, 0.3)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: '#457b9d',
+          }}>
+            <div className="spinner-border text-primary" role="status" style={{ marginBottom: '20px' }}>
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p style={{ fontSize: '1.1rem', marginBottom: '10px' }}>Loading testimonials...</p>
+            <small style={{ color: '#6b7280' }}>If this takes too long, please refresh the page</small>
+          </div>
+        )}
       </div>
 
-      {/* Add CSS animation for floating elements */}
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0); }

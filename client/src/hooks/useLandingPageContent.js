@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 
 // Default config to use when API fails completely
-// IMPORTANT: testimonials.items is EMPTY - we don't want fake testimonials overriding real ones
+// IMPORTANT: testimonials.items is EMPTY - real testimonials come from API
 const getDefaultFallbackConfig = (pageKey) => {
   if (pageKey === 'brainiac') {
     return {
@@ -59,7 +59,7 @@ const getDefaultFallbackConfig = (pageKey) => {
       testimonials: {
         heading: 'Success Stories',
         subheading: 'Hear from our graduates who passed NCLEX',
-        items: [] // Empty - let the Testimonials component handle fallback
+        items: [] // Empty - real testimonials loaded from API
       }
     }
   };
@@ -75,48 +75,57 @@ const useLandingPageContent = (pageKey) => {
     let active = true;
 
     const load = async () => {
-      try {
-        // Always use relative path so it goes through Vercel proxy
-        // This avoids CORS issues and leverages Vercel's rewrites
-        const url = `/api/content/landing-page/${pageKey}`;
+      const url = `/api/content/landing-page/${pageKey}`;
+      console.log('[LandingPage] Fetching config from:', url);
 
-        console.log('[LandingPage] Fetching config from:', url);
+      // Try up to 3 times with increasing timeouts (for Render cold starts)
+      const maxRetries = 3;
+      const timeouts = [10000, 20000, 30000]; // 10s, 20s, 30s
+      
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const res = await axios.get(url, {
+            params: { _t: Date.now() },
+            timeout: timeouts[attempt],
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          });
+          
+          if (!active) return;
 
-        const res = await axios.get(url, {
-          params: { _t: Date.now() },
-          timeout: 30000, // Increased from 15s to 30s to handle Render cold starts
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+          console.log('[LandingPage] API Response:', res.data);
+
+          const isObjectPayload = res && res.data && typeof res.data === 'object' && !Array.isArray(res.data);
+          if (!isObjectPayload || (!Object.prototype.hasOwnProperty.call(res.data, 'config') && !Object.prototype.hasOwnProperty.call(res.data, 'hasSavedConfig'))) {
+            throw new Error('Invalid landing-page API payload');
           }
-        });
-        
-        if (!active) return;
 
-        console.log('[LandingPage] API Response:', res.data);
-
-        const isObjectPayload = res && res.data && typeof res.data === 'object' && !Array.isArray(res.data);
-        if (!isObjectPayload || (!Object.prototype.hasOwnProperty.call(res.data, 'config') && !Object.prototype.hasOwnProperty.call(res.data, 'hasSavedConfig'))) {
-          throw new Error('Invalid landing-page API payload');
+          setHasSavedConfig(Boolean(res.data.hasSavedConfig));
+          setConfig(res.data.config || null);
+          setError(null);
+          setLoading(false);
+          return; // Success, exit
+          
+        } catch (err) {
+          if (!active) return;
+          
+          console.error(`[LandingPage] Attempt ${attempt + 1} failed:`, err.message);
+          
+          // If this was the last attempt, use fallback
+          if (attempt === maxRetries - 1) {
+            console.error('[LandingPage] All retries failed, using fallback config');
+            const fallbackConfig = getDefaultFallbackConfig(pageKey);
+            setError(err.message);
+            setHasSavedConfig(false);
+            setConfig(fallbackConfig);
+            setLoading(false);
+          } else {
+            // Wait a bit before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         }
-
-        setHasSavedConfig(Boolean(res.data.hasSavedConfig));
-        setConfig(res.data.config || null);
-        setError(null);
-      } catch (err) {
-        if (!active) return;
-        console.error(`[LandingPage] Failed to load config for ${pageKey}:`, err);
-        console.error('[LandingPage] Error details:', err.response?.data || err.message);
-        
-        // Use fallback config instead of null so the page still renders properly
-        console.log('[LandingPage] Using fallback config due to error');
-        const fallbackConfig = getDefaultFallbackConfig(pageKey);
-        
-        setError(err.message);
-        setHasSavedConfig(false);
-        setConfig(fallbackConfig);
-      } finally {
-        if (active) setLoading(false);
       }
     };
 
