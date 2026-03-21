@@ -21,16 +21,16 @@ const writeCache = (key, payload) => {
   }
 };
 
-const CACHE_TTL_MS = 15 * 1000;
+const CACHE_TTL_MS = 0;
 
 const useLandingPageContent = (pageKey) => {
-  const cacheKey = `landing-page-cache:v6:${pageKey}`;
+  const cacheKey = `landing-page-cache:v7:${pageKey}`;
   const cached = readCache(cacheKey);
 
   const [config, setConfig] = useState(cached?.config || null);
   const [hasSavedConfig, setHasSavedConfig] = useState(Boolean(cached?.hasSavedConfig));
   const isCacheFresh = cached?.cachedAt && Date.now() - cached.cachedAt < CACHE_TTL_MS;
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
