@@ -6,10 +6,18 @@ import axios from 'axios';
 
 /**
  * Get the resolved API base URL
+ * In production, use relative paths (Vercel rewrites will proxy)
+ * In development, use VITE_API_BASE_URL if set
  * @returns {string}
  */
-const getApiBase = () =>
-  String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+const getApiBase = () => {
+  // In production, always use relative paths so Vercel rewrites work
+  if (!import.meta.env.DEV) {
+    return ''; // Relative path - Vercel will proxy
+  }
+  // In development, use the configured API URL
+  return String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+};
 
 /**
  * Resolve media URL to full URL
@@ -142,7 +150,10 @@ export const resolveMediaCandidates = (rawUrl) => {
   if (!original) return [];
 
   const normalized = original.replace(/\\/g, '/');
-  const apiBase = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  // In production, use relative paths
+  const apiBase = import.meta.env.DEV 
+    ? String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')
+    : '';
   const origin = window.location.origin.replace(/\/+$/, '');
   const candidates = [];
 
