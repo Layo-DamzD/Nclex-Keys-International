@@ -63,6 +63,39 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
+// Debug endpoint to test landing page config query
+app.get('/api/debug/landing-config', async (req, res) => {
+  try {
+    const LandingPageConfig = require('./models/LandingPageConfig');
+    console.log('[Debug] Starting landing config query...');
+    const startTime = Date.now();
+    
+    const doc = await LandingPageConfig.findOne({ pageKey: 'home' })
+      .lean()
+      .maxTimeMS(5000)
+      .catch(err => {
+        console.error('[Debug] Query error:', err.message);
+        return null;
+      });
+    
+    const elapsed = Date.now() - startTime;
+    console.log('[Debug] Query completed in', elapsed, 'ms');
+    
+    res.json({
+      success: true,
+      elapsed: elapsed + 'ms',
+      found: !!doc,
+      hasConfig: !!doc?.config,
+      configMode: doc?.config?.mode || null,
+      programCardsCount: doc?.config?.sections?.program?.cards?.length || 0,
+      testimonialsCount: doc?.config?.sections?.testimonials?.items?.length || 0
+    });
+  } catch (error) {
+    console.error('[Debug] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Friendly body-size error so frontend sees the real cause.
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') {
