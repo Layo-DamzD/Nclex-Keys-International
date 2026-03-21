@@ -94,7 +94,7 @@ const StudentLogin = () => {
           onClick={handleLampStart}
           aria-label={lampOn ? 'Opening login form' : 'Turn on lamp and open login form'}
         >
-          <span>{lampOn ? 'Opening login...' : 'Tap to continue'}</span>
+          <span>{lampOn ? 'Opening login...' : 'Tap Anywhere On Your Screen to continue'}</span>
         </button>
       )}
 
