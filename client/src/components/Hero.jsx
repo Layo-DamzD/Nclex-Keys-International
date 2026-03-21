@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 
 const DEFAULT_CONTENT = {
@@ -14,36 +14,12 @@ const DEFAULT_CONTENT = {
   videoUrl: 'https://www.youtube.com/embed/7ILVwUsfrAc',
   gradientStart: '#0d6efd',
   gradientEnd: '#6f42c1',
-  titleHighlightColor: '#86efac',
-};
-
-const extractYouTubeId = (url = '') => {
-  const value = String(url || '').trim();
-  if (!value) return '';
-  const patterns = [
-    /(?:youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/i,
-    /(?:youtube\.com\/watch\?v=)([A-Za-z0-9_-]{6,})/i,
-    /(?:youtu\.be\/)([A-Za-z0-9_-]{6,})/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = value.match(pattern);
-    if (match?.[1]) return match[1];
-  }
-
-  return '';
+  titleHighlightColor: '#dc2626',
 };
 
 const Hero = ({ content = {} }) => {
   const data = { ...DEFAULT_CONTENT, ...content };
   const features = Array.isArray(data.features) && data.features.length ? data.features : DEFAULT_CONTENT.features;
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
-  const videoId = extractYouTubeId(data.videoUrl);
-  const thumbnailUrl = videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '';
-  const shouldUseLiteEmbed = Boolean(videoId);
-  const embedUrl = videoId
-    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`
-    : data.videoUrl;
 
   return (
     <section id="home" className="hero-section" style={{ 
@@ -87,7 +63,7 @@ const Hero = ({ content = {} }) => {
               ))}
             </div>
             <div className="cta-buttons">
-              <Link to={data.ctaUrl} className="btn btn-primary btn-lg px-5 py-3 nki-hero-cta-btn nki-hero-cta-btn-desktop">
+              <Link to={data.ctaUrl} className="btn btn-primary btn-lg px-5 py-3 nki-hero-cta-btn">
                 <i className="fas fa-user-plus me-2"></i>{data.ctaText}
               </Link>
             </div>
@@ -99,46 +75,20 @@ const Hero = ({ content = {} }) => {
               borderRadius: '20px 0 0 20px',
               overflow: 'hidden', 
               boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-              width: '70%',            // 70% of the column width
-              marginLeft: 'auto',       // pushes it to the right
+              width: '70%',
+              marginLeft: 'auto',
               maxWidth: '100%' 
             }}>
-              {shouldUseLiteEmbed && !isVideoLoaded ? (
-                <button
-                  type="button"
-                  className="nki-hero-video-launch"
-                  onClick={() => setIsVideoLoaded(true)}
-                  aria-label="Play NCLEX success story video"
-                >
-                  {thumbnailUrl ? (
-                    <img
-                      className="nki-hero-video-poster"
-                      src={thumbnailUrl}
-                      alt="Watch NCLEX success story"
-                      loading="lazy"
-                    />
-                  ) : null}
-                  <span className="nki-hero-video-overlay">
-                    <span className="nki-hero-video-play" aria-hidden="true">
-                      <i className="fas fa-play"></i>
-                    </span>
-                    <span className="nki-hero-video-copy">Tap to watch our success story</span>
-                  </span>
-                </button>
-              ) : (
-                <iframe 
-                  className="nki-hero-video-embed"
-                  width="100%" 
-                  height="380" 
-                  src={embedUrl} 
-                  title="NCLEX Success Story" 
-                  frameBorder="0" 
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                  allowFullScreen
-                ></iframe>
-              )}
+              <iframe 
+                className="nki-hero-video-embed"
+                width="100%" 
+                height="380" 
+                src={data.videoUrl} 
+                title="NCLEX Success Story" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                allowFullScreen
+              ></iframe>
             </div>
           </div>
         </div>

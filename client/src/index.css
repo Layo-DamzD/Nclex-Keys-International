@@ -11613,14 +11613,14 @@ html[data-app-theme='dark'] .exam-review-filter-total {
 /* Hide desktop button on mobile */
 @media (max-width: 768px) {
   .nki-hero-cta-btn-desktop {
-    display: none !important;
+    display: inline-flex !important;
   }
 }
 
 /* Mobile hero adjustments */
 @media (max-width: 991.98px) {
   .nki-hero-row {
-    flex-direction: column-reverse;
+    flex-direction: column;
   }
   
   .nki-hero-copy-col {
