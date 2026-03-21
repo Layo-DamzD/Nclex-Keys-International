@@ -72,6 +72,16 @@ const DEFAULT_CONTENT = {
       title: 'Customized Study Plan',
       text: 'Personalized preparation roadmap focused on your weak areas and exam goals.',
     },
+    {
+      icon: 'fa-graduation-cap',
+      title: 'NCLEX Expertise',
+      text: 'Specialized focus on NCLEX-RN and NCLEX-PN exam patterns and question styles.',
+    },
+    {
+      icon: 'fa-clock',
+      title: 'Flexible Scheduling',
+      text: 'Study at your own pace with 24/7 access to resources and live support sessions.',
+    },
   ],
   missionVision: {
     heading: 'Our Mission & Vision',
