@@ -11,22 +11,23 @@ const fs = require('fs');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
 
-// Configure Cloudinary if credentials are provided
-const cloudinaryConfigured = Boolean(
+// Configure Cloudinary - supports both CLOUDINARY_URL and individual env vars
+// Option 1 (EASIEST): Set CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
+// Option 2: Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET separately
+const cloudinaryConfigured = Boolean(process.env.CLOUDINARY_URL) || Boolean(
   process.env.CLOUDINARY_CLOUD_NAME &&
   process.env.CLOUDINARY_API_KEY &&
   process.env.CLOUDINARY_API_SECRET
 );
 
 if (cloudinaryConfigured) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
+  // cloudinary.config() automatically reads CLOUDINARY_URL if set
+  // Or uses individual vars if CLOUDINARY_URL is not set
+  cloudinary.config();
   console.log('✅ Cloudinary configured for persistent image storage');
 } else {
   console.log('⚠️ Cloudinary not configured - using local storage (files will be lost on server restart)');
+  console.log('💡 To fix: Add CLOUDINARY_URL to your environment variables');
 }
 
 const normalizeRole = (role) => String(role || '').trim().toLowerCase();
