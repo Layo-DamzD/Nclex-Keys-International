@@ -7,8 +7,24 @@ import Testimonials from '../Testimonials';
 import Footer from '../Footer';
 import BrainiacSection, { DEFAULT_BRAINIAC } from '../BrainiacSection';
 import { resolveMediaUrl, withCacheBust } from '../../utils/landingMedia';
+import { resolveMediaCandidates } from '../../utils/imageUpload';
 import './LandingPageEditor.css';
 import './LandingPageStudio.css';
+
+// Image fallback handler for resolving image URLs when the primary URL fails
+const handleImageFallback = (event) => {
+  const target = event.currentTarget;
+  const raw = target.getAttribute('data-raw-src') || '';
+  const currentIndex = Number(target.getAttribute('data-fallback-index') || '0');
+  const candidates = resolveMediaCandidates(raw);
+  if (currentIndex + 1 >= candidates.length) {
+    target.style.display = 'none';
+    target.onerror = null;
+    return;
+  }
+  target.setAttribute('data-fallback-index', String(currentIndex + 1));
+  target.src = candidates[currentIndex + 1];
+};
 
 const HOME_ORDER_DEFAULT = ['hero', 'stats', 'program', 'testimonials'];
 
@@ -228,55 +244,6 @@ const fileToDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
-
-function getResolvedApiBase() {
-  return String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
-}
-
-const resolveMediaUrl = (rawUrl) => {
-  const url = String(rawUrl || '').trim();
-  if (!url) return '';
-  if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
-  if (url.startsWith('//')) return `${window.location.protocol}${url}`;
-  if (url.startsWith('/api/')) return getResolvedApiBase() ? `${getResolvedApiBase()}${url}` : url;
-  if (url.startsWith('/')) return getResolvedApiBase() ? `${getResolvedApiBase()}${url}` : url;
-  return getResolvedApiBase() ? `${getResolvedApiBase()}/${url}` : url;
-
-
-  const resolvedApiBase = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
-  if (url.startsWith('/api/')) return resolvedApiBase ? `${resolvedApiBase}${url}` : url;
-  if (url.startsWith('/')) return resolvedApiBase ? `${resolvedApiBase}${url}` : url;
-  return resolvedApiBase ? `${resolvedApiBase}/${url}` : url;
-};
-
-const withCacheBust = (rawUrl) => {
-  const value = String(rawUrl || '').trim();
-  if (!value) return '';
-  const joiner = value.includes('?') ? '&' : '?';
-  return `${value}${joiner}v=${Date.now()}`;
-
-  const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
-  const apiBase = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
-  if (url.startsWith('/api/')) return apiBase ? `${apiBase}${url}` : url;
-  if (url.startsWith('/')) return apiBase ? `${apiBase}${url}` : url;
-  return apiBase ? `${apiBase}/${url}` : url;
-
-};
-
-const withCacheBust = (rawUrl) => {
-  const value = String(rawUrl || '').trim();
-  if (!value) return '';
-  const joiner = value.includes('?') ? '&' : '?';
-  return `${value}${joiner}v=${Date.now()}`;
-  
-};
-
-function withCacheBust(rawUrl) {
-  const value = String(rawUrl || '').trim();
-  if (!value) return '';
-  const joiner = value.includes('?') ? '&' : '?';
-  return `${value}${joiner}v=${Date.now()}`;
-}
 
 const LandingPageStudio = () => {
   const token = sessionStorage.getItem('adminToken');
@@ -750,6 +717,9 @@ const LandingPageStudio = () => {
                   <div className="landing-studio-upload-preview">
                     <img
                       src={resolveMediaUrl(item.imageUrl || item.avatar)}
+                      data-raw-src={item.imageUrl || item.avatar}
+                      data-fallback-index="0"
+                      onError={handleImageFallback}
                       alt={item.name || `Success Story ${index + 1}`}
                     />
                   </div>
@@ -885,7 +855,13 @@ const LandingPageStudio = () => {
             </div>
             {tutor.imageUrl ? (
               <div className="landing-studio-upload-preview landing-studio-upload-preview--avatar">
-                <img src={resolveMediaUrl(tutor.imageUrl)} alt={tutor.name || 'Brainiac'} />
+                <img
+                  src={resolveMediaUrl(tutor.imageUrl)}
+                  data-raw-src={tutor.imageUrl}
+                  data-fallback-index="0"
+                  onError={handleImageFallback}
+                  alt={tutor.name || 'Brainiac'}
+                />
               </div>
             ) : (
               <div className="landing-studio-upload-hint">Upload an image to replace the icon on this Brainiac card.</div>

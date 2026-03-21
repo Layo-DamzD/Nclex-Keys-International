@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
+import { resolveMediaCandidates, withCacheBust } from '../../utils/imageUpload';
 
 const QUESTION_TYPES = [
   { value: 'multiple-choice', label: 'Multiple Choice', icon: 'fas fa-list-ul' },
@@ -123,67 +124,7 @@ const UploadQuestion = () => {
 
   const addOption = () => setOptions((prev) => [...prev, '']);
 
-  const withCacheBust = (rawUrl) => {
-    const value = String(rawUrl || '').trim();
-    if (!value) return '';
-    const joiner = value.includes('?') ? '&' : '?';
-    return `${value}${joiner}v=${Date.now()}`;
-  };
-
-  const resolveMediaCandidates = (rawUrl) => {
-    const original = String(rawUrl || '').trim();
-    if (!original) return [];
-    const normalized = original.replace(/\\/g, '/');
-    const apiBase = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
-    const origin = window.location.origin.replace(/\/+$/, '');
-    const candidates = [];
-
-    const pushUnique = (value) => {
-      const next = String(value || '').trim();
-      if (!next) return;
-      if (!candidates.includes(next)) candidates.push(next);
-    };
-
-    if (/^data:/i.test(normalized)) {
-      pushUnique(normalized);
-      return candidates;
-    }
-
-    if (/^https?:\/\//i.test(normalized)) {
-      pushUnique(normalized);
-      try {
-        const parsed = new URL(normalized);
-        if (parsed.pathname.includes('/uploads/')) {
-          pushUnique(`${origin}${parsed.pathname}`);
-          pushUnique(`${apiBase}${parsed.pathname}`);
-        }
-      } catch {
-        // ignore parse failures
-      }
-    } else if (normalized.startsWith('/')) {
-      pushUnique(`${origin}${normalized}`);
-      pushUnique(`${apiBase}${normalized}`);
-      if (!normalized.startsWith('/api/')) {
-        pushUnique(`${origin}/api${normalized}`);
-        pushUnique(`${apiBase}/api${normalized}`);
-      }
-      pushUnique(normalized);
-    } else {
-      pushUnique(`${origin}/${normalized}`);
-      pushUnique(`${apiBase}/${normalized}`);
-      pushUnique(normalized);
-    }
-
-    const uploadMatch = normalized.match(/(?:^|\/)uploads\/(.+)/i);
-    if (uploadMatch?.[1]) {
-      const suffix = uploadMatch[1].replace(/^\/+/, '');
-      pushUnique(`${origin}/api/uploads/${suffix}`);
-      pushUnique(`${apiBase}/api/uploads/${suffix}`);
-    }
-
-    return candidates;
-  };
-
+  // Use shared utility functions from imageUpload.js
   const firstMediaUrl = (rawUrl) => resolveMediaCandidates(rawUrl)[0] || '';
 
   const handlePreviewImageFallback = (event) => {

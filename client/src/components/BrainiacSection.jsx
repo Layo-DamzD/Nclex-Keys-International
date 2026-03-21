@@ -1,5 +1,5 @@
 import React from 'react';
-import axios from 'axios';
+import { resolveMediaCandidates } from '../utils/imageUpload';
 
 const DEFAULT_BRAINIAC = {
   header: {
@@ -8,97 +8,8 @@ const DEFAULT_BRAINIAC = {
   },  tutors: [],
 };
 
-const resolveImageCandidates = (rawUrl) => {
-  const url = String(rawUrl || '').trim().replace(/\\/g, '/');
-  if (!url) return [];
-
-  const base = String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
-  const origin = typeof window !== 'undefined' ? window.location.origin.replace(/\/+$/, '') : '';
-  const candidates = [];
-  const pushUnique = (value) => { if (value && !candidates.includes(value)) candidates.push(value); };
-  const stripTrailingSlash = (value) => String(value || '').replace(/\/+$/, '');
-  const buildUploadVariants = (value) => {
-    const normalized = String(value || '').replace(/\\/g, '/');
-    const markerIndex = normalized.toLowerCase().indexOf('/uploads/');
-    if (markerIndex === -1) return;
-
-    const uploadSuffix = normalized.slice(markerIndex + '/uploads/'.length).replace(/^\/+/, '');
-    if (!uploadSuffix) return;
-
-    const safeOrigin = stripTrailingSlash(origin);
-    const safeBase = stripTrailingSlash(base);
-
-    pushUnique(safeOrigin ? `${safeOrigin}/api/uploads/${uploadSuffix}` : '');
-    pushUnique(safeOrigin ? `${safeOrigin}/uploads/${uploadSuffix}` : '');
-    pushUnique(safeBase ? `${safeBase}/api/uploads/${uploadSuffix}` : '');
-    pushUnique(safeBase ? `${safeBase}/uploads/${uploadSuffix}` : '');
-  };
-
-  const convertGoogleDriveUrl = (value) => {
-    const raw = String(value || '');
-    const idMatch = raw.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{10,})/);
-    if (!idMatch?.[1]) return '';
-    return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
-  };
-
-  if (/^data:/i.test(url)) {
-    pushUnique(url);
-    return candidates;
-  }
-
-  if (/^https?:\/\//i.test(url)) {
-    pushUnique(url);
-    pushUnique(url.replace(/^http:\/\//i, 'https://'));
-    try {
-      const parsed = new URL(url);
-      const safeOrigin = stripTrailingSlash(origin);
-      if (parsed.pathname.includes('/uploads/')) {
-        buildUploadVariants(parsed.pathname);
-        pushUnique(`${origin}${parsed.pathname}`);
-        pushUnique(`${base}${parsed.pathname}`);
-      }
-      if (safeOrigin && parsed.hostname === window.location.hostname) {
-        pushUnique(`${safeOrigin}${parsed.pathname}${parsed.search || ''}`);
-      }
-    } catch {
-      // ignore parse failures
-    }
-    pushUnique(convertGoogleDriveUrl(url));
-
-    try {
-      const parsed = new URL(url);
-      if (parsed.pathname.includes('/api/uploads/')) {
-        pushUnique(`${origin}${parsed.pathname}`);
-        pushUnique(`${base}${parsed.pathname}`);
-      }
-    } catch {
-      // ignore parse failures
-    }
-
-  } else if (url.startsWith('//')) {
-    pushUnique(`${window.location.protocol}${url}`);
-  } else if (url.startsWith('/')) {
-    pushUnique(origin ? `${origin}${url}` : '');
-    pushUnique(base ? `${base}${url}` : '');
-
-    if (!url.startsWith('/api/')) {
-      pushUnique(origin ? `${origin}/api${url}` : '');
-      pushUnique(base ? `${base}/api${url}` : '');
-    }
-
-    pushUnique(url);
-  } else {
-    pushUnique(origin ? `${origin}/${url}` : '');
-    pushUnique(base ? `${base}/${url}` : '');
-    pushUnique(origin ? `${origin}/api/${url}` : '');
-    pushUnique(base ? `${base}/api/${url}` : '');
-    pushUnique(url);
-  }
-
-  buildUploadVariants(url);
-
-  return candidates.filter(Boolean);
-};
+// Use shared utility for consistent image URL resolution
+const resolveImageCandidates = (rawUrl) => resolveMediaCandidates(rawUrl);
 
 const BrainiacSection = ({
   content = {},

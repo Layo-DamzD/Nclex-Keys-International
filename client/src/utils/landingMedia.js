@@ -6,13 +6,34 @@ export const getResolvedApiBase = () =>
 export const resolveMediaUrl = (rawUrl) => {
   const url = String(rawUrl || '').trim();
   if (!url) return '';
-  if (/^data:/i.test(url) || /^https?:\/\//i.test(url)) return url;
+
+  // Data URLs and full URLs are returned as-is
+  if (/^data:/i.test(url)) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+
+  // Protocol-relative URLs
   if (url.startsWith('//')) return `${window.location.protocol}${url}`;
 
   const base = getResolvedApiBase();
-  if (url.startsWith('/api/')) return base ? `${base}${url}` : url;
-  if (url.startsWith('/')) return base ? `${base}${url}` : url;
-  return base ? `${base}/${url}` : url;
+  const origin = typeof window !== 'undefined' ? window.location.origin.replace(/\/+$/, '') : '';
+
+  // For /api/ paths, try origin first (same-origin requests), then API base
+  if (url.startsWith('/api/')) {
+    // If we have an API base URL that's different from origin, use it
+    if (base && base !== origin) return `${base}${url}`;
+    // Otherwise use the current origin (works for same-origin deployments)
+    return `${origin}${url}`;
+  }
+
+  // For other absolute paths
+  if (url.startsWith('/')) {
+    if (base && base !== origin) return `${base}${url}`;
+    return `${origin}${url}`;
+  }
+
+  // Relative paths
+  if (base && base !== origin) return `${base}/${url}`;
+  return `${origin}/${url}`;
 };
 
 export const withCacheBust = (rawUrl) => {

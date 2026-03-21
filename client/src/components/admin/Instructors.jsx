@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { uploadImage, fileToDataUrl, withCacheBust, resolveMediaUrl } from '../../utils/imageUpload';
 
 const Instructors = () => {
   const [instructors, setInstructors] = useState([]);
@@ -24,6 +25,8 @@ const Instructors = () => {
   });
 
   const [specialtyInput, setSpecialtyInput] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
     fetchInstructors();
@@ -274,15 +277,83 @@ const Instructors = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Photo URL</label>
-              <input
-                type="text"
-                name="photoUrl"
-                className="form-control"
-                value={formData.photoUrl}
-                onChange={handleInputChange}
-                placeholder="https://example.com/photo.jpg"
-              />
+              <label className="form-label">Photo</label>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="file"
+                  className="form-control"
+                  accept="image/*"
+                  style={{ flex: '1', minWidth: '200px' }}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    
+                    setUploading(true);
+                    setUploadError('');
+                    
+                    try {
+                      // First show preview
+                      const dataUrl = await fileToDataUrl(file);
+                      setFormData(prev => ({ ...prev, photoUrl: dataUrl }));
+                      
+                      // Then upload to server
+                      const token = sessionStorage.getItem('adminToken');
+                      const result = await uploadImage(file, token);
+                      const freshUrl = withCacheBust(result.fileUrl);
+                      setFormData(prev => ({ ...prev, photoUrl: freshUrl }));
+                    } catch (err) {
+                      setUploadError(err.message || 'Failed to upload image');
+                    } finally {
+                      setUploading(false);
+                    }
+                  }}
+                  disabled={uploading}
+                />
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setFormData(prev => ({ ...prev, photoUrl: '' }))}
+                  disabled={!formData.photoUrl}
+                >
+                  Clear
+                </button>
+              </div>
+              {uploading && <small className="text-muted d-block mt-2">Uploading image...</small>}
+              {uploadError && <small className="text-danger d-block mt-2">{uploadError}</small>}
+              
+              {/* Show current photo or preview */}
+              {formData.photoUrl && (
+                <div className="mt-3" style={{ textAlign: 'center' }}>
+                  <img
+                    src={resolveMediaUrl(formData.photoUrl)}
+                    alt="Instructor preview"
+                    style={{
+                      width: '100px',
+                      height: '100px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '3px solid #e2e8f0'
+                    }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                  <small className="text-muted d-block mt-1">Photo Preview</small>
+                </div>
+              )}
+              
+              {/* Alternative: Enter URL manually */}
+              <details className="mt-3">
+                <summary style={{ cursor: 'pointer', color: '#64748b', fontSize: '0.85rem' }}>
+                  Or enter image URL manually
+                </summary>
+                <input
+                  type="text"
+                  name="photoUrl"
+                  className="form-control mt-2"
+                  value={formData.photoUrl}
+                  onChange={handleInputChange}
+                  placeholder="https://example.com/photo.jpg"
+                />
+              </details>
             </div>
 
             <h5 className="mt-4">Social Links</h5>
@@ -359,9 +430,10 @@ const Instructors = () => {
                     <div className="d-flex align-items-center mb-3">
                       {instructor.photoUrl ? (
                         <img 
-                          src={instructor.photoUrl} 
+                          src={resolveMediaUrl(instructor.photoUrl)} 
                           alt={instructor.name}
                           style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', marginRight: '15px' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
                         />
                       ) : (
                         <div style={{ 

@@ -11509,3 +11509,186 @@ html[data-app-theme='dark'] .exam-review-filter-total {
 .testimonial-mobile-item {
   min-width: 0;
 }
+
+/* ============================================
+   LANDING PAGE FIXES - Full Width Layout
+   ============================================ */
+
+/* Ensure landing page takes full width */
+.landing-page-wrapper,
+.home-page-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Hero section row fixes */
+.nki-hero-row {
+  margin: 0 !important;
+  padding: 0;
+}
+
+.nki-hero-copy-col {
+  padding-left: 3rem !important;
+  padding-right: 2rem !important;
+}
+
+.nki-hero-media-col {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
+.nki-hero-media-shell {
+  border-radius: 20px 0 0 20px !important;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  width: 70%;
+  margin-left: auto;
+  max-width: 100%;
+}
+
+/* Fix hero CTA button mobile visibility */
+.nki-hero-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #28a745 !important;
+  border-color: #28a745 !important;
+  color: white !important;
+  font-weight: 700;
+  padding: 0.75rem 2rem;
+  border-radius: 30px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.nki-hero-cta-btn:hover {
+  background: #218838 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+}
+
+/* Hide desktop button on mobile */
+@media (max-width: 768px) {
+  .nki-hero-cta-btn-desktop {
+    display: none !important;
+  }
+}
+
+/* Mobile hero adjustments */
+@media (max-width: 991.98px) {
+  .nki-hero-row {
+    flex-direction: column-reverse;
+  }
+  
+  .nki-hero-copy-col {
+    padding: 2rem 1.5rem !important;
+    text-align: center;
+  }
+  
+  .nki-hero-media-col {
+    padding: 0 !important;
+    margin-bottom: 2rem;
+  }
+  
+  .nki-hero-media-shell {
+    width: 100%;
+    border-radius: 0 !important;
+    margin-left: 0;
+  }
+  
+  .hero-section {
+    margin-top: 70px !important;
+    padding: 40px 0 !important;
+    border-radius: 0 0 30px 30px !important;
+  }
+  
+  .hero-section .hero-title {
+    font-size: 2rem !important;
+  }
+  
+  .hero-section .hero-description {
+    font-size: 1rem !important;
+  }
+  
+  .hero-section .feature-item {
+    font-size: 1rem !important;
+    text-align: left;
+  }
+}
+
+/* Stats section responsive fix */
+@media (max-width: 768px) {
+  .stats-section {
+    margin: -20px 1rem 40px !important;
+    max-width: calc(100% - 2rem) !important;
+    padding: 40px 0 !important;
+  }
+  
+  .stat-number {
+    font-size: 2rem !important;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* Program section fixes */
+.program-section {
+  padding: 60px 0;
+}
+
+.program-section .feature-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.program-section .feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+/* Testimonials carousel fix */
+.success-section .carousel-item {
+  min-height: 300px;
+}
+
+/* Landing page editor preview fixes */
+.landing-studio-home-preview {
+  background: #f8fbff;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.landing-studio-preview-section {
+  position: relative;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.landing-studio-preview-section:hover {
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.landing-studio-preview-section.selected {
+  border-color: #2563eb;
+}
+
+/* Ensure footer is full width */
+.footer {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* AOS animation fixes for editor preview */
+.landing-studio-preview-scroll [data-aos],
+.landing-studio-preview-scroll .aos-init,
+.landing-studio-preview-scroll .aos-animate {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  transition: none !important;
+}
+

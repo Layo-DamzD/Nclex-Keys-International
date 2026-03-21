@@ -3,47 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { resolveMediaCandidates } from '../utils/imageUpload';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const resolveMediaCandidates = (rawUrl) => {
-  const value = String(rawUrl || '').trim();
-  if (!value) return [];
-  const normalized = value.replace(/\\/g, '/');
-  const apiBase = String(axios.defaults.baseURL || '').trim().replace(/\/+$/, '');
-  const origin = window.location.origin.replace(/\/+$/, '');
-  const out = [];
-  const pushUnique = (next) => {
-    const url = String(next || '').trim();
-    if (!url) return;
-    if (!out.includes(url)) out.push(url);
-  };
-
-  if (/^data:/i.test(normalized)) return [normalized];
-  if (/^https?:\/\//i.test(normalized)) {
-    pushUnique(normalized);
-  } else if (normalized.startsWith('/')) {
-    if (normalized.startsWith('/api/')) {
-      pushUnique(apiBase ? `${apiBase}${normalized}` : '');
-    }
-    pushUnique(`${origin}${normalized}`);
-    pushUnique(apiBase ? `${apiBase}${normalized}` : '');
-    pushUnique(normalized);
-  } else {
-    pushUnique(`${origin}/${normalized}`);
-    pushUnique(apiBase ? `${apiBase}/${normalized}` : '');
-    pushUnique(normalized);
-  }
-
-  const uploadMatch = normalized.match(/(?:^|\/)api\/uploads\/([^?#]+)/i) || normalized.match(/(?:^|\/)uploads\/([^?#]+)/i);
-  if (uploadMatch?.[1]) {
-    const suffix = uploadMatch[1].replace(/^\/+/, '');
-    pushUnique(`${origin}/api/uploads/${suffix}`);
-    pushUnique(apiBase ? `${apiBase}/api/uploads/${suffix}` : '');
-  }
-  return out;
-};
-
+// Use shared utility for consistent image URL resolution
 const firstMediaUrl = (rawUrl) => resolveMediaCandidates(rawUrl)[0] || '';
 
 const handleImageFallback = (event) => {

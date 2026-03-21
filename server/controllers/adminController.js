@@ -9,6 +9,25 @@ const ExamSupportMessage = require('../models/ExamSupportMessage');
 const { sendPushNotificationMulticast } = require('../services/firebaseAdmin');
 const fs = require('fs');
 const path = require('path');
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary if credentials are provided
+const cloudinaryConfigured = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+if (cloudinaryConfigured) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+  console.log('✅ Cloudinary configured for persistent image storage');
+} else {
+  console.log('⚠️ Cloudinary not configured - using local storage (files will be lost on server restart)');
+}
 
 const normalizeRole = (role) => String(role || '').trim().toLowerCase();
 const isSuperAdminUser = (user) => normalizeRole(user?.role) === 'superadmin';
@@ -1448,11 +1467,6 @@ const uploadFile = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const uploadsDir = path.join(__dirname, '..', 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
     const originalName = req.file.originalname || 'file';
     const ext = path.extname(originalName);
     const extType = ext.replace('.', '').toLowerCase();
@@ -1464,6 +1478,51 @@ const uploadFile = async (req, res) => {
     if (!isPdf && !isImage) {
       return res.status(400).json({ message: 'Only PDF and image files are allowed' });
     }
+
+    const fileType = isPdf ? 'pdf' : 'image';
+
+    // Use Cloudinary if configured (persistent cloud storage)
+    if (cloudinaryConfigured) {
+      try {
+        const base = path.basename(originalName, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
+        const publicId = `nclex-keys/${fileType}s/${Date.now()}-${base}`;
+
+        const uploadResult = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              public_id: publicId,
+              resource_type: isPdf ? 'raw' : 'image',
+              folder: `nclex-keys/${fileType}s`,
+              overwrite: true,
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.file.buffer);
+        });
+
+        console.log(`✅ File uploaded to Cloudinary: ${uploadResult.secure_url}`);
+
+        return res.json({
+          fileUrl: uploadResult.secure_url,
+          fileName: originalName,
+          fileType,
+          storage: 'cloudinary',
+        });
+      } catch (cloudinaryError) {
+        console.error('Cloudinary upload failed, falling back to local:', cloudinaryError.message);
+        // Fall through to local storage
+      }
+    }
+
+    // Fallback: Local storage (ephemeral on Render free tier)
+    const uploadsDir = path.join(__dirname, '..', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
     const base = path.basename(originalName, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
     const fileName = `${Date.now()}-${base}${ext}`;
     const filePath = path.join(uploadsDir, fileName);
@@ -1471,16 +1530,18 @@ const uploadFile = async (req, res) => {
     fs.writeFileSync(filePath, req.file.buffer);
 
     const fileUrl = `/api/uploads/${fileName}`;
-    const fileType = isPdf ? 'pdf' : 'image';
-    
+
+    console.log(`⚠️ File saved locally (ephemeral): ${fileUrl}`);
+
     res.json({
       fileUrl,
       fileName: originalName,
-      fileType
+      fileType,
+      storage: 'local',
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Upload error:', error);
+    res.status(500).json({ message: 'Server error during upload' });
   }
 };
 
