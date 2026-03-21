@@ -21,16 +21,18 @@ const writeCache = (key, payload) => {
   }
 };
 
-const CACHE_TTL_MS = 15 * 1000;
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds - increased to reduce flicker
 
 const useLandingPageContent = (pageKey) => {
-  const cacheKey = `landing-page-cache:v7:${pageKey}`;
+  const cacheKey = `landing-page-cache:v8:${pageKey}`; // bumped cache version
   const cached = readCache(cacheKey);
 
-  const [config, setConfig] = useState(cached?.config || null);
-  const [hasSavedConfig, setHasSavedConfig] = useState(Boolean(cached?.hasSavedConfig));
-  const isCacheFresh = cached?.cachedAt && Date.now() - cached.cachedAt < CACHE_TTL_MS;
+  const [config, setConfig] = useState(null);
+  const [hasSavedConfig, setHasSavedConfig] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Check if cache is still fresh (within TTL)
+  const isCacheFresh = cached?.cachedAt && Date.now() - cached.cachedAt < CACHE_TTL_MS;
 
   useEffect(() => {
     let active = true;
@@ -60,7 +62,11 @@ const useLandingPageContent = (pageKey) => {
       } catch (error) {
         if (!active) return;
         console.error(`Failed to load landing page config for ${pageKey}:`, error);
-        if (!cached) {
+        // On error, use cached data if available
+        if (cached) {
+          setHasSavedConfig(cached.hasSavedConfig);
+          setConfig(cached.config);
+        } else {
           setHasSavedConfig(false);
           setConfig(null);
         }
@@ -69,17 +75,20 @@ const useLandingPageContent = (pageKey) => {
       }
     };
 
-    if (isCacheFresh) {
-      // Still refresh in the background so the public page reflects latest admin edits quickly.
-      load();
+    // If cache is fresh, use it immediately without re-fetching
+    if (isCacheFresh && cached) {
+      setHasSavedConfig(cached.hasSavedConfig);
+      setConfig(cached.config);
+      setLoading(false);
     } else {
+      // Otherwise fetch fresh data
       load();
     }
 
     return () => {
       active = false;
     };
-  }, [isCacheFresh, pageKey]);
+  }, [pageKey]);
 
   return { config, hasSavedConfig, loading };
 };
