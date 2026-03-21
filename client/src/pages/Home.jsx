@@ -14,7 +14,8 @@ const TESTIMONIAL_SECTION_ALIASES = ['testimonials', 'successStories', 'success'
 
 const Home = () => {
   const { config, hasSavedConfig, loading } = useLandingPageContent('home');
-  const isStructured = hasSavedConfig && config?.mode === 'structured';
+  // Check if config has structured mode - this should work regardless of hasSavedConfig
+  const isStructured = config?.mode === 'structured';
   const incomingOrder = Array.isArray(config?.sectionOrder) ? config.sectionOrder : [];
   const normalizeSectionKey = (sectionKey) => (
     TESTIMONIAL_SECTION_ALIASES.includes(sectionKey) ? 'testimonials' : sectionKey
@@ -76,7 +77,7 @@ const Home = () => {
       <Navbar />
       {isStructured ? (
         <>{order.map(renderStructuredSection)}</>
-      ) : hasSavedConfig && config ? (
+      ) : config ? (
         <>
           <Hero content={sections.hero} />
           <div className="landing-public-page">
