@@ -1,41 +1,13 @@
 {
   "rewrites": [
     {
-      "source": "/api/content/:path*",
-      "destination": "https://nclex-keys-international.onrender.com/api/content/:path*"
-    },
-    {
-      "source": "/api/auth/:path*",
-      "destination": "https://nclex-keys-international.onrender.com/api/auth/:path*"
-    },
-    {
-      "source": "/api/student/:path*",
-      "destination": "https://nclex-keys-international.onrender.com/api/student/:path*"
-    },
-    {
-      "source": "/api/admin/:path*",
-      "destination": "https://nclex-keys-international.onrender.com/api/admin/:path*"
-    },
-    {
-      "source": "/api/uploads/:path*",
-      "destination": "https://nclex-keys-international.onrender.com/api/uploads/:path*"
-    },
-    {
-      "source": "/api/health",
-      "destination": "https://nclex-keys-international.onrender.com/api/health"
-    },
-    {
-      "source": "/api/test",
-      "destination": "https://nclex-keys-international.onrender.com/api/test"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/api/:match*",
+      "destination": "https://nclex-keys-international.onrender.com/api/:match*"
     }
   ],
   "headers": [
     {
-      "source": "/api/:path*",
+      "source": "/api/:match*",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
       ]
