@@ -174,11 +174,11 @@ const getLandingPageConfig = async (req, res) => {
     return res.status(400).json({ message: 'Invalid page key' });
   }
 
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
 
-try {
+  try {
     const doc = await LandingPageConfig.findOne({ pageKey }).lean();
     if (!doc) {
       return res.json({
@@ -234,9 +234,11 @@ const getPublicLandingPageConfig = async (req, res) => {
     return res.status(400).json({ message: 'Invalid page key' });
   }
 
-    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
 
-try {
+  try {
     const doc = await LandingPageConfig.findOne({ pageKey }).lean();
     if (!doc) {
       return res.json({ pageKey, hasSavedConfig: false, config: null });
