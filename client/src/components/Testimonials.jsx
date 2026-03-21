@@ -457,14 +457,11 @@ const Testimonials = ({ content = {} }) => {
         ) : (
           <div style={{
             textAlign: 'center',
-            padding: '60px 20px',
+            padding: '40px 20px',
             color: '#457b9d',
           }}>
-            <div className="spinner-border text-primary" role="status" style={{ marginBottom: '20px' }}>
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            <p style={{ fontSize: '1.1rem', marginBottom: '10px' }}>Loading testimonials...</p>
-            <small style={{ color: '#6b7280' }}>If this takes too long, please refresh the page</small>
+            <i className="fas fa-comments" style={{ fontSize: '3rem', marginBottom: '15px', opacity: 0.3 }}></i>
+            <p style={{ fontSize: '1rem', marginBottom: '5px' }}>No testimonials available at the moment</p>
           </div>
         )}
       </div>

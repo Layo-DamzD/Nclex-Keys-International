@@ -1,8 +1,41 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-// Default config to use when API fails completely
-// IMPORTANT: testimonials.items is EMPTY - real testimonials come from API
+// Cache key for localStorage
+const CACHE_KEY = 'nclex_landing_page_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Get cached config immediately
+const getCachedConfig = (pageKey) => {
+  try {
+    const cached = localStorage.getItem(`${CACHE_KEY}_${pageKey}`);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        console.log('[LandingPage] Using cached config from localStorage');
+        return data;
+      }
+    }
+  } catch (e) {
+    console.log('[LandingPage] Cache read error:', e);
+  }
+  return null;
+};
+
+// Save config to cache
+const setCachedConfig = (pageKey, data) => {
+  try {
+    localStorage.setItem(`${CACHE_KEY}_${pageKey}`, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+    console.log('[LandingPage] Saved config to cache');
+  } catch (e) {
+    console.log('[LandingPage] Cache write error:', e);
+  }
+};
+
+// Default config when no cache and API fails
 const getDefaultFallbackConfig = (pageKey) => {
   if (pageKey === 'brainiac') {
     return {
@@ -59,76 +92,71 @@ const getDefaultFallbackConfig = (pageKey) => {
       testimonials: {
         heading: 'Success Stories',
         subheading: 'Hear from our graduates who passed NCLEX',
-        items: [] // Empty - real testimonials loaded from API
+        items: []
       }
     }
   };
 };
 
 const useLandingPageContent = (pageKey) => {
-  const [config, setConfig] = useState(null);
-  const [hasSavedConfig, setHasSavedConfig] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Initialize IMMEDIATELY with cached data or default - NO LOADING STATE!
+  const [config, setConfig] = useState(() => {
+    const cached = getCachedConfig(pageKey);
+    return cached || getDefaultFallbackConfig(pageKey);
+  });
+  
+  const [hasSavedConfig, setHasSavedConfig] = useState(() => {
+    const cached = getCachedConfig(pageKey);
+    return cached ? true : false;
+  });
+  
+  const [loading, setLoading] = useState(false); // Always false - we show immediately!
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       const url = `/api/content/landing-page/${pageKey}`;
-      console.log('[LandingPage] Fetching config from:', url);
+      console.log('[LandingPage] Fetching fresh config in background...');
 
-      // Try up to 3 times with increasing timeouts (for Render cold starts)
-      const maxRetries = 3;
-      const timeouts = [10000, 20000, 30000]; // 10s, 20s, 30s
-      
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-          const res = await axios.get(url, {
-            params: { _t: Date.now() },
-            timeout: timeouts[attempt],
-            headers: {
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            }
-          });
-          
-          if (!active) return;
-
-          console.log('[LandingPage] API Response:', res.data);
-
-          const isObjectPayload = res && res.data && typeof res.data === 'object' && !Array.isArray(res.data);
-          if (!isObjectPayload || (!Object.prototype.hasOwnProperty.call(res.data, 'config') && !Object.prototype.hasOwnProperty.call(res.data, 'hasSavedConfig'))) {
-            throw new Error('Invalid landing-page API payload');
+      try {
+        // Fast single attempt - 8 seconds max
+        const res = await axios.get(url, {
+          params: { _t: Date.now() },
+          timeout: 8000,
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           }
+        });
+        
+        if (!active) return;
 
-          setHasSavedConfig(Boolean(res.data.hasSavedConfig));
-          setConfig(res.data.config || null);
-          setError(null);
-          setLoading(false);
-          return; // Success, exit
-          
-        } catch (err) {
-          if (!active) return;
-          
-          console.error(`[LandingPage] Attempt ${attempt + 1} failed:`, err.message);
-          
-          // If this was the last attempt, use fallback
-          if (attempt === maxRetries - 1) {
-            console.error('[LandingPage] All retries failed, using fallback config');
-            const fallbackConfig = getDefaultFallbackConfig(pageKey);
-            setError(err.message);
-            setHasSavedConfig(false);
-            setConfig(fallbackConfig);
-            setLoading(false);
-          } else {
-            // Wait a bit before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
+        console.log('[LandingPage] API Response received:', res.data);
+
+        const isObjectPayload = res && res.data && typeof res.data === 'object' && !Array.isArray(res.data);
+        if (!isObjectPayload || (!Object.prototype.hasOwnProperty.call(res.data, 'config') && !Object.prototype.hasOwnProperty.call(res.data, 'hasSavedConfig'))) {
+          throw new Error('Invalid landing-page API payload');
         }
+
+        // Save to cache
+        const newConfig = res.data.config || null;
+        if (newConfig) {
+          setCachedConfig(pageKey, newConfig);
+        }
+        
+        // Update state with fresh data
+        setHasSavedConfig(Boolean(res.data.hasSavedConfig));
+        setConfig(newConfig || getDefaultFallbackConfig(pageKey));
+        
+      } catch (err) {
+        if (!active) return;
+        console.error('[LandingPage] API failed:', err.message);
+        // Keep showing cached/default config - no changes needed
       }
     };
 
+    // Fetch in background - DON'T block rendering!
     load();
 
     return () => {
@@ -136,7 +164,7 @@ const useLandingPageContent = (pageKey) => {
     };
   }, [pageKey]);
 
-  return { config, hasSavedConfig, loading, error };
+  return { config, hasSavedConfig, loading, error: null };
 };
 
 export default useLandingPageContent;
