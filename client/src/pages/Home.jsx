@@ -13,7 +13,19 @@ const HOME_SECTION_FALLBACK_ORDER = ['hero', 'stats', 'program', 'testimonials']
 const TESTIMONIAL_SECTION_ALIASES = ['testimonials', 'successStories', 'success', 'successStory'];
 
 const Home = () => {
-  const { config, hasSavedConfig, loading } = useLandingPageContent('home');
+  const { config, hasSavedConfig, loading, error } = useLandingPageContent('home');
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('[Home] State:', { hasSavedConfig, loading, error, configMode: config?.mode });
+    if (config?.sections?.program?.cards) {
+      console.log('[Home] Program cards count:', config.sections.program.cards.length);
+    }
+    if (config?.sections?.testimonials?.items) {
+      console.log('[Home] Testimonials count:', config.sections.testimonials.items.length);
+    }
+  }, [config, hasSavedConfig, loading, error]);
+
   // Check if config has structured mode - this should work regardless of hasSavedConfig
   const isStructured = config?.mode === 'structured';
   const incomingOrder = Array.isArray(config?.sectionOrder) ? config.sectionOrder : [];
@@ -70,6 +82,11 @@ const Home = () => {
         </div>
       </>
     );
+  }
+
+  // Show error state if API failed
+  if (error) {
+    console.error('[Home] API Error, showing fallback:', error);
   }
 
   return (

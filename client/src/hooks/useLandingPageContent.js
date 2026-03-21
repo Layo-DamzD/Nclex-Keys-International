@@ -5,17 +5,33 @@ const useLandingPageContent = (pageKey) => {
   const [config, setConfig] = useState(null);
   const [hasSavedConfig, setHasSavedConfig] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       try {
-        const res = await axios.get(`/api/content/landing-page/${pageKey}`, {
+        // Try to use the backend URL from environment, otherwise use relative path
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const url = baseUrl 
+          ? `${baseUrl}/api/content/landing-page/${pageKey}`
+          : `/api/content/landing-page/${pageKey}`;
+
+        console.log('[LandingPage] Fetching config from:', url);
+
+        const res = await axios.get(url, {
           params: { _t: Date.now() },
-          timeout: 10000,
+          timeout: 15000,
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
         });
+        
         if (!active) return;
+
+        console.log('[LandingPage] API Response:', res.data);
 
         const isObjectPayload = res && res.data && typeof res.data === 'object' && !Array.isArray(res.data);
         if (!isObjectPayload || (!Object.prototype.hasOwnProperty.call(res.data, 'config') && !Object.prototype.hasOwnProperty.call(res.data, 'hasSavedConfig'))) {
@@ -24,9 +40,12 @@ const useLandingPageContent = (pageKey) => {
 
         setHasSavedConfig(Boolean(res.data.hasSavedConfig));
         setConfig(res.data.config || null);
-      } catch (error) {
+        setError(null);
+      } catch (err) {
         if (!active) return;
-        console.error(`Failed to load landing page config for ${pageKey}:`, error);
+        console.error(`[LandingPage] Failed to load config for ${pageKey}:`, err);
+        console.error('[LandingPage] Error details:', err.response?.data || err.message);
+        setError(err.message);
         setHasSavedConfig(false);
         setConfig(null);
       } finally {
@@ -41,7 +60,7 @@ const useLandingPageContent = (pageKey) => {
     };
   }, [pageKey]);
 
-  return { config, hasSavedConfig, loading };
+  return { config, hasSavedConfig, loading, error };
 };
 
 export default useLandingPageContent;
