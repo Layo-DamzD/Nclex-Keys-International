@@ -230,7 +230,10 @@ const saveLandingPageConfig = async (req, res) => {
 
 const getPublicLandingPageConfig = async (req, res) => {
   const { pageKey } = req.params;
+  console.log('[PublicLandingPage] Request received for pageKey:', pageKey);
+  
   if (!isValidPageKey(pageKey)) {
+    console.log('[PublicLandingPage] Invalid page key:', pageKey);
     return res.status(400).json({ message: 'Invalid page key' });
   }
 
@@ -239,15 +242,21 @@ const getPublicLandingPageConfig = async (req, res) => {
   res.set('Expires', '0');
 
   try {
-    const doc = await LandingPageConfig.findOne({ pageKey }).lean();
+    console.log('[PublicLandingPage] Querying database...');
+    const doc = await LandingPageConfig.findOne({ pageKey }).lean().maxTimeMS(10000);
+    console.log('[PublicLandingPage] Query result:', doc ? 'found' : 'not found');
+    
     if (!doc) {
       // Return default config so the frontend has something to render
+      console.log('[PublicLandingPage] Returning default config');
       return res.json({
         pageKey,
         hasSavedConfig: false,
         config: getDefaultConfig(pageKey),
       });
     }
+    
+    console.log('[PublicLandingPage] Returning saved config');
     res.json({
       pageKey,
       hasSavedConfig: true,
@@ -255,8 +264,14 @@ const getPublicLandingPageConfig = async (req, res) => {
       updatedAt: doc.updatedAt,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('[PublicLandingPage] Error:', error.message);
+    // Return default config on error instead of failing
+    res.json({
+      pageKey,
+      hasSavedConfig: false,
+      config: getDefaultConfig(pageKey),
+      error: error.message,
+    });
   }
 };
 
