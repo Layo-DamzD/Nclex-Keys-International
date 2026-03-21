@@ -5,7 +5,11 @@
       "destination": "https://nclex-keys-international.onrender.com/api/:match*"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/uploads/:match*",
+      "destination": "https://nclex-keys-international.onrender.com/api/uploads/:match*"
+    },
+    {
+      "source": "/((?!api/)(?!uploads/).*)",
       "destination": "/index.html"
     }
   ],

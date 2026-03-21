@@ -39,47 +39,35 @@ const StudyMaterials = () => {
 
   const handleDownload = async (fileUrl, title = 'study-material') => {
     try {
-      // Resolve the full URL
-      let fullUrl = fileUrl;
-      if (fileUrl && !fileUrl.startsWith('http') && !fileUrl.startsWith('//')) {
-        // It's a relative path - prepend the API base URL
-        fullUrl = `${window.location.origin}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
-      }
-      
-      // For Cloudinary URLs or external URLs, open in new tab or use direct link
-      if (fullUrl.includes('cloudinary.com') || fullUrl.includes('res.cloudinary.com')) {
-        window.open(fullUrl, '_blank');
+      if (!fileUrl) {
+        window.alert('No file available for download.');
         return;
       }
-      
-      // For local files, try to download via fetch
-      const token = localStorage.getItem('token');
-      const response = await fetch(fullUrl, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`);
+
+      // For Cloudinary URLs or external URLs, open in new tab
+      if (fileUrl.includes('cloudinary.com') || fileUrl.includes('res.cloudinary.com')) {
+        window.open(fileUrl, '_blank');
+        return;
       }
+
+      // Resolve the full URL for local files - use backend API
+      let fullUrl = fileUrl;
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nclex-keys-international.onrender.com';
       
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const guessedExt = String(fileUrl || '').split('.').pop() || 'pdf';
-      link.href = blobUrl;
-      link.setAttribute('download', `${String(title || 'study-material').replace(/[^a-z0-9_-]/gi, '_')}.${guessedExt}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
+      if (!fileUrl.startsWith('http') && !fileUrl.startsWith('//')) {
+        // Clean up the path and ensure it goes through /api/uploads/
+        let cleanPath = fileUrl.replace(/^\/+/, '');
+        if (!cleanPath.startsWith('api/')) {
+          cleanPath = `api/${cleanPath}`;
+        }
+        fullUrl = `${apiBaseUrl}/${cleanPath}`;
+      }
+
+      // For files, open directly in new tab to trigger download
+      window.open(fullUrl, '_blank');
     } catch (error) {
       console.error('Failed to download material:', error);
-      // Fallback: try opening the URL directly
-      if (fileUrl) {
-        window.open(fileUrl, '_blank');
-      } else {
-        window.alert('Could not download this material right now. Please try again.');
-      }
+      window.alert('Could not download this material right now. Please try again.');
     }
   };
 
