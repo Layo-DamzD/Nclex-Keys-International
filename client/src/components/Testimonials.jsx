@@ -204,11 +204,11 @@ const Testimonials = ({ content = {} }) => {
       style={{ background: 'linear-gradient(to bottom, white 0%, #f0f4ff 100%)', padding: '80px 0' }}
     >
       <div className="container">
-        <div className="section-header text-center mb-5" data-aos="fade-down">
+        <div className="section-header text-center mb-5">
           <h2 style={{ fontFamily: "'Roboto Slab', serif", color: '#1d3557' }}>{heading}</h2>
           <p style={{ color: '#457b9d' }}>{subheading}</p>
         </div>
-        <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-bs-interval="5000" data-aos="fade-up">
+        <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
           <div className="carousel-inner">
             {testimonials.map((testimonial, index) => (
               <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>

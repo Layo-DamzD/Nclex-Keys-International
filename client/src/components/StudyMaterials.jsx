@@ -39,13 +39,31 @@ const StudyMaterials = () => {
 
   const handleDownload = async (fileUrl, title = 'study-material') => {
     try {
+      // Resolve the full URL
+      let fullUrl = fileUrl;
+      if (fileUrl && !fileUrl.startsWith('http') && !fileUrl.startsWith('//')) {
+        // It's a relative path - prepend the API base URL
+        fullUrl = `${window.location.origin}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
+      }
+      
+      // For Cloudinary URLs or external URLs, open in new tab or use direct link
+      if (fullUrl.includes('cloudinary.com') || fullUrl.includes('res.cloudinary.com')) {
+        window.open(fullUrl, '_blank');
+        return;
+      }
+      
+      // For local files, try to download via fetch
       const token = localStorage.getItem('token');
-      const response = await axios.get(fileUrl, {
-        responseType: 'blob',
+      const response = await fetch(fullUrl, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-
-      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       const guessedExt = String(fileUrl || '').split('.').pop() || 'pdf';
       link.href = blobUrl;
@@ -56,7 +74,12 @@ const StudyMaterials = () => {
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Failed to download material:', error);
-      window.alert('Could not download this material right now. Please try again.');
+      // Fallback: try opening the URL directly
+      if (fileUrl) {
+        window.open(fileUrl, '_blank');
+      } else {
+        window.alert('Could not download this material right now. Please try again.');
+      }
     }
   };
 

@@ -141,21 +141,31 @@ const ContentManagement = () => {
 
   const handleDownload = async (fileUrl, title = 'study-material') => {
     try {
+      // Resolve the full URL
+      let fullUrl = fileUrl;
+      if (fileUrl && !fileUrl.startsWith('http') && !fileUrl.startsWith('//')) {
+        fullUrl = `${window.location.origin}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
+      }
+      
+      // For Cloudinary URLs, open in new tab
+      if (fullUrl.includes('cloudinary.com') || fullUrl.includes('res.cloudinary.com')) {
+        window.open(fullUrl, '_blank');
+        return;
+      }
+      
       const token = sessionStorage.getItem('adminToken');
-      const response = await axios.get(fileUrl, {
-        responseType: 'blob',
+      const response = await fetch(fullUrl, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-
-      const blobUrl = window.URL.createObjectURL(
-        new Blob([response.data], {
-          type: response.headers?.['content-type'] || 'application/pdf',
-        })
-      );
-      const extension = String(response.headers?.['content-type'] || '').includes('pdf')
-        ? 'pdf'
-        : (String(fileUrl || '').split('.').pop() || 'pdf');
-
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const extension = String(fileUrl || '').split('.').pop() || 'pdf';
+      
       const link = document.createElement('a');
       link.href = blobUrl;
       link.setAttribute(
@@ -168,7 +178,12 @@ const ContentManagement = () => {
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Failed to download material:', error);
-      window.alert('Could not download this material right now. Please try again.');
+      // Fallback: try opening the URL directly
+      if (fileUrl) {
+        window.open(fileUrl, '_blank');
+      } else {
+        window.alert('Could not download this material right now. Please try again.');
+      }
     }
   };
 
