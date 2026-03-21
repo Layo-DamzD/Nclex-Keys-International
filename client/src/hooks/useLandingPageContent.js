@@ -12,11 +12,9 @@ const useLandingPageContent = (pageKey) => {
 
     const load = async () => {
       try {
-        // Try to use the backend URL from environment, otherwise use relative path
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-        const url = baseUrl 
-          ? `${baseUrl}/api/content/landing-page/${pageKey}`
-          : `/api/content/landing-page/${pageKey}`;
+        // Always use relative path so it goes through Vercel proxy
+        // This avoids CORS issues and leverages Vercel's rewrites
+        const url = `/api/content/landing-page/${pageKey}`;
 
         console.log('[LandingPage] Fetching config from:', url);
 

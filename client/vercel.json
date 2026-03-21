@@ -1,11 +1,35 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://nclex-keys-international.onrender.com/api/:path*"
+      "source": "/api/content/:path*",
+      "destination": "https://nclex-keys-international.onrender.com/api/content/:path*"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/api/auth/:path*",
+      "destination": "https://nclex-keys-international.onrender.com/api/auth/:path*"
+    },
+    {
+      "source": "/api/student/:path*",
+      "destination": "https://nclex-keys-international.onrender.com/api/student/:path*"
+    },
+    {
+      "source": "/api/admin/:path*",
+      "destination": "https://nclex-keys-international.onrender.com/api/admin/:path*"
+    },
+    {
+      "source": "/api/uploads/:path*",
+      "destination": "https://nclex-keys-international.onrender.com/api/uploads/:path*"
+    },
+    {
+      "source": "/api/health",
+      "destination": "https://nclex-keys-international.onrender.com/api/health"
+    },
+    {
+      "source": "/api/test",
+      "destination": "https://nclex-keys-international.onrender.com/api/test"
+    },
+    {
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
@@ -13,9 +37,7 @@
     {
       "source": "/api/:path*",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate" },
-        { "key": "Pragma", "value": "no-cache" },
-        { "key": "Expires", "value": "0" }
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
       ]
     }
   ]
