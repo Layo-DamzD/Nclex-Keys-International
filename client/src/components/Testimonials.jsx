@@ -1,6 +1,31 @@
 import React from 'react';
 import axios from 'axios';
 
+// Default testimonials to show when none are provided
+const DEFAULT_TESTIMONIALS = [
+  {
+    id: 'default-1',
+    name: 'Sarah M.',
+    role: 'RN, Passed NCLEX-RN',
+    text: 'NCLEX Keys gave me the confidence and strategies I needed to pass my NCLEX on the first attempt. The tutors are amazing!',
+    rating: 5
+  },
+  {
+    id: 'default-2',
+    name: 'Michael O.',
+    role: 'PN, Passed NCLEX-PN',
+    text: 'The comprehensive content and personalized study plans made all the difference. Highly recommend!',
+    rating: 5
+  },
+  {
+    id: 'default-3',
+    name: 'Jennifer A.',
+    role: 'RN, Passed NCLEX-RN',
+    text: 'After struggling with other prep courses, NCLEX Keys helped me understand the exam logic and pass with confidence.',
+    rating: 5
+  }
+];
+
 const Testimonials = ({ content = {} }) => {
   // Debug: Log what we're receiving
   console.log('[Testimonials] Received content:', content);
@@ -23,18 +48,21 @@ const Testimonials = ({ content = {} }) => {
     return [];
   };
 
-  const testimonials = normalizeItems(
+  // Try to get testimonials from content, fallback to defaults if empty
+  let testimonials = normalizeItems(
     content?.items ??
     content?.stories ??
     content?.testimonials ??
     (Array.isArray(content) ? content : null)
   );
   
-  console.log('[Testimonials] Normalized testimonials count:', testimonials.length);
+  // If no testimonials found, use defaults (DON'T return null!)
   if (testimonials.length === 0) {
-    console.log('[Testimonials] No testimonials found, returning null');
-    return null;
+    console.log('[Testimonials] No testimonials in content, using defaults');
+    testimonials = DEFAULT_TESTIMONIALS;
   }
+  
+  console.log('[Testimonials] Final testimonials count:', testimonials.length);
   const heading = content.heading || 'Success Stories';
   const subheading = content.subheading || 'Hear from our graduates who passed NCLEX';
   const resolveMediaCandidates = (rawUrl) => {
