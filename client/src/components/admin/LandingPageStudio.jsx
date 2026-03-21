@@ -6,6 +6,7 @@ import Program from '../Program';
 import Testimonials from '../Testimonials';
 import Footer from '../Footer';
 import BrainiacSection, { DEFAULT_BRAINIAC } from '../BrainiacSection';
+import { resolveMediaUrl, withCacheBust } from '../../utils/landingMedia';
 import './LandingPageEditor.css';
 import './LandingPageStudio.css';
 
@@ -226,6 +227,7 @@ const fileToDataUrl = (file) =>
     reader.onerror = () => reject(new Error('Failed to read image file'));
     reader.readAsDataURL(file);
   });
+
 
 function getResolvedApiBase() {
   return String(axios.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
