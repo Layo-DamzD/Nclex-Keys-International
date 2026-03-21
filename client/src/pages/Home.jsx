@@ -49,6 +49,28 @@ const Home = () => {
     return null;
   };
 
+  // Show loading state instead of fallback content to prevent flicker
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div style={{ 
+          minHeight: '60vh', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: '16px'
+        }}>
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p style={{ color: '#666' }}>Loading content...</p>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -71,7 +93,7 @@ const Home = () => {
           <Testimonials />
         </>
       )}
-      {!loading ? <Footer content={isStructured ? sections.footer : undefined} /> : null}
+      <Footer content={isStructured ? sections.footer : undefined} />
     </>
   );
 };
