@@ -7,12 +7,37 @@
     --text-light: #457b9d;
 }
 
-/* Smooth theme transitions - prevents lag/flicker when toggling dark mode */
-html,
-html *,
-html *::before,
-html *::after {
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.1s ease, box-shadow 0.15s ease;
+/* Optimized theme transitions - only apply to key themed elements */
+/* This prevents lag by not applying transitions to every element */
+body.app-theme-active,
+body.app-theme-active .sidebar,
+body.app-theme-active .sidebar-header,
+body.app-theme-active .main-content,
+body.app-theme-active .dashboard-header,
+body.app-theme-active .stats-card,
+body.app-theme-active .progress-container,
+body.app-theme-active .test-card,
+body.app-theme-active .test-interface,
+body.app-theme-active .data-table,
+body.app-theme-active .question-container,
+body.app-theme-active .module-card,
+body.app-theme-active .chart-container,
+body.app-theme-active .weak-areas,
+body.app-theme-active .recommendations,
+body.app-theme-active .lesson-card,
+body.app-theme-active .test-table,
+body.app-theme-active .category-card,
+body.app-theme-active .option,
+body.app-theme-active .nav-link,
+body.app-theme-active .tab,
+body.app-theme-active .form-control,
+body.app-theme-active .form-select,
+body.app-theme-active .btn,
+body.app-theme-active .content-section,
+body.app-theme-active .content-section *,
+body.app-theme-active .student-dashboard-shell,
+body.app-theme-active .student-dashboard-shell * {
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.1s ease;
 }
 
 /* Disable transitions during page load to prevent flash */
