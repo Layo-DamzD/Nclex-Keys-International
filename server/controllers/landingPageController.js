@@ -241,7 +241,12 @@ const getPublicLandingPageConfig = async (req, res) => {
   try {
     const doc = await LandingPageConfig.findOne({ pageKey }).lean();
     if (!doc) {
-      return res.json({ pageKey, hasSavedConfig: false, config: null });
+      // Return default config so the frontend has something to render
+      return res.json({
+        pageKey,
+        hasSavedConfig: false,
+        config: getDefaultConfig(pageKey),
+      });
     }
     res.json({
       pageKey,
