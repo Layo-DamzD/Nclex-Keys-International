@@ -11749,3 +11749,467 @@ html[data-app-theme='dark'] .exam-review-filter-total {
   transition: none !important;
 }
 
+
+/* Bowtie Question Styles - NCLEX Style Layout */
+.bowtie-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 16px;
+  border: 2px solid #cbd5e1;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.bowtie-diagram {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.bowtie-row {
+  display: contents;
+}
+
+.bowtie-top .bowtie-cell:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+
+.bowtie-top .bowtie-cell:nth-child(2) {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.bowtie-center {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: center;
+}
+
+.bowtie-bottom .bowtie-cell:nth-child(1) {
+  grid-column: 1;
+  grid-row: 3;
+  justify-self: start;
+}
+
+.bowtie-bottom .bowtie-cell:nth-child(2) {
+  grid-column: 2;
+  grid-row: 3;
+  justify-self: end;
+}
+
+.bowtie-connector {
+  display: none;
+}
+
+.bowtie-top {
+  margin-bottom: 0;
+}
+
+.bowtie-bottom {
+  margin-top: 0;
+}
+
+.bowtie-cell {
+  flex: 1;
+  max-width: 280px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.bowtie-cell:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.bowtie-action {
+  border-left: 4px solid #f59e0b;
+}
+
+.bowtie-action:hover {
+  border-left-color: #d97706;
+}
+
+.bowtie-parameter {
+  border-left: 4px solid #10b981;
+}
+
+.bowtie-parameter:hover {
+  border-left-color: #059669;
+}
+
+.bowtie-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.bowtie-connector {
+  display: flex;
+  justify-content: space-between;
+  width: 50%;
+  height: 30px;
+  position: relative;
+}
+
+.bowtie-connector-bottom {
+  transform: scaleY(-1);
+}
+
+.bowtie-line {
+  width: 50%;
+  height: 100%;
+  position: relative;
+}
+
+.bowtie-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(to bottom, #94a3b8, #cbd5e1);
+}
+
+.bowtie-line-left::before {
+  right: 0;
+  transform: rotate(15deg);
+  transform-origin: top right;
+}
+
+.bowtie-line-right::before {
+  left: 0;
+  transform: rotate(-15deg);
+  transform-origin: top left;
+}
+
+.bowtie-center {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.bowtie-condition-box {
+  width: 100%;
+  max-width: 320px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  text-align: center;
+}
+
+.bowtie-label-center {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #bfdbfe;
+  margin-bottom: 10px;
+}
+
+.bowtie-condition-box .form-control {
+  background: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  font-weight: 600;
+}
+
+.bowtie-condition-box .form-control:focus {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+
+/* Bowtie runtime for case study */
+.bowtie-runtime {
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.bowtie-runtime .form-control {
+  background: #fff;
+  border: 2px solid #cbd5e1;
+  padding: 10px 12px;
+  font-weight: 500;
+}
+
+.bowtie-runtime .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Mobile responsive bowtie */
+@media (max-width: 768px) {
+  .bowtie-container {
+    padding: 12px;
+  }
+
+  .bowtie-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .bowtie-cell {
+    max-width: 100%;
+  }
+
+  .bowtie-connector {
+    display: none;
+  }
+
+  .bowtie-condition-box {
+    max-width: 100%;
+    margin: 12px 0;
+  }
+
+  .bowtie-diagram {
+    gap: 12px;
+  }
+}
+
+/* Dark mode bowtie */
+html[data-app-theme='dark'] .bowtie-container {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-color: #334155;
+}
+
+html[data-app-theme='dark'] .bowtie-cell {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-app-theme='dark'] .bowtie-cell:hover {
+  border-color: #60a5fa;
+}
+
+html[data-app-theme='dark'] .bowtie-label {
+  color: #94a3b8;
+}
+
+html[data-app-theme='dark'] .bowtie-condition-box {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+}
+
+html[data-app-theme='dark'] .bowtie-runtime {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+/* Case Study Session Styles */
+.case-study-session .patient-data-panel {
+  background: #f8fafc;
+  padding: 16px;
+  border-right: 1px solid #e2e8f0;
+  overflow-y: auto;
+}
+
+.case-study-session .patient-data-panel .btn {
+  min-width: auto;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Ensure case study section tabs are always visible */
+.case-study-session .patient-data-panel .btn-outline-primary {
+  background: #fff !important;
+  color: #1e40af !important;
+  border: 2px solid #1e40af !important;
+}
+
+.case-study-session .patient-data-panel .btn-outline-primary:hover {
+  background: #eff6ff !important;
+  border-color: #1e40af !important;
+}
+
+.case-study-session .patient-data-panel .btn-primary {
+  background: #1e40af !important;
+  color: #fff !important;
+  border: 2px solid #1e40af !important;
+}
+
+.case-study-session .scenario-box,
+.case-study-session .section-box {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.case-study-session .scenario-box h5,
+.case-study-session .section-box h6 {
+  color: #1e40af;
+  font-weight: 700;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.case-study-session .scenario-box p,
+.case-study-session .section-box p {
+  color: #334155;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.case-study-session .question-panel {
+  background: #fff;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* Mobile styles for case study */
+@media (max-width: 768px) {
+  .case-study-session .patient-data-panel,
+  .case-study-session .question-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+    padding: 12px;
+  }
+
+  .case-study-session .patient-data-panel {
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+    max-height: 40vh;
+  }
+
+  .case-study-session .question-panel {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .case-study-session .patient-data-panel .d-flex.flex-wrap.gap-2 {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .case-study-session .patient-data-panel .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+/* Dark mode case study */
+html[data-app-theme='dark'] .case-study-session .patient-data-panel {
+  background: #0f172a;
+  border-right-color: #334155;
+}
+
+html[data-app-theme='dark'] .case-study-session .patient-data-panel .btn-outline-primary {
+  background: #1e293b !important;
+  color: #60a5fa !important;
+  border: 2px solid #3b82f6 !important;
+}
+
+html[data-app-theme='dark'] .case-study-session .patient-data-panel .btn-outline-primary:hover {
+  background: #1e3a5f !important;
+  border-color: #60a5fa !important;
+}
+
+html[data-app-theme='dark'] .case-study-session .patient-data-panel .btn-primary {
+  background: #2563eb !important;
+  color: #fff !important;
+  border: 2px solid #3b82f6 !important;
+}
+
+html[data-app-theme='dark'] .case-study-session .scenario-box,
+html[data-app-theme='dark'] .case-study-session .section-box {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-app-theme='dark'] .case-study-session .scenario-box h5,
+html[data-app-theme='dark'] .case-study-session .section-box h6 {
+  color: #60a5fa;
+  border-bottom-color: #334155;
+}
+
+html[data-app-theme='dark'] .case-study-session .scenario-box p,
+html[data-app-theme='dark'] .case-study-session .section-box p {
+  color: #e2e8f0;
+}
+
+html[data-app-theme='dark'] .case-study-session .question-panel {
+  background: #0f172a;
+}
+
+/* Mobile Navigation Fix for Exam Interface */
+@media (max-width: 640px) {
+  .exam-runtime-skin .navigation.exam-runtime-navigation {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .exam-runtime-skin .navigation.exam-runtime-navigation .btn {
+    padding: 16px 12px;
+    font-size: 0.9rem;
+  }
+
+  .exam-runtime-skin .navigation.exam-runtime-navigation .btn:nth-child(2) {
+    border-right: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  .exam-runtime-skin .navigation.exam-runtime-navigation .btn:nth-child(3) {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .exam-runtime-skin .navigation.exam-runtime-navigation .btn:nth-child(4) {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Ensure Next button is always visible */
+.exam-runtime-skin .navigation.exam-runtime-navigation .btn-primary,
+.exam-runtime-skin .navigation.exam-runtime-navigation .btn-success {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.exam-runtime-skin .navigation.exam-runtime-navigation .btn-primary:hover,
+.exam-runtime-skin .navigation.exam-runtime-navigation .btn-success:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Case study navigation buttons */
+.case-study-session .navigation {
+  margin-top: auto;
+  padding-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.case-study-session .navigation .btn {
+  flex: 1;
+  min-width: 100px;
+}
+
+@media (max-width: 640px) {
+  .case-study-session .navigation {
+    flex-direction: column;
+  }
+
+  .case-study-session .navigation .btn {
+    width: 100%;
+    min-width: auto;
+  }
+}

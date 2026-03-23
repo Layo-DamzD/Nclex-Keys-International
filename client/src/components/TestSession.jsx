@@ -1753,6 +1753,121 @@ const TestSession = () => {
             </div>
           </div>
         )}
+
+        {currentQ.type === 'bowtie' && (
+          <div className="bowtie-container">
+            <div className="bowtie-diagram">
+              {/* Top row - Actions */}
+              <div className="bowtie-row bowtie-top">
+                <div className="bowtie-cell bowtie-action">
+                  <label className="bowtie-label">Action to Take</label>
+                  <select
+                    className="form-control"
+                    value={answers[currentQ._id]?.actionLeft || ''}
+                    disabled={isPaused}
+                    onChange={(e) => {
+                      const current = answers[currentQ._id] || {};
+                      handleAnswer(currentQ._id, { ...current, actionLeft: e.target.value });
+                    }}
+                  >
+                    <option value="">Select Action</option>
+                    {(currentQ.bowtieActions || []).filter(Boolean).map((opt) => (
+                      <option key={`al-${opt}`} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="bowtie-cell bowtie-action">
+                  <label className="bowtie-label">Action to Take</label>
+                  <select
+                    className="form-control"
+                    value={answers[currentQ._id]?.actionRight || ''}
+                    disabled={isPaused}
+                    onChange={(e) => {
+                      const current = answers[currentQ._id] || {};
+                      handleAnswer(currentQ._id, { ...current, actionRight: e.target.value });
+                    }}
+                  >
+                    <option value="">Select Action</option>
+                    {(currentQ.bowtieActions || []).filter(Boolean).map((opt) => (
+                      <option key={`ar-${opt}`} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Bowtie connector lines */}
+              <div className="bowtie-connector">
+                <div className="bowtie-line bowtie-line-left"></div>
+                <div className="bowtie-line bowtie-line-right"></div>
+              </div>
+
+              {/* Center - Condition */}
+              <div className="bowtie-center">
+                <div className="bowtie-condition-box">
+                  <label className="bowtie-label-center">Potential Condition</label>
+                  <select
+                    className="form-control"
+                    value={answers[currentQ._id]?.condition || ''}
+                    disabled={isPaused}
+                    onChange={(e) => {
+                      const current = answers[currentQ._id] || {};
+                      handleAnswer(currentQ._id, { ...current, condition: e.target.value });
+                    }}
+                  >
+                    <option value="">Select Condition</option>
+                    {(currentQ.bowtieCondition || []).filter(Boolean).map((opt) => (
+                      <option key={`c-${opt}`} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Bowtie connector lines bottom */}
+              <div className="bowtie-connector bowtie-connector-bottom">
+                <div className="bowtie-line bowtie-line-left"></div>
+                <div className="bowtie-line bowtie-line-right"></div>
+              </div>
+
+              {/* Bottom row - Parameters */}
+              <div className="bowtie-row bowtie-bottom">
+                <div className="bowtie-cell bowtie-parameter">
+                  <label className="bowtie-label">Parameter to Monitor</label>
+                  <select
+                    className="form-control"
+                    value={answers[currentQ._id]?.parameterLeft || ''}
+                    disabled={isPaused}
+                    onChange={(e) => {
+                      const current = answers[currentQ._id] || {};
+                      handleAnswer(currentQ._id, { ...current, parameterLeft: e.target.value });
+                    }}
+                  >
+                    <option value="">Select Parameter</option>
+                    {(currentQ.bowtieParameters || []).filter(Boolean).map((opt) => (
+                      <option key={`pl-${opt}`} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="bowtie-cell bowtie-parameter">
+                  <label className="bowtie-label">Parameter to Monitor</label>
+                  <select
+                    className="form-control"
+                    value={answers[currentQ._id]?.parameterRight || ''}
+                    disabled={isPaused}
+                    onChange={(e) => {
+                      const current = answers[currentQ._id] || {};
+                      handleAnswer(currentQ._id, { ...current, parameterRight: e.target.value });
+                    }}
+                  >
+                    <option value="">Select Parameter</option>
+                    {(currentQ.bowtieParameters || []).filter(Boolean).map((opt) => (
+                      <option key={`pr-${opt}`} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
