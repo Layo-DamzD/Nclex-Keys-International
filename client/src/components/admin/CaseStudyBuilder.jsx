@@ -34,6 +34,11 @@ const CaseStudyBuilder = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('details'); // details, sections, questions
 
+  // List view state
+  const [showList, setShowList] = useState(!isEditing);
+  const [caseStudies, setCaseStudies] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
+
   // Case study data
   const [caseStudy, setCaseStudy] = useState({
     title: '',
@@ -87,6 +92,70 @@ const CaseStudyBuilder = () => {
       fetchCaseStudy();
     }
   }, [editingId]);
+
+  useEffect(() => {
+    if (showList) {
+      fetchCaseStudies();
+    }
+  }, [showList]);
+
+  const fetchCaseStudies = async () => {
+    setListLoading(true);
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.get('/api/admin/case-studies', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCaseStudies(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      console.error('Failed to fetch case studies:', err);
+    } finally {
+      setListLoading(false);
+    }
+  };
+
+  const handleDeleteCaseStudy = async (caseStudyId, caseStudyTitle) => {
+    if (!window.confirm(`Are you sure you want to delete "${caseStudyTitle}"?`)) {
+      return;
+    }
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      await axios.delete(`/api/admin/case-studies/${caseStudyId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchCaseStudies();
+      alert('Case study deleted successfully');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete case study');
+    }
+  };
+
+  const handleEditCaseStudy = (caseStudyId) => {
+    navigate(`/admin/dashboard?section=case-studies`, { state: { caseStudyId } });
+    setShowList(false);
+  };
+
+  const handleCreateNew = () => {
+    setCaseStudy({
+      title: '',
+      category: '',
+      subcategory: '',
+      type: '6-question',
+      scenario: '',
+      sections: [],
+      questions: [],
+      isActive: true
+    });
+    setShowList(false);
+  };
+
+  const handleBackToList = () => {
+    setShowList(true);
+    setActiveTab('details');
+    setCurrentQuestion(getEmptyQuestion());
+    setEditingQuestionIndex(-1);
+    setActiveQuestionTab('new');
+  };
 
   const fetchCaseStudy = async () => {
     setLoading(true);
@@ -305,7 +374,7 @@ const CaseStudyBuilder = () => {
         });
         alert('Case study created successfully');
       }
-      navigate('/admin/dashboard?section=case-studies');
+      setShowList(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save case study');
     } finally {
@@ -315,9 +384,114 @@ const CaseStudyBuilder = () => {
 
   if (loading && isEditing) return <div>Loading case study...</div>;
 
+  // List View
+  if (showList) {
+    return (
+      <div className="case-study-builder">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ margin: 0 }}>Case Studies</h2>
+          <button className="btn btn-primary" onClick={handleCreateNew}>
+            <i className="fas fa-plus" style={{ marginRight: '8px' }}></i>
+            Create New Case Study
+          </button>
+        </div>
+
+        {listLoading ? (
+          <div className="text-center" style={{ padding: '40px' }}>
+            <div className="spinner-border text-primary" role="status">
+              <span className="sr-only">Loading...</span>
+            </div>
+            <p className="mt-2">Loading case studies...</p>
+          </div>
+        ) : caseStudies.length === 0 ? (
+          <div className="text-center" style={{ padding: '60px', background: '#f8fafc', borderRadius: '12px' }}>
+            <i className="fas fa-folder-open" style={{ fontSize: '48px', color: '#94a3b8', marginBottom: '16px' }}></i>
+            <h4 style={{ color: '#64748b' }}>No Case Studies Yet</h4>
+            <p style={{ color: '#94a3b8', marginBottom: '20px' }}>Create your first case study to get started.</p>
+            <button className="btn btn-primary" onClick={handleCreateNew}>
+              <i className="fas fa-plus" style={{ marginRight: '8px' }}></i>
+              Create New Case Study
+            </button>
+          </div>
+        ) : (
+          <div className="case-study-list">
+            {caseStudies.map((cs) => (
+              <div key={cs._id} className="card mb-3" style={{ border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                <div className="card-body" style={{ padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        <h4 style={{ margin: 0, color: '#1e293b' }}>{cs.title || 'Untitled Case Study'}</h4>
+                        <span
+                          className="badge"
+                          style={{
+                            background: cs.isActive ? '#dcfce7' : '#fee2e2',
+                            color: cs.isActive ? '#166534' : '#991b1b',
+                            fontSize: '12px',
+                            padding: '4px 10px',
+                            borderRadius: '12px'
+                          }}
+                        >
+                          {cs.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        <span
+                          className="badge"
+                          style={{
+                            background: '#e0f2fe',
+                            color: '#0369a1',
+                            fontSize: '12px',
+                            padding: '4px 10px',
+                            borderRadius: '12px'
+                          }}
+                        >
+                          {CASE_STUDY_TYPES.find(t => t.value === cs.type)?.label || cs.type}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '16px', color: '#64748b', fontSize: '14px', marginBottom: '8px' }}>
+                        <span><i className="fas fa-folder" style={{ marginRight: '6px' }}></i>{cs.category || 'No category'}</span>
+                        <span><i className="fas fa-tag" style={{ marginRight: '6px' }}></i>{cs.subcategory || 'No subcategory'}</span>
+                        <span><i className="fas fa-question-circle" style={{ marginRight: '6px' }}></i>{cs.questions?.length || 0} questions</span>
+                      </div>
+                      <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>
+                        {cs.scenario ? cs.scenario.substring(0, 150) + (cs.scenario.length > 150 ? '...' : '') : 'No scenario provided'}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => handleEditCaseStudy(cs._id)}
+                        title="Edit case study"
+                      >
+                        <i className="fas fa-edit"></i> Edit
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleDeleteCaseStudy(cs._id, cs.title)}
+                        title="Delete case study"
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Create/Edit View
   return (
     <div className="case-study-builder">
-      <h2>{isEditing ? 'Edit Case Study' : 'Create New Case Study'}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+        <button className="btn btn-outline-secondary" onClick={handleBackToList}>
+          <i className="fas fa-arrow-left" style={{ marginRight: '8px' }}></i>
+          Back to List
+        </button>
+        <h2 style={{ margin: 0 }}>{isEditing ? 'Edit Case Study' : 'Create New Case Study'}</h2>
+      </div>
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="builder-tabs">
