@@ -422,22 +422,47 @@
   font-size: 0.78rem;
   color: #64748b;
   line-height: 1.25;
-  display: inline-block;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  max-width: 100%;
 }
 
 /* CSV import text handling - prevent long text from breaking layout */
 .admin-dashboard-page .manage-questions .data-table tbody td {
-  max-width: 400px;
+  max-width: 1px; /* Force respect of col width in fixed layout */
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.admin-dashboard-page .manage-questions .data-table tbody td:hover {
-  overflow: visible;
+.admin-dashboard-page .manage-questions .data-table tbody tr:hover td {
+  background: rgba(30, 64, 175, 0.02);
+}
+
+.admin-dashboard-page .manage-questions .mq-question-cell {
+  max-width: 330px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .manage-questions .mq-question-cell:hover {
   white-space: normal;
+  overflow: visible;
+  background: #f8fbff;
+  position: relative;
+  z-index: 10;
+}
+
+.admin-dashboard-page .manage-questions .mq-category-cell {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .manage-questions .mq-subcategory-text {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
 }
 
 .admin-dashboard-page .manage-questions .mq-actions-cell {
