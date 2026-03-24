@@ -544,11 +544,19 @@ const forgotPassword = async (req, res) => {
 const forgotAdminPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    console.log('[ADMIN FORGOT PASSWORD] Email requested:', email);
+    
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
 
+    // First check if user exists at all
+    const userByEmail = await User.findOne({ email: exactRegex(email) });
+    console.log('[ADMIN FORGOT PASSWORD] User found by email:', userByEmail ? { email: userByEmail.email, role: userByEmail.role } : null);
+
     const user = await User.findOne({ email: exactRegex(email), role: { $in: ['admin', 'superadmin'] } });
+    console.log('[ADMIN FORGOT PASSWORD] Admin user found:', user ? { email: user.email, role: user.role } : null);
+    
     if (!user) {
       return res.status(404).json({ message: 'No admin account with that email exists' });
     }
