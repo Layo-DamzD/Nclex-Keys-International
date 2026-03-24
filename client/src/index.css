@@ -3790,6 +3790,35 @@ html[data-app-theme='dark'] .exam-runtime-skin .option:hover {
     font-size: 0.82rem;
     padding: 4px 6px;
   }
+
+  /* Mobile navigation buttons - ensure visibility */
+  .exam-runtime-skin .navigation.exam-runtime-navigation {
+    grid-template-columns: repeat(4, 1fr);
+    min-height: 56px;
+  }
+
+  .exam-runtime-skin .navigation.exam-runtime-navigation .btn {
+    padding: 14px 8px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .exam-runtime-skin .navigation.exam-runtime-navigation .btn i {
+    font-size: 0.9rem;
+  }
+}
+
+/* Extra small screens - ensure buttons remain visible */
+@media (max-width: 400px) {
+  .exam-runtime-skin .navigation.exam-runtime-navigation .btn {
+    padding: 14px 4px;
+    font-size: 0.78rem;
+  }
 }
 
 /* 5-day exam countdown celebration overlay */
@@ -12018,6 +12047,43 @@ html[data-app-theme='dark'] .bowtie-runtime {
   overflow-y: auto;
 }
 
+/* Patient Info header - non-clickable label */
+.case-study-section-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #1e40af;
+}
+
+.patient-info-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e40af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Case study tabs container */
+.case-study-tabs {
+  margin-top: 8px;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+.case-study-tabs .btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: auto !important;
+  padding: 8px 14px !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
 .case-study-session .patient-data-panel .btn {
   min-width: auto;
   padding: 8px 14px;
@@ -12026,21 +12092,29 @@ html[data-app-theme='dark'] .bowtie-runtime {
 }
 
 /* Ensure case study section tabs are always visible */
-.case-study-session .patient-data-panel .btn-outline-primary {
+.case-study-session .patient-data-panel .btn-outline-primary,
+.case-study-tabs .btn-outline-primary {
   background: #fff !important;
   color: #1e40af !important;
   border: 2px solid #1e40af !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: inline-flex !important;
 }
 
-.case-study-session .patient-data-panel .btn-outline-primary:hover {
+.case-study-session .patient-data-panel .btn-outline-primary:hover,
+.case-study-tabs .btn-outline-primary:hover {
   background: #eff6ff !important;
   border-color: #1e40af !important;
+  color: #1e40af !important;
 }
 
-.case-study-session .patient-data-panel .btn-primary {
+.case-study-session .patient-data-panel .btn-primary,
+.case-study-tabs .btn-primary {
   background: #1e40af !important;
   color: #fff !important;
   border: 2px solid #1e40af !important;
+  display: inline-flex !important;
 }
 
 .case-study-session .scenario-box,
@@ -12116,21 +12190,37 @@ html[data-app-theme='dark'] .case-study-session .patient-data-panel {
   border-right-color: #334155;
 }
 
-html[data-app-theme='dark'] .case-study-session .patient-data-panel .btn-outline-primary {
+html[data-app-theme='dark'] .case-study-section-header {
+  border-bottom-color: #60a5fa;
+}
+
+html[data-app-theme='dark'] .patient-info-label {
+  color: #60a5fa;
+}
+
+html[data-app-theme='dark'] .case-study-session .patient-data-panel .btn-outline-primary,
+html[data-app-theme='dark'] .case-study-tabs .btn-outline-primary {
   background: #1e293b !important;
   color: #60a5fa !important;
   border: 2px solid #3b82f6 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: inline-flex !important;
 }
 
-html[data-app-theme='dark'] .case-study-session .patient-data-panel .btn-outline-primary:hover {
+html[data-app-theme='dark'] .case-study-session .patient-data-panel .btn-outline-primary:hover,
+html[data-app-theme='dark'] .case-study-tabs .btn-outline-primary:hover {
   background: #1e3a5f !important;
   border-color: #60a5fa !important;
+  color: #60a5fa !important;
 }
 
-html[data-app-theme='dark'] .case-study-session .patient-data-panel .btn-primary {
+html[data-app-theme='dark'] .case-study-session .patient-data-panel .btn-primary,
+html[data-app-theme='dark'] .case-study-tabs .btn-primary {
   background: #2563eb !important;
   color: #fff !important;
   border: 2px solid #3b82f6 !important;
+  display: inline-flex !important;
 }
 
 html[data-app-theme='dark'] .case-study-session .scenario-box,

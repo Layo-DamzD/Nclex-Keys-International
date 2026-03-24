@@ -1068,39 +1068,48 @@ const TestSession = () => {
         <div className="case-study-layout row">
           {/* Left panel – patient data */}
           <div className="col-md-5 patient-data-panel">
-            <div className="d-flex flex-wrap gap-2 mb-3">
-              <button
-                type="button"
-                className={`btn btn-sm ${activeCaseTab === 'scenario' ? 'btn-primary' : 'btn-outline-primary'}`}
-                onClick={() => setActiveCaseTabByQuestion((prev) => ({ ...prev, [subQId]: 'scenario' }))}
-              >
-                Patient Info
-              </button>
-              {visibleSections.map((section, index) => {
-                const sectionId = section?.sectionId || `section-${index + 1}`;
-                return (
-                  <button
-                    key={sectionId}
-                    type="button"
-                    className={`btn btn-sm ${activeCaseTab === sectionId ? 'btn-primary' : 'btn-outline-primary'}`}
-                    onClick={() => setActiveCaseTabByQuestion((prev) => ({ ...prev, [subQId]: sectionId }))}
-                  >
-                    {section.title}
-                  </button>
-                );
-              })}
+            {/* Patient Info header - not clickable */}
+            <div className="case-study-section-header">
+              <span className="patient-info-label">Patient Info</span>
             </div>
-            {activeCaseTab === 'scenario' ? (
+            {/* Section tabs - clickable */}
+            {visibleSections.length > 0 && (
+              <div className="case-study-tabs d-flex flex-wrap gap-2 mb-3">
+                {visibleSections.map((section, index) => {
+                  const sectionId = section?.sectionId || `section-${index + 1}`;
+                  return (
+                    <button
+                      key={sectionId}
+                      type="button"
+                      className={`btn btn-sm ${activeCaseTab === sectionId ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setActiveCaseTabByQuestion((prev) => ({ ...prev, [subQId]: sectionId }))}
+                    >
+                      {section.title}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {activeCaseTab === 'scenario' || !visibleSections.find((section, index) => {
+              const sectionId = section?.sectionId || `section-${index + 1}`;
+              return sectionId === activeCaseTab;
+            }) ? (
               <div className="scenario-box p-3 mb-3 bg-light border rounded">
                 <h5>Scenario</h5>
                 <p>{currentQ.scenario}</p>
               </div>
-            ) : selectedSection ? (
-              <div className="section-box p-3 mb-3 bg-white border rounded">
-                <h6>{selectedSection.title}</h6>
-                <p>{selectedSection.content}</p>
-              </div>
-            ) : null}
+            ) : (() => {
+              const selectedSection = visibleSections.find((section, index) => {
+                const sectionId = section?.sectionId || `section-${index + 1}`;
+                return sectionId === activeCaseTab;
+              });
+              return selectedSection ? (
+                <div className="section-box p-3 mb-3 bg-white border rounded">
+                  <h6>{selectedSection.title}</h6>
+                  <p>{selectedSection.content}</p>
+                </div>
+              ) : null;
+            })()}
           </div>
 
           {/* Right panel – current question */}
