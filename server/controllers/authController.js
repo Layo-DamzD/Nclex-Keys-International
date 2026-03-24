@@ -509,31 +509,45 @@ const approveAdmin = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    console.log('[STUDENT FORGOT PASSWORD] Email requested:', email);
+    
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
 
+    // First check if user exists at all
+    const userByEmail = await User.findOne({ email: exactRegex(email) });
+    console.log('[STUDENT FORGOT PASSWORD] User found by email:', userByEmail ? { email: userByEmail.email, role: userByEmail.role } : null);
+
     const user = await User.findOne({ email: exactRegex(email), role: 'student' });
+    console.log('[STUDENT FORGOT PASSWORD] Student user found:', user ? { email: user.email, role: user.role } : null);
+    
     if (!user) {
       return res.status(404).json({ message: 'No student account with that email exists' });
     }
 
     if (!isEmailConfigured()) {
+      console.log('[STUDENT FORGOT PASSWORD] Email not configured');
       return res.status(503).json({ message: 'Email OTP is not configured yet. Contact support.' });
     }
 
     const otp = await savePasswordResetOtp(user);
+    console.log('[STUDENT FORGOT PASSWORD] OTP generated for:', user.email);
+    
     const emailResult = await sendPasswordResetOtpEmail({
       to: user.email,
       name: user.name,
       otp,
       accountLabel: 'student account'
     });
+    console.log('[STUDENT FORGOT PASSWORD] Email result:', emailResult);
 
     if (!emailResult.sent) {
+      console.log('[STUDENT FORGOT PASSWORD] Email failed to send:', emailResult.reason, emailResult.error);
       return res.status(500).json({ message: 'Failed to send OTP email. Please try again.' });
     }
 
+    console.log('[STUDENT FORGOT PASSWORD] OTP email sent successfully to:', user.email);
     return res.json({ message: 'OTP sent to your email. Enter it below to reset your password.' });
   } catch (error) {
     console.error(error);
@@ -562,6 +576,7 @@ const forgotAdminPassword = async (req, res) => {
     }
 
     if (!isEmailConfigured()) {
+      console.log('[ADMIN FORGOT PASSWORD] Email not configured');
       return res.json({
         message: 'Reset email service is temporarily unavailable. Please contact support to reset your password.'
       });
@@ -572,6 +587,7 @@ const forgotAdminPassword = async (req, res) => {
     user.resetPasswordToken = hashedResetToken;
     user.resetPasswordExpire = Date.now() + 5 * 60 * 1000; // 5 minutes
     await user.save();
+    console.log('[ADMIN FORGOT PASSWORD] Reset token generated for:', user.email);
 
     const emailResult = await sendPasswordResetEmail({
       to: user.email,
@@ -579,14 +595,17 @@ const forgotAdminPassword = async (req, res) => {
       resetPath: `/admin/reset-password/${resetToken}`,
       accountLabel: 'admin account'
     });
+    console.log('[ADMIN FORGOT PASSWORD] Email result:', emailResult);
 
     if (!emailResult.sent) {
+      console.log('[ADMIN FORGOT PASSWORD] Email failed to send:', emailResult.reason, emailResult.error);
       return res.json({
         message: 'We could not deliver reset email right now. Please contact support for password reset assistance.',
         reason: emailResult?.reason || 'send_failed'
       });
     }
 
+    console.log('[ADMIN FORGOT PASSWORD] Reset email sent successfully to:', user.email);
     return res.json({ message: 'Password reset link sent to your email.' });
   } catch (error) {
     console.error(error);
