@@ -19,6 +19,7 @@ const {
   getPreparedTest,
   getStudyMaterials,
   getPerformanceData,
+  getPerformanceDataDetailed,
   getProfile,
   updateProfile,
   changePassword,
@@ -51,6 +52,7 @@ router.get('/test-result/:id', protect, getTestResult);
 router.get('/test/:id', protect, getPreparedTest);
 router.get('/study-materials', protect, getStudyMaterials);
 router.get('/performance', protect, getPerformanceData);
+router.get('/performance-detailed', protect, getPerformanceDataDetailed);
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
 router.post('/change-password', protect, changePassword);

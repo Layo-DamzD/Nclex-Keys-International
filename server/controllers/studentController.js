@@ -1299,6 +1299,76 @@ const sendExamSupportMessage = async (req, res) => {
   }
 };
 
+// @desc    Get detailed performance data with all answers for filtering
+// @route   GET /api/student/performance-detailed
+// @access  Private
+const getPerformanceDataDetailed = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    const testResults = await TestResult.find({ student: studentId })
+      .sort({ date: 1 })
+      .select('date percentage answers score totalQuestions');
+
+    // Score trend (last 10 tests)
+    const trend = testResults.slice(-10).map(t => ({
+      date: t.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      score: t.percentage
+    }));
+
+    // Aggregate all answers for filtering
+    const allAnswers = [];
+    const categoryStats = {};
+
+    testResults.forEach(result => {
+      if (result.answers && Array.isArray(result.answers)) {
+        result.answers.forEach(answer => {
+          allAnswers.push({
+            ...answer.toObject ? answer.toObject() : answer,
+            testDate: result.date,
+            testId: result._id
+          });
+
+          // Category stats
+          const cat = answer.category || answer.subcategory || 'Unknown';
+          if (!categoryStats[cat]) {
+            categoryStats[cat] = { total: 0, correct: 0 };
+          }
+          categoryStats[cat].total += 1;
+          if (answer.isCorrect === true) {
+            categoryStats[cat].correct += 1;
+          }
+        });
+      }
+    });
+
+    const weakAreas = Object.entries(categoryStats).map(([category, stats]) => ({
+      category,
+      accuracy: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0
+    })).sort((a, b) => a.accuracy - b.accuracy);
+
+    res.json({
+      trend,
+      weakAreas: weakAreas.length > 0 ? weakAreas : [
+        { category: 'No data yet', accuracy: 0 }
+      ],
+      stats: {
+        totalTests: testResults.length,
+        averageScore: testResults.length > 0
+          ? Math.round(testResults.reduce((sum, t) => sum + t.percentage, 0) / testResults.length)
+          : 0,
+        bestScore: testResults.length > 0
+          ? Math.max(...testResults.map(t => t.percentage))
+          : 0
+      },
+      allAnswers
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getRecentTests,
@@ -1317,6 +1387,7 @@ module.exports = {
   getPreparedTest,
   getStudyMaterials,
   getPerformanceData,
+  getPerformanceDataDetailed,
   getProfile,
   updateProfile,
   changePassword,

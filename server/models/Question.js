@@ -65,10 +65,15 @@ const questionSchema = new mongoose.Schema({
     enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'],
     required: true
   },
-  
+
   // Basic fields
   category: { type: String, required: true },
   subcategory: { type: String, required: true },
+
+  // Client Needs framework (NCLEX categorization)
+  clientNeed: { type: String, default: '' }, // e.g., "Safe and Effective Care Environment"
+  clientNeedSubcategory: { type: String, default: '' }, // e.g., "Management of Care"
+
   questionText: { type: String, required: true },
   questionImageUrl: { type: String, default: '' },
   options: [String],
