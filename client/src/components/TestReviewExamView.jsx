@@ -724,36 +724,128 @@ const TestReviewExamView = ({
         </div>
 
         {activeSummaryTab === 'analysis' ? (
-          <div className="exam-review-analysis-board">
-            <div className="exam-review-analysis-table-wrap">
-              <h4>Subjects</h4>
-              <table className="exam-review-table compact">
-                <thead><tr><th>Name</th><th>Total</th><th>Correct</th><th>Accuracy</th></tr></thead>
-                <tbody>
-                  {analysisBlocks.subjects.map((row) => (
-                    <tr key={`subject-${row.name}`}>
-                      <td>{row.name}</td><td>{row.total}</td><td>{row.correct}</td><td>{row.pct}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="exam-review-analysis-dashboard">
+            {/* Top Stats Row */}
+            <div className="analysis-stats-row">
+              <div className="analysis-stat-card">
+                <div className="analysis-stat-icon" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a' }}>
+                  <i className="fas fa-check-circle"></i>
+                </div>
+                <div className="analysis-stat-info">
+                  <span className="analysis-stat-label">Correct Answers</span>
+                  <strong className="analysis-stat-value correct-value">{summary.correct}</strong>
+                  <div className="analysis-stat-progress">
+                    <div className="analysis-progress-bar" style={{ width: `${totalQuestions > 0 ? (summary.correct / totalQuestions) * 100 : 0}%`, background: 'linear-gradient(90deg, #22c55e, #16a34a)' }}></div>
+                  </div>
+                </div>
+              </div>
+              <div className="analysis-stat-card">
+                <div className="analysis-stat-icon" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#dc2626' }}>
+                  <i className="fas fa-times-circle"></i>
+                </div>
+                <div className="analysis-stat-info">
+                  <span className="analysis-stat-label">Incorrect Answers</span>
+                  <strong className="analysis-stat-value incorrect-value">{summary.incorrect}</strong>
+                  <div className="analysis-stat-progress">
+                    <div className="analysis-progress-bar" style={{ width: `${totalQuestions > 0 ? (summary.incorrect / totalQuestions) * 100 : 0}%`, background: 'linear-gradient(90deg, #f87171, #dc2626)' }}></div>
+                  </div>
+                </div>
+              </div>
+              <div className="analysis-stat-card">
+                <div className="analysis-stat-icon" style={{ background: 'rgba(251, 146, 60, 0.15)', color: '#ea580c' }}>
+                  <i className="fas fa-signal"></i>
+                </div>
+                <div className="analysis-stat-info">
+                  <span className="analysis-stat-label">Difficulty Level</span>
+                  <strong className="analysis-stat-value">{difficultyMeter.label}</strong>
+                  <div className="analysis-difficulty-meter">
+                    <div className="difficulty-track">
+                      <div className="difficulty-indicator" style={{ left: `${difficultyMeter.score}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="analysis-stat-card">
+                <div className="analysis-stat-icon" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#2563eb' }}>
+                  <i className="fas fa-sync-alt"></i>
+                </div>
+                <div className="analysis-stat-info">
+                  <span className="analysis-stat-label">Answer Changes</span>
+                  <strong className="analysis-stat-value">{answerChangeSummary.correctToIncorrect + answerChangeSummary.incorrectToCorrect}</strong>
+                  <small className="analysis-stat-detail">C→I: {answerChangeSummary.correctToIncorrect} · I→C: {answerChangeSummary.incorrectToCorrect}</small>
+                </div>
+              </div>
             </div>
-            <div className="exam-review-analysis-table-wrap">
-              <h4>Systems</h4>
-              <table className="exam-review-table compact">
-                <thead><tr><th>Name</th><th>Total</th><th>Correct</th><th>Accuracy</th></tr></thead>
-                <tbody>
-                  {analysisBlocks.systems.map((row) => (
-                    <tr key={`system-${row.name}`}>
-                      <td>{row.name}</td><td>{row.total}</td><td>{row.correct}</td><td>{row.pct}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            {/* Subjects and Systems Tables */}
+            <div className="analysis-tables-grid">
+              {/* Subjects Table */}
+              <div className="analysis-table-section">
+                <div className="analysis-section-header">
+                  <h4><i className="fas fa-book-medical"></i> Subjects</h4>
+                  <span className="analysis-section-count">{analysisBlocks.subjects.length} items</span>
+                </div>
+                <div className="analysis-table-container">
+                  {analysisBlocks.subjects.length === 0 ? (
+                    <p className="text-muted p-3">No subject data available</p>
+                  ) : (
+                    analysisBlocks.subjects.map((row, idx) => (
+                      <div key={`subject-${row.name}-${idx}`} className="analysis-row">
+                        <div className="analysis-row-name">{row.name}</div>
+                        <div className="analysis-row-data">
+                          <div className="analysis-progress-wrapper">
+                            <div className="analysis-progress-track">
+                              <div className="analysis-progress-fill" style={{ width: `${row.pct}%` }}></div>
+                            </div>
+                            <span className="analysis-progress-pct">{row.pct}%</span>
+                          </div>
+                          <div className="analysis-row-stats">
+                            <span className="stat-correct"><i className="fas fa-check"></i> {row.correct}</span>
+                            <span className="stat-total">/ {row.total}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Systems Table */}
+              <div className="analysis-table-section">
+                <div className="analysis-section-header">
+                  <h4><i className="fas fa-heartbeat"></i> Systems</h4>
+                  <span className="analysis-section-count">{analysisBlocks.systems.length} items</span>
+                </div>
+                <div className="analysis-table-container">
+                  {analysisBlocks.systems.length === 0 ? (
+                    <p className="text-muted p-3">No system data available</p>
+                  ) : (
+                    analysisBlocks.systems.map((row, idx) => (
+                      <div key={`system-${row.name}-${idx}`} className="analysis-row">
+                        <div className="analysis-row-name">{row.name}</div>
+                        <div className="analysis-row-data">
+                          <div className="analysis-progress-wrapper">
+                            <div className="analysis-progress-track">
+                              <div className="analysis-progress-fill" style={{ width: `${row.pct}%` }}></div>
+                            </div>
+                            <span className="analysis-progress-pct">{row.pct}%</span>
+                          </div>
+                          <div className="analysis-row-stats">
+                            <span className="stat-correct"><i className="fas fa-check"></i> {row.correct}</span>
+                            <span className="stat-total">/ {row.total}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         ) : null}
 
+        {activeSummaryTab === 'results' ? (
+          <>
         <div className="exam-review-report-grid">
           <div className="exam-review-report-metrics">
             <div className="exam-review-report-metric">
@@ -934,6 +1026,8 @@ const TestReviewExamView = ({
             </div>
           )}
         </div>
+          </>
+        ) : null}
 
       </div>
     </div>

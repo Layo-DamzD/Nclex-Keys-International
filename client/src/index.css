@@ -11597,6 +11597,293 @@ html[data-app-theme='dark'] .rationale-text-block {
   .exam-review-insight-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .exam-review-analysis-board { grid-template-columns: 1fr; }
 }
+
+/* New Analysis Dashboard Styles */
+.exam-review-analysis-dashboard {
+  margin-top: 16px;
+  display: grid;
+  gap: 20px;
+}
+
+.analysis-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.analysis-stat-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.analysis-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+.analysis-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.analysis-stat-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.analysis-stat-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+}
+
+.analysis-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.analysis-stat-value.correct-value {
+  color: #16a34a;
+}
+
+.analysis-stat-value.incorrect-value {
+  color: #dc2626;
+}
+
+.analysis-stat-progress {
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.analysis-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.analysis-stat-detail {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.analysis-difficulty-meter {
+  margin-top: 8px;
+}
+
+.difficulty-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e 0%, #fbbf24 50%, #ef4444 100%);
+  position: relative;
+}
+
+.difficulty-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 16px;
+  background: #0f172a;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.analysis-tables-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.analysis-table-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.analysis-section-header {
+  background: #f8fafc;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.analysis-section-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.analysis-section-header h4 i {
+  color: #2563eb;
+  font-size: 0.9rem;
+}
+
+.analysis-section-count {
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #e2e8f0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.analysis-table-container {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.analysis-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.analysis-row:last-child {
+  border-bottom: none;
+}
+
+.analysis-row:hover {
+  background: #f8fafc;
+}
+
+.analysis-row-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analysis-row-data {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.analysis-progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 140px;
+}
+
+.analysis-progress-track {
+  flex: 1;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.analysis-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.analysis-progress-pct {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #16a34a;
+  min-width: 40px;
+  text-align: right;
+}
+
+.analysis-row-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+.analysis-row-stats .stat-correct {
+  color: #16a34a;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.analysis-row-stats .stat-correct i {
+  font-size: 0.7rem;
+}
+
+.analysis-row-stats .stat-total {
+  color: #64748b;
+}
+
+@media (max-width: 1100px) {
+  .analysis-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .analysis-tables-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .analysis-stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-stat-card {
+    padding: 14px;
+  }
+
+  .analysis-stat-value {
+    font-size: 1.3rem;
+  }
+
+  .analysis-row-data {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  .analysis-progress-wrapper {
+    width: 120px;
+  }
+}
+
 .exam-review-filter-strip {
   display: flex;
   flex-wrap: wrap;
@@ -13591,4 +13878,135 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
 .app-dull-bg .text-muted,
 .student-dashboard-shell .greeting .text-muted {
   color: #64748b !important;
+}
+
+/* =============================================
+   ROLE-BASED BACKGROUNDS FOR ADMINS
+   Regular Admin: Dull Blue background (matching sidebar)
+   Super-Admin: Dull Black background (not sharp, readable)
+   ============================================= */
+
+/* Regular Admin - Dull Blue Background */
+body.admin-regular-bg,
+.admin-regular-bg .admin-dashboard-shell,
+.admin-regular-bg .main-content {
+  background: #d1dce8 !important; /* Dull blue-gray - matches admin sidebar */
+  min-height: 100vh;
+}
+
+/* Super Admin - Dull Black Background (not sharp) */
+body.admin-super-bg,
+.admin-super-bg .admin-dashboard-shell,
+.admin-super-bg .main-content {
+  background: #1a1f2e !important; /* Dull dark - not pure black, easier on eyes */
+  min-height: 100vh;
+}
+
+/* Super Admin - Light text for dark background */
+.admin-super-bg h1,
+.admin-super-bg h2,
+.admin-super-bg h3,
+.admin-super-bg h4,
+.admin-super-bg h5,
+.admin-super-bg .greeting h1,
+.admin-super-bg .sidebar-header,
+.admin-super-bg .stats-card h3,
+.admin-super-bg .card-title {
+  color: #e2e8f0 !important;
+}
+
+.admin-super-bg .text-muted,
+.admin-super-bg .greeting .text-muted {
+  color: #94a3b8 !important;
+}
+
+/* Super Admin - Cards with dark theme */
+.admin-super-bg .stats-card,
+.admin-super-bg .card,
+.admin-super-bg .chart-container,
+.admin-super-bg .test-table,
+.admin-super-bg .dashboard-header,
+.admin-super-bg .content-section,
+.admin-super-bg .data-table,
+.admin-super-bg .module-card {
+  background: #242b3d !important;
+  border-color: #3b4563 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Super Admin - Table styling */
+.admin-super-bg .test-table th {
+  background: #1e2433 !important;
+  color: #cbd5e1 !important;
+  border-color: #3b4563 !important;
+}
+
+.admin-super-bg .test-table td {
+  border-color: #3b4563 !important;
+  color: #e2e8f0 !important;
+}
+
+.admin-super-bg .test-table tr:hover {
+  background: #2d3548 !important;
+}
+
+/* Super Admin - Form controls */
+.admin-super-bg .form-control,
+.admin-super-bg .form-select {
+  background: #1e2433 !important;
+  border-color: #3b4563 !important;
+  color: #e2e8f0 !important;
+}
+
+.admin-super-bg .form-control:focus,
+.admin-super-bg .form-select:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Super Admin - Nav links */
+.admin-super-bg .nav-link {
+  color: #94a3b8 !important;
+}
+
+.admin-super-bg .nav-link:hover,
+.admin-super-bg .nav-link.active {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+}
+
+/* Regular Admin - Keep light theme with blue tint */
+.admin-regular-bg .stats-card,
+.admin-regular-bg .card,
+.admin-regular-bg .chart-container,
+.admin-regular-bg .test-table,
+.admin-regular-bg .dashboard-header,
+.admin-regular-bg .content-section,
+.admin-regular-bg .data-table,
+.admin-regular-bg .module-card {
+  background: #ffffff !important;
+  border-color: #c7d6e8 !important;
+  box-shadow: 0 2px 8px rgba(26, 95, 180, 0.08) !important;
+}
+
+/* Regular Admin - Text colors */
+.admin-regular-bg h1,
+.admin-regular-bg h2,
+.admin-regular-bg h3,
+.admin-regular-bg h4,
+.admin-regular-bg .greeting h1 {
+  color: #1a365d !important;
+}
+
+.admin-regular-bg .text-muted,
+.admin-regular-bg .greeting .text-muted {
+  color: #4a5568 !important;
+}
+
+/* Student Background - Dull calm background */
+body.student-bg,
+.student-bg .student-dashboard-shell,
+.student-bg .main-content {
+  background: #e8edf3 !important; /* Dull calm gray-blue - reduces brightness */
+  min-height: 100vh;
 }
