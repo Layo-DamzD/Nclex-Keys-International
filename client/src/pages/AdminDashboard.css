@@ -1008,9 +1008,9 @@
   min-width: 240px;
 }
 
-/* Regular Admin - Permanent BLUE (same as superadmin) */
+/* Regular Admin - Dull dark theme */
 .admin-dashboard-page.admin-regular .sidebar {
-  background: linear-gradient(180deg, #1e40af, #1d4ed8);
+  background: linear-gradient(180deg, #1e293b, #334155);
 }
 
 .admin-dashboard-page.admin-regular .sidebar-header {
@@ -1018,24 +1018,24 @@
 }
 
 .admin-dashboard-page.admin-regular .logo-icon {
-  color: #1e40af;
+  color: #1e293b;
 }
 
 .admin-dashboard-page.admin-regular .stat-card {
-  border-top-color: #2563eb !important;
+  border-top-color: #334155 !important;
 }
 
 .admin-dashboard-page.admin-regular .btn-primary {
-  background: #2563eb;
+  background: #334155;
 }
 
 .admin-dashboard-page.admin-regular .btn-primary:hover {
-  background: #1d4ed8;
+  background: #475569;
 }
 
 .admin-dashboard-page.admin-regular .nav-link.active {
   background: #fff;
-  color: #1e40af;
+  color: #1e293b;
 }
 
 .admin-dashboard-page.admin-regular .nav-link:hover {
@@ -1044,19 +1044,19 @@
 }
 
 .admin-dashboard-page.admin-regular .header h1 span {
-  color: #1d4ed8;
+  color: #334155;
 }
 
 .admin-dashboard-page.admin-regular .time-display .time {
-  color: #1d4ed8;
+  color: #334155;
 }
 
 .admin-dashboard-page.admin-regular .user-avatar {
-  background: #1d4ed8;
-  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25);
+  background: #334155;
+  box-shadow: 0 4px 12px rgba(51, 65, 85, 0.25);
 }
 
-/* Super Admin - BLACK theme */
+/* Super Admin - Deep dark theme */
 .admin-dashboard-page:not(.admin-regular) .sidebar {
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
 }
@@ -1094,6 +1094,85 @@
 
 .admin-dashboard-page:not(.admin-regular) .stat-card {
   border-top-color: #0f172a !important;
+}
+
+/* Admin pages use a dull blue-gray background to match the blue sidebar theme */
+.admin-dashboard-page,
+.admin-dashboard-page.admin-container,
+.admin-dashboard-page .main-content {
+  background: #eef6ff !important;
+}
+
+.admin-dashboard-page .header,
+.admin-dashboard-page .stat-card,
+.admin-dashboard-page .form-card,
+.admin-dashboard-page .manage-questions .data-table-container,
+.admin-dashboard-page .admin-analytics-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.admin-dashboard-page .header h1,
+.admin-dashboard-page .stat-number,
+.admin-dashboard-page .admin-section-title,
+.admin-dashboard-page .admin-analytics-card h3,
+.admin-dashboard-page .user-name,
+.admin-dashboard-page .recent-question-text {
+  color: #0f172a;
+}
+
+.admin-dashboard-page .time-display .date,
+.admin-dashboard-page .user-role-label,
+.admin-dashboard-page .recent-question-meta,
+.admin-dashboard-page .stat-card h3,
+.admin-dashboard-page .bulk-import-help,
+.admin-dashboard-page .admin-analytics-subtitle {
+  color: #64748b;
+}
+
+.admin-dashboard-page .btn-outline-secondary,
+.admin-dashboard-page .upload-question .btn-outline-secondary {
+  background: #ffffff;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.admin-dashboard-page .upload-question .form-control,
+.admin-dashboard-page .upload-question .type-btn,
+.admin-dashboard-page .upload-question .option-index {
+  background: #ffffff;
+  color: #1e293b;
+  border-color: #e2e8f0;
+}
+
+.admin-dashboard-page .upload-question .form-label,
+.admin-dashboard-page .upload-question .text-muted,
+.admin-dashboard-page .upload-question .option-correct-toggle {
+  color: #475569;
+}
+
+.admin-dashboard-page .manage-questions .data-table thead th,
+.admin-dashboard-page .admin-analytics-table thead th {
+  background: #f8fafc;
+  color: #1e3a5f;
+  border-bottom-color: #e2e8f0;
+}
+
+.admin-dashboard-page .manage-questions .data-table tbody td,
+.admin-dashboard-page .admin-analytics-table td {
+  color: #1e293b;
+  border-bottom-color: #e2e8f0;
+}
+
+.admin-dashboard-page .manage-questions .mq-id-text {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+.admin-dashboard-page .sidebar {
+  border-right-color: rgba(148, 163, 184, 0.2);
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page,
@@ -1174,16 +1253,16 @@ html[data-app-theme='dark'] .admin-dashboard-page .sidebar {
   border-right-color: rgba(148, 163, 184, 0.2);
 }
 
-/* Dark mode - Regular Admin stays BLUE */
+/* Dark mode - Regular Admin uses dark theme */
 html[data-app-theme='dark'] .admin-dashboard-page.admin-regular .sidebar {
-  background: linear-gradient(180deg, #1e40af 0%, #1d4ed8 100%);
+  background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page.admin-regular .sidebar-header {
   background: transparent;
 }
 
-/* Dark mode - Super Admin stays BLACK */
+/* Dark mode - Super Admin stays deep dark */
 html[data-app-theme='dark'] .admin-dashboard-page:not(.admin-regular) .sidebar {
   background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
 }

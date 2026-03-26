@@ -36,13 +36,19 @@ const StudentTestReviewPage = () => {
     fetchReview();
   }, [resultId]);
 
-  if (loading) return <div className="p-4">Loading review...</div>;
+  if (loading) {
+    return (
+      <div className="student-review-page-shell" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%)', minHeight: '100vh', padding: '20px' }}>
+        <div style={{ color: '#e2e8f0' }}>Loading review...</div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
-      <div className="p-4">
-        <div className="alert alert-danger">{error}</div>
-        <button type="button" className="btn btn-secondary" onClick={() => navigate('/dashboard?section=previous-tests')}>
+      <div className="student-review-page-shell" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%)', minHeight: '100vh', padding: '20px' }}>
+        <div className="alert alert-danger" style={{ background: '#ffffff', borderRadius: '12px' }}>{error}</div>
+        <button type="button" className="btn btn-secondary" onClick={() => navigate('/dashboard?section=previous-tests')} style={{ background: '#64748b', color: '#ffffff' }}>
           Back to Previous Tests
         </button>
       </div>
@@ -50,13 +56,15 @@ const StudentTestReviewPage = () => {
   }
 
   return (
-    <TestReviewExamView
-      testResult={testResult}
-      onBack={() => navigate('/dashboard?section=previous-tests')}
-      backLabel="Back to list"
-      titlePrefix="Test Review"
-      runtimeMode={true}
-    />
+    <div className="student-review-page-shell">
+      <TestReviewExamView
+        testResult={testResult}
+        onBack={() => navigate('/dashboard?section=previous-tests')}
+        backLabel="Back to list"
+        titlePrefix="Test Review"
+        runtimeMode={true}
+      />
+    </div>
   );
 };
 
