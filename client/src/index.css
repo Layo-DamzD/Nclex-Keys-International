@@ -12303,3 +12303,344 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
     min-width: auto;
   }
 }
+
+/* ============================================
+   Student Dashboard - Dull Blue Background
+   ============================================ */
+
+.student-dashboard-shell {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+  min-height: 100vh;
+}
+
+.student-dashboard-shell .main-content {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+}
+
+.student-dashboard-shell .sidebar {
+  background: rgba(15, 39, 68, 0.95);
+  border-right: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.student-dashboard-shell .sidebar-header {
+  background: rgba(30, 58, 95, 0.8);
+  border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.student-dashboard-shell .nav-link {
+  color: #94a3b8;
+  transition: all 0.2s ease;
+}
+
+.student-dashboard-shell .nav-link:hover {
+  background: rgba(96, 165, 250, 0.1);
+  color: #e2e8f0;
+}
+
+.student-dashboard-shell .nav-link.active {
+  background: rgba(37, 99, 235, 0.3);
+  color: #60a5fa;
+  border-left: 3px solid #3b82f6;
+}
+
+.student-dashboard-shell .dashboard-header,
+.student-dashboard-shell .stats-card,
+.student-dashboard-shell .progress-container {
+  background: rgba(30, 58, 95, 0.6);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.student-dashboard-shell .greeting h1 {
+  color: #f1f5f9;
+}
+
+.student-dashboard-shell .greeting p {
+  color: #94a3b8;
+}
+
+.student-dashboard-shell .dashboard-clock-badge {
+  background: rgba(30, 58, 95, 0.8);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  color: #e2e8f0;
+}
+
+.student-dashboard-shell .dashboard-clock-badge .clock-time {
+  color: #60a5fa;
+}
+
+.student-dashboard-shell .dashboard-clock-badge .clock-date {
+  color: #94a3b8;
+}
+
+.student-dashboard-shell h3,
+.student-dashboard-shell h4 {
+  color: #f1f5f9;
+}
+
+.student-dashboard-shell .text-muted {
+  color: #94a3b8 !important;
+}
+
+.student-dashboard-shell .content-section {
+  color: #e2e8f0;
+}
+
+.student-dashboard-shell .alert {
+  background: rgba(30, 58, 95, 0.8);
+  border-color: rgba(96, 165, 250, 0.3);
+  color: #e2e8f0;
+}
+
+.student-dashboard-shell .alert-warning {
+  background: rgba(180, 83, 9, 0.3);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fcd34d;
+}
+
+/* ============================================
+   Statistics Dashboard Styles
+   ============================================ */
+
+.statistics-dashboard {
+  padding: 0;
+}
+
+.stats-dashboard-card {
+  background: rgba(30, 58, 95, 0.6);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.stats-card-title {
+  color: #60a5fa;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.stats-donut-wrapper {
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.stats-info {
+  flex: 1;
+}
+
+.stats-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(96, 165, 250, 0.1);
+}
+
+.stats-info-row:last-child {
+  border-bottom: none;
+}
+
+.stats-label {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.stats-value {
+  color: #f1f5f9;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.stats-badge-purple {
+  background: rgba(139, 92, 246, 0.3);
+  color: #a78bfa;
+}
+
+.stats-badge-blue {
+  background: rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+.stats-badge-green {
+  background: rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.stats-badge-orange {
+  background: rgba(249, 115, 22, 0.3);
+  color: #fb923c;
+}
+
+.stats-badge-red {
+  background: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+/* Summary Stat Cards */
+.summary-stat-card {
+  background: rgba(30, 58, 95, 0.6);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.summary-stat-label {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.summary-stat-value {
+  display: block;
+  color: #f1f5f9;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Statistics Toggle Buttons */
+.btn-teal {
+  background: #0d9488;
+  color: #fff;
+  border: none;
+}
+
+.btn-teal:hover {
+  background: #0f766e;
+  color: #fff;
+}
+
+/* Performance Analysis Adjustments */
+.performance-analysis .stats-card {
+  background: rgba(30, 58, 95, 0.6);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.performance-analysis .stats-card h5 {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.performance-analysis .stats-number {
+  color: #60a5fa;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.performance-analysis .chart-container {
+  background: rgba(30, 58, 95, 0.6);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.performance-analysis .recommendations h4 {
+  color: #f1f5f9;
+}
+
+.performance-analysis .list-group-item {
+  background: rgba(30, 58, 95, 0.6);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  color: #e2e8f0;
+}
+
+.performance-analysis .list-group-item-success {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+/* Student Dashboard Form Controls */
+.student-dashboard-shell .form-control,
+.student-dashboard-shell .form-select {
+  background: rgba(30, 58, 95, 0.8);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  color: #e2e8f0;
+}
+
+.student-dashboard-shell .form-control:focus,
+.student-dashboard-shell .form-select:focus {
+  background: rgba(30, 58, 95, 0.9);
+  border-color: #3b82f6;
+  color: #e2e8f0;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.student-dashboard-shell .form-control::placeholder {
+  color: #94a3b8;
+}
+
+/* Buttons in Student Dashboard */
+.student-dashboard-shell .btn-primary {
+  background: #2563eb;
+  border-color: #3b82f6;
+}
+
+.student-dashboard-shell .btn-primary:hover {
+  background: #1d4ed8;
+  border-color: #2563eb;
+}
+
+.student-dashboard-shell .btn-outline-secondary {
+  border-color: rgba(96, 165, 250, 0.3);
+  color: #94a3b8;
+}
+
+.student-dashboard-shell .btn-outline-secondary:hover {
+  background: rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #e2e8f0;
+}
+
+/* Remove dark mode toggle for students */
+.student-dashboard-shell .theme-toggle-btn {
+  display: none !important;
+}
+
+/* Student Sidebar Styling */
+.student-sidebar {
+  background: rgba(15, 39, 68, 0.95);
+}
+
+.student-sidebar .sidebar-header {
+  background: rgba(30, 58, 95, 0.8);
+}
+
+.student-sidebar .nav-link {
+  color: #94a3b8;
+}
+
+.student-sidebar .nav-link:hover {
+  background: rgba(96, 165, 250, 0.1);
+  color: #e2e8f0;
+}
+
+.student-sidebar .nav-link.active {
+  background: rgba(37, 99, 235, 0.3);
+  color: #60a5fa;
+}
+
+.student-sidebar .sidebar-footer {
+  border-top: 1px solid rgba(96, 165, 250, 0.2);
+  color: #94a3b8;
+}

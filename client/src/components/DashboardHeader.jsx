@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useAppTheme } from '../context/AppThemeContext';
 import PwaInstallButton from './PwaInstallButton';
 
 const DashboardHeader = ({
@@ -14,7 +13,6 @@ const DashboardHeader = ({
   const [currentTime, setCurrentTime] = useState('');
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   const notificationMenuRef = useRef(null);
-  const { theme, toggleTheme, isThemeEnabled } = useAppTheme();
   const currentDate = new Date().toLocaleDateString('en-GB');
   const unreadLabel = unreadNotificationCount > 99 ? '99+' : String(unreadNotificationCount);
 
@@ -155,17 +153,6 @@ const DashboardHeader = ({
           </div>
           <div className="clock-date">{currentDate}</div>
         </div>
-        {isThemeEnabled && (
-          <button
-            type="button"
-            className="theme-toggle-btn"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            title={theme === 'dark' ? 'Dark mode' : 'Light mode'}
-          >
-            <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
-          </button>
-        )}
       </div>
     </div>
   );

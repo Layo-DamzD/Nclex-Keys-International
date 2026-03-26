@@ -575,10 +575,10 @@ const getStudyMaterials = async (req, res) => {
 const getPerformanceData = async (req, res) => {
   try {
     const studentId = req.user.id;
-    
+
     const testResults = await TestResult.find({ student: studentId })
       .sort({ date: 1 })
-      .select('date percentage answers');
+      .select('date percentage answers score totalQuestions');
 
     // Score trend (last 10 tests)
     const trend = testResults.slice(-10).map(t => ({
@@ -589,18 +589,46 @@ const getPerformanceData = async (req, res) => {
     // Aggregate weak areas by category
     const categoryStats = {};
 
+    // Question statistics
+    let totalQuestions = 0;
+    let usedQuestions = 0;
+    let totalCorrect = 0;
+    let totalIncorrect = 0;
+    let totalOmitted = 0;
+    let totalCorrectOnReattempt = 0;
+
     testResults.forEach(result => {
       if (result.answers && Array.isArray(result.answers)) {
         result.answers.forEach(answer => {
-          // For now, we don't have category in answers, so we'll use questionText as a proxy
-          // In a real implementation, you'd store category during test creation
-          const cat = answer.category || 'Unknown';
-          
+          // Count questions
+          totalQuestions += 1;
+          usedQuestions += 1;
+
+          const isAnswered = answer.userAnswer !== null &&
+                            answer.userAnswer !== undefined &&
+                            answer.userAnswer !== '' &&
+                            !(Array.isArray(answer.userAnswer) && answer.userAnswer.length === 0);
+
+          if (!isAnswered) {
+            totalOmitted += 1;
+          } else if (answer.isCorrect === true) {
+            totalCorrect += 1;
+          } else if (answer.isCorrect === 'partial') {
+            // For partial SATA, count earned marks
+            totalCorrect += answer.earnedMarks || 0;
+            totalIncorrect += (answer.totalMarks || 1) - (answer.earnedMarks || 0);
+          } else {
+            totalIncorrect += 1;
+          }
+
+          // Category stats
+          const cat = answer.category || answer.subcategory || 'Unknown';
+
           if (!categoryStats[cat]) {
             categoryStats[cat] = { total: 0, correct: 0 };
           }
           categoryStats[cat].total += 1;
-          if (answer.isCorrect) {
+          if (answer.isCorrect === true) {
             categoryStats[cat].correct += 1;
           }
         });
@@ -609,7 +637,7 @@ const getPerformanceData = async (req, res) => {
 
     const weakAreas = Object.entries(categoryStats).map(([category, stats]) => ({
       category,
-      accuracy: Math.round((stats.correct / stats.total) * 100)
+      accuracy: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0
     })).sort((a, b) => a.accuracy - b.accuracy);
 
     res.json({
@@ -619,12 +647,21 @@ const getPerformanceData = async (req, res) => {
       ],
       stats: {
         totalTests: testResults.length,
-        averageScore: testResults.length > 0 
-          ? Math.round(testResults.reduce((sum, t) => sum + t.percentage, 0) / testResults.length) 
+        averageScore: testResults.length > 0
+          ? Math.round(testResults.reduce((sum, t) => sum + t.percentage, 0) / testResults.length)
           : 0,
-        bestScore: testResults.length > 0 
-          ? Math.max(...testResults.map(t => t.percentage)) 
+        bestScore: testResults.length > 0
+          ? Math.max(...testResults.map(t => t.percentage))
           : 0
+      },
+      questionStats: {
+        totalQuestions,
+        usedQuestions,
+        unusedQuestions: 0, // This would require tracking all available questions
+        totalCorrect,
+        totalIncorrect,
+        totalOmitted,
+        totalCorrectOnReattempt
       }
     });
   } catch (error) {
