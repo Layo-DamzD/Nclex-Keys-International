@@ -1903,8 +1903,8 @@ const TestSession = () => {
 
       {/* Question Navigator Modal */}
       {showNavigatorModal && (
-        <div 
-          className="modal fade show d-block" 
+        <div
+          className="modal fade show d-block"
           style={{ background: 'rgba(0,0,0,0.5)' }}
           onClick={() => setShowNavigatorModal(false)}
         >
@@ -1915,9 +1915,34 @@ const TestSession = () => {
                 <button type="button" className="btn-close" onClick={() => setShowNavigatorModal(false)}></button>
               </div>
               <div className="modal-body">
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(10, 1fr)', 
+                {/* Quick Jump Dropdown */}
+                <div className="mb-3 d-flex align-items-center gap-2">
+                  <label className="fw-bold mb-0">Jump to Question:</label>
+                  <select
+                    className="form-select"
+                    style={{ width: 'auto', minWidth: '150px' }}
+                    value={currentIndex}
+                    onChange={(e) => goToQuestion(Number(e.target.value))}
+                  >
+                    {questions.map((q, idx) => {
+                      const isAnswered = q.type === 'case-study'
+                        ? q.questions?.some(subQ => caseAnswers[subQ._id] !== undefined)
+                        : answers[q._id] !== undefined;
+                      const status = isAnswered ? '✓' : '○';
+                      const caseLabel = q.type === 'case-study' ? ' (Case)' : '';
+                      return (
+                        <option key={idx} value={idx}>
+                          Question {idx + 1}{caseLabel} {status}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Grid View */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(10, 1fr)',
                   gap: '8px',
                   maxHeight: '400px',
                   overflowY: 'auto'
@@ -1927,7 +1952,7 @@ const TestSession = () => {
                       ? q.questions?.some(subQ => caseAnswers[subQ._id] !== undefined)
                       : answers[q._id] !== undefined;
                     const isCurrent = idx === currentIndex;
-                    
+
                     return (
                       <button
                         key={q._id || idx}
@@ -1939,10 +1964,10 @@ const TestSession = () => {
                           padding: '8px',
                           fontWeight: isCurrent ? 'bold' : 'normal',
                           border: isCurrent ? '3px solid #1d4ed8' : '1px solid #cbd5e1',
-                          backgroundColor: isCurrent 
-                            ? '#dbeafe' 
-                            : isAnswered 
-                              ? '#dcfce7' 
+                          backgroundColor: isCurrent
+                            ? '#dbeafe'
+                            : isAnswered
+                              ? '#dcfce7'
                               : '#fff',
                           color: '#1e3a5f',
                           borderRadius: '8px',
