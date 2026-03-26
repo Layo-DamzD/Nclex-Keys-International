@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../constants/Categories';
+import { CLIENT_NEEDS } from '../constants/ClientNeeds';
 
 // Fun color palette for category cards
 const CATEGORY_COLORS = [
@@ -13,6 +14,14 @@ const CATEGORY_COLORS = [
   { border: '#ec4899', bg: '#fdf2f8', accent: '#db2777' }, // pink
   { border: '#06b6d4', bg: '#ecfeff', accent: '#0891b2' }, // cyan
   { border: '#eab308', bg: '#fefce8', accent: '#ca8a04' }, // yellow
+];
+
+// Color palette for Client Needs
+const CLIENT_NEEDS_COLORS = [
+  { border: '#2563eb', bg: '#eff6ff', accent: '#1d4ed8' }, // blue
+  { border: '#7c3aed', bg: '#f5f3ff', accent: '#6d28d9' }, // violet
+  { border: '#db2777', bg: '#fdf2f8', accent: '#be185d' }, // pink
+  { border: '#059669', bg: '#ecfdf5', accent: '#047857' }, // emerald
 ];
 
 const TestCustomization = () => {
@@ -35,6 +44,12 @@ const TestCustomization = () => {
   });
   const navigate = useNavigate();
 
+  // Filter mode: 'standard' (by Subject) or 'clientNeeds' (by NCLEX Client Needs)
+  const [filterMode, setFilterMode] = useState('standard');
+  const [selectedClientNeedPairs, setSelectedClientNeedPairs] = useState([]);
+  const [expandedClientNeed, setExpandedClientNeed] = useState(null);
+  const [clientNeedsCounts, setClientNeedsCounts] = useState({});
+
   const handleTimedToggle = (checked) => {
     setTimed(checked);
     if (checked) {
@@ -48,6 +63,70 @@ const TestCustomization = () => {
       setTimed(false);
     }
   };
+
+  // Client Needs helper functions
+  const getClientNeedPairKey = (clientNeed, subcategory) => `${clientNeed}:::${subcategory}`;
+
+  const isClientNeedSubcategorySelected = (clientNeed, subcategory) =>
+    selectedClientNeedPairs.includes(getClientNeedPairKey(clientNeed, subcategory));
+
+  const getClientNeedCount = (clientNeed, subcategory) => {
+    // Map client need subcategory to question counts
+    const key = normalizeKey(subcategory);
+    return clientNeedsCounts?.[key] || 0;
+  };
+
+  const handleClientNeedSubcategoryToggle = (clientNeed, subcategory) => {
+    const key = getClientNeedPairKey(clientNeed, subcategory);
+    setSelectedClientNeedPairs(prev =>
+      prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key]
+    );
+  };
+
+  const handleClientNeedSelectAll = (clientNeed, subcategories) => {
+    const allSelected = subcategories.every(sub => isClientNeedSubcategorySelected(clientNeed, sub));
+    if (allSelected) {
+      const subcatKeys = new Set(subcategories.map(sub => getClientNeedPairKey(clientNeed, sub)));
+      setSelectedClientNeedPairs(prev => prev.filter(s => !subcatKeys.has(s)));
+    } else {
+      const missing = subcategories
+        .map(sub => getClientNeedPairKey(clientNeed, sub))
+        .filter(key => !selectedClientNeedPairs.includes(key));
+      setSelectedClientNeedPairs(prev => [...prev, ...missing]);
+    }
+  };
+
+  // Calculate totals for Client Needs mode
+  const clientNeedsTotals = useMemo(() => {
+    const totals = {};
+    Object.entries(CLIENT_NEEDS).forEach(([clientNeed, subcategories]) => {
+      const total = subcategories.reduce((sum, sub) => sum + getClientNeedCount(clientNeed, sub), 0);
+      totals[clientNeed] = total;
+    });
+    return totals;
+  }, [clientNeedsCounts]);
+
+  const selectedClientNeedsStats = useMemo(() => {
+    if (selectedClientNeedPairs.length === 0) {
+      // Calculate total from all client needs
+      let total = 0;
+      Object.entries(CLIENT_NEEDS).forEach(([clientNeed, subcategories]) => {
+        subcategories.forEach(sub => {
+          total += getClientNeedCount(clientNeed, sub);
+        });
+      });
+      return { available: total, used: 0, omitted: 0 };
+    }
+
+    return selectedClientNeedPairs.reduce((totals, pairKey) => {
+      const [clientNeed, subcategory] = pairKey.split(':::');
+      const count = getClientNeedCount(clientNeed, subcategory);
+      return {
+        ...totals,
+        available: totals.available + count,
+      };
+    }, { available: 0, used: 0, omitted: 0 });
+  }, [selectedClientNeedPairs, clientNeedsCounts]);
 
   const normalizeKey = (value) => {
     const base = String(value || '')
@@ -116,6 +195,18 @@ const TestCustomization = () => {
         setCategoryMap(CATEGORIES);
         setUsedSubcategoryCounts(normalizeNestedCounts(usedRawNestedCounts));
         setOmittedSubcategoryCounts(normalizeNestedCounts(omittedRawNestedCounts));
+
+        // Also fetch client needs counts
+        try {
+          const clientNeedsResponse = await axios.get('/api/student/client-needs-counts', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setClientNeedsCounts(clientNeedsResponse.data?.countsByClientNeed || {});
+        } catch (cnErr) {
+          console.error('Failed to load client needs counts', cnErr);
+          // Set empty counts if endpoint doesn't exist yet
+          setClientNeedsCounts({});
+        }
       } catch (err) {
         console.error('Failed to load subcategory counts', err);
         setCountLoadError('Could not load question counts');
@@ -207,40 +298,80 @@ const TestCustomization = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (selectedSubcategoryPairs.length === 0) {
-      setError('Select at least one subcategory');
-      return;
+
+    // Check based on filter mode
+    if (filterMode === 'clientNeeds') {
+      if (selectedClientNeedPairs.length === 0) {
+        setError('Select at least one client need subcategory');
+        return;
+      }
+      if (selectedClientNeedsStats.available === 0) {
+        setError('No questions are available in the selected client needs.');
+        return;
+      }
+      if (questionCount > selectedClientNeedsStats.available) {
+        setError(`Only ${selectedClientNeedsStats.available} questions match your current client needs selection.`);
+        return;
+      }
+    } else {
+      if (selectedSubcategoryPairs.length === 0) {
+        setError('Select at least one subcategory');
+        return;
+      }
+      if (selectedStats.available === 0) {
+        setError('No questions are available in the selected subcategories.');
+        return;
+      }
+      if (questionCount > selectedStats.available) {
+        setError(`Only ${selectedStats.available} questions match your current category/subcategory selection.`);
+        return;
+      }
     }
-    if (selectedStats.available === 0) {
-      setError('No questions are available in the selected subcategories.');
-      return;
-    }
+
     if (questionCount < questionRangeMin || questionCount > questionRangeMax) {
       setError(`Question count must be between ${questionRangeMin} and ${questionRangeMax}.`);
       return;
     }
-    if (questionCount > selectedStats.available) {
-      setError(`Only ${selectedStats.available} questions match your current category/subcategory selection.`);
-      return;
-    }
+
     setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const selections = selectedSubcategoryPairs.map((pairKey) => {
-        const [category, subcategory] = pairKey.split(':::');
-        return { category, subcategory };
-      });
-      const response = await axios.post('/api/student/generate-test', {
-        selections,
-        subcategories: selections.map((item) => item.subcategory),
-        questionCount,
-        timed,
-        tutorMode
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      navigate('/test-session', { state: response.data });
+
+      if (filterMode === 'clientNeeds') {
+        // Submit with client needs
+        const clientNeedsSelections = selectedClientNeedPairs.map((pairKey) => {
+          const [clientNeed, subcategory] = pairKey.split(':::');
+          return { clientNeed, clientNeedSubcategory: subcategory };
+        });
+
+        const response = await axios.post('/api/student/generate-test', {
+          clientNeedsSelections: clientNeedsSelections,
+          filterMode: 'clientNeeds',
+          questionCount,
+          timed,
+          tutorMode
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        navigate('/test-session', { state: response.data });
+      } else {
+        // Standard mode - submit with categories
+        const selections = selectedSubcategoryPairs.map((pairKey) => {
+          const [category, subcategory] = pairKey.split(':::');
+          return { category, subcategory };
+        });
+        const response = await axios.post('/api/student/generate-test', {
+          selections,
+          subcategories: selections.map((item) => item.subcategory),
+          questionCount,
+          timed,
+          tutorMode
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        navigate('/test-session', { state: response.data });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to generate test');
     } finally {
@@ -250,6 +381,10 @@ const TestCustomization = () => {
 
   // Get color for category by index
   const getCategoryColor = (index) => CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+  const getClientNeedColor = (index) => CLIENT_NEEDS_COLORS[index % CLIENT_NEEDS_COLORS.length];
+
+  // Get current stats based on mode
+  const currentStats = filterMode === 'clientNeeds' ? selectedClientNeedsStats : selectedStats;
 
   return (
     <div className="test-customization">
@@ -266,11 +401,47 @@ const TestCustomization = () => {
       {error && <div className="alert alert-danger">{error}</div>}
       {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
       <form onSubmit={handleSubmit}>
+        {/* Filter Mode Toggle */}
+        <div className="filter-mode-toggle mb-4">
+          <div className="btn-group w-100" role="group">
+            <button
+              type="button"
+              className={`btn ${filterMode === 'standard' ? 'btn-primary' : 'btn-outline-secondary'}`}
+              onClick={() => setFilterMode('standard')}
+              style={{
+                background: filterMode === 'standard' ? 'linear-gradient(135deg, #14b8a6, #0d9488)' : 'transparent',
+                borderColor: filterMode === 'standard' ? '#14b8a6' : '#cbd5e1',
+                color: filterMode === 'standard' ? 'white' : '#475569',
+                fontWeight: 600,
+                borderRadius: '8px 0 0 8px'
+              }}
+            >
+              <i className="fas fa-book-medical me-2"></i>
+              Standard (By Subject)
+            </button>
+            <button
+              type="button"
+              className={`btn ${filterMode === 'clientNeeds' ? 'btn-primary' : 'btn-outline-secondary'}`}
+              onClick={() => setFilterMode('clientNeeds')}
+              style={{
+                background: filterMode === 'clientNeeds' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                borderColor: filterMode === 'clientNeeds' ? '#2563eb' : '#cbd5e1',
+                color: filterMode === 'clientNeeds' ? 'white' : '#475569',
+                fontWeight: 600,
+                borderRadius: '0 8px 8px 0'
+              }}
+            >
+              <i className="fas fa-clipboard-list me-2"></i>
+              NCLEX Client Needs
+            </button>
+          </div>
+        </div>
+
         <div className="exam-review-filter-strip mb-4">
           {[
-            { key: 'available', label: 'Available', count: selectedStats.available },
-            { key: 'used', label: 'Used', count: selectedStats.used },
-            { key: 'omitted', label: 'Omitted', count: selectedStats.omitted },
+            { key: 'available', label: 'Available', count: currentStats.available },
+            { key: 'used', label: 'Used', count: currentStats.used },
+            { key: 'omitted', label: 'Omitted', count: currentStats.omitted },
           ].map((item) => (
             <div key={item.key} className={`exam-review-filter-pill ${visibleSummary[item.key] ? 'active' : ''}`}>
               <input
@@ -286,19 +457,21 @@ const TestCustomization = () => {
             </div>
           ))}
           <div className="exam-review-filter-total">
-            This Test Uses <strong>{Math.min(questionCount, selectedStats.available)}</strong>
+            This Test Uses <strong>{Math.min(questionCount, currentStats.available)}</strong>
           </div>
         </div>
 
-        <div className="categories-section">
-          <label style={{ 
-            fontWeight: 600, 
-            color: '#14b8a6',
-            marginBottom: '12px',
-            fontSize: '1rem'
-          }}>
-            📚 Categories & Subcategories
-          </label>
+        {/* Standard Categories Section */}
+        {filterMode === 'standard' && (
+          <div className="categories-section">
+            <label style={{ 
+              fontWeight: 600, 
+              color: '#14b8a6',
+              marginBottom: '12px',
+              fontSize: '1rem'
+            }}>
+              📚 Categories & Subcategories
+            </label>
           <div className="category-grid">
             {categoryColumns.map((column, colIndex) => (
               <div key={colIndex} className="category-column">
@@ -398,7 +571,119 @@ const TestCustomization = () => {
               </div>
             ))}
           </div>
-        </div>
+          </div>
+        )}
+
+        {/* Client Needs Section */}
+        {filterMode === 'clientNeeds' && (
+          <div className="categories-section">
+            <label style={{ 
+              fontWeight: 600, 
+              color: '#2563eb',
+              marginBottom: '12px',
+              fontSize: '1rem'
+            }}>
+              📋 NCLEX Client Needs Framework
+            </label>
+            <p className="text-muted small mb-3">
+              Select questions based on the official NCLEX Client Needs categories. This aligns with how questions are organized in the actual NCLEX exam.
+            </p>
+            <div className="category-grid">
+              {Object.entries(CLIENT_NEEDS).map(([clientNeed, subcategories], clientNeedIndex) => {
+                const colorStyle = getClientNeedColor(clientNeedIndex);
+                return (
+                  <div 
+                    key={clientNeed} 
+                    className={`category-card ${expandedClientNeed === clientNeed ? 'expanded' : ''}`}
+                    style={{ 
+                      borderLeft: `4px solid ${colorStyle.border}`,
+                      background: `linear-gradient(135deg, ${colorStyle.bg} 0%, #ffffff 100%)`
+                    }}
+                  >
+                    <div 
+                      className="category-header" 
+                      onClick={() => setExpandedClientNeed(prev => prev === clientNeed ? null : clientNeed)}
+                      style={{ color: colorStyle.accent }}
+                    >
+                      <i 
+                        className={`fas fa-chevron-${expandedClientNeed === clientNeed ? 'down' : 'right'}`}
+                        style={{ color: colorStyle.border }}
+                      ></i>
+                      <span className="fw-bold" style={{ color: colorStyle.accent }}>
+                        {clientNeed}
+                        <span
+                          className="subcategory-count-pill category-total"
+                          style={{ 
+                            background: colorStyle.border,
+                            color: 'white'
+                          }}
+                        >
+                          {clientNeedsTotals[clientNeed] || 0}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-sm select-all-btn"
+                        style={{
+                          background: subcategories.every(sub => isClientNeedSubcategorySelected(clientNeed, sub)) 
+                            ? `linear-gradient(135deg, ${colorStyle.accent}, ${colorStyle.border})`
+                            : 'white',
+                          color: subcategories.every(sub => isClientNeedSubcategorySelected(clientNeed, sub)) 
+                            ? 'white' 
+                            : colorStyle.accent,
+                          border: `1px solid ${colorStyle.border}`,
+                          fontWeight: 600
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleClientNeedSelectAll(clientNeed, subcategories);
+                        }}
+                      >
+                        {subcategories.every(sub => isClientNeedSubcategorySelected(clientNeed, sub)) ? '✓ Deselect' : 'Select All'}
+                      </button>
+                    </div>
+                    {expandedClientNeed === clientNeed && (
+                      <div className="subcategory-list">
+                        {subcategories.map(sub => (
+                          <div key={sub} className="form-check">
+                            <input
+                              type="checkbox"
+                              className="form-check-input"
+                              id={`${clientNeed}-${sub}`}
+                              checked={isClientNeedSubcategorySelected(clientNeed, sub)}
+                              onChange={() => handleClientNeedSubcategoryToggle(clientNeed, sub)}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ 
+                                accentColor: colorStyle.border,
+                              }}
+                            />
+                            <label 
+                              className="form-check-label" 
+                              htmlFor={`${clientNeed}-${sub}`}
+                              style={{ color: '#374151' }}
+                            >
+                              <span>{sub}</span>
+                              <span
+                                className="subcategory-count-pill"
+                                style={{
+                                  background: `${colorStyle.bg}`,
+                                  color: colorStyle.accent,
+                                  border: `1px solid ${colorStyle.border}`
+                                }}
+                              >
+                                {getClientNeedCount(clientNeed, sub)}
+                              </span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="controls-row">
           <div className="question-control">
@@ -407,13 +692,13 @@ const TestCustomization = () => {
               type="number"
               className="form-control"
               min={questionRangeMin}
-              max={Math.min(questionRangeMax, selectedStats.available)}
+              max={Math.min(questionRangeMax, currentStats.available)}
               step={1}
               value={questionCount}
               onChange={(e) => setQuestionCount(Number(e.target.value))}
               style={{ width: '120px', display: 'inline-block', marginLeft: '10px' }}
             />
-            <span className="text-muted ms-2">(Max: {Math.min(questionRangeMax, selectedStats.available)})</span>
+            <span className="text-muted ms-2">(Max: {Math.min(questionRangeMax, currentStats.available)})</span>
           </div>
 
           <div className="mode-controls">

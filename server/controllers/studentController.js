@@ -1369,6 +1369,56 @@ const getPerformanceDataDetailed = async (req, res) => {
   }
 };
 
+// @desc    Get question counts by NCLEX Client Needs
+// @route   GET /api/student/client-needs-counts
+// @access  Private
+const getClientNeedsCounts = async (req, res) => {
+  try {
+    // Aggregate counts by clientNeed and clientNeedSubcategory
+    const rows = await Question.aggregate([
+      {
+        $match: {
+          clientNeed: { $exists: true, $ne: null, $ne: '' }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            clientNeed: '$clientNeed',
+            clientNeedSubcategory: '$clientNeedSubcategory'
+          },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Build counts object
+    const countsByClientNeed = {};
+    const countsBySubcategory = {};
+
+    rows.forEach(row => {
+      const clientNeed = row._id?.clientNeed || 'Uncategorized';
+      const subcategory = row._id?.clientNeedSubcategory || 'General';
+      const count = row.count || 0;
+
+      // By client need
+      countsByClientNeed[clientNeed] = (countsByClientNeed[clientNeed] || 0) + count;
+
+      // By subcategory (normalized key)
+      const normalizedSubcat = String(subcategory).trim().toLowerCase();
+      countsBySubcategory[normalizedSubcat] = (countsBySubcategory[normalizedSubcat] || 0) + count;
+    });
+
+    res.json({
+      countsByClientNeed,
+      countsBySubcategory
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getRecentTests,
@@ -1400,5 +1450,6 @@ module.exports = {
   markPublicTestReviewReviewed,
   submitStudentFeedback,
   getExamSupportMessages,
-  sendExamSupportMessage
+  sendExamSupportMessage,
+  getClientNeedsCounts
 };

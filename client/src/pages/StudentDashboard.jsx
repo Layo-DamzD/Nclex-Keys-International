@@ -14,6 +14,7 @@ import IncorrectQuestions from '../components/IncorrectQuestions';
 import PreviousTests from '../components/PreviousTests';
 import StudyMaterials from '../components/StudyMaterials';
 import PerformanceAnalysis from '../components/PerformanceAnalysis';
+import TopicAnalysis from '../components/TopicAnalysis';
 import WeeklyReviewPopup from '../components/WeeklyReviewPopup';
 import Profile from '../components/Profile';
 import StudentFeedbackModal from '../components/StudentFeedbackModal';
@@ -546,6 +547,11 @@ const StudentDashboard = () => {
         {activeSection === 'performance' && (
           <div id="performance" className="content-section active">
             <PerformanceAnalysis />
+          </div>
+        )}
+        {activeSection === 'topic-analysis' && (
+          <div id="topic-analysis" className="content-section active">
+            <TopicAnalysis />
           </div>
         )}
         {activeSection === 'materials' && (

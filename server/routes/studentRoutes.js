@@ -32,7 +32,8 @@ const {
   markPublicTestReviewReviewed,
   submitStudentFeedback,
   getExamSupportMessages,
-  sendExamSupportMessage
+  sendExamSupportMessage,
+  getClientNeedsCounts
 } = require('../controllers/studentController');
 
 router.get('/dashboard/stats', protect, getDashboardStats);
@@ -43,6 +44,7 @@ router.delete('/fcm-token', protect, unregisterFcmToken);
 router.get('/available-tests', protect, getAvailableTests);
 router.get('/categories', protect, getCategories);
 router.get('/subcategory-counts', protect, getSubcategoryCounts);
+router.get('/client-needs-counts', protect, getClientNeedsCounts);
 router.post('/generate-test', protect, generateTest);
 router.get('/incorrect-questions', protect, getIncorrectQuestions);
 router.post('/redo-question', protect, redoQuestion);
