@@ -13533,3 +13533,57 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
     margin-top: 8px;
   }
 }
+
+/* =============================================
+   DULL BACKGROUND - Applied to all app pages except login/signup/landing
+   ============================================= */
+
+.app-dull-bg,
+.student-review-page-shell,
+.admin-dashboard-page,
+.test-session,
+.test-results {
+  background: #f1f5f9 !important;
+  min-height: 100vh;
+}
+
+/* Light dull background for cards */
+.app-dull-bg .card,
+.app-dull-bg .chart-card,
+.app-dull-bg .table-card,
+.app-dull-bg .summary-card,
+.app-dull-bg .filter-section,
+.student-review-page-shell .card,
+.student-review-page-shell .exam-review-card,
+.admin-dashboard-page .card,
+.admin-dashboard-page .stats-card,
+.admin-dashboard-page .data-table {
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+}
+
+/* Dark mode dull background overrides */
+html[data-app-theme='dark'] .app-dull-bg,
+html[data-app-theme='dark'] .student-review-page-shell,
+html[data-app-theme='dark'] .admin-dashboard-page,
+html[data-app-theme='dark'] .test-session,
+html[data-app-theme='dark'] .test-results {
+  background: #0f172a !important;
+}
+
+html[data-app-theme='dark'] .app-dull-bg .card,
+html[data-app-theme='dark'] .app-dull-bg .chart-card,
+html[data-app-theme='dark'] .app-dull-bg .table-card,
+html[data-app-theme='dark'] .app-dull-bg .summary-card,
+html[data-app-theme='dark'] .app-dull-bg .filter-section,
+html[data-app-theme='dark'] .student-review-page-shell .card,
+html[data-app-theme='dark'] .student-review-page-shell .exam-review-card,
+html[data-app-theme='dark'] .admin-dashboard-page .card,
+html[data-app-theme='dark'] .admin-dashboard-page .stats-card,
+html[data-app-theme='dark'] .admin-dashboard-page .data-table {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}

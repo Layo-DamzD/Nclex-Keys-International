@@ -38,15 +38,15 @@ const StudentTestReviewPage = () => {
 
   if (loading) {
     return (
-      <div className="student-review-page-shell" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%)', minHeight: '100vh', padding: '20px' }}>
-        <div style={{ color: '#e2e8f0' }}>Loading review...</div>
+      <div className="student-review-page-shell app-dull-bg" style={{ minHeight: '100vh', padding: '20px' }}>
+        <div style={{ color: '#64748b' }}>Loading review...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="student-review-page-shell" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%)', minHeight: '100vh', padding: '20px' }}>
+      <div className="student-review-page-shell app-dull-bg" style={{ minHeight: '100vh', padding: '20px' }}>
         <div className="alert alert-danger" style={{ background: '#ffffff', borderRadius: '12px' }}>{error}</div>
         <button type="button" className="btn btn-secondary" onClick={() => navigate('/dashboard?section=previous-tests')} style={{ background: '#64748b', color: '#ffffff' }}>
           Back to Previous Tests
@@ -56,7 +56,7 @@ const StudentTestReviewPage = () => {
   }
 
   return (
-    <div className="student-review-page-shell">
+    <div className="student-review-page-shell app-dull-bg">
       <TestReviewExamView
         testResult={testResult}
         onBack={() => navigate('/dashboard?section=previous-tests')}
