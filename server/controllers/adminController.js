@@ -99,6 +99,14 @@ const getAdminStats = async (req, res) => {
   }
 };
 
+// Helper function to properly escape CSV fields
+const escapeCsvField = (value) => {
+  if (value === null || value === undefined) return '""';
+  const str = String(value);
+  // Always quote fields and escape internal quotes by doubling them
+  return `"${str.replace(/"/g, '""')}"`;
+};
+
 // @desc    Export all questions as CSV
 // @route   GET /api/admin/questions/export
 // @access  Private (admin only)
@@ -106,33 +114,32 @@ const exportQuestions = async (req, res) => {
   try {
     const questions = await Question.find().lean();
     
-    // Define CSV headers
-    const headers = ['ID', 'Type', 'Category', 'Subcategory', 'Question', 'Options', 'Correct Answer', 'Rationale', 'Difficulty', 'Times Used', 'Correct %'];
+    // Define CSV headers - MUST match import expected headers (lowercase)
+    // type, category, subcategory, questiontext are required for import
+    const headers = ['type', 'category', 'subcategory', 'questiontext', 'options', 'correctanswer', 'rationale', 'difficulty'];
     
-    // Convert questions to CSV rows
+    // Convert questions to CSV rows with proper escaping
     const rows = questions.map(q => [
-      q._id.toString(),
-      q.type,
-      q.category,
-      q.subcategory,
-      `"${q.questionText.replace(/"/g, '""')}"`, // escape quotes
-      q.options ? `"${q.options.join('; ').replace(/"/g, '""')}"` : '',
-      Array.isArray(q.correctAnswer) ? q.correctAnswer.join('; ') : q.correctAnswer,
-      `"${(q.rationale || '').replace(/"/g, '""')}"`,
-      q.difficulty,
-      q.timesUsed || 0,
-      q.timesUsed > 0 ? Math.round((q.correctAttempts / q.timesUsed) * 100) + '%' : '0%'
+      escapeCsvField(q.type || ''),
+      escapeCsvField(q.category || ''),
+      escapeCsvField(q.subcategory || ''),
+      escapeCsvField(q.questionText || ''),
+      escapeCsvField(q.options ? q.options.join('; ') : ''),
+      escapeCsvField(Array.isArray(q.correctAnswer) ? q.correctAnswer.join(';') : (q.correctAnswer || '')),
+      escapeCsvField(q.rationale || ''),
+      escapeCsvField(q.difficulty || 'medium')
     ]);
 
-    // Build CSV string
+    // Build CSV string with CRLF line endings (standard CSV format)
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(','))
-    ].join('\n');
+    ].join('\r\n');
 
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="questions.csv"');
-    res.send(csvContent);
+    // Add BOM for Excel compatibility with UTF-8
+    res.send('\ufeff' + csvContent);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -305,8 +312,17 @@ const bulkImportQuestions = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const csvText = req.file.buffer.toString();
+    // Handle BOM and different encodings
+    let csvText = req.file.buffer.toString('utf8');
+    // Remove BOM if present
+    if (csvText.charCodeAt(0) === 0xfeff) {
+      csvText = csvText.slice(1);
+    }
 
+    // Improved CSV parser that handles:
+    // - Quoted fields with commas inside
+    // - Quoted fields with newlines inside
+    // - Escaped quotes (doubled quotes)
     const parseCsv = (text = '') => {
       const rows = [];
       let row = [];
@@ -314,7 +330,8 @@ const bulkImportQuestions = async (req, res) => {
       let inQuotes = false;
 
       const pushCell = () => {
-        row.push(cell.replace(/\r/g, '').trim());
+        // Don't trim - preserve original spacing, just remove \r
+        row.push(cell.replace(/\r/g, ''));
         cell = '';
       };
 
@@ -331,9 +348,11 @@ const bulkImportQuestions = async (req, res) => {
 
         if (char === '"') {
           if (inQuotes && nextChar === '"') {
+            // Escaped quote - add single quote and skip next
             cell += '"';
             i += 1;
           } else {
+            // Toggle quote state
             inQuotes = !inQuotes;
           }
           continue;
@@ -345,6 +364,7 @@ const bulkImportQuestions = async (req, res) => {
         }
 
         if ((char === '\n' || char === '\r') && !inQuotes) {
+          // Handle CRLF
           if (char === '\r' && nextChar === '\n') {
             i += 1;
           }
@@ -356,6 +376,7 @@ const bulkImportQuestions = async (req, res) => {
         cell += char;
       }
 
+      // Handle last cell/row
       pushCell();
       pushRow();
       return rows;
@@ -364,11 +385,15 @@ const bulkImportQuestions = async (req, res) => {
     const rows = parseCsv(csvText);
     const rowCount = Math.max(0, rows.length - 1);
 
+    console.log(`📊 CSV Import: Parsed ${rows.length} rows (${rowCount} data rows)`);
+
     if (rows.length < 2) {
       return res.status(400).json({ message: 'CSV file is empty or invalid' });
     }
 
-    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const headers = rows[0].map(h => String(h || '').toLowerCase().trim());
+    console.log(`📋 CSV Headers: ${headers.join(', ')}`);
+
     const requiredHeaders = ['type', 'category', 'subcategory', 'questiontext'];
 
     const normalizeImportedText = (value) => String(value || '')
@@ -376,33 +401,32 @@ const bulkImportQuestions = async (req, res) => {
       .replace(/\\r\\n/g, '\n')
       .replace(/\\n/g, '\n');
 
-    const normalizeValuesForHeaders = (values = []) => {
+    // Improved value normalization - no more auto-merging
+    // If values don't match headers, log warning and handle gracefully
+    const normalizeValuesForHeaders = (values = [], rowIndex) => {
       const normalized = [...values];
-      if (normalized.length === headers.length) return normalized;
+      
+      if (normalized.length === headers.length) {
+        return normalized;
+      }
+      
       if (normalized.length < headers.length) {
+        // Pad with empty strings
         normalized.push(...Array(headers.length - normalized.length).fill(''));
         return normalized;
       }
 
-      const rationaleIndex = headers.indexOf('rationale');
-      if (rationaleIndex >= 0) {
-        const overflow = normalized.length - headers.length;
-        const endIndex = Math.min(normalized.length, rationaleIndex + overflow + 1);
-        const mergedRationale = normalized.slice(rationaleIndex, endIndex).join(', ');
-        const rebuilt = [
-          ...normalized.slice(0, rationaleIndex),
-          mergedRationale,
-          ...normalized.slice(endIndex),
-        ];
-        return rebuilt.slice(0, headers.length);
-      }
-
+      // More values than headers - this shouldn't happen with properly quoted CSV
+      // Log warning and truncate
+      console.warn(`⚠️ Row ${rowIndex}: ${normalized.length} values vs ${headers.length} headers. Extra values will be truncated.`);
+      console.warn(`   First extra value: "${String(normalized[headers.length] || '').substring(0, 50)}..."`);
+      
       return normalized.slice(0, headers.length);
     };
 
     const missing = requiredHeaders.filter(h => !headers.includes(h));
     if (missing.length > 0) {
-      return res.status(400).json({ message: `Missing headers: ${missing.join(', ')}` });
+      return res.status(400).json({ message: `Missing required headers: ${missing.join(', ')}. Required: ${requiredHeaders.join(', ')}` });
     }
 
     const questions = [];
@@ -411,7 +435,7 @@ const bulkImportQuestions = async (req, res) => {
     let updated = 0;
 
     for (let i = 1; i < rows.length; i += 1) {
-      const values = normalizeValuesForHeaders(rows[i]);
+      const values = normalizeValuesForHeaders(rows[i], i);
 
       const row = {};
       headers.forEach((h, idx) => {
