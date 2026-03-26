@@ -1584,8 +1584,8 @@ const uploadFile = async (req, res) => {
       }
     }
 
-    // Priority 3: Fallback to local storage (ephemeral - files will be lost on restart!)
-    console.log('⚠️ Falling back to local storage (ephemeral)...');
+    // Priority 3: Fallback to local storage (only used if MongoDB fails!)
+    console.log('⚠️ MongoDB storage unavailable, falling back to local disk...');
     const uploadsDir = path.join(__dirname, '..', 'uploads');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
@@ -1599,14 +1599,14 @@ const uploadFile = async (req, res) => {
 
     const fileUrl = `/api/uploads/${fileName}`;
 
-    console.log(`⚠️ File saved locally (EPHEMERAL - will be lost on restart!): ${fileUrl}`);
+    console.log(`⚠️ File saved to local disk (fallback): ${fileUrl}`);
 
     res.json({
       fileUrl,
       fileName: originalName,
       fileType,
-      storage: 'local',
-      warning: 'Local storage is ephemeral - files will be lost on server restart. Configure Cloudinary for persistent storage.',
+      storage: 'local-fallback',
+      warning: 'MongoDB storage failed. File saved to local disk as fallback. Please check database connection.',
     });
   } catch (error) {
     console.error('Upload error:', error);
