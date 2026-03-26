@@ -794,6 +794,8 @@ const TestSession = () => {
       if (createdResultId) {
         setSubmittedResultId(createdResultId);
         setSubmitReviewError('');
+        // Navigate directly to test summary - no loading screen
+        setIsSubmitting(false);
         navigate(`/test-review/${createdResultId}`);
       } else {
         setIsSubmitting(false); // Stop loading to show error
@@ -1915,37 +1917,17 @@ const TestSession = () => {
                 <button type="button" className="btn-close" onClick={() => setShowNavigatorModal(false)}></button>
               </div>
               <div className="modal-body">
-                {/* Quick Jump Dropdown */}
-                <div className="mb-3 d-flex align-items-center gap-2">
-                  <label className="fw-bold mb-0">Jump to Question:</label>
-                  <select
-                    className="form-select"
-                    style={{ width: 'auto', minWidth: '150px' }}
-                    value={currentIndex}
-                    onChange={(e) => goToQuestion(Number(e.target.value))}
-                  >
-                    {questions.map((q, idx) => {
-                      const isAnswered = q.type === 'case-study'
-                        ? q.questions?.some(subQ => caseAnswers[subQ._id] !== undefined)
-                        : answers[q._id] !== undefined;
-                      const status = isAnswered ? '✓' : '○';
-                      const caseLabel = q.type === 'case-study' ? ' (Case)' : '';
-                      return (
-                        <option key={idx} value={idx}>
-                          Question {idx + 1}{caseLabel} {status}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                {/* Grid View */}
+                {/* All Question Numbers - Click to Jump */}
+                <div className="mb-2 text-muted small">Click any question number to jump directly:</div>
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(10, 1fr)',
-                  gap: '8px',
-                  maxHeight: '400px',
-                  overflowY: 'auto'
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                  maxHeight: '350px',
+                  overflowY: 'auto',
+                  padding: '10px',
+                  background: '#f8fafc',
+                  borderRadius: '8px'
                 }}>
                   {questions.map((q, idx) => {
                     const isAnswered = q.type === 'case-study'
@@ -1957,36 +1939,41 @@ const TestSession = () => {
                       <button
                         key={q._id || idx}
                         type="button"
-                        className={`btn btn-sm`}
                         onClick={() => goToQuestion(idx)}
                         style={{
-                          aspectRatio: '1',
-                          padding: '8px',
-                          fontWeight: isCurrent ? 'bold' : 'normal',
-                          border: isCurrent ? '3px solid #1d4ed8' : '1px solid #cbd5e1',
+                          width: '40px',
+                          height: '40px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: isCurrent ? 'bold' : '600',
+                          border: isCurrent ? '3px solid #1d4ed8' : isAnswered ? '2px solid #22c55e' : '1px solid #cbd5e1',
                           backgroundColor: isCurrent
                             ? '#dbeafe'
                             : isAnswered
                               ? '#dcfce7'
                               : '#fff',
                           color: '#1e3a5f',
-                          borderRadius: '8px',
-                          fontSize: '0.9rem'
+                          borderRadius: '6px',
+                          fontSize: '0.95rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
                         }}
+                        title={`Question ${idx + 1}${q.type === 'case-study' ? ' (Case Study)' : ''} - ${isAnswered ? 'Answered' : 'Unanswered'}`}
                       >
                         {idx + 1}
                       </button>
                     );
                   })}
                 </div>
-                <div className="mt-3 d-flex gap-3 justify-content-center">
-                  <span><span style={{ display: 'inline-block', width: 16, height: 16, background: '#dbeafe', border: '2px solid #1d4ed8', borderRadius: 4, marginRight: 4 }}></span> Current</span>
-                  <span><span style={{ display: 'inline-block', width: 16, height: 16, background: '#dcfce7', border: '1px solid #22c55e', borderRadius: 4, marginRight: 4 }}></span> Answered</span>
-                  <span><span style={{ display: 'inline-block', width: 16, height: 16, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 4, marginRight: 4 }}></span> Unanswered</span>
+                <div className="mt-3 d-flex gap-3 justify-content-center flex-wrap">
+                  <span><span style={{ display: 'inline-block', width: 18, height: 18, background: '#dbeafe', border: '2px solid #1d4ed8', borderRadius: 4, marginRight: 6, verticalAlign: 'middle' }}></span> Current</span>
+                  <span><span style={{ display: 'inline-block', width: 18, height: 18, background: '#dcfce7', border: '2px solid #22c55e', borderRadius: 4, marginRight: 6, verticalAlign: 'middle' }}></span> Answered</span>
+                  <span><span style={{ display: 'inline-block', width: 18, height: 18, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 4, marginRight: 6, verticalAlign: 'middle' }}></span> Unanswered</span>
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowNavigatorModal(false)}>
+                <button type="button" className="btn btn-primary" onClick={() => setShowNavigatorModal(false)}>
                   Close
                 </button>
               </div>
