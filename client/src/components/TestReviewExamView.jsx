@@ -69,6 +69,14 @@ const formatQuestionTimeLabel = (item) => {
 };
 
 const formatMarksLabel = (item) => {
+  // For SATA questions, show earned/total marks
+  if (item?.type === 'sata') {
+    const earned = item?.earnedMarks ?? 0;
+    const total = item?.totalMarks ?? 1;
+    return `${earned}/${total}`;
+  }
+
+  // For other questions, check if marks are provided
   const mark = item?.marks ?? item?.scorePerQuestion ?? item?.points;
   if (mark === null || mark === undefined || mark === '') {
     return item?.isCorrect === true ? '1/1' : '0/1';
@@ -234,6 +242,16 @@ const TestReviewExamView = ({
     ).length;
     const incorrect = Math.max(answers.length - correct - unanswered - partiallyCorrect, 0);
 
+    // Calculate total points (sum of earnedMarks / totalMarks)
+    let totalEarnedMarks = 0;
+    let totalPossibleMarks = 0;
+    answers.forEach((a) => {
+      const earned = Number(a?.earnedMarks ?? (a?.isCorrect === true ? 1 : 0));
+      const total = Number(a?.totalMarks ?? 1);
+      totalEarnedMarks += earned;
+      totalPossibleMarks += total;
+    });
+
     const sectionsMap = {};
     answers.forEach((a) => {
       const section = a.category || a.subcategory || 'Uncategorized';
@@ -259,6 +277,8 @@ const TestReviewExamView = ({
       partiallyCorrect,
       incorrect,
       unanswered,
+      totalEarnedMarks,
+      totalPossibleMarks,
       sections: Object.values(sectionsMap).sort((a, b) => b.total - a.total),
     };
   }, [answers]);
@@ -427,7 +447,7 @@ const TestReviewExamView = ({
       return Number.isFinite(num) && num > 0 ? ` (${num}%)` : '';
     };
     const reviewStats = [
-      { label: 'Scored / Max', value: formatMarksLabel(active) },
+      { label: 'Points', value: formatMarksLabel(active) },
       { label: 'Scoring Rule', value: active?.scoringRule || 'Standard' },
       { label: 'Time Spent', value: formatQuestionTimeLabel(active) },
     ];
@@ -454,18 +474,41 @@ const TestReviewExamView = ({
                   const selected = Array.isArray(userAns) ? userAns.includes(letter) : userAns === letter;
                   const correct = Array.isArray(correctAns) ? correctAns.includes(letter) : correctAns === letter;
                   const isWrong = selected && !correct;
+                  const isCorrectNotSelected = correct && !selected;
+
+                  // Determine background color
+                  let bgStyle = {};
+                  if (correct) {
+                    bgStyle = {
+                      backgroundColor: '#dcfce7',
+                      border: '2px solid #22c55e',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                    };
+                  }
+                  if (isWrong) {
+                    bgStyle = {
+                      backgroundColor: '#fee2e2',
+                      border: '2px solid #ef4444',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                    };
+                  }
+
                   return (
                     <div
                       key={`${letter}-${idx}`}
                       className={`exam-review-runtime-option-row ${selected ? 'selected' : ''} ${correct ? 'correct' : ''} ${isWrong ? 'wrong' : ''}`}
+                      style={bgStyle}
                     >
                       <span className="exam-review-runtime-option-indicator" />
                       <span className="exam-review-runtime-option-number">{idx + 1}.</span>
-                      <span 
+                      <span
                         className="exam-review-runtime-option-text"
-                        style={isWrong ? { textDecoration: 'line-through', color: '#dc2626' } : {}}
+                        style={isWrong ? { textDecoration: 'line-through', color: '#dc2626' } : correct ? { color: '#166534', fontWeight: 600 } : {}}
                       >
                         {opt}{optionPercent(letter)}
+                        {correct && <span style={{ marginLeft: 8, fontSize: '0.85em' }}>✓</span>}
                       </span>
                     </div>
                   );
@@ -658,8 +701,8 @@ const TestReviewExamView = ({
 
         <div className="exam-review-insight-strip">
           <div className="exam-review-insight-card">
-            <span>Point Scored</span>
-            <strong>{score}/{totalQuestions}</strong>
+            <span>Points Scored</span>
+            <strong>{summary.totalEarnedMarks}/{summary.totalPossibleMarks}</strong>
             <div className="exam-review-insight-progress"><i style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} /></div>
           </div>
           <div className="exam-review-insight-card">
@@ -717,12 +760,12 @@ const TestReviewExamView = ({
               <strong>{totalQuestions}</strong>
             </div>
             <div className="exam-review-report-metric">
-              <span>Marks / Grades</span>
-              <strong>{score}/{totalQuestions}</strong>
+              <span>Points</span>
+              <strong>{summary.totalEarnedMarks}/{summary.totalPossibleMarks}</strong>
             </div>
             <div className="exam-review-report-metric">
-              <span>Negative Mark</span>
-              <strong>0%</strong>
+              <span>Score</span>
+              <strong>{score}/{totalQuestions}</strong>
             </div>
             <div className="exam-review-report-metric">
               <span>Time Taken</span>
@@ -741,8 +784,8 @@ const TestReviewExamView = ({
               </div>
             </div>
             <div className="exam-review-score-meta exam-review-score-meta-report">
-              <div><strong>{score}</strong> / {totalQuestions}</div>
-              <div>Accuracy: {percent}%</div>
+              <div><strong>{summary.totalEarnedMarks}</strong> / {summary.totalPossibleMarks} Points</div>
+              <div>{summary.correct} Correct of {totalQuestions}</div>
             </div>
           </div>
 
@@ -846,7 +889,7 @@ const TestReviewExamView = ({
                     <th>QID</th>
                     <th>Answer Status</th>
                     <th>Difficulty</th>
-                    <th>Marks</th>
+                    <th>Points</th>
                     <th>Section</th>
                     <th>Time Spent</th>
                     <th>Review</th>
