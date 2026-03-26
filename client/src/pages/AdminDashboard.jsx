@@ -20,7 +20,6 @@ import AdminApproval from '../components/admin/AdminApproval';
 import ExamSupportChat from '../components/admin/ExamSupportChat';
 import AdminSettings from '../components/admin/AdminSettings';
 import PwaInstallButton from '../components/PwaInstallButton';
-import { useAppTheme } from '../context/AppThemeContext';
 import './AdminDashboard.css';
 
 const MOBILE_BREAKPOINT = 992;
@@ -36,7 +35,6 @@ const AdminDashboard = () => {
   const [now, setNow] = useState(() => new Date());
   const user = JSON.parse(sessionStorage.getItem('adminUser') || '{}');
   const userRole = user.role;
-  const { theme, toggleTheme, isThemeEnabled } = useAppTheme();
   const [sidebarBadges, setSidebarBadges] = useState({});
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
@@ -241,18 +239,6 @@ const AdminDashboard = () => {
               </div>
               <div className="date">{now.toLocaleDateString('en-GB')}</div>
             </div>
-
-            {isThemeEnabled && (
-              <button
-                type="button"
-                className="theme-toggle-btn"
-                onClick={toggleTheme}
-                aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-                title={theme === 'dark' ? 'Dark mode' : 'Light mode'}
-              >
-                <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
-              </button>
-            )}
 
             <div className="user-profile-meta">
               <div className="user-name">{user.name || 'Admin'}</div>
