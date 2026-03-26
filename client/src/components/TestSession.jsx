@@ -138,7 +138,6 @@ const TestSession = () => {
   const [filter] = useState('all');
   const [showCalculator, setShowCalculator] = useState(false);
   const [showNavigatorModal, setShowNavigatorModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeCaseTabByQuestion, setActiveCaseTabByQuestion] = useState({});
   const [isBooting, setIsBooting] = useState(true);
   const [bootProgress, setBootProgress] = useState(0);
@@ -652,7 +651,7 @@ const TestSession = () => {
   async function handleSubmit() {
     if (submitted) return;
     setIsPaused(false);
-    setIsSubmitting(true); // Show loading screen
+    // Don't show loading screen - go directly to test summary
     setSubmitted(true);
 
     // Flatten all results (including case study sub‑questions)
@@ -794,16 +793,13 @@ const TestSession = () => {
       if (createdResultId) {
         setSubmittedResultId(createdResultId);
         setSubmitReviewError('');
-        // Navigate directly to test summary - no loading screen
-        setIsSubmitting(false);
+        // Navigate directly to test summary without any loading screen
         navigate(`/test-review/${createdResultId}`);
       } else {
-        setIsSubmitting(false); // Stop loading to show error
         setSubmitReviewError('Could not open summary automatically. Please use Previous Tests from dashboard.');
       }
     } catch (error) {
       console.error('Submit failed:', error);
-      setIsSubmitting(false); // Stop loading to show error
       setSubmitReviewError('Submit saved locally but server review id was not created.');
     } finally {
       if (proctorSnapshotTimerRef.current) {
@@ -874,26 +870,7 @@ const TestSession = () => {
 
   // --- Submitted view (results) ---
   if (submitted) {
-    // Show loading screen while submitting and navigating to review
-    if (isSubmitting) {
-      return (
-        <div className="exam-boot-screen">
-          <div className="exam-boot-card">
-            <div className="exam-boot-top">
-              <div className="exam-boot-title">Submitting Test...</div>
-              <div className="exam-boot-percent">100%</div>
-            </div>
-            <div className="exam-boot-bar">
-              <div className="exam-boot-bar-fill" style={{ width: '100%' }}></div>
-            </div>
-            <div className="exam-boot-subtitle">
-              Preparing your test summary
-            </div>
-          </div>
-        </div>
-      );
-    }
-
+    // Directly show results - navigation to test summary happens automatically after API success
     const correctCount = results.filter((r) => r.isCorrect === true).length;
     const partialCount = results.filter((r) => r.isCorrect === 'partial').length;
     const incorrectCount = results.length - correctCount - partialCount;

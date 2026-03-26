@@ -689,16 +689,42 @@ const TestCustomization = () => {
           <div className="question-control">
             <label style={{ fontWeight: 600, color: '#14b8a6' }}>🎯 Questions:</label>
             <input
-              type="number"
+              type="text"
               className="form-control"
-              min={questionRangeMin}
-              max={Math.min(questionRangeMax, currentStats.available)}
-              step={1}
               value={questionCount}
-              onChange={(e) => setQuestionCount(Number(e.target.value))}
-              style={{ width: '120px', display: 'inline-block', marginLeft: '10px' }}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, '');
+                if (value === '') {
+                  setQuestionCount('');
+                } else {
+                  const num = parseInt(value, 10);
+                  if (!isNaN(num)) {
+                    const clamped = Math.min(Math.max(num, questionRangeMin), Math.min(questionRangeMax, currentStats.available));
+                    setQuestionCount(clamped);
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                const num = parseInt(e.target.value, 10);
+                if (isNaN(num) || num < questionRangeMin) {
+                  setQuestionCount(questionRangeMin);
+                } else if (num > Math.min(questionRangeMax, currentStats.available)) {
+                  setQuestionCount(Math.min(questionRangeMax, currentStats.available));
+                }
+              }}
+              style={{ 
+                width: '100px', 
+                display: 'inline-block', 
+                marginLeft: '10px',
+                textAlign: 'center',
+                fontSize: '1.1rem',
+                fontWeight: 600,
+                border: '2px solid #14b8a6',
+                borderRadius: '8px'
+              }}
+              placeholder="75"
             />
-            <span className="text-muted ms-2">(Max: {Math.min(questionRangeMax, currentStats.available)})</span>
+            <span className="text-muted ms-2" style={{ fontSize: '0.85rem' }}>(Min: {questionRangeMin}, Max: {Math.min(questionRangeMax, currentStats.available)})</span>
           </div>
 
           <div className="mode-controls">
