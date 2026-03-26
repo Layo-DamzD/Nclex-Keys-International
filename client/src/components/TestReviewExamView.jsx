@@ -69,14 +69,15 @@ const formatQuestionTimeLabel = (item) => {
 };
 
 const formatMarksLabel = (item) => {
-  // For SATA questions, show earned/total marks
-  if (item?.type === 'sata') {
+  // For SATA questions, show earned/total marks (each correct option = 1 point)
+  const itemType = String(item?.type || '').toLowerCase();
+  if (itemType === 'sata') {
     const earned = item?.earnedMarks ?? 0;
     const total = item?.totalMarks ?? 1;
     return `${earned}/${total}`;
   }
 
-  // For other questions, check if marks are provided
+  // For other questions, each question = 1 point
   const mark = item?.marks ?? item?.scorePerQuestion ?? item?.points;
   if (mark === null || mark === undefined || mark === '') {
     return item?.isCorrect === true ? '1/1' : '0/1';
