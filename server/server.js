@@ -63,6 +63,86 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
+// Serve images stored in MongoDB (PUBLIC endpoint - accessible without auth)
+app.get('/api/images/:imageId', async (req, res) => {
+  try {
+    const Image = require('./models/Image');
+    const { imageId } = req.params;
+
+    const image = await Image.findOne({ imageId }).lean();
+
+    if (!image) {
+      return res.status(404).json({ message: 'Image not found' });
+    }
+
+    // Set proper headers
+    res.set('Content-Type', image.mimeType);
+    res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+    res.set('X-Content-Type-Options', 'nosniff');
+
+    // Decode base64 and send
+    const buffer = Buffer.from(image.data, 'base64');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Image serve error:', error);
+    res.status(500).json({ message: 'Error serving image' });
+  }
+});
+
+// List all images (for admin management)
+app.get('/api/images', async (req, res) => {
+  try {
+    const Image = require('./models/Image');
+    const { category, limit = 50, page = 1 } = req.query;
+
+    const filter = {};
+    if (category) filter.category = category;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const images = await Image.find(filter)
+      .select('imageId filename mimeType size category createdAt')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip(skip)
+      .lean();
+
+    const total = await Image.countDocuments(filter);
+
+    res.json({
+      images,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Image list error:', error);
+    res.status(500).json({ message: 'Error listing images' });
+  }
+});
+
+// Delete an image by imageId
+app.delete('/api/images/:imageId', async (req, res) => {
+  try {
+    const Image = require('./models/Image');
+    const { imageId } = req.params;
+
+    const result = await Image.deleteOne({ imageId });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: 'Image not found' });
+    }
+
+    res.json({ message: 'Image deleted successfully', imageId });
+  } catch (error) {
+    console.error('Image delete error:', error);
+    res.status(500).json({ message: 'Error deleting image' });
+  }
+});
+
 // Debug endpoint to test landing page config query
 app.get('/api/debug/landing-config', async (req, res) => {
   try {

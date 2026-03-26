@@ -6,6 +6,7 @@ const StudyMaterial = require('../models/StudyMaterial');
 const SystemLog = require('../models/SystemLog');
 const Activity = require('../models/Activity');
 const ExamSupportMessage = require('../models/ExamSupportMessage');
+const Image = require('../models/Image');
 const { sendPushNotificationMulticast } = require('../services/firebaseAdmin');
 const fs = require('fs');
 const path = require('path');
@@ -1459,7 +1460,7 @@ const deleteStudyMaterial = async (req, res) => {
   }
 };
 
-// @desc    Upload a file (for study materials)
+// @desc    Upload a file (for study materials, success stories, etc.)
 // @route   POST /api/admin/content/upload
 // @access  Private (admin only)
 const uploadFile = async (req, res) => {
@@ -1481,8 +1482,9 @@ const uploadFile = async (req, res) => {
     }
 
     const fileType = isPdf ? 'pdf' : 'image';
+    const category = req.body?.category || 'general';
 
-    // Use Cloudinary if configured (persistent cloud storage)
+    // Priority 1: Use Cloudinary if configured (persistent cloud storage)
     if (cloudinaryConfigured) {
       try {
         const base = path.basename(originalName, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
@@ -1513,12 +1515,47 @@ const uploadFile = async (req, res) => {
           storage: 'cloudinary',
         });
       } catch (cloudinaryError) {
-        console.error('Cloudinary upload failed, falling back to local:', cloudinaryError.message);
-        // Fall through to local storage
+        console.error('Cloudinary upload failed, falling back to MongoDB:', cloudinaryError.message);
+        // Fall through to MongoDB storage
       }
     }
 
-    // Fallback: Local storage (ephemeral on Render free tier)
+    // Priority 2: Store in MongoDB (persistent, survives server restarts)
+    if (isImage) {
+      try {
+        const imageId = Image.generateImageId();
+        const base64Data = req.file.buffer.toString('base64');
+
+        const savedImage = await Image.create({
+          imageId,
+          filename: originalName,
+          mimeType: mimetype || `image/${extType}`,
+          data: base64Data,
+          size: req.file.size,
+          uploadedBy: req.user?._id || null,
+          category,
+          altText: req.body?.altText || '',
+        });
+
+        // Return a URL that will be served by our API
+        const fileUrl = `/api/images/${imageId}`;
+
+        console.log(`✅ Image stored in MongoDB: ${fileUrl}`);
+
+        return res.json({
+          fileUrl,
+          fileName: originalName,
+          fileType,
+          storage: 'mongodb',
+          imageId,
+        });
+      } catch (mongoError) {
+        console.error('MongoDB image storage failed:', mongoError.message);
+        // Fall through to local storage as last resort
+      }
+    }
+
+    // Priority 3: Fallback to local storage (ephemeral - files will be lost on restart!)
     const uploadsDir = path.join(__dirname, '..', 'uploads');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
@@ -1532,13 +1569,14 @@ const uploadFile = async (req, res) => {
 
     const fileUrl = `/api/uploads/${fileName}`;
 
-    console.log(`⚠️ File saved locally (ephemeral): ${fileUrl}`);
+    console.log(`⚠️ File saved locally (EPHEMERAL - will be lost on restart!): ${fileUrl}`);
 
     res.json({
       fileUrl,
       fileName: originalName,
       fileType,
       storage: 'local',
+      warning: 'Local storage is ephemeral - files will be lost on server restart. Configure Cloudinary for persistent storage.',
     });
   } catch (error) {
     console.error('Upload error:', error);
