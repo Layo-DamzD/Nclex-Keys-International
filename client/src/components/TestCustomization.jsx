@@ -329,16 +329,18 @@ const TestCustomization = () => {
 
         <div className="controls-row">
           <div className="question-control">
-            <label>Questions: {questionCount}</label>
+            <label>Questions:</label>
             <input
-              type="range"
-              className="form-range"
+              type="number"
+              className="form-control"
               min={questionRangeMin}
-              max={questionRangeMax}
+              max={Math.min(questionRangeMax, selectedStats.available)}
               step={1}
               value={questionCount}
               onChange={(e) => setQuestionCount(Number(e.target.value))}
+              style={{ width: '120px', display: 'inline-block', marginLeft: '10px' }}
             />
+            <span className="text-muted ms-2">(Max: {Math.min(questionRangeMax, selectedStats.available)})</span>
           </div>
 
           <div className="mode-controls">

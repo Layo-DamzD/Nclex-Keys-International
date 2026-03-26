@@ -137,6 +137,8 @@ const TestSession = () => {
   const [showReview] = useState(false);
   const [filter] = useState('all');
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showNavigatorModal, setShowNavigatorModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeCaseTabByQuestion, setActiveCaseTabByQuestion] = useState({});
   const [isBooting, setIsBooting] = useState(true);
   const [bootProgress, setBootProgress] = useState(0);
@@ -507,16 +509,13 @@ const TestSession = () => {
   const openQuestionNavigator = () => {
     if (isPaused) return;
     if (!questions.length) return;
-    const currentNumber = currentIndex + 1;
-    const input = window.prompt(`Go to question number (1-${questions.length})`, String(currentNumber));
-    if (!input) return;
-    const target = Number(input);
-    if (!Number.isInteger(target) || target < 1 || target > questions.length) {
-      window.alert(`Enter a number between 1 and ${questions.length}.`);
-      return;
-    }
-    setCurrentIndex(target - 1);
+    setShowNavigatorModal(true);
+  };
+
+  const goToQuestion = (index) => {
+    setCurrentIndex(index);
     setCaseIndex(0);
+    setShowNavigatorModal(false);
   };
 
   // Highlight helpers
@@ -653,6 +652,7 @@ const TestSession = () => {
   async function handleSubmit() {
     if (submitted) return;
     setIsPaused(false);
+    setIsSubmitting(true); // Show loading screen
     setSubmitted(true);
 
     // Flatten all results (including case study sub‑questions)
@@ -796,10 +796,12 @@ const TestSession = () => {
         setSubmitReviewError('');
         navigate(`/test-review/${createdResultId}`);
       } else {
+        setIsSubmitting(false); // Stop loading to show error
         setSubmitReviewError('Could not open summary automatically. Please use Previous Tests from dashboard.');
       }
     } catch (error) {
       console.error('Submit failed:', error);
+      setIsSubmitting(false); // Stop loading to show error
       setSubmitReviewError('Submit saved locally but server review id was not created.');
     } finally {
       if (proctorSnapshotTimerRef.current) {
@@ -870,6 +872,26 @@ const TestSession = () => {
 
   // --- Submitted view (results) ---
   if (submitted) {
+    // Show loading screen while submitting and navigating to review
+    if (isSubmitting) {
+      return (
+        <div className="exam-boot-screen">
+          <div className="exam-boot-card">
+            <div className="exam-boot-top">
+              <div className="exam-boot-title">Submitting Test...</div>
+              <div className="exam-boot-percent">100%</div>
+            </div>
+            <div className="exam-boot-bar">
+              <div className="exam-boot-bar-fill" style={{ width: '100%' }}></div>
+            </div>
+            <div className="exam-boot-subtitle">
+              Preparing your test summary
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     const correctCount = results.filter((r) => r.isCorrect === true).length;
     const partialCount = results.filter((r) => r.isCorrect === 'partial').length;
     const incorrectCount = results.length - correctCount - partialCount;
@@ -1878,6 +1900,75 @@ const TestSession = () => {
           </div>
         )}
       </div>
+
+      {/* Question Navigator Modal */}
+      {showNavigatorModal && (
+        <div 
+          className="modal fade show d-block" 
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowNavigatorModal(false)}
+        >
+          <div className="modal-dialog modal-dialog-centered modal-lg" onClick={e => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Question Navigator</h5>
+                <button type="button" className="btn-close" onClick={() => setShowNavigatorModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(10, 1fr)', 
+                  gap: '8px',
+                  maxHeight: '400px',
+                  overflowY: 'auto'
+                }}>
+                  {questions.map((q, idx) => {
+                    const isAnswered = q.type === 'case-study'
+                      ? q.questions?.some(subQ => caseAnswers[subQ._id] !== undefined)
+                      : answers[q._id] !== undefined;
+                    const isCurrent = idx === currentIndex;
+                    
+                    return (
+                      <button
+                        key={q._id || idx}
+                        type="button"
+                        className={`btn btn-sm`}
+                        onClick={() => goToQuestion(idx)}
+                        style={{
+                          aspectRatio: '1',
+                          padding: '8px',
+                          fontWeight: isCurrent ? 'bold' : 'normal',
+                          border: isCurrent ? '3px solid #1d4ed8' : '1px solid #cbd5e1',
+                          backgroundColor: isCurrent 
+                            ? '#dbeafe' 
+                            : isAnswered 
+                              ? '#dcfce7' 
+                              : '#fff',
+                          color: '#1e3a5f',
+                          borderRadius: '8px',
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        {idx + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 d-flex gap-3 justify-content-center">
+                  <span><span style={{ display: 'inline-block', width: 16, height: 16, background: '#dbeafe', border: '2px solid #1d4ed8', borderRadius: 4, marginRight: 4 }}></span> Current</span>
+                  <span><span style={{ display: 'inline-block', width: 16, height: 16, background: '#dcfce7', border: '1px solid #22c55e', borderRadius: 4, marginRight: 4 }}></span> Answered</span>
+                  <span><span style={{ display: 'inline-block', width: 16, height: 16, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 4, marginRight: 4 }}></span> Unanswered</span>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowNavigatorModal(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

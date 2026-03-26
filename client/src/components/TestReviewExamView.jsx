@@ -441,31 +441,6 @@ const TestReviewExamView = ({
           <div className={`timer exam-review-runtime-status ${runtimeStatus.tone}`}>{runtimeStatus.label}</div>
         </div>
 
-        <div className="exam-inline-toolbar">
-          <button type="button" className="exam-toolbar-btn" onClick={goBackFromRuntimeQuestion}>
-            <i className="fas fa-arrow-left"></i> Back to Summary
-          </button>
-          <button
-            type="button"
-            className="exam-toolbar-btn"
-            onClick={() => setActiveQuestionIndex((prev) => Math.max(0, prev - 1))}
-            disabled={activeQuestionIndex === 0}
-          >
-            <i className="fas fa-arrow-left"></i> Previous
-          </button>
-          <button type="button" className="exam-toolbar-btn" onClick={scrollToQuestionList}>
-            <i className="fas fa-map"></i> Navigator
-          </button>
-          <button
-            type="button"
-            className="exam-toolbar-btn"
-            onClick={() => setActiveQuestionIndex((prev) => Math.min(answers.length - 1, prev + 1))}
-            disabled={activeQuestionIndex >= answers.length - 1}
-          >
-            Next <i className="fas fa-arrow-right"></i>
-          </button>
-        </div>
-
         <div className="question-container exam-runtime-question-panel exam-review-runtime-split">
           <div className="exam-review-runtime-question-column">
             <p className="question-text">{active.questionText || 'No question text'}</p>
@@ -478,14 +453,20 @@ const TestReviewExamView = ({
                   const correctAns = active.correctAnswer;
                   const selected = Array.isArray(userAns) ? userAns.includes(letter) : userAns === letter;
                   const correct = Array.isArray(correctAns) ? correctAns.includes(letter) : correctAns === letter;
+                  const isWrong = selected && !correct;
                   return (
                     <div
                       key={`${letter}-${idx}`}
-                      className={`exam-review-runtime-option-row ${selected ? 'selected' : ''} ${correct ? 'correct' : ''} ${selected && !correct ? 'wrong' : ''}`}
+                      className={`exam-review-runtime-option-row ${selected ? 'selected' : ''} ${correct ? 'correct' : ''} ${isWrong ? 'wrong' : ''}`}
                     >
                       <span className="exam-review-runtime-option-indicator" />
                       <span className="exam-review-runtime-option-number">{idx + 1}.</span>
-                      <span className="exam-review-runtime-option-text">{opt}{optionPercent(letter)}</span>
+                      <span 
+                        className="exam-review-runtime-option-text"
+                        style={isWrong ? { textDecoration: 'line-through', color: '#dc2626' } : {}}
+                      >
+                        {opt}{optionPercent(letter)}
+                      </span>
                     </div>
                   );
                 })}
@@ -540,6 +521,32 @@ const TestReviewExamView = ({
               )}
             </div>
           </div>
+        </div>
+
+        {/* Navigation buttons at the bottom */}
+        <div className="exam-inline-toolbar" style={{ marginTop: 'auto', padding: '12px 0' }}>
+          <button type="button" className="exam-toolbar-btn" onClick={goBackFromRuntimeQuestion}>
+            <i className="fas fa-arrow-left"></i> Back to Summary
+          </button>
+          <button
+            type="button"
+            className="exam-toolbar-btn"
+            onClick={() => setActiveQuestionIndex((prev) => Math.max(0, prev - 1))}
+            disabled={activeQuestionIndex === 0}
+          >
+            <i className="fas fa-arrow-left"></i> Previous
+          </button>
+          <button type="button" className="exam-toolbar-btn" onClick={scrollToQuestionList}>
+            <i className="fas fa-map"></i> Navigator
+          </button>
+          <button
+            type="button"
+            className="exam-toolbar-btn"
+            onClick={() => setActiveQuestionIndex((prev) => Math.min(answers.length - 1, prev + 1))}
+            disabled={activeQuestionIndex >= answers.length - 1}
+          >
+            Next <i className="fas fa-arrow-right"></i>
+          </button>
         </div>
       </div>
     );
