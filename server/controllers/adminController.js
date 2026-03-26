@@ -27,8 +27,8 @@ if (cloudinaryConfigured) {
   cloudinary.config();
   console.log('✅ Cloudinary configured for persistent image storage');
 } else {
-  console.log('⚠️ Cloudinary not configured - using local storage (files will be lost on server restart)');
-  console.log('💡 To fix: Add CLOUDINARY_URL to your environment variables');
+  console.log('📦 Cloudinary not configured - using MongoDB for persistent image storage');
+  console.log('💡 To enable Cloudinary: Add CLOUDINARY_URL to your environment variables');
 }
 
 const normalizeRole = (role) => String(role || '').trim().toLowerCase();
@@ -1477,12 +1477,15 @@ const uploadFile = async (req, res) => {
     const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(extType)
       && (!mimetype || mimetype.startsWith('image/'));
 
+    console.log(`📤 Upload request: ${originalName} (${mimetype}, ${req.file.size} bytes)`);
+
     if (!isPdf && !isImage) {
       return res.status(400).json({ message: 'Only PDF and image files are allowed' });
     }
 
     const fileType = isPdf ? 'pdf' : 'image';
     const category = req.body?.category || 'general';
+    console.log(`📁 File type: ${fileType}, Category: ${category}`);
 
     // Priority 1: Use Cloudinary if configured (persistent cloud storage)
     if (cloudinaryConfigured) {
@@ -1522,6 +1525,7 @@ const uploadFile = async (req, res) => {
 
     // Priority 2: Store in MongoDB (persistent, survives server restarts)
     if (isImage) {
+      console.log('📦 Attempting MongoDB storage for image...');
       try {
         const imageId = Image.generateImageId();
         const base64Data = req.file.buffer.toString('base64');
@@ -1540,7 +1544,7 @@ const uploadFile = async (req, res) => {
         // Return a URL that will be served by our API
         const fileUrl = `/api/images/${imageId}`;
 
-        console.log(`✅ Image stored in MongoDB: ${fileUrl}`);
+        console.log(`✅ Image stored in MongoDB: ${fileUrl} (${savedImage._id})`);
 
         return res.json({
           fileUrl,
@@ -1550,12 +1554,14 @@ const uploadFile = async (req, res) => {
           imageId,
         });
       } catch (mongoError) {
-        console.error('MongoDB image storage failed:', mongoError.message);
+        console.error('❌ MongoDB image storage failed:', mongoError.message);
+        console.error('   Stack:', mongoError.stack?.split('\n').slice(0, 3).join('\n'));
         // Fall through to local storage as last resort
       }
     }
 
     // Priority 3: Fallback to local storage (ephemeral - files will be lost on restart!)
+    console.log('⚠️ Falling back to local storage (ephemeral)...');
     const uploadsDir = path.join(__dirname, '..', 'uploads');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
