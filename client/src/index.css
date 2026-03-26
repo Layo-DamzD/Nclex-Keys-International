@@ -12746,3 +12746,653 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
   min-height: 100vh;
   width: 100%;
 }
+
+/* ============================================
+   COLORFUL AND FUN THEME - LIKE ARCHER REVIEW
+   ============================================ */
+
+/* Fun Color Variables */
+:root {
+  --fun-teal: #14b8a6;
+  --fun-teal-dark: #0d9488;
+  --fun-orange: #f97316;
+  --fun-orange-dark: #ea580c;
+  --fun-green: #22c55e;
+  --fun-green-dark: #16a34a;
+  --fun-purple: #a855f7;
+  --fun-purple-dark: #9333ea;
+  --fun-pink: #ec4899;
+  --fun-blue: #3b82f6;
+  --fun-yellow: #eab308;
+  --fun-cyan: #06b6d4;
+  --fun-red: #ef4444;
+}
+
+/* =============================================
+   STUDENT DASHBOARD - COLORFUL & FUN THEME
+   ============================================= */
+
+/* Colorful Stats Cards */
+.student-dashboard-shell .stats-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%) !important;
+  border-left: 5px solid var(--fun-teal) !important;
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px !important;
+}
+
+.student-dashboard-shell .stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+}
+
+.student-dashboard-shell .stats-card:nth-child(1) { border-left-color: var(--fun-teal) !important; }
+.student-dashboard-shell .stats-card:nth-child(2) { border-left-color: var(--fun-orange) !important; }
+.student-dashboard-shell .stats-card:nth-child(3) { border-left-color: var(--fun-purple) !important; }
+.student-dashboard-shell .stats-card:nth-child(4) { border-left-color: var(--fun-green) !important; }
+
+/* Row-based stats card coloring */
+.student-dashboard-shell .row .col-lg-3:nth-child(1) .stats-card { border-left-color: var(--fun-teal) !important; }
+.student-dashboard-shell .row .col-lg-3:nth-child(2) .stats-card { border-left-color: var(--fun-blue) !important; }
+.student-dashboard-shell .row .col-lg-3:nth-child(3) .stats-card { border-left-color: var(--fun-green) !important; }
+.student-dashboard-shell .row .col-lg-3:nth-child(4) .stats-card { border-left-color: var(--fun-orange) !important; }
+
+/* Colorful Stats Icons with Gradients */
+.student-dashboard-shell .stats-icon.icon-blue { 
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; 
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.student-dashboard-shell .stats-icon.icon-green { 
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important; 
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.student-dashboard-shell .stats-icon.icon-orange { 
+  background: linear-gradient(135deg, #f97316, #ea580c) !important; 
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+}
+
+.student-dashboard-shell .stats-icon.icon-purple { 
+  background: linear-gradient(135deg, #a855f7, #9333ea) !important; 
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+}
+
+/* Fun Colorful Numbers */
+.student-dashboard-shell .stats-number {
+  background: linear-gradient(135deg, var(--fun-teal), var(--fun-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* =============================================
+   FUN COLORFUL BUTTONS
+   ============================================= */
+
+/* Primary Teal Buttons */
+.student-dashboard-shell .btn-primary,
+.student-dashboard-shell .start-test-btn {
+  background: linear-gradient(135deg, var(--fun-teal) 0%, var(--fun-teal-dark) 100%) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);
+  transition: all 0.3s ease;
+  border-radius: 10px !important;
+  font-weight: 600;
+}
+
+.student-dashboard-shell .btn-primary:hover,
+.student-dashboard-shell .start-test-btn:hover {
+  background: linear-gradient(135deg, var(--fun-teal-dark) 0%, #0f766e 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(20, 184, 166, 0.4);
+}
+
+/* Orange Action/Review Buttons */
+.student-dashboard-shell .btn-warning,
+.student-dashboard-shell .btn-review,
+.student-dashboard-shell .review-btn {
+  background: linear-gradient(135deg, var(--fun-orange) 0%, var(--fun-orange-dark) 100%) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+  border-radius: 10px !important;
+}
+
+.student-dashboard-shell .btn-warning:hover,
+.student-dashboard-shell .btn-review:hover,
+.student-dashboard-shell .review-btn:hover {
+  background: linear-gradient(135deg, var(--fun-orange-dark) 0%, #c2410c 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+}
+
+/* Green Success Buttons */
+.student-dashboard-shell .btn-success {
+  background: linear-gradient(135deg, var(--fun-green) 0%, var(--fun-green-dark) 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.student-dashboard-shell .btn-success:hover {
+  background: linear-gradient(135deg, var(--fun-green-dark) 0%, #15803d 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+}
+
+/* Purple Special Buttons */
+.student-dashboard-shell .btn-purple,
+.student-dashboard-shell .btn-brainiac {
+  background: linear-gradient(135deg, var(--fun-purple) 0%, var(--fun-purple-dark) 100%) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+}
+
+/* =============================================
+   COLORFUL TEST CARDS
+   ============================================= */
+
+.student-dashboard-shell .test-card {
+  border-left: 5px solid var(--fun-teal) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-radius: 16px !important;
+}
+
+.student-dashboard-shell .test-card:nth-child(even) {
+  border-left-color: var(--fun-orange) !important;
+}
+
+.student-dashboard-shell .test-card:nth-child(3n) {
+  border-left-color: var(--fun-purple) !important;
+}
+
+.student-dashboard-shell .test-card:nth-child(4n) {
+  border-left-color: var(--fun-green) !important;
+}
+
+.student-dashboard-shell .test-card:nth-child(5n) {
+  border-left-color: var(--fun-pink) !important;
+}
+
+.student-dashboard-shell .test-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* =============================================
+   COLORFUL PROGRESS BARS
+   ============================================= */
+
+.student-dashboard-shell .progress {
+  background: linear-gradient(90deg, #e0f2fe, #f0fdf4, #fef3c7) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  height: 10px !important;
+}
+
+.student-dashboard-shell .progress-bar {
+  background: linear-gradient(90deg, var(--fun-teal), var(--fun-green)) !important;
+  border-radius: 10px;
+}
+
+.student-dashboard-shell .progress-bar.bg-success {
+  background: linear-gradient(90deg, var(--fun-green), #15803d) !important;
+}
+
+.student-dashboard-shell .progress-bar.bg-danger {
+  background: linear-gradient(90deg, var(--fun-red), #dc2626) !important;
+}
+
+/* =============================================
+   COLORFUL BADGES & PERCENTAGES
+   ============================================= */
+
+.student-dashboard-shell .badge-success,
+.student-dashboard-shell .percentage.pass {
+  background: linear-gradient(135deg, var(--fun-green), var(--fun-green-dark)) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 20px !important;
+  padding: 5px 12px !important;
+}
+
+.student-dashboard-shell .badge-danger,
+.student-dashboard-shell .percentage.fail {
+  background: linear-gradient(135deg, var(--fun-red), #dc2626) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 20px !important;
+  padding: 5px 12px !important;
+}
+
+/* =============================================
+   COLORFUL TABLE ROWS
+   ============================================= */
+
+.student-dashboard-shell .test-table {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.student-dashboard-shell .test-table th {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+  color: var(--fun-teal-dark) !important;
+  font-weight: 700 !important;
+}
+
+.student-dashboard-shell .test-table tr:nth-child(even) {
+  background: linear-gradient(90deg, #f0fdfa 0%, #ffffff 100%) !important;
+}
+
+.student-dashboard-shell .test-table tr:hover {
+  background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%) !important;
+}
+
+/* =============================================
+   FUN CATEGORY CARDS
+   ============================================= */
+
+.student-dashboard-shell .category-card,
+.test-customization .category-card {
+  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%) !important;
+  border-left: 4px solid var(--fun-teal) !important;
+  transition: all 0.3s ease;
+  border-radius: 10px !important;
+}
+
+.student-dashboard-shell .category-card:hover,
+.test-customization .category-card:hover {
+  border-left-color: var(--fun-orange) !important;
+  transform: translateX(5px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* Category cards - rotate colors */
+.test-customization .category-card:nth-child(3n+1) { border-left-color: var(--fun-teal) !important; }
+.test-customization .category-card:nth-child(3n+2) { border-left-color: var(--fun-orange) !important; }
+.test-customization .category-card:nth-child(3n+3) { border-left-color: var(--fun-purple) !important; }
+
+/* =============================================
+   COLORFUL SIDEBAR
+   ============================================= */
+
+.student-dashboard-shell .sidebar {
+  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%) !important;
+}
+
+.student-dashboard-shell .sidebar-header {
+  background: transparent !important;
+}
+
+.student-dashboard-shell .sidebar-header h5 {
+  color: white !important;
+  font-weight: 600;
+}
+
+.student-dashboard-shell .sidebar-header p,
+.student-dashboard-shell .sidebar-header small {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.student-dashboard-shell .student-avatar {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: white !important;
+  color: white !important;
+}
+
+/* Sidebar navigation */
+.student-dashboard-shell .nav-link {
+  color: rgba(255, 255, 255, 0.85) !important;
+  border-left: 4px solid transparent;
+}
+
+.student-dashboard-shell .nav-link:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+  border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+.student-dashboard-shell .nav-link.active {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border-left-color: white !important;
+}
+
+.student-dashboard-shell .nav-link i {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.student-dashboard-shell .nav-link.text-danger {
+  color: #fca5a5 !important;
+}
+
+.student-dashboard-shell .nav-link.text-danger:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: white !important;
+}
+
+/* =============================================
+   COLORFUL DASHBOARD HEADER
+   ============================================= */
+
+.student-dashboard-shell .dashboard-header {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%) !important;
+  border-left: 5px solid var(--fun-teal);
+  border-radius: 16px !important;
+}
+
+.student-dashboard-shell .greeting h1 {
+  background: linear-gradient(135deg, var(--fun-teal), var(--fun-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* =============================================
+   COLORFUL TABS NAVIGATION
+   ============================================= */
+
+.student-dashboard-shell .dashboard-tabs {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-radius: 16px !important;
+}
+
+.student-dashboard-shell .tab {
+  border-radius: 10px !important;
+  transition: all 0.3s ease;
+}
+
+.student-dashboard-shell .tab:hover {
+  background-color: rgba(20, 184, 166, 0.1) !important;
+  color: var(--fun-teal) !important;
+}
+
+.student-dashboard-shell .tab.active {
+  background: linear-gradient(135deg, var(--fun-teal), var(--fun-teal-dark)) !important;
+  color: white !important;
+}
+
+/* =============================================
+   COLORFUL NAV PILLS
+   ============================================= */
+
+.student-dashboard-shell .nav-pills .nav-link {
+  border-radius: 10px !important;
+  color: #666 !important;
+}
+
+.student-dashboard-shell .nav-pills .nav-link.active {
+  background: linear-gradient(135deg, var(--fun-teal), var(--fun-teal-dark)) !important;
+  color: white !important;
+}
+
+/* =============================================
+   COLORFUL FORM ELEMENTS
+   ============================================= */
+
+.student-dashboard-shell .form-control:focus,
+.student-dashboard-shell .form-select:focus {
+  border-color: var(--fun-teal) !important;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2) !important;
+}
+
+.student-dashboard-shell .form-check-input:checked {
+  background-color: var(--fun-teal) !important;
+  border-color: var(--fun-teal) !important;
+}
+
+.student-dashboard-shell .form-switch .form-check-input:checked {
+  background-color: var(--fun-teal) !important;
+}
+
+/* =============================================
+   COLORFUL ICONS THROUGHOUT
+   ============================================= */
+
+.student-dashboard-shell .fa-check-circle { color: var(--fun-green) !important; }
+.student-dashboard-shell .fa-times-circle { color: var(--fun-red) !important; }
+.student-dashboard-shell .fa-exclamation-circle { color: var(--fun-orange) !important; }
+.student-dashboard-shell .fa-info-circle { color: var(--fun-blue) !important; }
+.student-dashboard-shell .fa-star { color: var(--fun-yellow) !important; }
+.student-dashboard-shell .fa-trophy { color: var(--fun-yellow) !important; }
+.student-dashboard-shell .fa-brain { color: var(--fun-purple) !important; }
+.student-dashboard-shell .fa-layer-group { color: var(--fun-cyan) !important; }
+
+/* =============================================
+   FUN HOVER EFFECTS
+   ============================================= */
+
+.student-dashboard-shell .stats-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* =============================================
+   RAINBOW PROGRESS INDICATOR
+   ============================================= */
+
+.test-progress-rainbow {
+  background: linear-gradient(90deg, 
+    #ef4444 0%, 
+    #f97316 20%, 
+    #eab308 40%, 
+    #22c55e 60%, 
+    #14b8a6 80%, 
+    #3b82f6 100%
+  );
+  height: 6px;
+  border-radius: 3px;
+}
+
+/* =============================================
+   FUN ANIMATIONS
+   ============================================= */
+
+@keyframes colorPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(20, 184, 166, 0); }
+}
+
+.student-dashboard-shell .btn-primary:focus {
+  animation: colorPulse 1s ease-in-out;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.student-dashboard-shell .feature-icon {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+/* =============================================
+   COLORFUL SUBCATEGORY COUNT PILLS
+   ============================================= */
+
+.test-customization .subcategory-count-pill {
+  background: linear-gradient(135deg, #e0f2fe, #f0f9ff) !important;
+  color: var(--fun-teal) !important;
+  font-weight: 700 !important;
+}
+
+.test-customization .subcategory-count-pill.category-total {
+  background: linear-gradient(135deg, #ccfbf1, #e0f2fe) !important;
+  color: var(--fun-teal-dark) !important;
+}
+
+/* =============================================
+   COLORFUL FILTER STRIP
+   ============================================= */
+
+.exam-review-filter-strip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.exam-review-filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.exam-review-filter-pill.active {
+  border-color: var(--fun-teal);
+  background: linear-gradient(135deg, #f0fdfa, #e0f2fe);
+}
+
+.exam-review-filter-pill:hover {
+  border-color: var(--fun-teal);
+}
+
+.exam-review-filter-total {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--fun-teal-dark);
+}
+
+/* =============================================
+   COLORFUL ALERTS
+   ============================================= */
+
+.student-dashboard-shell .alert-success {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7) !important;
+  border-left: 4px solid var(--fun-green) !important;
+}
+
+.student-dashboard-shell .alert-danger {
+  background: linear-gradient(135deg, #fef2f2, #fecaca) !important;
+  border-left: 4px solid var(--fun-red) !important;
+}
+
+.student-dashboard-shell .alert-warning {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+  border-left: 4px solid var(--fun-yellow) !important;
+}
+
+.student-dashboard-shell .alert-info {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+  border-left: 4px solid var(--fun-blue) !important;
+}
+
+/* =============================================
+   COLORFUL CHART CONTAINERS
+   ============================================= */
+
+.student-dashboard-shell .chart-container {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-radius: 16px !important;
+  border-top: 4px solid var(--fun-teal) !important;
+}
+
+.student-dashboard-shell .weak-areas {
+  border-top: 4px solid var(--fun-red) !important;
+}
+
+.student-dashboard-shell .recommendations {
+  border-top: 4px solid var(--fun-green) !important;
+}
+
+/* =============================================
+   LIGHT GRADIENT BACKGROUND FOR SHELL
+   ============================================= */
+
+.student-dashboard-shell {
+  background: linear-gradient(135deg, #f0f9ff 0%, #f0fdfa 50%, #fefce8 100%) !important;
+}
+
+/* =============================================
+   COLORFUL QUESTION OPTIONS
+   ============================================= */
+
+.student-dashboard-shell .option {
+  border: 2px solid #e2e8f0;
+  border-radius: 12px !important;
+  transition: all 0.3s ease;
+}
+
+.student-dashboard-shell .option:hover {
+  border-color: var(--fun-teal) !important;
+  background-color: #f0fdfa !important;
+}
+
+.student-dashboard-shell .option.selected {
+  border-color: var(--fun-teal) !important;
+  background: linear-gradient(135deg, #f0fdfa, #e0f2fe) !important;
+}
+
+.student-dashboard-shell .option.selected .option-letter {
+  background: linear-gradient(135deg, var(--fun-teal), var(--fun-teal-dark)) !important;
+  color: white !important;
+}
+
+/* =============================================
+   COLORFUL PLAY BUTTON
+   ============================================= */
+
+.student-dashboard-shell .play-btn {
+  background: linear-gradient(135deg, var(--fun-teal), var(--fun-teal-dark)) !important;
+  transition: all 0.3s ease;
+}
+
+.student-dashboard-shell .play-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(20, 184, 166, 0.4);
+}
+
+/* =============================================
+   COLORFUL WATCH BUTTON
+   ============================================= */
+
+.student-dashboard-shell .watch-btn {
+  color: var(--fun-teal) !important;
+}
+
+.student-dashboard-shell .watch-btn:hover {
+  color: var(--fun-teal-dark) !important;
+}
+
+/* =============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================= */
+
+@media (max-width: 768px) {
+  .student-dashboard-shell .stats-card {
+    margin-bottom: 15px;
+  }
+  
+  .exam-review-filter-strip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .exam-review-filter-total {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+}

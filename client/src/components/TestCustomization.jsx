@@ -3,6 +3,18 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../constants/Categories';
 
+// Fun color palette for category cards
+const CATEGORY_COLORS = [
+  { border: '#14b8a6', bg: '#f0fdfa', accent: '#0d9488' }, // teal
+  { border: '#f97316', bg: '#fff7ed', accent: '#ea580c' }, // orange
+  { border: '#a855f7', bg: '#faf5ff', accent: '#9333ea' }, // purple
+  { border: '#22c55e', bg: '#f0fdf4', accent: '#16a34a' }, // green
+  { border: '#3b82f6', bg: '#eff6ff', accent: '#1d4ed8' }, // blue
+  { border: '#ec4899', bg: '#fdf2f8', accent: '#db2777' }, // pink
+  { border: '#06b6d4', bg: '#ecfeff', accent: '#0891b2' }, // cyan
+  { border: '#eab308', bg: '#fefce8', accent: '#ca8a04' }, // yellow
+];
+
 const TestCustomization = () => {
   const [selectedSubcategoryPairs, setSelectedSubcategoryPairs] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
@@ -236,9 +248,21 @@ const TestCustomization = () => {
     }
   };
 
+  // Get color for category by index
+  const getCategoryColor = (index) => CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+
   return (
     <div className="test-customization">
-      <h3>Customize Your Test</h3>
+      <h3 style={{ 
+        background: 'linear-gradient(135deg, #14b8a6, #3b82f6)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        fontWeight: 700,
+        marginBottom: '16px'
+      }}>
+        ✨ Customize Your Test ✨
+      </h3>
       {error && <div className="alert alert-danger">{error}</div>}
       {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
       <form onSubmit={handleSubmit}>
@@ -267,32 +291,69 @@ const TestCustomization = () => {
         </div>
 
         <div className="categories-section">
-          <label>Categories & Subcategories</label>
+          <label style={{ 
+            fontWeight: 600, 
+            color: '#14b8a6',
+            marginBottom: '12px',
+            fontSize: '1rem'
+          }}>
+            📚 Categories & Subcategories
+          </label>
           <div className="category-grid">
             {categoryColumns.map((column, colIndex) => (
               <div key={colIndex} className="category-column">
-                {column.map(([category, subcats]) => (
-                  <div key={category} className={`category-card ${expandedCategory === category ? 'expanded' : ''}`}>
-                    <div className="category-header" onClick={() => toggleCategory(category)}>
-                      <i className={`fas fa-chevron-${expandedCategory === category ? 'down' : 'right'}`}></i>
-                      <span className="fw-bold">
+                {column.map(([category, subcats], cardIndex) => {
+                  const colorStyle = getCategoryColor(colIndex * 10 + cardIndex);
+                  return (
+                  <div 
+                    key={category} 
+                    className={`category-card ${expandedCategory === category ? 'expanded' : ''}`}
+                    style={{ 
+                      borderLeft: `4px solid ${colorStyle.border}`,
+                      background: `linear-gradient(135deg, ${colorStyle.bg} 0%, #ffffff 100%)`
+                    }}
+                  >
+                    <div 
+                      className="category-header" 
+                      onClick={() => toggleCategory(category)}
+                      style={{ color: colorStyle.accent }}
+                    >
+                      <i 
+                        className={`fas fa-chevron-${expandedCategory === category ? 'down' : 'right'}`}
+                        style={{ color: colorStyle.border }}
+                      ></i>
+                      <span className="fw-bold" style={{ color: colorStyle.accent }}>
                         {category}
                         <span
                           className="subcategory-count-pill category-total"
                           title={`Used in your custom tests: ${usedCategoryTotals[category] || 0}`}
+                          style={{ 
+                            background: colorStyle.border,
+                            color: 'white'
+                          }}
                         >
                           {categoryTotals[category] || 0}
                         </span>
                       </span>
                       <button
                         type="button"
-                        className="btn btn-sm btn-outline-secondary select-all-btn"
+                        className="btn btn-sm select-all-btn"
+                        style={{
+                          background: subcats.every(sub => isSubcategorySelected(category, sub)) 
+                            ? `linear-gradient(135deg, ${colorStyle.accent}, ${colorStyle.border})`
+                            : 'white',
+                          color: subcats.every(sub => isSubcategorySelected(category, sub)) 
+                            ? 'white' 
+                            : colorStyle.accent,
+                          border: `1px solid ${colorStyle.border}`,
+                          fontWeight: 600
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleCategorySelectAll(category, subcats);
                         }}
                       >
-                        {subcats.every(sub => isSubcategorySelected(category, sub)) ? 'Deselect All' : 'Select All'}
+                        {subcats.every(sub => isSubcategorySelected(category, sub)) ? '✓ Deselect' : 'Select All'}
                       </button>
                     </div>
                     {expandedCategory === category && (
@@ -306,12 +367,24 @@ const TestCustomization = () => {
                               checked={isSubcategorySelected(category, sub)}
                               onChange={() => handleSubcategoryToggle(category, sub)}
                               onClick={(e) => e.stopPropagation()}
+                              style={{ 
+                                accentColor: colorStyle.border,
+                              }}
                             />
-                            <label className="form-check-label" htmlFor={`${category}-${sub}`}>
+                            <label 
+                              className="form-check-label" 
+                              htmlFor={`${category}-${sub}`}
+                              style={{ color: '#374151' }}
+                            >
                               <span>{sub}</span>
                               <span
                                 className="subcategory-count-pill"
                                 title={`Used in your custom tests: ${getUsedSubcategoryCount(category, sub)}`}
+                                style={{
+                                  background: `${colorStyle.bg}`,
+                                  color: colorStyle.accent,
+                                  border: `1px solid ${colorStyle.border}`
+                                }}
                               >
                                 {getSubcategoryCount(category, sub)}
                               </span>
@@ -321,7 +394,7 @@ const TestCustomization = () => {
                       </div>
                     )}
                   </div>
-                ))}
+                );})}
               </div>
             ))}
           </div>
@@ -329,7 +402,7 @@ const TestCustomization = () => {
 
         <div className="controls-row">
           <div className="question-control">
-            <label>Questions:</label>
+            <label style={{ fontWeight: 600, color: '#14b8a6' }}>🎯 Questions:</label>
             <input
               type="number"
               className="form-control"
@@ -367,8 +440,19 @@ const TestCustomization = () => {
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Generating...' : 'Start Test'}
+          <button 
+            type="submit" 
+            className="btn btn-primary" 
+            disabled={loading}
+            style={{
+              background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+              border: 'none',
+              fontWeight: 600,
+              boxShadow: '0 4px 15px rgba(20, 184, 166, 0.3)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            {loading ? '⏳ Generating...' : '🚀 Start Test'}
           </button>
         </div>
       </form>
