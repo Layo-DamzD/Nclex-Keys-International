@@ -47,7 +47,7 @@ const StudentSidebar = ({
   ];
 
   return (
-    <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <div className={`sidebar student-sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header" style={{ position: 'relative' }}>
         <button
           onClick={toggleSidebar}

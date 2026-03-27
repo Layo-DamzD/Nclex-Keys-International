@@ -797,7 +797,24 @@ hr {
             color: white;
             text-align: center;
         }
-        
+
+        /* Student Sidebar - GREEN THEME */
+        .student-sidebar .sidebar-header {
+            background-color: #198754;
+        }
+
+        .student-sidebar .nav-link:hover,
+        .student-sidebar .nav-link.active {
+            background-color: rgba(25, 135, 84, 0.1);
+            color: #198754;
+            border-left-color: #198754;
+        }
+
+        .student-sidebar .nav-link.selected .option-letter,
+        .student-sidebar .option.selected .option-letter {
+            background-color: #198754;
+        }
+
         .student-avatar {
             width: 80px;
             height: 80px;
