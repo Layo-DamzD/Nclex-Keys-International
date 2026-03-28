@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const Testimonials = ({ content = {} }) => {
+  const [loadedImages, setLoadedImages] = useState(new Set());
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const carouselRef = useRef(null);
+
   const parseMaybeJson = (value) => {
     if (typeof value !== 'string') return value;
     try {
@@ -96,6 +100,50 @@ const Testimonials = ({ content = {} }) => {
     target.setAttribute('data-fallback-index', String(index + 1));
     target.src = candidates[index + 1];
   };
+
+  const handleImageLoad = (index) => {
+    setLoadedImages(prev => new Set([...prev, index]));
+  };
+
+  // Preload all images before starting auto-slide
+  useEffect(() => {
+    if (testimonials.length <= 1) return;
+    
+    // Preload images
+    testimonials.forEach((testimonial, index) => {
+      const imgUrl = testimonial.imageUrl || testimonial.avatar;
+      if (imgUrl) {
+        const img = new window.Image();
+        img.onload = () => handleImageLoad(index);
+        img.onerror = () => handleImageLoad(index); // Still mark as loaded even on error
+        img.src = firstMediaUrl(imgUrl);
+      } else {
+        handleImageLoad(index);
+      }
+    });
+  }, [testimonials]);
+
+  // Auto-slide only after all images are loaded
+  useEffect(() => {
+    if (testimonials.length <= 1) return;
+    if (loadedImages.size < testimonials.length) return;
+
+    const interval = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % testimonials.length);
+    }, 5000); // Increased from 3000 to 5000ms
+
+    return () => clearInterval(interval);
+  }, [testimonials.length, loadedImages.size]);
+
+  // Update Bootstrap carousel when slide changes
+  useEffect(() => {
+    if (carouselRef.current) {
+      const carousel = new window.bootstrap.Carousel(carouselRef.current, {
+        interval: 5000,
+        ride: 'carousel'
+      });
+    }
+  }, [loadedImages.size]);
 
   const renderTestimonialCard = (testimonial, index) => {
     const displayMode = testimonial.imageDisplayMode || (testimonial.imageOnly ? 'imageOnly' : 'standard');
@@ -208,7 +256,7 @@ const Testimonials = ({ content = {} }) => {
           <h2 style={{ fontFamily: "'Roboto Slab', serif", color: '#1d3557' }}>{heading}</h2>
           <p style={{ color: '#457b9d' }}>{subheading}</p>
         </div>
-        <div id="testimonialCarousel" className="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
+        <div id="testimonialCarousel" ref={carouselRef} className="carousel slide" data-bs-ride="carousel" data-bs-interval="5000" data-bs-pause="hover">
           <div className="carousel-inner">
             {testimonials.map((testimonial, index) => (
               <div key={testimonial.id || index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>

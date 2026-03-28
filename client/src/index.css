@@ -11207,6 +11207,16 @@ html[data-app-theme='dark'] .brainiac-page .landing-public-page {
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
+/* Fix Brainiac text wrapping - prevent jampacked text */
+.brainiac-page .card h5,
+.brainiac-page .card p,
+.brainiac-page .card .text-muted {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.6 !important;
+}
+
 .brainiac-page .landing-block-text,
 .brainiac-page .landing-block-card h4,
 .brainiac-page .landing-card-subtitle,
