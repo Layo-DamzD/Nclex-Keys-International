@@ -1008,9 +1008,9 @@
   min-width: 240px;
 }
 
-/* Regular Admin - Dull dark theme */
+/* Regular Admin - Soft Blue theme */
 .admin-dashboard-page.admin-regular .sidebar {
-  background: linear-gradient(180deg, #1e293b, #334155);
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
 }
 
 .admin-dashboard-page.admin-regular .sidebar-header {
@@ -1018,47 +1018,47 @@
 }
 
 .admin-dashboard-page.admin-regular .logo-icon {
-  color: #1e293b;
+  color: #3b82f6;
 }
 
 .admin-dashboard-page.admin-regular .stat-card {
-  border-top-color: #334155 !important;
+  border-top-color: #3b82f6 !important;
 }
 
 .admin-dashboard-page.admin-regular .btn-primary {
-  background: #334155;
+  background: #3b82f6;
 }
 
 .admin-dashboard-page.admin-regular .btn-primary:hover {
-  background: #475569;
+  background: #2563eb;
 }
 
 .admin-dashboard-page.admin-regular .nav-link.active {
   background: #fff;
-  color: #1e293b;
+  color: #3b82f6;
 }
 
 .admin-dashboard-page.admin-regular .nav-link:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
 }
 
 .admin-dashboard-page.admin-regular .header h1 span {
-  color: #334155;
+  color: #3b82f6;
 }
 
 .admin-dashboard-page.admin-regular .time-display .time {
-  color: #334155;
+  color: #3b82f6;
 }
 
 .admin-dashboard-page.admin-regular .user-avatar {
-  background: #334155;
-  box-shadow: 0 4px 12px rgba(51, 65, 85, 0.25);
+  background: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
 }
 
-/* Super Admin - Deep dark theme */
+/* Super Admin - Deep Blue theme */
 .admin-dashboard-page:not(.admin-regular) .sidebar {
-  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
 }
 
 .admin-dashboard-page:not(.admin-regular) .sidebar-header {
@@ -1067,48 +1067,48 @@
 
 .admin-dashboard-page:not(.admin-regular) .nav-link.active {
   background: #fff;
-  color: #0f172a;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: #1d4ed8;
+  box-shadow: 0 2px 8px rgba(29, 78, 216, 0.3);
 }
 
 .admin-dashboard-page:not(.admin-regular) .user-avatar {
-  background: #0f172a;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
 }
 
 .admin-dashboard-page:not(.admin-regular) .btn-primary {
-  background: #0f172a;
+  background: #1d4ed8;
 }
 
 .admin-dashboard-page:not(.admin-regular) .btn-primary:hover {
-  background: #1e293b;
+  background: #1e40af;
 }
 
 .admin-dashboard-page:not(.admin-regular) .header h1 span {
-  color: #0f172a;
+  color: #1d4ed8;
 }
 
 .admin-dashboard-page:not(.admin-regular) .time-display .time {
-  color: #0f172a;
+  color: #1d4ed8;
 }
 
 .admin-dashboard-page:not(.admin-regular) .stat-card {
-  border-top-color: #0f172a !important;
+  border-top-color: #1d4ed8 !important;
 }
 
-/* Admin pages use dull backgrounds based on role - easy on the eyes */
-/* Regular Admin: Dull blue matching sidebar theme */
+/* Admin pages use soft backgrounds based on role - easy on the eyes */
+/* Regular Admin: Soft blue-grey background */
 .admin-dashboard-page,
 .admin-dashboard-page.admin-container,
 .admin-dashboard-page.admin-regular .main-content {
-  background: #e8eef5 !important; /* Dull blue-grey - easy on the eyes */
+  background: #eff6ff !important; /* Soft blue - easy on the eyes */
 }
 
-/* Super Admin: Grey background - professional and clean like reference but grey */
+/* Super Admin: Light blue background */
 .admin-dashboard-page.admin-super,
 .admin-dashboard-page.admin-super.admin-container,
 .admin-dashboard-page.admin-super .main-content {
-  background: #6b7280 !important; /* Medium grey - not too dark, not too light */
+  background: #dbeafe !important; /* Light blue */
 }
 
 /* Default fallback */
@@ -1119,16 +1119,16 @@
   display: block !important;
 }
 
-/* Super Admin cards - lighter grey for contrast on grey background */
+/* Super Admin cards - white for contrast on blue background */
 .admin-dashboard-page.admin-super .header,
 .admin-dashboard-page.admin-super .stat-card,
 .admin-dashboard-page.admin-super .form-card,
 .admin-dashboard-page.admin-super .manage-questions .data-table-container,
 .admin-dashboard-page.admin-super .admin-analytics-card,
 .admin-dashboard-page.admin-super .all-students .data-table-container {
-  background: #9ca3af !important; /* Lighter grey cards */
-  border-color: #6b7280 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  background: #ffffff !important; /* White cards */
+  border-color: #bfdbfe !important;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.1) !important;
 }
 
 .admin-dashboard-page.admin-super .header h1,
@@ -1137,60 +1137,60 @@
 .admin-dashboard-page.admin-super .admin-analytics-card h3,
 .admin-dashboard-page.admin-super .user-name,
 .admin-dashboard-page.admin-super .recent-question-text {
-  color: #1f2937 !important; /* Dark text on grey cards */
+  color: #1e3a8a !important; /* Dark blue text */
 }
 
 .admin-dashboard-page.admin-super .time-display .date,
 .admin-dashboard-page.admin-super .user-role-label,
 .admin-dashboard-page.admin-super .recent-question-meta,
 .admin-dashboard-page.admin-super .stat-card h3 {
-  color: #4b5563 !important; /* Medium dark secondary text */
+  color: #3b82f6 !important; /* Blue secondary text */
 }
 
 .admin-dashboard-page.admin-super .manage-questions .data-table thead th,
 .admin-dashboard-page.admin-super .admin-analytics-table thead th {
-  background: #6b7280 !important;
-  color: #1f2937 !important;
-  border-bottom-color: #9ca3af !important;
+  background: #eff6ff !important;
+  color: #1e3a8a !important;
+  border-bottom-color: #bfdbfe !important;
 }
 
 .admin-dashboard-page.admin-super .manage-questions .data-table tbody td,
 .admin-dashboard-page.admin-super .admin-analytics-table td {
-  color: #1f2937 !important;
-  border-bottom-color: #9ca3af !important;
+  color: #1e3a8a !important;
+  border-bottom-color: #e0f2fe !important;
 }
 
 .admin-dashboard-page.admin-super .btn-outline-secondary {
-  background: #9ca3af !important;
-  color: #1f2937 !important;
-  border-color: #6b7280 !important;
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  border-color: #93c5fd !important;
 }
 
 .admin-dashboard-page.admin-super .upload-question .form-control,
 .admin-dashboard-page.admin-super .upload-question .type-btn,
 .admin-dashboard-page.admin-super .upload-question .option-index {
-  background: #d1d5db !important;
-  color: #1f2937 !important;
-  border-color: #9ca3af !important;
+  background: #ffffff !important;
+  color: #1e3a8a !important;
+  border-color: #bfdbfe !important;
 }
 
 .admin-dashboard-page.admin-super .upload-question .form-label,
 .admin-dashboard-page.admin-super .upload-question .text-muted {
-  color: #4b5563 !important;
+  color: #3b82f6 !important;
 }
 
 .admin-dashboard-page.admin-super .time-display .time {
-  color: #1f2937 !important;
+  color: #1d4ed8 !important;
 }
 
 .admin-dashboard-page.admin-super .header h1 span {
-  color: #374151 !important;
+  color: #1d4ed8 !important;
 }
 
 .admin-dashboard-page.admin-super .mq-id-text {
-  background: #d1d5db !important;
-  border-color: #9ca3af !important;
-  color: #4b5563 !important;
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+  color: #3b82f6 !important;
 }
 
 .admin-dashboard-page .header,
@@ -1343,18 +1343,18 @@ html[data-app-theme='dark'] .admin-dashboard-page .sidebar {
   border-right-color: rgba(148, 163, 184, 0.2);
 }
 
-/* Dark mode - Regular Admin uses dark theme */
+/* Dark mode - Regular Admin uses blue theme */
 html[data-app-theme='dark'] .admin-dashboard-page.admin-regular .sidebar {
-  background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page.admin-regular .sidebar-header {
   background: transparent;
 }
 
-/* Dark mode - Super Admin stays deep dark */
+/* Dark mode - Super Admin stays deep blue */
 html[data-app-theme='dark'] .admin-dashboard-page:not(.admin-regular) .sidebar {
-  background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  background: linear-gradient(180deg, #1e40af 0%, #1d4ed8 100%);
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page .form-control,
