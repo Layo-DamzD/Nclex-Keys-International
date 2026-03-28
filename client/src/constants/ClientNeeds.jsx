@@ -2,6 +2,20 @@
 // This is the official NCLEX test plan categorization
 // Used for both student test creation and admin question categorization
 
+// The 8 NCLEX Client Needs Categories used for test creation
+// These are the primary categories students select when creating tests
+export const NCLEX_CLIENT_NEEDS_CATEGORIES = [
+  'Management of Care',
+  'Safety and Infection Control',
+  'Health Promotion and Maintenance',
+  'Psychosocial Integrity',
+  'Basic Care and Comfort',
+  'Pharmacological and Parenteral Therapies',
+  'Reduction of Risk Potential',
+  'Physiological Adaptation'
+];
+
+// Main categories structure (used for organizing questions in database)
 export const CLIENT_NEEDS = {
   "Safe and Effective Care Environment": [
     "Management of Care",

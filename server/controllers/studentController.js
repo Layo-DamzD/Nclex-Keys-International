@@ -1456,6 +1456,73 @@ const getClientNeedsCounts = async (req, res) => {
   }
 };
 
+// @desc    Get question status counts (unused, incorrect, marked, omitted, correct)
+// @route   GET /api/student/question-status-counts
+// @access  Private
+const getQuestionStatusCounts = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const user = await User.findById(studentId);
+
+    // Get all questions to calculate counts
+    const allQuestions = await Question.find({}, '_id isNextGen');
+    const allQuestionIds = allQuestions.map(q => String(q._id));
+
+    // Get question IDs by status
+    const seenQuestionIds = new Set((user.seenQuestions || []).map(id => String(id)));
+    const incorrectQuestionIds = new Set((user.incorrectQuestions || []).map(id => String(id)));
+    const markedQuestions = user.markedQuestions || [];
+    const omittedQuestionIds = new Set((user.customTestOmittedQuestions || []).map(id => String(id)));
+    const usedQuestionIds = new Set((user.customTestUsedQuestions || []).map(id => String(id)));
+
+    // Calculate correct questions (seen but not incorrect)
+    const correctQuestionIds = new Set(
+      [...seenQuestionIds].filter(id => !incorrectQuestionIds.has(id))
+    );
+
+    // Calculate unused questions (not seen yet)
+    const unusedQuestionIds = new Set(
+      allQuestionIds.filter(id => !seenQuestionIds.has(id))
+    );
+
+    // Helper to count NGN questions
+    const countWithNgn = (questionIds) => {
+      let count = 0;
+      let ngnCount = 0;
+      questionIds.forEach(id => {
+        const q = allQuestions.find(question => String(question._id) === id);
+        if (q) {
+          count++;
+          if (q.isNextGen) ngnCount++;
+        }
+      });
+      return { count, ngnCount };
+    };
+
+    const unused = countWithNgn(unusedQuestionIds);
+    const incorrect = countWithNgn(incorrectQuestionIds);
+    const marked = countWithNgn(new Set(markedQuestions.map(id => String(id))));
+    const omitted = countWithNgn(omittedQuestionIds);
+    const correct = countWithNgn(correctQuestionIds);
+
+    res.json({
+      unused: unused.count,
+      unusedNgn: unused.ngnCount,
+      incorrect: incorrect.count,
+      incorrectNgn: incorrect.ngnCount,
+      marked: marked.count,
+      markedNgn: marked.ngnCount,
+      omitted: omitted.count,
+      omittedNgn: omitted.ngnCount,
+      correct: correct.count,
+      correctNgn: correct.ngnCount
+    });
+  } catch (error) {
+    console.error('Error fetching question status counts:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getRecentTests,
@@ -1488,5 +1555,6 @@ module.exports = {
   submitStudentFeedback,
   getExamSupportMessages,
   sendExamSupportMessage,
-  getClientNeedsCounts
+  getClientNeedsCounts,
+  getQuestionStatusCounts
 };

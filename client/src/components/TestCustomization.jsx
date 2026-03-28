@@ -2,18 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../constants/Categories';
+import { NCLEX_CLIENT_NEEDS_CATEGORIES } from '../constants/ClientNeeds';
 
-// NCLEX Client Needs - 8 main subcategories shown in UWorld interface
-const CLIENT_NEEDS_CATEGORIES = [
-  'Management of Care',
-  'Safety and Infection Control',
-  'Health Promotion and Maintenance',
-  'Psychosocial Integrity',
-  'Basic Care and Comfort',
-  'Pharmacological and Parenteral Therapies',
-  'Reduction of Risk Potential',
-  'Physiological Adaptation'
-];
+// Use the imported constant
+const CLIENT_NEEDS_CATEGORIES = NCLEX_CLIENT_NEEDS_CATEGORIES;
 
 const TestCustomization = () => {
   const normalizeKey = (value) => {
@@ -55,9 +47,28 @@ const TestCustomization = () => {
   const [clientNeedsCounts, setClientNeedsCounts] = useState({});
   const [clientNeedsNgnCounts, setClientNeedsNgnCounts] = useState({});
 
-  // Question type filters
-  const [includeTraditional, setIncludeTraditional] = useState(true);
-  const [includeNextGen, setIncludeNextGen] = useState(true);
+  // Question status filters
+  const [statusFilters, setStatusFilters] = useState({
+    unused: true,
+    incorrect: false,
+    marked: false,
+    omitted: false,
+    correct: false
+  });
+
+  // Question status counts
+  const [statusCounts, setStatusCounts] = useState({
+    unused: 0,
+    unusedNgn: 0,
+    incorrect: 0,
+    incorrectNgn: 0,
+    marked: 0,
+    markedNgn: 0,
+    omitted: 0,
+    omittedNgn: 0,
+    correct: 0,
+    correctNgn: 0
+  });
 
   const navigate = useNavigate();
 
@@ -95,10 +106,10 @@ const TestCustomization = () => {
   };
 
   const handleSelectAllClientNeeds = () => {
-    if (selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length) {
+    if (selectedClientNeeds.length === NCLEX_CLIENT_NEEDS_CATEGORIES.length) {
       setSelectedClientNeeds([]);
     } else {
-      setSelectedClientNeeds([...CLIENT_NEEDS_CATEGORIES]);
+      setSelectedClientNeeds([...NCLEX_CLIENT_NEEDS_CATEGORIES]);
     }
   };
 
@@ -160,6 +171,27 @@ const TestCustomization = () => {
           console.error('Failed to load client needs counts', cnErr);
           setClientNeedsCounts({});
           setClientNeedsNgnCounts({});
+        }
+
+        // Fetch question status counts
+        try {
+          const statusResponse = await axios.get('/api/student/question-status-counts', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setStatusCounts({
+            unused: statusResponse.data?.unused || 0,
+            unusedNgn: statusResponse.data?.unusedNgn || 0,
+            incorrect: statusResponse.data?.incorrect || 0,
+            incorrectNgn: statusResponse.data?.incorrectNgn || 0,
+            marked: statusResponse.data?.marked || 0,
+            markedNgn: statusResponse.data?.markedNgn || 0,
+            omitted: statusResponse.data?.omitted || 0,
+            omittedNgn: statusResponse.data?.omittedNgn || 0,
+            correct: statusResponse.data?.correct || 0,
+            correctNgn: statusResponse.data?.correctNgn || 0
+          });
+        } catch (statusErr) {
+          console.error('Failed to load question status counts', statusErr);
         }
       } catch (err) {
         console.error('Failed to load subcategory counts', err);
@@ -336,8 +368,7 @@ const TestCustomization = () => {
           questionCount,
           timed,
           tutorMode,
-          includeTraditional,
-          includeNextGen
+          statusFilters
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -354,8 +385,7 @@ const TestCustomization = () => {
           questionCount,
           timed,
           tutorMode,
-          includeTraditional,
-          includeNextGen
+          statusFilters
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -376,7 +406,7 @@ const TestCustomization = () => {
       boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
     }}>
       <h3 style={{
-        color: '#1e40af',
+        color: '#059669',
         fontWeight: 700,
         marginBottom: '20px',
         fontSize: '1.5rem'
@@ -425,8 +455,8 @@ const TestCustomization = () => {
           </div>
         </div>
 
-        {/* Question Type Section */}
-        <div className="question-type-section" style={{
+        {/* Question Status Filter Section */}
+        <div className="question-status-section" style={{
           marginBottom: '20px',
           padding: '16px',
           background: '#f8fafc',
@@ -435,39 +465,71 @@ const TestCustomization = () => {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <label style={{ fontWeight: 600, color: '#374151' }}>
-              Question Type
+              Question Status
             </label>
-            <span style={{ color: '#1e40af', fontWeight: 600, fontSize: '0.9rem' }}>
+            <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>
               {currentAvailable} questions available
             </span>
           </div>
-          <div style={{ display: 'flex', gap: '20px' }}>
-            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                type="checkbox"
-                className="form-check-input"
-                id="traditionalCheck"
-                checked={includeTraditional}
-                onChange={(e) => setIncludeTraditional(e.target.checked)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <label className="form-check-label" htmlFor="traditionalCheck" style={{ fontWeight: 500 }}>
-                Traditional
-              </label>
-            </div>
-            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                type="checkbox"
-                className="form-check-input"
-                id="nextGenCheck"
-                checked={includeNextGen}
-                onChange={(e) => setIncludeNextGen(e.target.checked)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <label className="form-check-label" htmlFor="nextGenCheck" style={{ fontWeight: 500 }}>
-                Next Gen
-              </label>
-            </div>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {[
+              { key: 'unused', label: 'Unused', count: statusCounts.unused, ngnCount: statusCounts.unusedNgn },
+              { key: 'incorrect', label: 'Incorrect', count: statusCounts.incorrect, ngnCount: statusCounts.incorrectNgn },
+              { key: 'marked', label: 'Marked', count: statusCounts.marked, ngnCount: statusCounts.markedNgn },
+              { key: 'omitted', label: 'Omitted', count: statusCounts.omitted, ngnCount: statusCounts.omittedNgn },
+              { key: 'correct', label: 'Correct', count: statusCounts.correct, ngnCount: statusCounts.correctNgn }
+            ].map(({ key, label, count, ngnCount }) => (
+              <div 
+                key={key}
+                className="form-check" 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  padding: '8px 12px',
+                  background: statusFilters[key] ? '#e0f2fe' : '#fff',
+                  borderRadius: '6px',
+                  border: statusFilters[key] ? '1px solid #0ea5e9' : '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setStatusFilters(prev => ({ ...prev, [key]: !prev[key] }))}
+              >
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id={`${key}Check`}
+                  checked={statusFilters[key]}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setStatusFilters(prev => ({ ...prev, [key]: e.target.checked }));
+                  }}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0ea5e9' }}
+                />
+                <label 
+                  className="form-check-label" 
+                  htmlFor={`${key}Check`} 
+                  style={{ 
+                    fontWeight: 500,
+                    color: statusFilters[key] ? '#0369a1' : '#374151',
+                    cursor: 'pointer',
+                    marginRight: '4px'
+                  }}
+                >
+                  {label}
+                </label>
+                <span style={{
+                  background: statusFilters[key] ? '#0ea5e9' : '#e2e8f0',
+                  color: statusFilters[key] ? '#fff' : '#64748b',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600
+                }}>
+                  {count} ({ngnCount} NGN)
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -481,8 +543,8 @@ const TestCustomization = () => {
           {/* Tabs */}
           <div style={{
             display: 'flex',
-            borderBottom: '1px solid #e2e8f0',
-            background: '#f8fafc'
+            borderBottom: '1px solid #a7f3d0',
+            background: '#f0fdf4'
           }}>
             <button
               type="button"
@@ -492,9 +554,9 @@ const TestCustomization = () => {
                 padding: '12px 20px',
                 border: 'none',
                 background: categoryTab === 'subjects' ? '#fff' : 'transparent',
-                borderBottom: categoryTab === 'subjects' ? '3px solid #1e40af' : '3px solid transparent',
+                borderBottom: categoryTab === 'subjects' ? '3px solid #059669' : '3px solid transparent',
                 fontWeight: categoryTab === 'subjects' ? 600 : 500,
-                color: categoryTab === 'subjects' ? '#1e40af' : '#64748b',
+                color: categoryTab === 'subjects' ? '#059669' : '#6b7280',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
@@ -509,9 +571,9 @@ const TestCustomization = () => {
                 padding: '12px 20px',
                 border: 'none',
                 background: categoryTab === 'clientNeeds' ? '#fff' : 'transparent',
-                borderBottom: categoryTab === 'clientNeeds' ? '3px solid #1e40af' : '3px solid transparent',
+                borderBottom: categoryTab === 'clientNeeds' ? '3px solid #059669' : '3px solid transparent',
                 fontWeight: categoryTab === 'clientNeeds' ? 600 : 500,
-                color: categoryTab === 'clientNeeds' ? '#1e40af' : '#64748b',
+                color: categoryTab === 'clientNeeds' ? '#059669' : '#6b7280',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
@@ -562,10 +624,10 @@ const TestCustomization = () => {
                           alignItems: 'center',
                           gap: '8px',
                           padding: '10px 12px',
-                          background: isSelected ? '#eff6ff' : '#f8fafc',
+                          background: isSelected ? '#f0fdf4' : '#f8fafc',
                           borderRadius: '6px',
                           marginBottom: '8px',
-                          border: isSelected ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                          border: isSelected ? '1px solid #6ee7b7' : '1px solid #e2e8f0',
                           transition: 'all 0.2s'
                         }}>
                           <input
@@ -589,7 +651,7 @@ const TestCustomization = () => {
                             {clientNeed}
                           </label>
                           <span style={{
-                            background: '#1e40af',
+                            background: '#059669',
                             color: '#fff',
                             padding: '2px 8px',
                             borderRadius: '12px',
@@ -615,7 +677,7 @@ const TestCustomization = () => {
                     {column.map(([category, subcats]) => (
                       <div key={category} style={{
                         marginBottom: '12px',
-                        border: '1px solid #e2e8f0',
+                        border: '1px solid #a7f3d0',
                         borderRadius: '8px',
                         overflow: 'hidden'
                       }}>
@@ -623,13 +685,13 @@ const TestCustomization = () => {
                           onClick={() => toggleCategory(category)}
                           style={{
                             padding: '10px 12px',
-                            background: expandedCategory === category ? '#eff6ff' : '#f8fafc',
+                            background: expandedCategory === category ? '#f0fdf4' : '#f8fafc',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             fontWeight: 600,
-                            color: '#1e40af'
+                            color: '#059669'
                           }}
                         >
                           <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -637,7 +699,7 @@ const TestCustomization = () => {
                             {category}
                           </span>
                           <span style={{
-                            background: '#1e40af',
+                            background: '#059669',
                             color: '#fff',
                             padding: '2px 8px',
                             borderRadius: '12px',
@@ -696,15 +758,15 @@ const TestCustomization = () => {
         <div className="question-count-section" style={{
           marginBottom: '20px',
           padding: '16px',
-          background: '#f8fafc',
+          background: '#f0fdf4',
           borderRadius: '8px',
-          border: '1px solid #e2e8f0'
+          border: '1px solid #a7f3d0'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ fontWeight: 600, color: '#374151' }}>
               No. of Questions
             </label>
-            <span style={{ color: '#64748b', fontSize: '0.85rem' }}>
+            <span style={{ color: '#059669', fontSize: '0.85rem', fontWeight: 500 }}>
               Max allowed: {maxAllowed}
             </span>
           </div>
@@ -725,7 +787,7 @@ const TestCustomization = () => {
               marginTop: '8px',
               padding: '10px 12px',
               fontSize: '1rem',
-              border: '2px solid #cbd5e1',
+              border: '2px solid #6ee7b7',
               borderRadius: '6px'
             }}
           />
@@ -737,7 +799,7 @@ const TestCustomization = () => {
           className="btn btn-primary w-100"
           disabled={loading}
           style={{
-            background: '#1e40af',
+            background: '#059669',
             border: 'none',
             padding: '14px 24px',
             fontSize: '1.1rem',

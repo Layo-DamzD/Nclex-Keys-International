@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
-import { CLIENT_NEEDS, CLIENT_NEEDS_EXTENDED } from '../../constants/ClientNeeds';
+import { NCLEX_CLIENT_NEEDS_CATEGORIES } from '../../constants/ClientNeeds';
 import { resolveMediaCandidates, withCacheBust } from '../../utils/imageUpload';
 
 const QUESTION_TYPES = [
@@ -119,11 +119,6 @@ const UploadQuestion = () => {
   const handleCategoryChange = (e) => {
     setCategory(e.target.value);
     setSubcategory('');
-  };
-
-  const handleClientNeedChange = (e) => {
-    setClientNeed(e.target.value);
-    setClientNeedSubcategory('');
   };
 
   const handleOptionChange = (index, value) => {
@@ -575,34 +570,21 @@ const UploadQuestion = () => {
           <p className="text-muted small mb-3">
             Categorize this question by NCLEX Client Needs framework for better test filtering.
           </p>
-          <div className="upload-grid-two">
-            <div className="form-group">
-              <label className="form-label">Client Need Category</label>
-              <select 
-                className="form-control" 
-                value={clientNeed} 
-                onChange={handleClientNeedChange}
-              >
-                <option value="">Select Client Need</option>
-                {Object.keys(CLIENT_NEEDS).map((cn) => (
-                  <option key={cn} value={cn}>{cn}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Client Need Subcategory</label>
-              <select 
-                className="form-control" 
-                value={clientNeedSubcategory} 
-                onChange={(e) => setClientNeedSubcategory(e.target.value)}
-                disabled={!clientNeed}
-              >
-                <option value="">Select Subcategory</option>
-                {clientNeed && CLIENT_NEEDS[clientNeed]?.map((sub) => (
-                  <option key={sub} value={sub}>{sub}</option>
-                ))}
-              </select>
-            </div>
+          <div className="form-group">
+            <label className="form-label">Client Need Category</label>
+            <select 
+              className="form-control" 
+              value={clientNeedSubcategory || clientNeed} 
+              onChange={(e) => {
+                setClientNeed(e.target.value);
+                setClientNeedSubcategory(e.target.value);
+              }}
+            >
+              <option value="">Select Client Need</option>
+              {NCLEX_CLIENT_NEEDS_CATEGORIES.map((cn) => (
+                <option key={cn} value={cn}>{cn}</option>
+              ))}
+            </select>
           </div>
           <div className="form-check mt-3">
             <input

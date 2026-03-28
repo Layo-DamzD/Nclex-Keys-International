@@ -2154,44 +2154,44 @@ html[data-app-theme='dark'] .admin-sidebar-floating-open-btn {
   background: linear-gradient(180deg, #1d4ed8, #2563eb);
 }
 
-/* Super Admin - BLACK theme (not pink) */
+/* Super Admin - BLUE theme (changed from grey) */
 .admin-dashboard-page.admin-super .sidebar {
-  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
 }
 
 .admin-dashboard-page.admin-super .nav-link.active {
   background: #fff;
-  color: #0f172a;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 .admin-dashboard-page.admin-super .user-avatar {
-  background: #0f172a;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
 }
 
 .admin-dashboard-page.admin-super .btn-primary {
-  background: #0f172a;
+  background: #1d4ed8;
 }
 
 .admin-dashboard-page.admin-super .btn-primary:hover {
-  background: #1e293b;
+  background: #1e40af;
 }
 
 .admin-dashboard-page.admin-super .header h1 span {
-  color: #0f172a;
+  color: #1d4ed8;
 }
 
 .admin-dashboard-page.admin-super .time-display .time {
-  color: #0f172a;
+  color: #1d4ed8;
 }
 
 .admin-dashboard-page.admin-super .stat-card {
-  border-top-color: #0f172a !important;
+  border-top-color: #1d4ed8 !important;
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page.admin-super .sidebar {
-  background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  background: linear-gradient(180deg, #1e40af 0%, #1d4ed8 100%);
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page.admin-super .nav-link.active {
@@ -2200,9 +2200,9 @@ html[data-app-theme='dark'] .admin-dashboard-page.admin-super .nav-link.active {
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page.admin-super .btn-primary {
-  background: #1e293b;
+  background: #1d4ed8;
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page.admin-super .btn-primary:hover {
-  background: #334155;
+  background: #1e40af;
 }
