@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { UserProvider } from './context/UserContext';
 import Home from './pages/Home';
+import About from './pages/About';
+import Contact from './pages/Contact';
 import StudentLogin from './pages/StudentLogin';
 import StudentSignup from './pages/StudentSignup';
 import ForgotPassword from './pages/ForgotPassword';
@@ -34,6 +36,8 @@ function App() {
           <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/brainiac" element={<Brainiac />} />
           <Route path="/test-your-knowledge" element={<PublicKnowledgeTest />} />
           <Route path="/login" element={<StudentLogin />} />

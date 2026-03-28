@@ -6,6 +6,8 @@ User-agent: *
 
 # Allow all public pages
 Allow: /
+Allow: /about
+Allow: /contact
 Allow: /login
 Allow: /signup
 Allow: /brainiac
