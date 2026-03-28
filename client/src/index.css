@@ -10287,13 +10287,13 @@ html[data-app-theme='dark'] .student-sidebar-overlay {
    - Landing page (keep purple gradient)
 ======================================== */
 
-/* Dull gray background for student dashboard */
+/* Dull calm background for student dashboard */
 .student-dashboard-shell {
-  background: #f1f5f9 !important;
+  background: #e8eef5 !important;
 }
 
 .student-dashboard-shell .main-content {
-  background: #f1f5f9 !important;
+  background: transparent !important;
 }
 
 /* Cards and containers with clean white backgrounds */
@@ -10304,11 +10304,11 @@ html[data-app-theme='dark'] .student-sidebar-overlay {
 .student-dashboard-shell .chart-container,
 .student-dashboard-shell .content-section .card {
   background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #d1d9e6 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Topic Analysis dull background styling */
+/* Topic Analysis styling */
 .topic-analysis {
   background: transparent;
 }
@@ -10319,10 +10319,10 @@ html[data-app-theme='dark'] .student-sidebar-overlay {
 .topic-analysis .summary-card {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Incorrect Questions dull background */
+/* Incorrect Questions styling */
 .incorrect-questions {
   background: transparent;
 }
@@ -10331,10 +10331,10 @@ html[data-app-theme='dark'] .student-sidebar-overlay {
 .incorrect-questions .card {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Performance Analysis dull background */
+/* Performance Analysis styling */
 .performance-analysis {
   background: transparent;
 }
@@ -10345,12 +10345,15 @@ html[data-app-theme='dark'] .student-sidebar-overlay {
 .performance-analysis .summary-stat-card {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Test Customization dull background */
+/* Test Customization styling */
 .test-customization {
-  background: transparent;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px;
+  padding: 20px;
 }
 
 .test-customization .category-card {
@@ -10359,12 +10362,12 @@ html[data-app-theme='dark'] .student-sidebar-overlay {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Study Materials dull background */
+/* Study Materials styling */
 .study-materials {
   background: transparent;
 }
 
-/* Previous Tests dull background */
+/* Previous Tests styling */
 .previous-tests {
   background: transparent;
 }
@@ -10372,61 +10375,21 @@ html[data-app-theme='dark'] .student-sidebar-overlay {
 .previous-tests .test-table {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Available Tests dull background */
+/* Available Tests styling */
 .available-tests {
   background: transparent;
 }
 
-/* Profile dull background */
+/* Profile styling */
 .profile-section {
   background: transparent;
 }
 
-/* Dark mode dull background overrides */
-html[data-app-theme='dark'] .student-dashboard-shell {
-  background: #0f172a !important;
-}
-
-html[data-app-theme='dark'] .student-dashboard-shell .main-content {
-  background: #0f172a !important;
-}
-
-html[data-app-theme='dark'] .student-dashboard-shell .dashboard-header,
-html[data-app-theme='dark'] .student-dashboard-shell .stats-card,
-html[data-app-theme='dark'] .student-dashboard-shell .progress-container,
-html[data-app-theme='dark'] .student-dashboard-shell .test-card,
-html[data-app-theme='dark'] .student-dashboard-shell .chart-container,
-html[data-app-theme='dark'] .student-dashboard-shell .content-section .card,
-html[data-app-theme='dark'] .topic-analysis .filter-section,
-html[data-app-theme='dark'] .topic-analysis .chart-card,
-html[data-app-theme='dark'] .topic-analysis .table-card,
-html[data-app-theme='dark'] .topic-analysis .summary-card,
-html[data-app-theme='dark'] .incorrect-questions .question-item,
-html[data-app-theme='dark'] .incorrect-questions .card,
-html[data-app-theme='dark'] .performance-analysis .stats-dashboard-card,
-html[data-app-theme='dark'] .performance-analysis .stats-card,
-html[data-app-theme='dark'] .performance-analysis .chart-container,
-html[data-app-theme='dark'] .performance-analysis .summary-stat-card,
-html[data-app-theme='dark'] .test-customization .category-card,
-html[data-app-theme='dark'] .previous-tests .test-table {
-  background: #1e293b !important;
-  border-color: #334155 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
-}
-
-html[data-app-theme='dark'] .student-sidebar-floating-open-btn {
-  background: #1d4ed8;
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.45);
-}
-
-html[data-app-theme='dark'] .student-dashboard-shell .sidebar-toggle {
-  border-color: #334155;
-  background: #111827;
-  color: #dbeafe;
-}
+/* Dark mode support - NOT applied for students */
+/* Students use light mode only - no dark mode toggle */
 
 /* Cross-page responsive pass (public + auth + exam flows) */
 .app-auth-lite-shell {
@@ -12761,11 +12724,11 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
 }
 
 /* ============================================
-   Student Dashboard - Dull Blue Background
+   Student Dashboard - Clean Readable Theme
    ============================================ */
 
 .student-dashboard-shell {
-  background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+  background: #e8eef5 !important;
   min-height: 100vh;
 }
 
@@ -12800,59 +12763,60 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
   border-left: 3px solid #198754;
 }
 
+/* Cards with white background for readability */
 .student-dashboard-shell .dashboard-header,
 .student-dashboard-shell .stats-card,
 .student-dashboard-shell .progress-container {
-  background: rgba(30, 58, 95, 0.6);
-  border: 1px solid rgba(96, 165, 250, 0.2);
-  backdrop-filter: blur(10px);
+  background: #ffffff !important;
+  border: 1px solid #d1d9e6 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
 .student-dashboard-shell .greeting h1 {
-  color: #f1f5f9;
+  color: #1e293b !important;
 }
 
 .student-dashboard-shell .greeting p {
-  color: #94a3b8;
+  color: #64748b !important;
 }
 
 .student-dashboard-shell .dashboard-clock-badge {
-  background: rgba(30, 58, 95, 0.8);
-  border: 1px solid rgba(96, 165, 250, 0.3);
+  background: #1e40af;
+  border: none;
   color: #e2e8f0;
 }
 
 .student-dashboard-shell .dashboard-clock-badge .clock-time {
-  color: #60a5fa;
+  color: #ffffff;
 }
 
 .student-dashboard-shell .dashboard-clock-badge .clock-date {
-  color: #94a3b8;
+  color: #bfdbfe;
 }
 
 .student-dashboard-shell h3,
 .student-dashboard-shell h4 {
-  color: #f1f5f9;
+  color: #1e293b !important;
 }
 
 .student-dashboard-shell .text-muted {
-  color: #94a3b8 !important;
+  color: #64748b !important;
 }
 
 .student-dashboard-shell .content-section {
-  color: #e2e8f0;
+  color: #334155;
 }
 
 .student-dashboard-shell .alert {
-  background: rgba(30, 58, 95, 0.8);
-  border-color: rgba(96, 165, 250, 0.3);
-  color: #e2e8f0;
+  background: #ffffff;
+  border-left: 4px solid #f59e0b;
+  color: #1e293b;
 }
 
 .student-dashboard-shell .alert-warning {
-  background: rgba(180, 83, 9, 0.3);
-  border-color: rgba(251, 191, 36, 0.4);
-  color: #fcd34d;
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #92400e;
 }
 
 /* ============================================
@@ -12864,20 +12828,20 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
 }
 
 .stats-dashboard-card {
-  background: rgba(30, 58, 95, 0.6);
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 24px;
-  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .stats-card-title {
-  color: #60a5fa;
+  color: #1e293b;
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .stats-donut-wrapper {
@@ -12895,7 +12859,7 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(96, 165, 250, 0.1);
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .stats-info-row:last-child {
@@ -12903,12 +12867,12 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
 }
 
 .stats-label {
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.9rem;
 }
 
 .stats-value {
-  color: #f1f5f9;
+  color: #1e293b;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -12923,50 +12887,50 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
 }
 
 .stats-badge-purple {
-  background: rgba(139, 92, 246, 0.3);
-  color: #a78bfa;
+  background: #f3e8ff;
+  color: #7c3aed;
 }
 
 .stats-badge-blue {
-  background: rgba(59, 130, 246, 0.3);
-  color: #60a5fa;
+  background: #dbeafe;
+  color: #2563eb;
 }
 
 .stats-badge-green {
-  background: rgba(34, 197, 94, 0.3);
-  color: #4ade80;
+  background: #dcfce7;
+  color: #16a34a;
 }
 
 .stats-badge-orange {
-  background: rgba(249, 115, 22, 0.3);
-  color: #fb923c;
+  background: #ffedd5;
+  color: #ea580c;
 }
 
 .stats-badge-red {
-  background: rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  background: #fee2e2;
+  color: #dc2626;
 }
 
 /* Summary Stat Cards */
 .summary-stat-card {
-  background: rgba(30, 58, 95, 0.6);
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 20px;
   text-align: center;
-  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .summary-stat-label {
   display: block;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.85rem;
   margin-bottom: 8px;
 }
 
 .summary-stat-value {
   display: block;
-  color: #f1f5f9;
+  color: #1e293b;
   font-size: 1.5rem;
   font-weight: 700;
 }
@@ -12985,46 +12949,48 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
 
 /* Performance Analysis Adjustments */
 .performance-analysis .stats-card {
-  background: rgba(30, 58, 95, 0.6);
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 20px;
   text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .performance-analysis .stats-card h5 {
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.9rem;
   margin-bottom: 8px;
 }
 
 .performance-analysis .stats-number {
-  color: #60a5fa;
+  color: #2563eb;
   font-size: 2rem;
   font-weight: 700;
 }
 
 .performance-analysis .chart-container {
-  background: rgba(30, 58, 95, 0.6);
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .performance-analysis .recommendations h4 {
-  color: #f1f5f9;
+  color: #1e293b;
 }
 
 .performance-analysis .list-group-item {
-  background: rgba(30, 58, 95, 0.6);
-  border: 1px solid rgba(96, 165, 250, 0.2);
-  color: #e2e8f0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
 }
 
 .performance-analysis .list-group-item-success {
-  background: rgba(34, 197, 94, 0.2);
-  border-color: rgba(34, 197, 94, 0.3);
-  color: #4ade80;
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
 }
 
 /* Student Dashboard Form Controls */
