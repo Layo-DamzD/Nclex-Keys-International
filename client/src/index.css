@@ -10191,6 +10191,21 @@ body.signup-love-rain-active {
     padding-right: 0;
   }
 
+  /* Mobile Create Test - ensure visibility */
+  .student-dashboard-shell .content-section.active {
+    display: block !important;
+  }
+
+  .student-dashboard-shell .content-section.active > .test-customization {
+    background: #ffffff !important;
+    padding: 16px !important;
+    border-radius: 12px;
+  }
+
+  .student-dashboard-shell .category-grid {
+    grid-template-columns: 1fr;
+  }
+
   .student-dashboard-shell .controls-row {
     flex-wrap: wrap;
     gap: 10px;
@@ -12755,33 +12770,34 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
 }
 
 .student-dashboard-shell .main-content {
-  background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+  background: transparent !important;
 }
 
+/* GREEN Sidebar for Students */
 .student-dashboard-shell .sidebar {
-  background: rgba(15, 39, 68, 0.95);
-  border-right: 1px solid rgba(96, 165, 250, 0.2);
+  background: linear-gradient(180deg, #198754 0%, #157347 100%) !important;
+  border-right: none;
 }
 
 .student-dashboard-shell .sidebar-header {
-  background: rgba(30, 58, 95, 0.8);
-  border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .student-dashboard-shell .nav-link {
-  color: #94a3b8;
+  color: #ffffff;
   transition: all 0.2s ease;
 }
 
 .student-dashboard-shell .nav-link:hover {
-  background: rgba(96, 165, 250, 0.1);
-  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .student-dashboard-shell .nav-link.active {
-  background: rgba(37, 99, 235, 0.3);
-  color: #60a5fa;
-  border-left: 3px solid #3b82f6;
+  background: #ffffff;
+  color: #198754;
+  border-left: 3px solid #198754;
 }
 
 .student-dashboard-shell .dashboard-header,
@@ -13103,6 +13119,23 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
   padding: 20px;
 }
 
+/* Create Test section - ensure visibility */
+.student-dashboard-shell .content-section.active {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.student-dashboard-shell .test-customization {
+  background: transparent !important;
+  min-height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 1 !important;
+  padding: 16px !important;
+}
+
 /* Student content cards - white for contrast */
 .student-dashboard-shell .dashboard-header,
 .student-dashboard-shell .stats-card,
@@ -13118,11 +13151,18 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
 .student-dashboard-shell .module-card,
 .student-dashboard-shell .category-card,
 .student-dashboard-shell .form-card,
-.student-dashboard-shell .content-section .card,
-.student-dashboard-shell .content-section > div {
+.student-dashboard-shell .content-section .card {
   background: #ffffff !important;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Test Customization wrapper - white card background */
+.student-dashboard-shell .content-section.active > .test-customization {
+  background: #ffffff !important;
+  border-radius: 16px;
+  padding: 24px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Student sidebar styling - GREEN */
