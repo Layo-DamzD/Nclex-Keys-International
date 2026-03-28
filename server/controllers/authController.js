@@ -451,18 +451,35 @@ const registerAdmin = async (req, res) => {
 const loginAdmin = async (req, res) => {
   try {
     const { email, password, accessCode, deviceId, deviceLabel } = req.body;
+    console.log('[ADMIN LOGIN] Attempt for email:', email);
+    
     const user = await User.findOne({ email, role: { $in: ['admin', 'superadmin'] } });
-    if (!user || !(await user.comparePassword(password))) {
+    
+    if (!user) {
+      console.log('[ADMIN LOGIN] No user found with email:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+    
+    console.log('[ADMIN LOGIN] User found:', { email: user.email, role: user.role, approved: user.approved, status: user.status });
+    
+    const passwordMatch = await user.comparePassword(password);
+    if (!passwordMatch) {
+      console.log('[ADMIN LOGIN] Password mismatch for:', email);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
     if (user.status && user.status !== 'active') {
+      console.log('[ADMIN LOGIN] Account inactive for:', email);
       return res.status(403).json({ message: 'This account is inactive' });
     }
+    
     if (user.role === 'admin') {
       if (!user.approved) {
+        console.log('[ADMIN LOGIN] Account not approved for:', email);
         return res.status(403).json({ message: 'Account pending approval by super admin' });
       }
       if (user.accessCode !== accessCode) {
+        console.log('[ADMIN LOGIN] Invalid access code for:', email);
         return res.status(401).json({ message: 'Invalid access code' });
       }
     }
@@ -470,6 +487,7 @@ const loginAdmin = async (req, res) => {
     upsertAdminDeviceLogin(user, req, deviceId, deviceLabel);
     await user.save();
 
+    console.log('[ADMIN LOGIN] Success for:', email, 'role:', user.role);
     res.json({
       _id: user._id,
       name: user.name,
@@ -479,7 +497,7 @@ const loginAdmin = async (req, res) => {
       token: generateToken(user._id)
     });
   } catch (error) {
-    console.error(error);
+    console.error('[ADMIN LOGIN] Error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

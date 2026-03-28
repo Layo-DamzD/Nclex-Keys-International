@@ -19,6 +19,38 @@ const {
   resetAdminPasswordWithOtp
 } = require('../controllers/authController');
 const { protect, superAdminOnly } = require('../middleware/authMiddleware');
+const User = require('../models/user');
+
+// DEBUG: Check admin account status (temporary - remove after debugging)
+router.post('/admin/debug-check', async (req, res) => {
+  try {
+    const { email } = req.body;
+    console.log('[DEBUG] Checking admin account for:', email);
+    
+    const user = await User.findOne({ email, role: { $in: ['admin', 'superadmin'] } });
+    
+    if (!user) {
+      return res.json({ 
+        found: false, 
+        message: 'No admin account found with this email',
+        email: email 
+      });
+    }
+    
+    res.json({
+      found: true,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      approved: user.approved,
+      status: user.status,
+      hasAccessCode: !!user.accessCode,
+      createdAt: user.createdAt
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Student routes
 router.post('/student/register', registerStudent);
