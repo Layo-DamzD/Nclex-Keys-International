@@ -226,22 +226,45 @@ const getSubcategoryCounts = async (req, res) => {
 // @access  Private
 const generateTest = async (req, res) => {
   try {
-    const { subcategories, selections, questionCount, timed, tutorMode } = req.body;
-    const parsedSelections = Array.isArray(selections)
-      ? selections.filter((item) => item?.category && item?.subcategory)
-      : [];
-
+    const { subcategories, selections, questionCount, timed, tutorMode, filterMode, clientNeedsSelections, includeTraditional, includeNextGen } = req.body;
+    
     let query = {};
-    if (parsedSelections.length > 0) {
-      query.$or = parsedSelections.map((item) => ({
-        category: item.category,
-        subcategory: item.subcategory
+    
+    // Handle Client Needs filtering
+    if (filterMode === 'clientNeeds' && Array.isArray(clientNeedsSelections) && clientNeedsSelections.length > 0) {
+      // Build query for client needs - match either clientNeed or clientNeedSubcategory
+      query.$or = clientNeedsSelections.map((item) => ({
+        $or: [
+          { clientNeed: item.clientNeed },
+          { clientNeedSubcategory: item.clientNeedSubcategory },
+          { clientNeedSubcategory: item.clientNeed } // Sometimes the client need IS the subcategory
+        ]
       }));
-    } else if (Array.isArray(subcategories) && subcategories.length > 0) {
-      query.subcategory = { $in: subcategories };
     } else {
-      return res.status(400).json({ message: 'Select at least one subcategory' });
+      // Standard category/subcategory filtering
+      const parsedSelections = Array.isArray(selections)
+        ? selections.filter((item) => item?.category && item?.subcategory)
+        : [];
+
+      if (parsedSelections.length > 0) {
+        query.$or = parsedSelections.map((item) => ({
+          category: item.category,
+          subcategory: item.subcategory
+        }));
+      } else if (Array.isArray(subcategories) && subcategories.length > 0) {
+        query.subcategory = { $in: subcategories };
+      } else {
+        return res.status(400).json({ message: 'Select at least one subcategory' });
+      }
     }
+
+    // Filter by question type (Traditional vs Next Gen)
+    if (includeTraditional === true && includeNextGen === false) {
+      query.isNextGen = { $ne: true };
+    } else if (includeTraditional === false && includeNextGen === true) {
+      query.isNextGen = true;
+    }
+    // If both are true or both are false, don't filter by isNextGen
 
     const matchingCount = await Question.countDocuments(query);
     if (matchingCount < questionCount) {
@@ -268,6 +291,9 @@ const generateTest = async (req, res) => {
       clozeBlanks: q.clozeBlanks,
       category: q.category,
       subcategory: q.subcategory,
+      clientNeed: q.clientNeed,
+      clientNeedSubcategory: q.clientNeedSubcategory,
+      isNextGen: q.isNextGen,
       ...(q.type === 'case-study'
         ? {
             scenario: q.scenario,
@@ -1387,44 +1413,42 @@ const getPerformanceDataDetailed = async (req, res) => {
 // @access  Private
 const getClientNeedsCounts = async (req, res) => {
   try {
-    // Aggregate counts by clientNeed and clientNeedSubcategory
+    // Aggregate counts by clientNeedSubcategory (the 8 main categories)
     const rows = await Question.aggregate([
       {
         $match: {
-          clientNeed: { $exists: true, $ne: null, $ne: '' }
+          clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' }
         }
       },
       {
         $group: {
-          _id: {
-            clientNeed: '$clientNeed',
-            clientNeedSubcategory: '$clientNeedSubcategory'
-          },
-          count: { $sum: 1 }
+          _id: '$clientNeedSubcategory',
+          count: { $sum: 1 },
+          ngnCount: {
+            $sum: { $cond: [{ $eq: ['$isNextGen', true] }, 1, 0] }
+          }
         }
       }
     ]);
 
-    // Build counts object
+    // Build counts object keyed by normalized subcategory name
     const countsByClientNeed = {};
-    const countsBySubcategory = {};
+    const ngnCountsByClientNeed = {};
 
     rows.forEach(row => {
-      const clientNeed = row._id?.clientNeed || 'Uncategorized';
-      const subcategory = row._id?.clientNeedSubcategory || 'General';
-      const count = row.count || 0;
-
-      // By client need
-      countsByClientNeed[clientNeed] = (countsByClientNeed[clientNeed] || 0) + count;
-
-      // By subcategory (normalized key)
-      const normalizedSubcat = String(subcategory).trim().toLowerCase();
-      countsBySubcategory[normalizedSubcat] = (countsBySubcategory[normalizedSubcat] || 0) + count;
+      const subcategory = row._id || 'Uncategorized';
+      const normalizedKey = String(subcategory).trim().toLowerCase()
+        .replace(/[’']/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      countsByClientNeed[normalizedKey] = row.count || 0;
+      ngnCountsByClientNeed[normalizedKey] = row.ngnCount || 0;
     });
 
     res.json({
       countsByClientNeed,
-      countsBySubcategory
+      ngnCountsByClientNeed
     });
   } catch (error) {
     console.error(error);

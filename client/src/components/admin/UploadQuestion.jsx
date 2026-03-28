@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
+import { CLIENT_NEEDS, CLIENT_NEEDS_EXTENDED } from '../../constants/ClientNeeds';
 import { resolveMediaCandidates, withCacheBust } from '../../utils/imageUpload';
 
 const QUESTION_TYPES = [
@@ -23,6 +24,9 @@ const UploadQuestion = () => {
   const [type, setType] = useState('multiple-choice');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
+  const [clientNeed, setClientNeed] = useState('');
+  const [clientNeedSubcategory, setClientNeedSubcategory] = useState('');
+  const [isNextGen, setIsNextGen] = useState(false);
   const [questionText, setQuestionText] = useState('');
   const [questionImageUrl, setQuestionImageUrl] = useState('');
   const [options, setOptions] = useState(['', '', '', '']);
@@ -61,6 +65,9 @@ const UploadQuestion = () => {
     setType(editingQuestion.type || 'multiple-choice');
     setCategory(editingQuestion.category || '');
     setSubcategory(editingQuestion.subcategory || '');
+    setClientNeed(editingQuestion.clientNeed || '');
+    setClientNeedSubcategory(editingQuestion.clientNeedSubcategory || '');
+    setIsNextGen(editingQuestion.isNextGen || false);
     setQuestionText(editingQuestion.questionText || '');
     setQuestionImageUrl(editingQuestion.questionImageUrl || '');
     setOptions(editingQuestion.options || ['', '', '', '']);
@@ -112,6 +119,11 @@ const UploadQuestion = () => {
   const handleCategoryChange = (e) => {
     setCategory(e.target.value);
     setSubcategory('');
+  };
+
+  const handleClientNeedChange = (e) => {
+    setClientNeed(e.target.value);
+    setClientNeedSubcategory('');
   };
 
   const handleOptionChange = (index, value) => {
@@ -178,6 +190,9 @@ const UploadQuestion = () => {
     setType('multiple-choice');
     setCategory('');
     setSubcategory('');
+    setClientNeed('');
+    setClientNeedSubcategory('');
+    setIsNextGen(false);
     setQuestionText('');
     setQuestionImageUrl('');
     setOptions(['', '', '', '']);
@@ -333,6 +348,9 @@ const UploadQuestion = () => {
       type,
       category,
       subcategory,
+      clientNeed,
+      clientNeedSubcategory,
+      isNextGen,
       questionText,
       questionImageUrl,
       rationale,
@@ -529,7 +547,7 @@ const UploadQuestion = () => {
 
         <div className="upload-grid-two">
           <div className="form-group">
-            <label className="form-label">Main Category</label>
+            <label className="form-label">Main Category (Subject)</label>
             <select className="form-control" value={category} onChange={handleCategoryChange} required>
               <option value="">Select Category</option>
               {Object.keys(CATEGORIES).map((cat) => (
@@ -545,6 +563,59 @@ const UploadQuestion = () => {
                 <option key={sub} value={sub}>{sub}</option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* NCLEX Client Needs Classification */}
+        <div className="form-group" style={{ marginTop: '16px', padding: '16px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+          <label className="form-label" style={{ color: '#0369a1', fontWeight: 600 }}>
+            <i className="fas fa-clipboard-list me-2"></i>
+            NCLEX Client Needs Classification (Optional)
+          </label>
+          <p className="text-muted small mb-3">
+            Categorize this question by NCLEX Client Needs framework for better test filtering.
+          </p>
+          <div className="upload-grid-two">
+            <div className="form-group">
+              <label className="form-label">Client Need Category</label>
+              <select 
+                className="form-control" 
+                value={clientNeed} 
+                onChange={handleClientNeedChange}
+              >
+                <option value="">Select Client Need</option>
+                {Object.keys(CLIENT_NEEDS).map((cn) => (
+                  <option key={cn} value={cn}>{cn}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Client Need Subcategory</label>
+              <select 
+                className="form-control" 
+                value={clientNeedSubcategory} 
+                onChange={(e) => setClientNeedSubcategory(e.target.value)}
+                disabled={!clientNeed}
+              >
+                <option value="">Select Subcategory</option>
+                {clientNeed && CLIENT_NEEDS[clientNeed]?.map((sub) => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="form-check mt-3">
+            <input
+              type="checkbox"
+              className="form-check-input"
+              id="isNextGen"
+              checked={isNextGen}
+              onChange={(e) => setIsNextGen(e.target.checked)}
+            />
+            <label className="form-check-label" htmlFor="isNextGen">
+              <strong>Next Generation (NGN) Question</strong>
+              <span className="text-muted d-block small">Check if this is a Next Generation NCLEX question type</span>
+            </label>
           </div>
         </div>
 

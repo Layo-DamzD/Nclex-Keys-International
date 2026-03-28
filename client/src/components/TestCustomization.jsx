@@ -2,30 +2,20 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../constants/Categories';
-import { CLIENT_NEEDS } from '../constants/ClientNeeds';
 
-// Fun color palette for category cards
-const CATEGORY_COLORS = [
-  { border: '#14b8a6', bg: '#f0fdfa', accent: '#0d9488' }, // teal
-  { border: '#f97316', bg: '#fff7ed', accent: '#ea580c' }, // orange
-  { border: '#a855f7', bg: '#faf5ff', accent: '#9333ea' }, // purple
-  { border: '#22c55e', bg: '#f0fdf4', accent: '#16a34a' }, // green
-  { border: '#3b82f6', bg: '#eff6ff', accent: '#1d4ed8' }, // blue
-  { border: '#ec4899', bg: '#fdf2f8', accent: '#db2777' }, // pink
-  { border: '#06b6d4', bg: '#ecfeff', accent: '#0891b2' }, // cyan
-  { border: '#eab308', bg: '#fefce8', accent: '#ca8a04' }, // yellow
-];
-
-// Color palette for Client Needs
-const CLIENT_NEEDS_COLORS = [
-  { border: '#2563eb', bg: '#eff6ff', accent: '#1d4ed8' }, // blue
-  { border: '#7c3aed', bg: '#f5f3ff', accent: '#6d28d9' }, // violet
-  { border: '#db2777', bg: '#fdf2f8', accent: '#be185d' }, // pink
-  { border: '#059669', bg: '#ecfdf5', accent: '#047857' }, // emerald
+// NCLEX Client Needs - 8 main subcategories shown in UWorld interface
+const CLIENT_NEEDS_CATEGORIES = [
+  'Management of Care',
+  'Safety and Infection Control',
+  'Health Promotion and Maintenance',
+  'Psychosocial Integrity',
+  'Basic Care and Comfort',
+  'Pharmacological and Parenteral Therapies',
+  'Reduction of Risk Potential',
+  'Physiological Adaptation'
 ];
 
 const TestCustomization = () => {
-  // Define normalizeKey FIRST before any function uses it
   const normalizeKey = (value) => {
     const base = String(value || '')
       .trim()
@@ -38,7 +28,6 @@ const TestCustomization = () => {
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Create a looser key so "immune / infectious disease" and "immune infectious disease" still match
     return base
       .replace(/[/&]/g, ' ')
       .replace(/\s+/g, ' ')
@@ -57,18 +46,20 @@ const TestCustomization = () => {
   const [usedSubcategoryCounts, setUsedSubcategoryCounts] = useState({});
   const [omittedSubcategoryCounts, setOmittedSubcategoryCounts] = useState({});
   const [countLoadError, setCountLoadError] = useState('');
-  const [visibleSummary, setVisibleSummary] = useState({
-    available: true,
-    used: true,
-    omitted: true,
-  });
-  const navigate = useNavigate();
-
-  // Filter mode: 'standard' (by Subject) or 'clientNeeds' (by NCLEX Client Needs)
-  const [filterMode, setFilterMode] = useState('standard');
-  const [selectedClientNeedPairs, setSelectedClientNeedPairs] = useState([]);
-  const [expandedClientNeed, setExpandedClientNeed] = useState(null);
+  
+  // Category tab: 'subjects' or 'clientNeeds'
+  const [categoryTab, setCategoryTab] = useState('clientNeeds');
+  
+  // Client Needs selections
+  const [selectedClientNeeds, setSelectedClientNeeds] = useState([]);
   const [clientNeedsCounts, setClientNeedsCounts] = useState({});
+  const [clientNeedsNgnCounts, setClientNeedsNgnCounts] = useState({});
+
+  // Question type filters
+  const [includeTraditional, setIncludeTraditional] = useState(true);
+  const [includeNextGen, setIncludeNextGen] = useState(true);
+
+  const navigate = useNavigate();
 
   const handleTimedToggle = (checked) => {
     setTimed(checked);
@@ -84,70 +75,34 @@ const TestCustomization = () => {
     }
   };
 
-  // Client Needs helper functions
-  const getClientNeedPairKey = (clientNeed, subcategory) => `${clientNeed}:::${subcategory}`;
-
-  const isClientNeedSubcategorySelected = (clientNeed, subcategory) =>
-    selectedClientNeedPairs.includes(getClientNeedPairKey(clientNeed, subcategory));
-
-  const getClientNeedCount = (clientNeed, subcategory) => {
-    // Map client need subcategory to question counts
-    const key = normalizeKey(subcategory);
+  // Client Needs helper
+  const getClientNeedCount = (clientNeed) => {
+    const key = normalizeKey(clientNeed);
     return clientNeedsCounts?.[key] || 0;
   };
 
-  const handleClientNeedSubcategoryToggle = (clientNeed, subcategory) => {
-    const key = getClientNeedPairKey(clientNeed, subcategory);
-    setSelectedClientNeedPairs(prev =>
-      prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key]
+  const getClientNeedNgnCount = (clientNeed) => {
+    const key = normalizeKey(clientNeed);
+    return clientNeedsNgnCounts?.[key] || 0;
+  };
+
+  const handleClientNeedToggle = (clientNeed) => {
+    setSelectedClientNeeds(prev =>
+      prev.includes(clientNeed)
+        ? prev.filter(c => c !== clientNeed)
+        : [...prev, clientNeed]
     );
   };
 
-  const handleClientNeedSelectAll = (clientNeed, subcategories) => {
-    const allSelected = subcategories.every(sub => isClientNeedSubcategorySelected(clientNeed, sub));
-    if (allSelected) {
-      const subcatKeys = new Set(subcategories.map(sub => getClientNeedPairKey(clientNeed, sub)));
-      setSelectedClientNeedPairs(prev => prev.filter(s => !subcatKeys.has(s)));
+  const handleSelectAllClientNeeds = () => {
+    if (selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length) {
+      setSelectedClientNeeds([]);
     } else {
-      const missing = subcategories
-        .map(sub => getClientNeedPairKey(clientNeed, sub))
-        .filter(key => !selectedClientNeedPairs.includes(key));
-      setSelectedClientNeedPairs(prev => [...prev, ...missing]);
+      setSelectedClientNeeds([...CLIENT_NEEDS_CATEGORIES]);
     }
   };
 
-  // Calculate totals for Client Needs mode
-  const clientNeedsTotals = useMemo(() => {
-    const totals = {};
-    Object.entries(CLIENT_NEEDS).forEach(([clientNeed, subcategories]) => {
-      const total = subcategories.reduce((sum, sub) => sum + getClientNeedCount(clientNeed, sub), 0);
-      totals[clientNeed] = total;
-    });
-    return totals;
-  }, [clientNeedsCounts]);
-
-  const selectedClientNeedsStats = useMemo(() => {
-    if (selectedClientNeedPairs.length === 0) {
-      // Calculate total from all client needs
-      let total = 0;
-      Object.entries(CLIENT_NEEDS).forEach(([clientNeed, subcategories]) => {
-        subcategories.forEach(sub => {
-          total += getClientNeedCount(clientNeed, sub);
-        });
-      });
-      return { available: total, used: 0, omitted: 0 };
-    }
-
-    return selectedClientNeedPairs.reduce((totals, pairKey) => {
-      const [clientNeed, subcategory] = pairKey.split(':::');
-      const count = getClientNeedCount(clientNeed, subcategory);
-      return {
-        ...totals,
-        available: totals.available + count,
-      };
-    }, { available: 0, used: 0, omitted: 0 });
-  }, [selectedClientNeedPairs, clientNeedsCounts]);
-
+  // Subject category helpers
   const getPairKey = (category, subcategory) => `${category}:::${subcategory}`;
 
   const isSubcategorySelected = (category, subcategory) =>
@@ -176,7 +131,6 @@ const TestCustomization = () => {
       return acc;
     }, {});
 
-
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -191,22 +145,21 @@ const TestCustomization = () => {
         const omittedRawNestedCounts = response.data?.omittedCountsByCategorySubcategory || {};
 
         setSubcategoryCounts(normalizeNestedCounts(totalRawNestedCounts));
-        // Always show your configured category/subcategory taxonomy,
-        // even when question counts are currently zero.
         setCategoryMap(CATEGORIES);
         setUsedSubcategoryCounts(normalizeNestedCounts(usedRawNestedCounts));
         setOmittedSubcategoryCounts(normalizeNestedCounts(omittedRawNestedCounts));
 
-        // Also fetch client needs counts
+        // Fetch client needs counts
         try {
           const clientNeedsResponse = await axios.get('/api/student/client-needs-counts', {
             headers: { Authorization: `Bearer ${token}` }
           });
           setClientNeedsCounts(clientNeedsResponse.data?.countsByClientNeed || {});
+          setClientNeedsNgnCounts(clientNeedsResponse.data?.ngnCountsByClientNeed || {});
         } catch (cnErr) {
           console.error('Failed to load client needs counts', cnErr);
-          // Set empty counts if endpoint doesn't exist yet
           setClientNeedsCounts({});
+          setClientNeedsNgnCounts({});
         }
       } catch (err) {
         console.error('Failed to load subcategory counts', err);
@@ -236,12 +189,34 @@ const TestCustomization = () => {
   }, [usedSubcategoryCounts, categoryMap]);
 
   const categoryColumns = useMemo(() => {
-    const cols = [[], [], []];
-    Object.entries(categoryMap).forEach((entry, index) => {
-      cols[index % 3].push(entry);
+    const cols = [[], []];
+    const entries = Object.entries(categoryMap);
+    entries.forEach((entry, index) => {
+      cols[index % 2].push(entry);
     });
     return cols;
   }, [categoryMap]);
+
+  // Client needs columns (2 columns)
+  const clientNeedsColumns = useMemo(() => {
+    const cols = [[], []];
+    CLIENT_NEEDS_CATEGORIES.forEach((clientNeed, index) => {
+      cols[index % 2].push(clientNeed);
+    });
+    return cols;
+  }, []);
+
+  // Calculate totals for Client Needs
+  const clientNeedsTotal = useMemo(() => {
+    return CLIENT_NEEDS_CATEGORIES.reduce((sum, cn) => sum + getClientNeedCount(cn), 0);
+  }, [clientNeedsCounts]);
+
+  const selectedClientNeedsTotal = useMemo(() => {
+    if (selectedClientNeeds.length === 0) {
+      return clientNeedsTotal;
+    }
+    return selectedClientNeeds.reduce((sum, cn) => sum + getClientNeedCount(cn), 0);
+  }, [selectedClientNeeds, clientNeedsCounts, clientNeedsTotal]);
 
   const selectedStats = useMemo(() => {
     const selectedPairs = selectedSubcategoryPairs.length > 0
@@ -297,21 +272,31 @@ const TestCustomization = () => {
     }
   };
 
+  const handleSelectAllSubjects = () => {
+    const allPairs = Object.entries(categoryMap).flatMap(([category, subcategories]) =>
+      subcategories.map(sub => getPairKey(category, sub))
+    );
+    if (selectedSubcategoryPairs.length === allPairs.length) {
+      setSelectedSubcategoryPairs([]);
+    } else {
+      setSelectedSubcategoryPairs(allPairs);
+    }
+  };
+
+  // Get current stats based on selected tab
+  const currentAvailable = categoryTab === 'clientNeeds' ? selectedClientNeedsTotal : selectedStats.available;
+  const maxAllowed = Math.min(questionRangeMax, currentAvailable);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check based on filter mode
-    if (filterMode === 'clientNeeds') {
-      if (selectedClientNeedPairs.length === 0) {
-        setError('Select at least one client need subcategory');
-        return;
-      }
-      if (selectedClientNeedsStats.available === 0) {
+    if (categoryTab === 'clientNeeds') {
+      if (currentAvailable === 0) {
         setError('No questions are available in the selected client needs.');
         return;
       }
-      if (questionCount > selectedClientNeedsStats.available) {
-        setError(`Only ${selectedClientNeedsStats.available} questions match your current client needs selection.`);
+      if (questionCount > currentAvailable) {
+        setError(`Only ${currentAvailable} questions match your current selection.`);
         return;
       }
     } else {
@@ -324,7 +309,7 @@ const TestCustomization = () => {
         return;
       }
       if (questionCount > selectedStats.available) {
-        setError(`Only ${selectedStats.available} questions match your current category/subcategory selection.`);
+        setError(`Only ${selectedStats.available} questions match your current selection.`);
         return;
       }
     }
@@ -339,19 +324,20 @@ const TestCustomization = () => {
     try {
       const token = localStorage.getItem('token');
 
-      if (filterMode === 'clientNeeds') {
+      if (categoryTab === 'clientNeeds') {
         // Submit with client needs
-        const clientNeedsSelections = selectedClientNeedPairs.map((pairKey) => {
-          const [clientNeed, subcategory] = pairKey.split(':::');
-          return { clientNeed, clientNeedSubcategory: subcategory };
-        });
+        const clientNeedsSelections = selectedClientNeeds.length > 0
+          ? selectedClientNeeds.map(cn => ({ clientNeed: cn, clientNeedSubcategory: cn }))
+          : CLIENT_NEEDS_CATEGORIES.map(cn => ({ clientNeed: cn, clientNeedSubcategory: cn }));
 
         const response = await axios.post('/api/student/generate-test', {
           clientNeedsSelections: clientNeedsSelections,
           filterMode: 'clientNeeds',
           questionCount,
           timed,
-          tutorMode
+          tutorMode,
+          includeTraditional,
+          includeNextGen
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -367,7 +353,9 @@ const TestCustomization = () => {
           subcategories: selections.map((item) => item.subcategory),
           questionCount,
           timed,
-          tutorMode
+          tutorMode,
+          includeTraditional,
+          includeNextGen
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -380,393 +368,386 @@ const TestCustomization = () => {
     }
   };
 
-  // Get color for category by index
-  const getCategoryColor = (index) => CATEGORY_COLORS[index % CATEGORY_COLORS.length];
-  const getClientNeedColor = (index) => CLIENT_NEEDS_COLORS[index % CLIENT_NEEDS_COLORS.length];
-
-  // Get current stats based on mode
-  const currentStats = filterMode === 'clientNeeds' ? selectedClientNeedsStats : selectedStats;
-
   return (
-    <div className="test-customization">
-      <h3 style={{ 
-        background: 'linear-gradient(135deg, #14b8a6, #3b82f6)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
+    <div className="test-customization" style={{
+      background: '#fff',
+      borderRadius: '12px',
+      padding: '24px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+    }}>
+      <h3 style={{
+        color: '#1e40af',
         fontWeight: 700,
-        marginBottom: '16px'
+        marginBottom: '20px',
+        fontSize: '1.5rem'
       }}>
-        ✨ Customize Your Test ✨
+        Create Test
       </h3>
+      
       {error && <div className="alert alert-danger">{error}</div>}
       {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
+      
       <form onSubmit={handleSubmit}>
-        {/* Filter Mode Toggle */}
-        <div className="filter-mode-toggle mb-4">
-          <div className="btn-group w-100" role="group">
-            <button
-              type="button"
-              className={`btn ${filterMode === 'standard' ? 'btn-primary' : 'btn-outline-secondary'}`}
-              onClick={() => setFilterMode('standard')}
-              style={{
-                background: filterMode === 'standard' ? 'linear-gradient(135deg, #14b8a6, #0d9488)' : 'transparent',
-                borderColor: filterMode === 'standard' ? '#14b8a6' : '#cbd5e1',
-                color: filterMode === 'standard' ? 'white' : '#475569',
-                fontWeight: 600,
-                borderRadius: '8px 0 0 8px'
-              }}
-            >
-              <i className="fas fa-book-medical me-2"></i>
-              Standard (By Subject)
-            </button>
-            <button
-              type="button"
-              className={`btn ${filterMode === 'clientNeeds' ? 'btn-primary' : 'btn-outline-secondary'}`}
-              onClick={() => setFilterMode('clientNeeds')}
-              style={{
-                background: filterMode === 'clientNeeds' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
-                borderColor: filterMode === 'clientNeeds' ? '#2563eb' : '#cbd5e1',
-                color: filterMode === 'clientNeeds' ? 'white' : '#475569',
-                fontWeight: 600,
-                borderRadius: '0 8px 8px 0'
-              }}
-            >
-              <i className="fas fa-clipboard-list me-2"></i>
-              NCLEX Client Needs
-            </button>
-          </div>
-        </div>
-
-        <div className="exam-review-filter-strip mb-4">
-          {[
-            { key: 'available', label: 'Available', count: currentStats.available },
-            { key: 'used', label: 'Used', count: currentStats.used },
-            { key: 'omitted', label: 'Omitted', count: currentStats.omitted },
-          ].map((item) => (
-            <div key={item.key} className={`exam-review-filter-pill ${visibleSummary[item.key] ? 'active' : ''}`}>
-              <input
-                type="checkbox"
-                checked={visibleSummary[item.key]}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setVisibleSummary((prev) => ({ ...prev, [item.key]: checked }));
-                }}
-              />
-              <span>{item.label}</span>
-              <strong>{visibleSummary[item.key] ? item.count : '-'}</strong>
-            </div>
-          ))}
-          <div className="exam-review-filter-total">
-            This Test Uses <strong>{Math.min(questionCount, currentStats.available)}</strong>
-          </div>
-        </div>
-
-        {/* Standard Categories Section */}
-        {filterMode === 'standard' && (
-          <div className="categories-section">
-            <label style={{ 
-              fontWeight: 600, 
-              color: '#14b8a6',
-              marginBottom: '12px',
-              fontSize: '1rem'
-            }}>
-              📚 Categories & Subcategories
-            </label>
-          <div className="category-grid">
-            {categoryColumns.map((column, colIndex) => (
-              <div key={colIndex} className="category-column">
-                {column.map(([category, subcats], cardIndex) => {
-                  const colorStyle = getCategoryColor(colIndex * 10 + cardIndex);
-                  return (
-                  <div 
-                    key={category} 
-                    className={`category-card ${expandedCategory === category ? 'expanded' : ''}`}
-                    style={{ 
-                      borderLeft: `4px solid ${colorStyle.border}`,
-                      background: `linear-gradient(135deg, ${colorStyle.bg} 0%, #ffffff 100%)`
-                    }}
-                  >
-                    <div 
-                      className="category-header" 
-                      onClick={() => toggleCategory(category)}
-                      style={{ color: colorStyle.accent }}
-                    >
-                      <i 
-                        className={`fas fa-chevron-${expandedCategory === category ? 'down' : 'right'}`}
-                        style={{ color: colorStyle.border }}
-                      ></i>
-                      <span className="fw-bold" style={{ color: colorStyle.accent }}>
-                        {category}
-                        <span
-                          className="subcategory-count-pill category-total"
-                          title={`Used in your custom tests: ${usedCategoryTotals[category] || 0}`}
-                          style={{ 
-                            background: colorStyle.border,
-                            color: 'white'
-                          }}
-                        >
-                          {categoryTotals[category] || 0}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-sm select-all-btn"
-                        style={{
-                          background: subcats.every(sub => isSubcategorySelected(category, sub)) 
-                            ? `linear-gradient(135deg, ${colorStyle.accent}, ${colorStyle.border})`
-                            : 'white',
-                          color: subcats.every(sub => isSubcategorySelected(category, sub)) 
-                            ? 'white' 
-                            : colorStyle.accent,
-                          border: `1px solid ${colorStyle.border}`,
-                          fontWeight: 600
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCategorySelectAll(category, subcats);
-                        }}
-                      >
-                        {subcats.every(sub => isSubcategorySelected(category, sub)) ? '✓ Deselect' : 'Select All'}
-                      </button>
-                    </div>
-                    {expandedCategory === category && (
-                      <div className="subcategory-list">
-                        {subcats.map(sub => (
-                          <div key={sub} className="form-check">
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              id={`${category}-${sub}`}
-                              checked={isSubcategorySelected(category, sub)}
-                              onChange={() => handleSubcategoryToggle(category, sub)}
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ 
-                                accentColor: colorStyle.border,
-                              }}
-                            />
-                            <label 
-                              className="form-check-label" 
-                              htmlFor={`${category}-${sub}`}
-                              style={{ color: '#374151' }}
-                            >
-                              <span>{sub}</span>
-                              <span
-                                className="subcategory-count-pill"
-                                title={`Used in your custom tests: ${getUsedSubcategoryCount(category, sub)}`}
-                                style={{
-                                  background: `${colorStyle.bg}`,
-                                  color: colorStyle.accent,
-                                  border: `1px solid ${colorStyle.border}`
-                                }}
-                              >
-                                {getSubcategoryCount(category, sub)}
-                              </span>
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );})}
-              </div>
-            ))}
-          </div>
-          </div>
-        )}
-
-        {/* Client Needs Section */}
-        {filterMode === 'clientNeeds' && (
-          <div className="categories-section">
-            <label style={{ 
-              fontWeight: 600, 
-              color: '#2563eb',
-              marginBottom: '12px',
-              fontSize: '1rem'
-            }}>
-              📋 NCLEX Client Needs Framework
-            </label>
-            <p className="text-muted small mb-3">
-              Select questions based on the official NCLEX Client Needs categories. This aligns with how questions are organized in the actual NCLEX exam.
-            </p>
-            <div className="category-grid">
-              {Object.entries(CLIENT_NEEDS).map(([clientNeed, subcategories], clientNeedIndex) => {
-                const colorStyle = getClientNeedColor(clientNeedIndex);
-                return (
-                  <div 
-                    key={clientNeed} 
-                    className={`category-card ${expandedClientNeed === clientNeed ? 'expanded' : ''}`}
-                    style={{ 
-                      borderLeft: `4px solid ${colorStyle.border}`,
-                      background: `linear-gradient(135deg, ${colorStyle.bg} 0%, #ffffff 100%)`
-                    }}
-                  >
-                    <div 
-                      className="category-header" 
-                      onClick={() => setExpandedClientNeed(prev => prev === clientNeed ? null : clientNeed)}
-                      style={{ color: colorStyle.accent }}
-                    >
-                      <i 
-                        className={`fas fa-chevron-${expandedClientNeed === clientNeed ? 'down' : 'right'}`}
-                        style={{ color: colorStyle.border }}
-                      ></i>
-                      <span className="fw-bold" style={{ color: colorStyle.accent }}>
-                        {clientNeed}
-                        <span
-                          className="subcategory-count-pill category-total"
-                          style={{ 
-                            background: colorStyle.border,
-                            color: 'white'
-                          }}
-                        >
-                          {clientNeedsTotals[clientNeed] || 0}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-sm select-all-btn"
-                        style={{
-                          background: subcategories.every(sub => isClientNeedSubcategorySelected(clientNeed, sub)) 
-                            ? `linear-gradient(135deg, ${colorStyle.accent}, ${colorStyle.border})`
-                            : 'white',
-                          color: subcategories.every(sub => isClientNeedSubcategorySelected(clientNeed, sub)) 
-                            ? 'white' 
-                            : colorStyle.accent,
-                          border: `1px solid ${colorStyle.border}`,
-                          fontWeight: 600
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleClientNeedSelectAll(clientNeed, subcategories);
-                        }}
-                      >
-                        {subcategories.every(sub => isClientNeedSubcategorySelected(clientNeed, sub)) ? '✓ Deselect' : 'Select All'}
-                      </button>
-                    </div>
-                    {expandedClientNeed === clientNeed && (
-                      <div className="subcategory-list">
-                        {subcategories.map(sub => (
-                          <div key={sub} className="form-check">
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              id={`${clientNeed}-${sub}`}
-                              checked={isClientNeedSubcategorySelected(clientNeed, sub)}
-                              onChange={() => handleClientNeedSubcategoryToggle(clientNeed, sub)}
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ 
-                                accentColor: colorStyle.border,
-                              }}
-                            />
-                            <label 
-                              className="form-check-label" 
-                              htmlFor={`${clientNeed}-${sub}`}
-                              style={{ color: '#374151' }}
-                            >
-                              <span>{sub}</span>
-                              <span
-                                className="subcategory-count-pill"
-                                style={{
-                                  background: `${colorStyle.bg}`,
-                                  color: colorStyle.accent,
-                                  border: `1px solid ${colorStyle.border}`
-                                }}
-                              >
-                                {getClientNeedCount(clientNeed, sub)}
-                              </span>
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <div className="controls-row">
-          <div className="question-control">
-            <label style={{ fontWeight: 600, color: '#14b8a6' }}>🎯 Questions:</label>
-            <input
-              type="text"
-              className="form-control"
-              value={questionCount}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^0-9]/g, '');
-                if (value === '') {
-                  setQuestionCount('');
-                } else {
-                  const num = parseInt(value, 10);
-                  if (!isNaN(num)) {
-                    const clamped = Math.min(Math.max(num, questionRangeMin), Math.min(questionRangeMax, currentStats.available));
-                    setQuestionCount(clamped);
-                  }
-                }
-              }}
-              onBlur={(e) => {
-                const num = parseInt(e.target.value, 10);
-                if (isNaN(num) || num < questionRangeMin) {
-                  setQuestionCount(questionRangeMin);
-                } else if (num > Math.min(questionRangeMax, currentStats.available)) {
-                  setQuestionCount(Math.min(questionRangeMax, currentStats.available));
-                }
-              }}
-              style={{ 
-                width: '100px', 
-                display: 'inline-block', 
-                marginLeft: '10px',
-                textAlign: 'center',
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                border: '2px solid #14b8a6',
-                borderRadius: '8px'
-              }}
-              placeholder="75"
-            />
-            <span className="text-muted ms-2" style={{ fontSize: '0.85rem' }}>(Min: {questionRangeMin}, Max: {Math.min(questionRangeMax, currentStats.available)})</span>
-          </div>
-
-          <div className="mode-controls">
-            <div className="form-check form-switch">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="timedSwitch"
-                checked={timed}
-                onChange={(e) => handleTimedToggle(e.target.checked)}
-              />
-              <label className="form-check-label" htmlFor="timedSwitch">Timed</label>
-            </div>
-
-            <div className="form-check form-switch">
+        {/* Test Mode Section */}
+        <div className="test-mode-section" style={{
+          marginBottom: '20px',
+          padding: '16px',
+          background: '#f8fafc',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <label style={{ fontWeight: 600, color: '#374151', marginBottom: '12px', display: 'block' }}>
+            Test Mode
+          </label>
+          <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+            <div className="form-check form-switch" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 className="form-check-input"
                 type="checkbox"
                 id="tutorSwitch"
                 checked={tutorMode}
                 onChange={(e) => handleTutorToggle(e.target.checked)}
+                style={{ width: '40px', height: '20px', cursor: 'pointer' }}
               />
-              <label className="form-check-label" htmlFor="tutorSwitch">Tutor</label>
+              <label className="form-check-label" htmlFor="tutorSwitch" style={{ fontWeight: 500 }}>Tutor</label>
+            </div>
+            <div className="form-check form-switch" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="timedSwitch"
+                checked={timed}
+                onChange={(e) => handleTimedToggle(e.target.checked)}
+                style={{ width: '40px', height: '20px', cursor: 'pointer' }}
+              />
+              <label className="form-check-label" htmlFor="timedSwitch" style={{ fontWeight: 500 }}>Timed</label>
+            </div>
+          </div>
+        </div>
+
+        {/* Question Type Section */}
+        <div className="question-type-section" style={{
+          marginBottom: '20px',
+          padding: '16px',
+          background: '#f8fafc',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <label style={{ fontWeight: 600, color: '#374151' }}>
+              Question Type
+            </label>
+            <span style={{ color: '#1e40af', fontWeight: 600, fontSize: '0.9rem' }}>
+              {currentAvailable} questions available
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '20px' }}>
+            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id="traditionalCheck"
+                checked={includeTraditional}
+                onChange={(e) => setIncludeTraditional(e.target.checked)}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <label className="form-check-label" htmlFor="traditionalCheck" style={{ fontWeight: 500 }}>
+                Traditional
+              </label>
+            </div>
+            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id="nextGenCheck"
+                checked={includeNextGen}
+                onChange={(e) => setIncludeNextGen(e.target.checked)}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <label className="form-check-label" htmlFor="nextGenCheck" style={{ fontWeight: 500 }}>
+                Next Gen
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Question Category Section */}
+        <div className="question-category-section" style={{
+          marginBottom: '20px',
+          border: '1px solid #e2e8f0',
+          borderRadius: '8px',
+          overflow: 'hidden'
+        }}>
+          {/* Tabs */}
+          <div style={{
+            display: 'flex',
+            borderBottom: '1px solid #e2e8f0',
+            background: '#f8fafc'
+          }}>
+            <button
+              type="button"
+              onClick={() => setCategoryTab('subjects')}
+              style={{
+                flex: 1,
+                padding: '12px 20px',
+                border: 'none',
+                background: categoryTab === 'subjects' ? '#fff' : 'transparent',
+                borderBottom: categoryTab === 'subjects' ? '3px solid #1e40af' : '3px solid transparent',
+                fontWeight: categoryTab === 'subjects' ? 600 : 500,
+                color: categoryTab === 'subjects' ? '#1e40af' : '#64748b',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Subjects
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategoryTab('clientNeeds')}
+              style={{
+                flex: 1,
+                padding: '12px 20px',
+                border: 'none',
+                background: categoryTab === 'clientNeeds' ? '#fff' : 'transparent',
+                borderBottom: categoryTab === 'clientNeeds' ? '3px solid #1e40af' : '3px solid transparent',
+                fontWeight: categoryTab === 'clientNeeds' ? 600 : 500,
+                color: categoryTab === 'clientNeeds' ? '#1e40af' : '#64748b',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Client Needs
+            </button>
+          </div>
+
+          {/* Select All */}
+          <div style={{
+            padding: '12px 16px',
+            borderBottom: '1px solid #e2e8f0',
+            background: '#fff'
+          }}>
+            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id="selectAllCategories"
+                checked={categoryTab === 'clientNeeds' 
+                  ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
+                  : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length
+                }
+                onChange={categoryTab === 'clientNeeds' ? handleSelectAllClientNeeds : handleSelectAllSubjects}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <label className="form-check-label" htmlFor="selectAllCategories" style={{ fontWeight: 500 }}>
+                Select All
+              </label>
             </div>
           </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            disabled={loading}
-            style={{
-              background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
-              border: 'none',
-              fontWeight: 600,
-              boxShadow: '0 4px 15px rgba(20, 184, 166, 0.3)',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            {loading ? '⏳ Generating...' : '🚀 Start Test'}
-          </button>
+          {/* Categories Content */}
+          <div style={{ padding: '16px', background: '#fff', maxHeight: '300px', overflowY: 'auto' }}>
+            {/* Client Needs Tab */}
+            {categoryTab === 'clientNeeds' && (
+              <div className="client-needs-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {clientNeedsColumns.map((column, colIndex) => (
+                  <div key={colIndex} className="client-needs-column">
+                    {column.map((clientNeed) => {
+                      const count = getClientNeedCount(clientNeed);
+                      const ngnCount = getClientNeedNgnCount(clientNeed);
+                      const isSelected = selectedClientNeeds.includes(clientNeed);
+                      
+                      return (
+                        <div key={clientNeed} className="form-check" style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 12px',
+                          background: isSelected ? '#eff6ff' : '#f8fafc',
+                          borderRadius: '6px',
+                          marginBottom: '8px',
+                          border: isSelected ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                          transition: 'all 0.2s'
+                        }}>
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            id={`cn-${clientNeed}`}
+                            checked={isSelected}
+                            onChange={() => handleClientNeedToggle(clientNeed)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <label 
+                            className="form-check-label" 
+                            htmlFor={`cn-${clientNeed}`}
+                            style={{ 
+                              flex: 1, 
+                              cursor: 'pointer',
+                              fontWeight: 500,
+                              color: '#374151'
+                            }}
+                          >
+                            {clientNeed}
+                          </label>
+                          <span style={{
+                            background: '#1e40af',
+                            color: '#fff',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600
+                          }}>
+                            {count}
+                            {ngnCount > 0 && <span style={{ opacity: 0.8 }}> | {ngnCount} NGN</span>}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Subjects Tab */}
+            {categoryTab === 'subjects' && (
+              <div className="subjects-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {categoryColumns.map((column, colIndex) => (
+                  <div key={colIndex} className="subject-column">
+                    {column.map(([category, subcats]) => (
+                      <div key={category} style={{
+                        marginBottom: '12px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        overflow: 'hidden'
+                      }}>
+                        <div
+                          onClick={() => toggleCategory(category)}
+                          style={{
+                            padding: '10px 12px',
+                            background: expandedCategory === category ? '#eff6ff' : '#f8fafc',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontWeight: 600,
+                            color: '#1e40af'
+                          }}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <i className={`fas fa-chevron-${expandedCategory === category ? 'down' : 'right'}`} style={{ fontSize: '0.75rem' }}></i>
+                            {category}
+                          </span>
+                          <span style={{
+                            background: '#1e40af',
+                            color: '#fff',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem'
+                          }}>
+                            {categoryTotals[category] || 0}
+                          </span>
+                        </div>
+                        {expandedCategory === category && (
+                          <div style={{ padding: '8px 12px', background: '#fff' }}>
+                            {subcats.map(sub => (
+                              <div key={sub} className="form-check" style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '6px 0'
+                              }}>
+                                <input
+                                  type="checkbox"
+                                  className="form-check-input"
+                                  id={`${category}-${sub}`}
+                                  checked={isSubcategorySelected(category, sub)}
+                                  onChange={() => handleSubcategoryToggle(category, sub)}
+                                  style={{ width: '16px', height: '16px' }}
+                                />
+                                <label 
+                                  className="form-check-label" 
+                                  htmlFor={`${category}-${sub}`}
+                                  style={{ flex: 1, fontSize: '0.9rem', color: '#475569' }}
+                                >
+                                  {sub}
+                                </label>
+                                <span style={{
+                                  background: '#f1f5f9',
+                                  padding: '1px 6px',
+                                  borderRadius: '10px',
+                                  fontSize: '0.7rem',
+                                  color: '#64748b'
+                                }}>
+                                  {getSubcategoryCount(category, sub)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Number of Questions */}
+        <div className="question-count-section" style={{
+          marginBottom: '20px',
+          padding: '16px',
+          background: '#f8fafc',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ fontWeight: 600, color: '#374151' }}>
+              No. of Questions
+            </label>
+            <span style={{ color: '#64748b', fontSize: '0.85rem' }}>
+              Max allowed: {maxAllowed}
+            </span>
+          </div>
+          <input
+            type="number"
+            className="form-control"
+            value={questionCount}
+            onChange={(e) => {
+              const value = parseInt(e.target.value, 10);
+              if (!isNaN(value)) {
+                setQuestionCount(Math.max(questionRangeMin, Math.min(maxAllowed, value)));
+              }
+            }}
+            min={questionRangeMin}
+            max={maxAllowed}
+            style={{
+              width: '100%',
+              marginTop: '8px',
+              padding: '10px 12px',
+              fontSize: '1rem',
+              border: '2px solid #cbd5e1',
+              borderRadius: '6px'
+            }}
+          />
+        </div>
+
+        {/* Generate Test Button */}
+        <button
+          type="submit"
+          className="btn btn-primary w-100"
+          disabled={loading}
+          style={{
+            background: '#1e40af',
+            border: 'none',
+            padding: '14px 24px',
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            borderRadius: '8px',
+            transition: 'all 0.2s'
+          }}
+        >
+          {loading ? 'Generating...' : 'GENERATE TEST'}
+        </button>
       </form>
     </div>
   );

@@ -73,6 +73,9 @@ const questionSchema = new mongoose.Schema({
   // Client Needs framework (NCLEX categorization)
   clientNeed: { type: String, default: '' }, // e.g., "Safe and Effective Care Environment"
   clientNeedSubcategory: { type: String, default: '' }, // e.g., "Management of Care"
+  
+  // Next Generation NCLEX flag
+  isNextGen: { type: Boolean, default: false },
 
   questionText: { type: String, required: true },
   questionImageUrl: { type: String, default: '' },
