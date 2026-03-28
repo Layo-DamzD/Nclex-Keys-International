@@ -25,6 +25,26 @@ const CLIENT_NEEDS_COLORS = [
 ];
 
 const TestCustomization = () => {
+  // Define normalizeKey FIRST before any function uses it
+  const normalizeKey = (value) => {
+    const base = String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[’']/g, '')
+      .replace(/\band\b/g, '&')
+      .replace(/\s*\/\s*/g, '/')
+      .replace(/\s*&\s*/g, '&')
+      .replace(/[(),.-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Create a looser key so "immune / infectious disease" and "immune infectious disease" still match
+    return base
+      .replace(/[/&]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
   const [selectedSubcategoryPairs, setSelectedSubcategoryPairs] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [questionCount, setQuestionCount] = useState(75);
@@ -127,25 +147,6 @@ const TestCustomization = () => {
       };
     }, { available: 0, used: 0, omitted: 0 });
   }, [selectedClientNeedPairs, clientNeedsCounts]);
-
-  const normalizeKey = (value) => {
-    const base = String(value || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[’']/g, '')
-      .replace(/\band\b/g, '&')
-      .replace(/\s*\/\s*/g, '/')
-      .replace(/\s*&\s*/g, '&')
-      .replace(/[(),.-]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    // Create a looser key so "immune / infectious disease" and "immune infectious disease" still match
-    return base
-      .replace(/[/&]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  };
 
   const getPairKey = (category, subcategory) => `${category}:::${subcategory}`;
 
