@@ -1101,14 +1101,14 @@
 .admin-dashboard-page,
 .admin-dashboard-page.admin-container,
 .admin-dashboard-page.admin-regular .main-content {
-  background: #dbeafe !important; /* Dull blue - matches regular admin sidebar */
+  background: #e8eef5 !important; /* Dull blue-grey - easy on the eyes */
 }
 
-/* Super Admin: Dull dark background - not sharp, easy to read */
+/* Super Admin: Grey background - professional and clean like reference but grey */
 .admin-dashboard-page.admin-super,
 .admin-dashboard-page.admin-super.admin-container,
 .admin-dashboard-page.admin-super .main-content {
-  background: #1e293b !important; /* Dull dark blue-gray - not sharp black */
+  background: #6b7280 !important; /* Medium grey - not too dark, not too light */
 }
 
 /* Default fallback */
@@ -1119,15 +1119,16 @@
   display: block !important;
 }
 
-/* Super Admin cards - lighter for contrast on dark background */
+/* Super Admin cards - lighter grey for contrast on grey background */
 .admin-dashboard-page.admin-super .header,
 .admin-dashboard-page.admin-super .stat-card,
 .admin-dashboard-page.admin-super .form-card,
 .admin-dashboard-page.admin-super .manage-questions .data-table-container,
-.admin-dashboard-page.admin-super .admin-analytics-card {
-  background: #334155 !important;
-  border-color: #475569 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+.admin-dashboard-page.admin-super .admin-analytics-card,
+.admin-dashboard-page.admin-super .all-students .data-table-container {
+  background: #9ca3af !important; /* Lighter grey cards */
+  border-color: #6b7280 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 .admin-dashboard-page.admin-super .header h1,
@@ -1136,46 +1137,60 @@
 .admin-dashboard-page.admin-super .admin-analytics-card h3,
 .admin-dashboard-page.admin-super .user-name,
 .admin-dashboard-page.admin-super .recent-question-text {
-  color: #f1f5f9 !important;
+  color: #1f2937 !important; /* Dark text on grey cards */
 }
 
 .admin-dashboard-page.admin-super .time-display .date,
 .admin-dashboard-page.admin-super .user-role-label,
 .admin-dashboard-page.admin-super .recent-question-meta,
 .admin-dashboard-page.admin-super .stat-card h3 {
-  color: #94a3b8 !important;
+  color: #4b5563 !important; /* Medium dark secondary text */
 }
 
 .admin-dashboard-page.admin-super .manage-questions .data-table thead th,
 .admin-dashboard-page.admin-super .admin-analytics-table thead th {
-  background: #1e293b !important;
-  color: #e2e8f0 !important;
-  border-bottom-color: #475569 !important;
+  background: #6b7280 !important;
+  color: #1f2937 !important;
+  border-bottom-color: #9ca3af !important;
 }
 
 .admin-dashboard-page.admin-super .manage-questions .data-table tbody td,
 .admin-dashboard-page.admin-super .admin-analytics-table td {
-  color: #e2e8f0 !important;
-  border-bottom-color: #475569 !important;
+  color: #1f2937 !important;
+  border-bottom-color: #9ca3af !important;
 }
 
 .admin-dashboard-page.admin-super .btn-outline-secondary {
-  background: #334155 !important;
-  color: #e2e8f0 !important;
-  border-color: #475569 !important;
+  background: #9ca3af !important;
+  color: #1f2937 !important;
+  border-color: #6b7280 !important;
 }
 
 .admin-dashboard-page.admin-super .upload-question .form-control,
 .admin-dashboard-page.admin-super .upload-question .type-btn,
 .admin-dashboard-page.admin-super .upload-question .option-index {
-  background: #334155 !important;
-  color: #f1f5f9 !important;
-  border-color: #475569 !important;
+  background: #d1d5db !important;
+  color: #1f2937 !important;
+  border-color: #9ca3af !important;
 }
 
 .admin-dashboard-page.admin-super .upload-question .form-label,
 .admin-dashboard-page.admin-super .upload-question .text-muted {
-  color: #94a3b8 !important;
+  color: #4b5563 !important;
+}
+
+.admin-dashboard-page.admin-super .time-display .time {
+  color: #1f2937 !important;
+}
+
+.admin-dashboard-page.admin-super .header h1 span {
+  color: #374151 !important;
+}
+
+.admin-dashboard-page.admin-super .mq-id-text {
+  background: #d1d5db !important;
+  border-color: #9ca3af !important;
+  color: #4b5563 !important;
 }
 
 .admin-dashboard-page .header,

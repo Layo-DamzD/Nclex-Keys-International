@@ -37,9 +37,6 @@ const {
   getFeedback,
   updateFeedback,
   deleteFeedback,
-  getExamSupportConversations,
-  getExamSupportMessagesAdmin,
-  sendExamSupportMessageAdmin,
   approveAdmin,
   getAllAdmins,
   getAdminStudentScope,
@@ -119,9 +116,6 @@ router.get('/logs', protect, superAdminOnly, getSystemLogs);
 router.get('/feedback', protect, superAdminOnly, getFeedback);
 router.put('/feedback/:id', protect, superAdminOnly, updateFeedback);
 router.delete('/feedback/:id', protect, superAdminOnly, deleteFeedback);
-router.get('/exam-support/conversations', protect, adminOnly, getExamSupportConversations);
-router.get('/exam-support/messages', protect, adminOnly, getExamSupportMessagesAdmin);
-router.post('/exam-support/messages', protect, adminOnly, sendExamSupportMessageAdmin);
 
 router.put('/approve/:adminId', protect, superAdminOnly, approveAdmin);
 router.get('/users/admins', protect, superAdminOnly, getAllAdmins);

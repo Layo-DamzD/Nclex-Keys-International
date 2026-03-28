@@ -9,7 +9,6 @@ import UploadQuestion from '../components/admin/UploadQuestion';
 import CaseStudyBuilder from '../components/admin/CaseStudyBuilder';
 import CreateTest from '../components/admin/CreateTest';
 import LandingPageStudio from '../components/admin/LandingPageStudio';
-import UsageAnalytics from '../components/admin/UsageAnalytics';
 import CategoryStats from '../components/admin/CategoryStats';
 import AllStudents from '../components/admin/AllStudents';
 import ProgressReport from '../components/admin/ProgressReport';
@@ -17,7 +16,6 @@ import ContentManagement from '../components/admin/ContentManagement';
 import SystemLogs from '../components/admin/SystemLogs';
 import StudentFeedback from '../components/admin/StudentFeedback';
 import AdminApproval from '../components/admin/AdminApproval';
-import ExamSupportChat from '../components/admin/ExamSupportChat';
 import AdminSettings from '../components/admin/AdminSettings';
 import PwaInstallButton from '../components/PwaInstallButton';
 import './AdminDashboard.css';
@@ -67,21 +65,17 @@ const AdminDashboard = () => {
         const token = sessionStorage.getItem('adminToken');
         if (!token) return;
 
-        const [adminsRes, feedbackRes, supportRes] = await Promise.all([
+        const [adminsRes, feedbackRes] = await Promise.all([
           axios.get('/api/admin/users/admins', {
             headers: { Authorization: `Bearer ${token}` }
           }),
           axios.get('/api/admin/feedback', {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get('/api/admin/exam-support/conversations', {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
 
         const admins = Array.isArray(adminsRes.data) ? adminsRes.data : [];
         const feedback = Array.isArray(feedbackRes.data) ? feedbackRes.data : [];
-        const supportConversations = Array.isArray(supportRes.data) ? supportRes.data : [];
 
         const pendingApprovals = admins.filter(
           (item) => item?.role !== 'superadmin' && item?.approved !== true
@@ -91,16 +85,10 @@ const AdminDashboard = () => {
           (item) => String(item?.status || '').toLowerCase() === 'new'
         ).length;
 
-        const unreadSupport = supportConversations.reduce(
-          (sum, item) => sum + Number(item?.unreadAdminCount || 0),
-          0
-        );
-
         if (mounted) {
           setSidebarBadges({
             'admin-approval': pendingApprovals,
-            'student-feedback': unreadFeedback,
-            'exam-support': unreadSupport
+            'student-feedback': unreadFeedback
           });
         }
       } catch (error) {
@@ -293,12 +281,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {activeSection === 'analytics' && (
-          <div className="section active">
-            <UsageAnalytics />
-          </div>
-        )}
-
         {activeSection === 'category-stats' && (
           <div className="section active">
             <CategoryStats />
@@ -314,12 +296,6 @@ const AdminDashboard = () => {
         {activeSection === 'progress-report' && (
           <div className="section active">
             <ProgressReport />
-          </div>
-        )}
-
-        {activeSection === 'exam-support' && (
-          <div className="section active">
-            <ExamSupportChat />
           </div>
         )}
 

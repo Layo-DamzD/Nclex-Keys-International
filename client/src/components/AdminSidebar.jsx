@@ -34,12 +34,10 @@ const AdminSidebar = ({
     {
       title: 'Analytics',
       items: [
-        { id: 'analytics', icon: 'chart-line', label: 'Usage Analytics' },
         { id: 'category-stats', icon: 'chart-pie', label: 'Category Stats' },
         { id: 'all-students', icon: 'users', label: 'Your Students' },
         { id: 'progress-report', icon: 'chart-bar', label: 'Progress Report' },
-        { id: 'content-management', icon: 'folder', label: 'Content Management' },
-        { id: 'exam-support', icon: 'comments', label: 'Exam Support Chat' }
+        { id: 'content-management', icon: 'folder', label: 'Content Management' }
       ]
     },
     {
@@ -68,12 +66,10 @@ const AdminSidebar = ({
     {
       title: 'Analytics',
       items: [
-        { id: 'analytics', icon: 'chart-line', label: 'Usage Analytics' },
         { id: 'category-stats', icon: 'chart-pie', label: 'Category Stats' },
         { id: 'all-students', icon: 'users', label: 'All Students' },
         { id: 'progress-report', icon: 'chart-bar', label: 'Progress Report' },
-        { id: 'content-management', icon: 'folder', label: 'Content Management' },
-        { id: 'exam-support', icon: 'comments', label: 'Exam Support Chat' }
+        { id: 'content-management', icon: 'folder', label: 'Content Management' }
       ]
     },
     {
