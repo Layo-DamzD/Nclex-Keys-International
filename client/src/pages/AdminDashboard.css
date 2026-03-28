@@ -1,12 +1,12 @@
 .admin-dashboard-page {
   width: 100%;
-  background: #eef6ff;
+  background: #f8fafc;
 }
 
 .admin-dashboard-page.admin-container {
   width: 100%;
   align-items: stretch;
-  background: #eef6ff;
+  background: #f8fafc;
 }
 
 .admin-dashboard-page .sidebar {
@@ -121,7 +121,7 @@
   width: 100%;
   min-height: 100vh;
   box-sizing: border-box;
-  background: #eef6ff !important;
+  background: #f8fafc !important;
   display: block !important;
 }
 
@@ -1097,18 +1097,18 @@
 }
 
 /* Admin pages use soft backgrounds based on role - easy on the eyes */
-/* Regular Admin: Soft blue-grey background */
+/* Regular Admin: Neutral background */
 .admin-dashboard-page,
 .admin-dashboard-page.admin-container,
 .admin-dashboard-page.admin-regular .main-content {
-  background: #eff6ff !important; /* Soft blue - easy on the eyes */
+  background: #f8fafc !important; /* Clean neutral background */
 }
 
 /* Super Admin: Light blue background */
 .admin-dashboard-page.admin-super,
 .admin-dashboard-page.admin-super.admin-container,
 .admin-dashboard-page.admin-super .main-content {
-  background: #dbeafe !important; /* Light blue */
+  background: #f8fafc !important; /* Clean neutral background */
 }
 
 /* Default fallback */
@@ -1119,7 +1119,7 @@
   display: block !important;
 }
 
-/* Super Admin cards - white for contrast on blue background */
+/* Super Admin cards - white with neutral borders */
 .admin-dashboard-page.admin-super .header,
 .admin-dashboard-page.admin-super .stat-card,
 .admin-dashboard-page.admin-super .form-card,
@@ -1127,8 +1127,8 @@
 .admin-dashboard-page.admin-super .admin-analytics-card,
 .admin-dashboard-page.admin-super .all-students .data-table-container {
   background: #ffffff !important; /* White cards */
-  border-color: #bfdbfe !important;
-  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.1) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
 }
 
 .admin-dashboard-page.admin-super .header h1,
@@ -1137,46 +1137,46 @@
 .admin-dashboard-page.admin-super .admin-analytics-card h3,
 .admin-dashboard-page.admin-super .user-name,
 .admin-dashboard-page.admin-super .recent-question-text {
-  color: #1e3a8a !important; /* Dark blue text */
+  color: #1e293b !important; /* Dark neutral text */
 }
 
 .admin-dashboard-page.admin-super .time-display .date,
 .admin-dashboard-page.admin-super .user-role-label,
 .admin-dashboard-page.admin-super .recent-question-meta,
 .admin-dashboard-page.admin-super .stat-card h3 {
-  color: #3b82f6 !important; /* Blue secondary text */
+  color: #64748b !important; /* Secondary text */
 }
 
 .admin-dashboard-page.admin-super .manage-questions .data-table thead th,
 .admin-dashboard-page.admin-super .admin-analytics-table thead th {
-  background: #eff6ff !important;
-  color: #1e3a8a !important;
-  border-bottom-color: #bfdbfe !important;
+  background: #f8fafc !important;
+  color: #1e293b !important;
+  border-bottom-color: #e2e8f0 !important;
 }
 
 .admin-dashboard-page.admin-super .manage-questions .data-table tbody td,
 .admin-dashboard-page.admin-super .admin-analytics-table td {
-  color: #1e3a8a !important;
-  border-bottom-color: #e0f2fe !important;
+  color: #334155 !important;
+  border-bottom-color: #e2e8f0 !important;
 }
 
 .admin-dashboard-page.admin-super .btn-outline-secondary {
   background: #ffffff !important;
-  color: #1d4ed8 !important;
-  border-color: #93c5fd !important;
+  color: #475569 !important;
+  border-color: #cbd5e1 !important;
 }
 
 .admin-dashboard-page.admin-super .upload-question .form-control,
 .admin-dashboard-page.admin-super .upload-question .type-btn,
 .admin-dashboard-page.admin-super .upload-question .option-index {
   background: #ffffff !important;
-  color: #1e3a8a !important;
-  border-color: #bfdbfe !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important;
 }
 
 .admin-dashboard-page.admin-super .upload-question .form-label,
 .admin-dashboard-page.admin-super .upload-question .text-muted {
-  color: #3b82f6 !important;
+  color: #475569 !important;
 }
 
 .admin-dashboard-page.admin-super .time-display .time {
@@ -1188,9 +1188,9 @@
 }
 
 .admin-dashboard-page.admin-super .mq-id-text {
-  background: #eff6ff !important;
-  border-color: #bfdbfe !important;
-  color: #3b82f6 !important;
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #64748b !important;
 }
 
 .admin-dashboard-page .header,

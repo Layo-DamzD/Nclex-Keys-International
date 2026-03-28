@@ -9424,9 +9424,9 @@ html[data-app-theme='dark'] .percentage.fail {
   }
 }
 
-/* Student dashboard GREEN THEME */
+/* Student dashboard - GREEN SIDEBAR + NEUTRAL BACKGROUND */
 .student-dashboard-shell {
-  background: #ecfdf5;
+  background: #f8fafc;
 }
 
 .student-dashboard-shell .sidebar {
@@ -9437,7 +9437,7 @@ html[data-app-theme='dark'] .percentage.fail {
 
 .student-dashboard-shell .sidebar-header {
   background: transparent;
-  border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .student-dashboard-shell .nav-link {
@@ -9458,19 +9458,19 @@ html[data-app-theme='dark'] .percentage.fail {
 }
 
 .student-dashboard-shell .main-content {
-  background: #ecfdf5 !important;
+  background: #f8fafc !important;
 }
 
 .student-dashboard-shell .dashboard-header,
 .student-dashboard-shell .stats-card,
 .student-dashboard-shell .progress-container {
   background: #ffffff;
-  border: 1px solid #a7f3d0;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .student-dashboard-shell .greeting h1 {
-  color: #059669;
+  color: #1e293b;
 }
 
 .student-dashboard-shell .dashboard-clock-badge {
@@ -12750,8 +12750,9 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
    Student Dashboard - Clean Readable Theme
    ============================================ */
 
+/* Clean neutral background - no color tint */
 .student-dashboard-shell {
-  background: #ecfdf5 !important;
+  background: #f8fafc !important;
   min-height: 100vh;
 }
 
@@ -12804,17 +12805,18 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
 }
 
 .student-dashboard-shell .dashboard-clock-badge {
-  background: #1e40af;
-  border: none;
-  color: #e2e8f0;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
 }
 
 .student-dashboard-shell .dashboard-clock-badge .clock-time {
-  color: #ffffff;
+  color: #1e293b;
+  font-weight: 700;
 }
 
 .student-dashboard-shell .dashboard-clock-badge .clock-date {
-  color: #bfdbfe;
+  color: #64748b;
 }
 
 .student-dashboard-shell h3,
