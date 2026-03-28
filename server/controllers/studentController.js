@@ -470,15 +470,28 @@ const getIncorrectQuestions = async (req, res) => {
     const user = await User.findById(studentId)
       .populate('incorrectQuestions.questionId');
     
-    const questions = user.incorrectQuestions.map(item => ({
-      ...item.questionId._doc,
-      attemptCount: item.attemptCount,
-      lastAttempted: item.lastAttempted
-    }));
+    if (!user || !user.incorrectQuestions) {
+      return res.json([]);
+    }
+    
+    const questions = user.incorrectQuestions
+      .filter(item => item && item.questionId) // Filter out null/missing questions
+      .map(item => ({
+        _id: item.questionId._id,
+        questionText: item.questionId.questionText,
+        category: item.questionId.category,
+        subcategory: item.questionId.subcategory,
+        type: item.questionId.type,
+        options: item.questionId.options,
+        correctAnswer: item.questionId.correctAnswer,
+        rationale: item.questionId.rationale,
+        attemptCount: item.attemptCount || 1,
+        lastAttempted: item.lastAttempted
+      }));
     
     res.json(questions);
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching incorrect questions:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
