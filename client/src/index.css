@@ -13085,21 +13085,86 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
   padding: 20px;
 }
 
-/* Create Test section - ensure visibility */
+/* Create Test section - FORCE visibility */
 .student-dashboard-shell .content-section.active {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+  min-height: 100px !important;
 }
 
 .student-dashboard-shell .test-customization {
-  background: transparent !important;
-  min-height: auto !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background: #ffffff !important;
+  min-height: 300px !important;
   max-height: none !important;
   overflow: visible !important;
   position: relative !important;
   z-index: 1 !important;
-  padding: 16px !important;
+  padding: 20px !important;
+  border: 2px solid #d1d9e6 !important;
+  border-radius: 12px !important;
+}
+
+/* Ensure all children are visible */
+.student-dashboard-shell .test-customization * {
+  visibility: visible !important;
+}
+
+.student-dashboard-shell .test-customization h3 {
+  display: block !important;
+  color: #1e293b !important;
+  font-size: 1.25rem !important;
+  margin-bottom: 16px !important;
+}
+
+/* Categories section and grid - FORCE visible */
+.student-dashboard-shell .categories-section {
+  display: block !important;
+  visibility: visible !important;
+  margin-bottom: 20px !important;
+}
+
+.student-dashboard-shell .category-grid {
+  display: grid !important;
+  visibility: visible !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 12px !important;
+  margin-top: 16px !important;
+}
+
+.student-dashboard-shell .category-card {
+  display: block !important;
+  visibility: visible !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+}
+
+.student-dashboard-shell .category-header {
+  display: flex !important;
+  visibility: visible !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+}
+
+.student-dashboard-shell .subcategory-list {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Controls row at bottom */
+.student-dashboard-shell .controls-row {
+  display: flex !important;
+  visibility: visible !important;
+  flex-wrap: wrap !important;
+  gap: 16px !important;
+  margin-top: 20px !important;
+  padding-top: 20px !important;
+  border-top: 1px solid #e2e8f0 !important;
 }
 
 /* Student content cards - white for contrast */
