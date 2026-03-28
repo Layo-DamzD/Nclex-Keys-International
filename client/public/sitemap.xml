@@ -43,14 +43,6 @@
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-  
-  <!-- Forgot Password -->
-  <url>
-    <loc>https://nclexkeysintl.com/forgot-password</loc>
-    <lastmod>2026-03-28</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
 
   <!--
     IMPORTANT: Admin pages are NOT included in this sitemap

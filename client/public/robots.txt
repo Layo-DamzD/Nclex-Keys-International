@@ -8,7 +8,6 @@ User-agent: *
 Allow: /
 Allow: /login
 Allow: /signup
-Allow: /forgot-password
 Allow: /brainiac
 Allow: /test-your-knowledge
 
@@ -18,6 +17,8 @@ Disallow: /NCLEXkeys
 Disallow: /dashboard
 Disallow: /test-session
 Disallow: /test-review/
+Disallow: /forgot-password
+Disallow: /reset-password/
 
 # Block API endpoints
 Disallow: /api/
