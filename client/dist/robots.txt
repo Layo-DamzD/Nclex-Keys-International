@@ -1,0 +1,29 @@
+# Robots.txt for NCLEX KEYS International
+# https://nclexkeysintl.com
+
+# Allow all search engines
+User-agent: *
+
+# Allow all public pages
+Allow: /
+Allow: /about
+Allow: /contact
+Allow: /login
+Allow: /signup
+Allow: /brainiac
+Allow: /test-your-knowledge
+
+# BLOCK admin pages from being indexed (IMPORTANT: Keep these private)
+Disallow: /admin/
+Disallow: /NCLEXkeys
+Disallow: /dashboard
+Disallow: /test-session
+Disallow: /test-review/
+Disallow: /forgot-password
+Disallow: /reset-password/
+
+# Block API endpoints
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://nclexkeysintl.com/sitemap.xml
