@@ -43,6 +43,8 @@ const caseStudyQuestionSchema = new mongoose.Schema({
   difficulty: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },
   highlightStart: Number,
   highlightEnd: Number,
+  highlightSelectableWords: [Number], // indices of words that are clickable
+  highlightCorrectWords: [Number], // indices of words that are correct answers
   matrixRows: [matrixRowSchema],
   matrixColumns: [String]
   ,
@@ -111,7 +113,8 @@ const questionSchema = new mongoose.Schema({
   // Highlight-specific fields
   highlightStart: Number,
   highlightEnd: Number,
-  
+  highlightSelectableWords: [Number], // indices of words that are clickable
+  highlightCorrectWords: [Number], // indices of words that are correct answers
   // IRT Parameters (for CAT)
   irtDiscrimination: { type: Number, default: 1.0 }, // a-parameter
   irtDifficulty: { type: Number, default: 0.0 },      // b-parameter

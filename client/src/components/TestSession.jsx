@@ -790,7 +790,10 @@ const TestSession = () => {
   };
   const isHighlightCorrect = (userAnswer, correctAnswer) => {
     if (!userAnswer || !correctAnswer) return false;
-    return userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+    // Support both old format (single text) and new format (pipe-separated words)
+    const user = userAnswer.trim().toLowerCase();
+    const correctOptions = correctAnswer.split('|').map(a => a.trim().toLowerCase());
+    return correctOptions.includes(user);
   };
   const isDragDropCorrect = (userAnswer, correctAnswer) => {
     if (!userAnswer || !correctAnswer) return false;
@@ -1447,21 +1450,63 @@ const TestSession = () => {
 
               {subQ.type === 'highlight' && (
                 <div className="highlight-container">
-                  <div
-                    ref={highlightRef}
-                    className="highlight-textarea"
-                    style={{ userSelect: 'text' }}
-                    onMouseUp={() => captureHighlight(subQId, subQ.highlightStart || 0, subQ.highlightEnd)}
+                  <p className="text-muted mb-3">
+                    <i className="fas fa-mouse-pointer me-2"></i>
+                    Click on the correct word in the sentence below:
+                  </p>
+                  <div 
+                    className="highlight-clickable-text"
+                    style={{ 
+                      padding: '20px', 
+                      background: '#f8fafc', 
+                      borderRadius: '12px', 
+                      border: '1px solid #e2e8f0',
+                      lineHeight: '2.2',
+                      fontSize: '16px'
+                    }}
                   >
-                    {subQ.questionText}
+                    {(() => {
+                      const words = (subQ.questionText || '').split(/\s+/).filter(w => w.trim());
+                      const selectableIndices = subQ.highlightSelectableWords || [];
+                      const currentAnswer = caseAnswers[subQId];
+                      
+                      return words.map((word, idx) => {
+                        const isSelectable = selectableIndices.includes(idx);
+                        const isSelected = currentAnswer === word || currentAnswer === String(idx);
+                        
+                        if (!isSelectable) {
+                          return <span key={idx} style={{ marginRight: '8px' }}>{word}</span>;
+                        }
+                        
+                        return (
+                          <span
+                            key={idx}
+                            onClick={() => !isPaused && handleCaseAnswer(subQId, word)}
+                            style={{
+                              display: 'inline-block',
+                              padding: '6px 14px',
+                              margin: '4px',
+                              borderRadius: '8px',
+                              cursor: isPaused ? 'not-allowed' : 'pointer',
+                              border: isSelected ? '2px solid #22c55e' : '2px solid #3b82f6',
+                              background: isSelected ? '#dcfce7' : '#dbeafe',
+                              color: isSelected ? '#166534' : '#1e40af',
+                              fontWeight: 600,
+                              transition: 'all 0.15s',
+                              boxShadow: isSelected ? '0 2px 8px rgba(34, 197, 94, 0.3)' : 'none'
+                            }}
+                          >
+                            {word}
+                            {isSelected && <i className="fas fa-check ms-2"></i>}
+                          </span>
+                        );
+                      });
+                    })()}
                   </div>
-                  <p className="text-muted mt-2">
-                    {subQ.highlightStart !== undefined && subQ.highlightEnd !== undefined ? (
-                      <>Select characters {subQ.highlightStart + 1}–{subQ.highlightEnd}.</>
-                    ) : (
-                      <>Select the correct part of the text.</>
-                    )}
-                    Selection: <strong>{caseAnswers[subQId] || 'none'}</strong>
+                  <p className="text-muted mt-3">
+                    Your selection: <strong style={{ color: caseAnswers[subQId] ? '#22c55e' : '#94a3b8' }}>
+                      {caseAnswers[subQId] || 'none selected'}
+                    </strong>
                   </p>
                 </div>
               )}
@@ -1825,21 +1870,63 @@ const TestSession = () => {
 
         {currentQ.type === 'highlight' && (
           <div className="highlight-container">
-            <div
-              ref={highlightRef}
-              className="highlight-textarea"
-              style={{ userSelect: 'text' }}
-              onMouseUp={() => captureHighlight(currentQ._id, currentQ.highlightStart || 0, currentQ.highlightEnd)}
+            <p className="text-muted mb-3">
+              <i className="fas fa-mouse-pointer me-2"></i>
+              Click on the correct word in the sentence below:
+            </p>
+            <div 
+              className="highlight-clickable-text"
+              style={{ 
+                padding: '20px', 
+                background: '#f8fafc', 
+                borderRadius: '12px', 
+                border: '1px solid #e2e8f0',
+                lineHeight: '2.2',
+                fontSize: '16px'
+              }}
             >
-              {currentQ.questionText}
+              {(() => {
+                const words = (currentQ.questionText || '').split(/\s+/).filter(w => w.trim());
+                const selectableIndices = currentQ.highlightSelectableWords || [];
+                const currentAnswer = answers[currentQ._id];
+                
+                return words.map((word, idx) => {
+                  const isSelectable = selectableIndices.includes(idx);
+                  const isSelected = currentAnswer === word || currentAnswer === String(idx);
+                  
+                  if (!isSelectable) {
+                    return <span key={idx} style={{ marginRight: '8px' }}>{word}</span>;
+                  }
+                  
+                  return (
+                    <span
+                      key={idx}
+                      onClick={() => !isPaused && handleAnswer(currentQ._id, word)}
+                      style={{
+                        display: 'inline-block',
+                        padding: '6px 14px',
+                        margin: '4px',
+                        borderRadius: '8px',
+                        cursor: isPaused ? 'not-allowed' : 'pointer',
+                        border: isSelected ? '2px solid #22c55e' : '2px solid #3b82f6',
+                        background: isSelected ? '#dcfce7' : '#dbeafe',
+                        color: isSelected ? '#166534' : '#1e40af',
+                        fontWeight: 600,
+                        transition: 'all 0.15s',
+                        boxShadow: isSelected ? '0 2px 8px rgba(34, 197, 94, 0.3)' : 'none'
+                      }}
+                    >
+                      {word}
+                      {isSelected && <i className="fas fa-check ms-2"></i>}
+                    </span>
+                  );
+                });
+              })()}
             </div>
-            <p className="text-muted mt-2">
-              {currentQ.highlightStart !== undefined && currentQ.highlightEnd !== undefined ? (
-                <>Select characters {currentQ.highlightStart + 1}–{currentQ.highlightEnd}.</>
-              ) : (
-                <>Select the correct part of the text.</>
-              )}
-              Selection: <strong>{answers[currentQ._id] || 'none'}</strong>
+            <p className="text-muted mt-3">
+              Your selection: <strong style={{ color: answers[currentQ._id] ? '#22c55e' : '#94a3b8' }}>
+                {answers[currentQ._id] || 'none selected'}
+              </strong>
             </p>
           </div>
         )}
