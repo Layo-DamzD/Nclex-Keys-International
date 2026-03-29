@@ -431,19 +431,82 @@ const TestSession = () => {
     }
   };
 
+  // Check if a case study question has been answered
+  const isCaseQuestionAnswered = (subQId) => {
+    const answer = caseAnswers[subQId];
+    if (answer === undefined || answer === null) return false;
+    if (typeof answer === 'string' && answer.trim() === '') return false;
+    if (Array.isArray(answer) && answer.length === 0) return false;
+    if (typeof answer === 'object' && Object.keys(answer).length === 0) return false;
+    return true;
+  };
+
+  // Check if Previous button should be disabled
+  const shouldDisablePrev = () => {
+    if (isPaused) return true;
+    const q = questions[currentIndex];
+    if (q?.type === 'case-study') {
+      // At the very first question
+      if (currentIndex === 0 && caseIndex === 0) return true;
+      // Check if previous question was answered
+      if (caseIndex > 0) {
+        const prevSubQ = q.questions[caseIndex - 1];
+        return isCaseQuestionAnswered(prevSubQ._id);
+      } else if (currentIndex > 0) {
+        const prevQ = questions[currentIndex - 1];
+        if (prevQ?.type === 'case-study') {
+          const lastSubQ = prevQ.questions[prevQ.questions.length - 1];
+          return isCaseQuestionAnswered(lastSubQ._id);
+        }
+        return answers[prevQ._id] !== undefined;
+      }
+    } else {
+      if (currentIndex === 0) return true;
+      const prevQ = questions[currentIndex - 1];
+      return answers[prevQ._id] !== undefined;
+    }
+    return false;
+  };
+
   const handlePrev = () => {
     if (isPaused) return;
     const q = questions[currentIndex];
     if (q?.type === 'case-study') {
       if (caseIndex > 0) {
+        // Check if the previous sub-question has been answered
+        const prevSubQ = q.questions[caseIndex - 1];
+        if (isCaseQuestionAnswered(prevSubQ._id)) {
+          // Don't allow going back to answered questions
+          return;
+        }
         setCaseIndex(caseIndex - 1);
       } else if (currentIndex > 0) {
-        setCurrentIndex(currentIndex - 1);
         const prevQ = questions[currentIndex - 1];
-        if (prevQ?.type === 'case-study') setCaseIndex(prevQ.questions.length - 1);
+        if (prevQ?.type === 'case-study') {
+          // Check if the last sub-question of previous case study has been answered
+          const lastSubQ = prevQ.questions[prevQ.questions.length - 1];
+          if (isCaseQuestionAnswered(lastSubQ._id)) {
+            return;
+          }
+          setCurrentIndex(currentIndex - 1);
+          setCaseIndex(prevQ.questions.length - 1);
+        } else {
+          // Check if the previous regular question has been answered
+          if (answers[prevQ._id] !== undefined) {
+            return;
+          }
+          setCurrentIndex(currentIndex - 1);
+        }
       }
     } else {
-      if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
+      if (currentIndex > 0) {
+        const prevQ = questions[currentIndex - 1];
+        // Don't allow going back to answered questions
+        if (answers[prevQ._id] !== undefined) {
+          return;
+        }
+        setCurrentIndex(currentIndex - 1);
+      }
     }
   };
 
@@ -1411,7 +1474,7 @@ const TestSession = () => {
           <button className="btn btn-secondary" onClick={handleExitSession}>
             Exit
           </button>
-          <button className="btn btn-secondary" onClick={handlePrev} disabled={isPaused || (currentIndex === 0 && caseIndex === 0)}>
+          <button className="btn btn-secondary" onClick={handlePrev} disabled={shouldDisablePrev()}>
             Previous
           </button>
           <button className="btn btn-primary" onClick={openQuestionNavigator} disabled={isPaused}>
@@ -1622,7 +1685,7 @@ const TestSession = () => {
         <button className="btn btn-secondary" onClick={handleExitSession}>
           Exit
         </button>
-        <button className="btn btn-secondary" onClick={handlePrev} disabled={isPaused || currentIndex === 0}>
+        <button className="btn btn-secondary" onClick={handlePrev} disabled={shouldDisablePrev()}>
           Previous
         </button>
         <button className="btn btn-primary" onClick={openQuestionNavigator} disabled={isPaused}>
