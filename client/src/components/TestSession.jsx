@@ -164,9 +164,13 @@ const TestSession = () => {
   // Highlight ref
   const highlightRef = useRef(null);
 
-  // Drag & drop state (non‑case)
-  const [dragItems, setDragItems] = useState([]);
+  // Drag & drop state (non‑case) - Two box system
+  const [dragSourceItems, setDragSourceItems] = useState([]); // Display box
+  const [dragAnswerItems, setDragAnswerItems] = useState([]);  // Answer arrangement box
+  const [dragItems, setDragItems] = useState([]); // Legacy - kept for compatibility
   const [caseDragItems, setCaseDragItems] = useState({});
+  const [caseDragSourceItems, setCaseDragSourceItems] = useState({});
+  const [caseDragAnswerItems, setCaseDragAnswerItems] = useState({});
   const hideInProgressAnswerHints = Boolean(settings?.tutorMode || settings?.timed);
 
   useEffect(() => {
@@ -365,16 +369,19 @@ const TestSession = () => {
     }
   }, []);
 
-  // Initialize drag for non‑case drag-drop
+  // Initialize drag for non‑case drag-drop - Two box system
   useEffect(() => {
     const q = questions[currentIndex];
     if (q && q.type !== 'case-study' && q.type === 'drag-drop') {
       const shuffled = [...q.options].sort(() => Math.random() - 0.5);
-      setDragItems(shuffled.map((text, idx) => ({ id: idx, text })));
+      const items = shuffled.map((text, idx) => ({ id: `item-${idx}-${Date.now()}`, text }));
+      setDragSourceItems(items); // All items start in source box
+      setDragAnswerItems([]);   // Answer box is empty
+      setDragItems(items); // Legacy compatibility
     }
   }, [currentIndex, questions]);
 
-  // Initialize drag for case study sub‑questions
+  // Initialize drag for case study sub‑questions - Two box system
   useEffect(() => {
     const q = questions[currentIndex];
     if (q?.type === 'case-study') {
@@ -383,7 +390,10 @@ const TestSession = () => {
         const key = `${q._id}-${subQ._id}`;
         if (!caseDragItems[key]) {
           const shuffled = [...subQ.options].sort(() => Math.random() - 0.5);
-          setCaseDragItems(prev => ({ ...prev, [key]: shuffled.map((text, idx) => ({ id: idx, text })) }));
+          const items = shuffled.map((text, idx) => ({ id: `case-item-${idx}-${Date.now()}`, text }));
+          setCaseDragItems(prev => ({ ...prev, [key]: items }));
+          setCaseDragSourceItems(prev => ({ ...prev, [key]: items }));
+          setCaseDragAnswerItems(prev => ({ ...prev, [key]: [] }));
         }
       }
     }
@@ -607,13 +617,73 @@ const TestSession = () => {
     }
   };
 
-  // Drag handlers for non‑case
-  const handleDragStart = (e, index) => {
+  // Drag handlers for non‑case - Two box system
+  const handleDragStart = (e, index, source) => {
+    if (isPaused) return;
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.dataTransfer.setData('source', source); // 'source' or 'answer'
+  };
+  const handleDragOver = (e) => e.preventDefault();
+  
+  // Handle drop in source box (move back from answer)
+  const handleDropToSource = (e) => {
+    if (isPaused) return;
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
+    const fromSource = e.dataTransfer.getData('source');
+    
+    if (fromSource === 'answer') {
+      // Move from answer box back to source box
+      const item = dragAnswerItems[dragIndex];
+      if (item) {
+        setDragSourceItems(prev => [...prev, item]);
+        setDragAnswerItems(prev => prev.filter((_, i) => i !== dragIndex));
+        // Update answer
+        const newAnswerItems = dragAnswerItems.filter((_, i) => i !== dragIndex);
+        handleAnswer(questions[currentIndex]._id, newAnswerItems.map(item => item.text).join('|'));
+      }
+    }
+  };
+  
+  // Handle drop in answer box (add from source or reorder within answer)
+  const handleDropToAnswer = (e, dropIndex = -1) => {
+    if (isPaused) return;
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
+    const fromSource = e.dataTransfer.getData('source');
+    
+    if (fromSource === 'source') {
+      // Move from source box to answer box
+      const item = dragSourceItems[dragIndex];
+      if (item) {
+        const newAnswerItems = dropIndex >= 0 
+          ? [...dragAnswerItems.slice(0, dropIndex), item, ...dragAnswerItems.slice(dropIndex)]
+          : [...dragAnswerItems, item];
+        setDragAnswerItems(newAnswerItems);
+        setDragSourceItems(prev => prev.filter((_, i) => i !== dragIndex));
+        handleAnswer(questions[currentIndex]._id, newAnswerItems.map(item => item.text).join('|'));
+      }
+    } else if (fromSource === 'answer') {
+      // Reorder within answer box
+      if (dragIndex === dropIndex) return;
+      const newItems = [...dragAnswerItems];
+      const [removed] = newItems.splice(dragIndex, 1);
+      if (dropIndex >= 0) {
+        newItems.splice(dropIndex, 0, removed);
+      } else {
+        newItems.push(removed);
+      }
+      setDragAnswerItems(newItems);
+      handleAnswer(questions[currentIndex]._id, newItems.map(item => item.text).join('|'));
+    }
+  };
+  
+  // Legacy handlers for compatibility
+  const handleDragStartLegacy = (e, index) => {
     if (isPaused) return;
     e.dataTransfer.setData('text/plain', index);
   };
-  const handleDragOver = (e) => e.preventDefault();
-  const handleDrop = (e, dropIndex) => {
+  const handleDropLegacy = (e, dropIndex) => {
     if (isPaused) return;
     e.preventDefault();
     const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
@@ -625,14 +695,79 @@ const TestSession = () => {
     handleAnswer(questions[currentIndex]._id, newItems.map(item => item.text).join('|'));
   };
 
-  // Drag handlers for case study sub‑questions
-  const handleCaseDragStart = (key, e, index) => {
+  // Drag handlers for case study sub‑questions - Two box system
+  const handleCaseDragStart = (key, e, index, source) => {
     if (isPaused) return;
-    e.dataTransfer.setData('text/plain', index);
+    e.dataTransfer.setData('text/plain', index.toString());
     e.dataTransfer.setData('dragKey', key);
+    e.dataTransfer.setData('source', source);
   };
   const handleCaseDragOver = (e) => e.preventDefault();
-  const handleCaseDrop = (key, e, dropIndex) => {
+  
+  // Handle drop in case study source box
+  const handleCaseDropToSource = (key, e) => {
+    if (isPaused) return;
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
+    const dragKey = e.dataTransfer.getData('dragKey');
+    const fromSource = e.dataTransfer.getData('source');
+    
+    if (dragKey !== key) return;
+    
+    if (fromSource === 'answer') {
+      const answerItems = caseDragAnswerItems[key] || [];
+      const item = answerItems[dragIndex];
+      if (item) {
+        setCaseDragSourceItems(prev => ({ ...prev, [key]: [...(prev[key] || []), item] }));
+        const newAnswerItems = answerItems.filter((_, i) => i !== dragIndex);
+        setCaseDragAnswerItems(prev => ({ ...prev, [key]: newAnswerItems }));
+        const subQ = questions[currentIndex].questions[caseIndex];
+        handleCaseAnswer(subQ._id, newAnswerItems.map(item => item.text).join('|'));
+      }
+    }
+  };
+  
+  // Handle drop in case study answer box
+  const handleCaseDropToAnswer = (key, e, dropIndex = -1) => {
+    if (isPaused) return;
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
+    const dragKey = e.dataTransfer.getData('dragKey');
+    const fromSource = e.dataTransfer.getData('source');
+    
+    if (dragKey !== key) return;
+    
+    const sourceItems = caseDragSourceItems[key] || [];
+    const answerItems = caseDragAnswerItems[key] || [];
+    
+    if (fromSource === 'source') {
+      const item = sourceItems[dragIndex];
+      if (item) {
+        const newAnswerItems = dropIndex >= 0
+          ? [...answerItems.slice(0, dropIndex), item, ...answerItems.slice(dropIndex)]
+          : [...answerItems, item];
+        setCaseDragAnswerItems(prev => ({ ...prev, [key]: newAnswerItems }));
+        setCaseDragSourceItems(prev => ({ ...prev, [key]: prev[key].filter((_, i) => i !== dragIndex) }));
+        const subQ = questions[currentIndex].questions[caseIndex];
+        handleCaseAnswer(subQ._id, newAnswerItems.map(item => item.text).join('|'));
+      }
+    } else if (fromSource === 'answer') {
+      if (dragIndex === dropIndex) return;
+      const newItems = [...answerItems];
+      const [removed] = newItems.splice(dragIndex, 1);
+      if (dropIndex >= 0) {
+        newItems.splice(dropIndex, 0, removed);
+      } else {
+        newItems.push(removed);
+      }
+      setCaseDragAnswerItems(prev => ({ ...prev, [key]: newItems }));
+      const subQ = questions[currentIndex].questions[caseIndex];
+      handleCaseAnswer(subQ._id, newItems.map(item => item.text).join('|'));
+    }
+  };
+  
+  // Legacy case drag drop for compatibility
+  const handleCaseDropLegacy = (key, e, dropIndex) => {
     if (isPaused) return;
     e.preventDefault();
     const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
@@ -1331,25 +1466,114 @@ const TestSession = () => {
                 </div>
               )}
 
-              {subQ.type === 'drag-drop' && dragList && (
-                <div className="drag-drop-container">
-                  <p className="mb-2">Drag into correct order:</p>
-                  <div className="drag-list">
-                    {dragList.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className="drag-item"
-                        draggable
-                        onDragStart={(e) => handleCaseDragStart(dragKey, e, index)}
-                        onDragOver={handleCaseDragOver}
-                        onDrop={(e) => handleCaseDrop(dragKey, e, index)}
-                      >
-                        {item.text}
+              {subQ.type === 'drag-drop' && (() => {
+                const sourceItems = caseDragSourceItems[dragKey] || [];
+                const answerItems = caseDragAnswerItems[dragKey] || [];
+                return (
+                  <div className="drag-drop-two-box-container" style={{ display: 'flex', gap: '20px', marginTop: '16px' }}>
+                    {/* Source/Display Box */}
+                    <div 
+                      className="drag-source-box" 
+                      style={{ 
+                        flex: 1, 
+                        minHeight: '120px', 
+                        padding: '16px', 
+                        border: '2px dashed #94a3b8', 
+                        borderRadius: '12px', 
+                        background: '#f8fafc' 
+                      }}
+                      onDragOver={handleCaseDragOver}
+                      onDrop={(e) => handleCaseDropToSource(dragKey, e)}
+                    >
+                      <p className="mb-2 text-muted" style={{ fontSize: '13px', fontWeight: 600 }}>Available Options</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '40px' }}>
+                        {sourceItems.length === 0 ? (
+                          <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>All items moved to answer box</span>
+                        ) : (
+                          sourceItems.map((item, index) => (
+                            <div
+                              key={item.id}
+                              className="drag-item"
+                              draggable
+                              onDragStart={(e) => handleCaseDragStart(dragKey, e, index, 'source')}
+                              style={{
+                                padding: '10px 16px',
+                                background: 'white',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                cursor: 'grab',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                fontSize: '14px'
+                              }}
+                            >
+                              {item.text}
+                            </div>
+                          ))
+                        )}
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Answer/Arrangement Box */}
+                    <div 
+                      className="drag-answer-box" 
+                      style={{ 
+                        flex: 1, 
+                        minHeight: '120px', 
+                        padding: '16px', 
+                        border: '2px solid #3b82f6', 
+                        borderRadius: '12px', 
+                        background: '#eff6ff' 
+                      }}
+                      onDragOver={handleCaseDragOver}
+                      onDrop={(e) => handleCaseDropToAnswer(dragKey, e, answerItems.length)}
+                    >
+                      <p className="mb-2" style={{ fontSize: '13px', fontWeight: 600, color: '#3b82f6' }}>Your Answer (arrange in order)</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '40px' }}>
+                        {answerItems.length === 0 ? (
+                          <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Drag items here to arrange your answer</span>
+                        ) : (
+                          answerItems.map((item, index) => (
+                            <div
+                              key={item.id}
+                              className="drag-item"
+                              draggable
+                              onDragStart={(e) => handleCaseDragStart(dragKey, e, index, 'answer')}
+                              onDragOver={handleCaseDragOver}
+                              onDrop={(e) => handleCaseDropToAnswer(dragKey, e, index)}
+                              style={{
+                                padding: '10px 16px',
+                                background: 'white',
+                                border: '1px solid #3b82f6',
+                                borderRadius: '8px',
+                                cursor: 'grab',
+                                boxShadow: '0 2px 6px rgba(59, 130, 246, 0.2)',
+                                fontSize: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                            >
+                              <span style={{ 
+                                width: '22px', 
+                                height: '22px', 
+                                borderRadius: '50%', 
+                                background: '#3b82f6', 
+                                color: 'white', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                fontSize: '12px',
+                                fontWeight: 600
+                              }}>{index + 1}</span>
+                              {item.text}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {subQ.type === 'matrix' && (
                 <div className="matrix-container">
@@ -1621,21 +1845,106 @@ const TestSession = () => {
         )}
 
         {currentQ.type === 'drag-drop' && (
-          <div className="drag-drop-container">
-            <p className="mb-2">Drag into correct order:</p>
-            <div className="drag-list">
-              {dragItems.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="drag-item"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, index)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, index)}
-                >
-                  {item.text}
-                </div>
-              ))}
+          <div className="drag-drop-two-box-container" style={{ display: 'flex', gap: '20px', marginTop: '16px' }}>
+            {/* Source/Display Box */}
+            <div 
+              className="drag-source-box" 
+              style={{ 
+                flex: 1, 
+                minHeight: '120px', 
+                padding: '16px', 
+                border: '2px dashed #94a3b8', 
+                borderRadius: '12px', 
+                background: '#f8fafc' 
+              }}
+              onDragOver={handleDragOver}
+              onDrop={handleDropToSource}
+            >
+              <p className="mb-2 text-muted" style={{ fontSize: '13px', fontWeight: 600 }}>Available Options</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '40px' }}>
+                {dragSourceItems.length === 0 ? (
+                  <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>All items moved to answer box</span>
+                ) : (
+                  dragSourceItems.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="drag-item"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index, 'source')}
+                      style={{
+                        padding: '10px 16px',
+                        background: 'white',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        cursor: 'grab',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        fontSize: '14px'
+                      }}
+                    >
+                      {item.text}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Answer/Arrangement Box */}
+            <div 
+              className="drag-answer-box" 
+              style={{ 
+                flex: 1, 
+                minHeight: '120px', 
+                padding: '16px', 
+                border: '2px solid #3b82f6', 
+                borderRadius: '12px', 
+                background: '#eff6ff' 
+              }}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDropToAnswer(e, dragAnswerItems.length)}
+            >
+              <p className="mb-2" style={{ fontSize: '13px', fontWeight: 600, color: '#3b82f6' }}>Your Answer (arrange in order)</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '40px' }}>
+                {dragAnswerItems.length === 0 ? (
+                  <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Drag items here to arrange your answer</span>
+                ) : (
+                  dragAnswerItems.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="drag-item"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index, 'answer')}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDropToAnswer(e, index)}
+                      style={{
+                        padding: '10px 16px',
+                        background: 'white',
+                        border: '1px solid #3b82f6',
+                        borderRadius: '8px',
+                        cursor: 'grab',
+                        boxShadow: '0 2px 6px rgba(59, 130, 246, 0.2)',
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <span style={{ 
+                        width: '22px', 
+                        height: '22px', 
+                        borderRadius: '50%', 
+                        background: '#3b82f6', 
+                        color: 'white', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 600
+                      }}>{index + 1}</span>
+                      {item.text}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}
