@@ -22,19 +22,21 @@ const QUESTION_TYPES = [
 ];
 
 
-const CaseStudyBuilder = () => {
+const CaseStudyBuilder = ({ editId: propEditId }) => {
   const createSectionId = () => `section-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const navigate = useNavigate();
   const location = useLocation();
-  const { id } = useParams(); // for editing
-  const editingId = id || location?.state?.caseStudyId || '';
+  const { id } = useParams(); // for editing from route params
+  
+  // Get edit ID from props (passed from AdminDashboard), route params, or location state
+  const editingId = propEditId || id || location?.state?.caseStudyId || '';
   const isEditing = Boolean(editingId);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('details'); // details, sections, questions
 
-  // List view state
+  // List view state - show list if not editing
   const [showList, setShowList] = useState(!isEditing);
   const [caseStudies, setCaseStudies] = useState([]);
   const [listLoading, setListLoading] = useState(false);
@@ -97,6 +99,15 @@ const CaseStudyBuilder = () => {
     }
   }, [editingId]);
 
+  // Handle editId prop changes from parent (AdminDashboard)
+  useEffect(() => {
+    if (propEditId) {
+      setShowList(false);
+      setLoading(true);
+      fetchCaseStudy();
+    }
+  }, [propEditId]);
+
   useEffect(() => {
     if (showList) {
       fetchCaseStudies();
@@ -135,7 +146,8 @@ const CaseStudyBuilder = () => {
   };
 
   const handleEditCaseStudy = (caseStudyId) => {
-    navigate(`/admin/dashboard?section=case-studies`, { state: { caseStudyId } });
+    // Navigate with URL parameter for proper routing
+    navigate(`/admin/dashboard?section=case-studies/edit/${caseStudyId}`);
     setShowList(false);
   };
 

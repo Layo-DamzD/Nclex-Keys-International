@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AOS from 'aos';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
@@ -12,8 +12,19 @@ import useLandingPageContent from '../hooks/useLandingPageContent';
 const HOME_SECTION_FALLBACK_ORDER = ['hero', 'stats', 'program', 'testimonials'];
 const TESTIMONIAL_SECTION_ALIASES = ['testimonials', 'successStories', 'success', 'successStory'];
 
+// Fallback components for error state
+const FallbackContent = () => (
+  <>
+    <Hero />
+    <Stats />
+    <Program />
+    <Testimonials />
+  </>
+);
+
 const Home = () => {
   const { config, hasSavedConfig, loading, error } = useLandingPageContent('home');
+  const [renderError, setRenderError] = useState(null);
   
   // Check if config has structured mode - this should work regardless of hasSavedConfig
   const isStructured = config?.mode === 'structured';
@@ -68,28 +79,56 @@ const Home = () => {
     AOS.refresh(); // Refresh AOS after dynamic content loads
   }, [isStructured, config]);
 
+  // Error boundary - if render fails, show fallback
+  useEffect(() => {
+    const handleError = (event) => {
+      console.error('[Home] Render error:', event.error);
+      setRenderError(event.error);
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   const renderStructuredSection = (sectionKey) => {
     console.log('[Home] Rendering section:', sectionKey);
     
-    if (sectionKey === 'hero') return <Hero content={sections.hero} key="hero" />;
-    if (sectionKey === 'stats') return <Stats content={sections.stats} key="stats" />;
-    if (sectionKey === 'program') return <Program content={sections.program} key="program" />;
-    if (sectionKey === 'testimonials') {
-      const testimonialContent =
-        sections.testimonials ||
-        sections.successStories ||
-        sections.success ||
-        sections.successStory ||
-        { items: [] };
-      console.log('[Home] Testimonial content being passed:', testimonialContent);
-      console.log('[Home] Testimonial items count:', testimonialContent?.items?.length || 0);
-      return <Testimonials content={testimonialContent} key="testimonials" />;
+    try {
+      if (sectionKey === 'hero') return <Hero content={sections.hero} key="hero" />;
+      if (sectionKey === 'stats') return <Stats content={sections.stats} key="stats" />;
+      if (sectionKey === 'program') return <Program content={sections.program} key="program" />;
+      if (sectionKey === 'testimonials') {
+        const testimonialContent =
+          sections.testimonials ||
+          sections.successStories ||
+          sections.success ||
+          sections.successStory ||
+          { items: [] };
+        console.log('[Home] Testimonial content being passed:', testimonialContent);
+        console.log('[Home] Testimonial items count:', testimonialContent?.items?.length || 0);
+        return <Testimonials content={testimonialContent} key="testimonials" />;
+      }
+    } catch (err) {
+      console.error(`[Home] Error rendering section ${sectionKey}:`, err);
+      return null;
     }
     return null;
   };
 
   // Show loading state instead of fallback content to prevent flicker
-  if (loading) {
+  // BUT with a maximum loading time of 3 seconds
+  const [maxLoadTimeReached, setMaxLoadTimeReached] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.log('[Home] Max load time reached, showing content');
+        setMaxLoadTimeReached(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
+  if (loading && !maxLoadTimeReached) {
     return (
       <>
         <Navbar />
@@ -110,9 +149,27 @@ const Home = () => {
     );
   }
 
-  // Show error state if API failed
-  if (error) {
-    console.error('[Home] API Error, showing fallback:', error);
+  // Show error state if API failed - render fallback content
+  if (error || renderError) {
+    console.error('[Home] Error detected, showing fallback:', error || renderError);
+    return (
+      <>
+        <Navbar />
+        <FallbackContent />
+        <Footer />
+      </>
+    );
+  }
+
+  // If still loading after max time, show fallback instead of blank
+  if (loading && maxLoadTimeReached) {
+    return (
+      <>
+        <Navbar />
+        <FallbackContent />
+        <Footer />
+      </>
+    );
   }
 
   return (
@@ -130,12 +187,7 @@ const Home = () => {
           </div>
         </>
       ) : (
-        <>
-          <Hero />
-          <Stats />
-          <Program />
-          <Testimonials />
-        </>
+        <FallbackContent />
       )}
       <Footer content={isStructured ? sections.footer : undefined} />
     </>

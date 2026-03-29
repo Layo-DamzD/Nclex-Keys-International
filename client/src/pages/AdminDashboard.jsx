@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminStats from '../components/admin/AdminStats';
@@ -25,7 +26,25 @@ import './AdminDashboard.css';
 const MOBILE_BREAKPOINT = 992;
 
 const AdminDashboard = () => {
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const [activeSection, setActiveSection] = useState(() => {
+    // Initialize from URL query param
+    const sectionParam = searchParams.get('section') || 'dashboard';
+    // Handle case-studies/edit/:id pattern
+    if (sectionParam.startsWith('case-studies')) {
+      return 'case-studies';
+    }
+    return sectionParam;
+  });
+  const [caseStudyEditId, setCaseStudyEditId] = useState(() => {
+    // Extract case study edit ID from URL or location state
+    const sectionParam = searchParams.get('section') || '';
+    if (sectionParam.startsWith('case-studies/edit/')) {
+      return sectionParam.replace('case-studies/edit/', '');
+    }
+    return location?.state?.caseStudyId || null;
+  });
   const [isMobileViewport, setIsMobileViewport] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BREAKPOINT : false
   );
@@ -42,12 +61,26 @@ const AdminDashboard = () => {
   const handleSectionChange = useCallback(
     (sectionId) => {
       setActiveSection(sectionId);
+      setCaseStudyEditId(null); // Clear edit ID when changing sections
       if (isMobileViewport) {
         setSidebarCollapsed(true);
       }
     },
     [isMobileViewport]
   );
+
+  // Listen for URL changes to handle case study editing
+  useEffect(() => {
+    const sectionParam = searchParams.get('section') || 'dashboard';
+    if (sectionParam.startsWith('case-studies/edit/')) {
+      const editId = sectionParam.replace('case-studies/edit/', '');
+      setActiveSection('case-studies');
+      setCaseStudyEditId(editId);
+    } else if (sectionParam.startsWith('case-studies')) {
+      setActiveSection('case-studies');
+      setCaseStudyEditId(location?.state?.caseStudyId || null);
+    }
+  }, [searchParams, location?.state?.caseStudyId]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
@@ -277,7 +310,7 @@ const AdminDashboard = () => {
 
         {activeSection === 'case-studies' && (
           <div className="section active">
-            <CaseStudyBuilder />
+            <CaseStudyBuilder editId={caseStudyEditId} />
           </div>
         )}
 
