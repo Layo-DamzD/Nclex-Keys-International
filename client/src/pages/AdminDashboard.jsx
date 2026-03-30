@@ -7,6 +7,7 @@ import QuickActions from '../components/admin/QuickActions';
 import RecentQuestions from '../components/admin/RecentQuestions';
 import ManageQuestions from '../components/admin/ManageQuestions';
 import UploadQuestion from '../components/admin/UploadQuestion';
+import DraftQuestions from '../components/admin/DraftQuestions';
 import CaseStudyBuilder from '../components/admin/CaseStudyBuilder';
 import CreateTest from '../components/admin/CreateTest';
 import LandingPageStudio from '../components/admin/LandingPageStudio';
@@ -305,6 +306,12 @@ const AdminDashboard = () => {
         {activeSection === 'upload' && (
           <div className="section active">
             <UploadQuestion />
+          </div>
+        )}
+
+        {activeSection === 'draft-questions' && (
+          <div className="section active">
+            <DraftQuestions />
           </div>
         )}
 
