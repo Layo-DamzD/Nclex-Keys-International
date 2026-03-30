@@ -87,6 +87,9 @@ const questionSchema = new mongoose.Schema({
   rationaleImageUrl: String,
   difficulty: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },
   
+  // Draft status - allows saving incomplete questions
+  isDraft: { type: Boolean, default: false },
+  
   // Usage statistics
   timesUsed: { type: Number, default: 0 },
   correctAttempts: { type: Number, default: 0 },

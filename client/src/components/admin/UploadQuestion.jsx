@@ -535,6 +535,58 @@ const UploadQuestion = () => {
     }
   };
 
+  // Save as Draft - minimal validation, saves current state
+  const handleSaveDraft = async () => {
+    setLoading(true);
+    setError('');
+
+    const questionData = {
+      type,
+      category,
+      subcategory,
+      clientNeed,
+      clientNeedSubcategory,
+      isNextGen,
+      questionText,
+      questionImageUrl,
+      rationale,
+      rationaleImageUrl,
+      difficulty,
+      isDraft: true, // Mark as draft
+      options: options.filter((opt) => opt.trim() !== ''),
+      correctAnswer: correctAnswer || '',
+      highlightSelectableWords,
+      highlightCorrectWords,
+      dragDropItems: dragDropItems.filter((item) => item.trim() !== ''),
+      matrixColumns,
+      matrixRows,
+      hotspotImageUrl,
+      hotspotTargets,
+      clozeTemplate,
+      clozeBlanks,
+    };
+
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      if (editingQuestion) {
+        await axios.put(`/api/admin/questions/${editingQuestion._id}`, questionData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Draft updated successfully!');
+      } else {
+        await axios.post('/api/admin/questions', questionData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Draft saved successfully!');
+      }
+      navigate('/admin/dashboard?section=questions');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save draft');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const dragPreviewItems = dragDropItems.filter((item) => item.trim() !== '');
 
   return (
@@ -1238,9 +1290,13 @@ const UploadQuestion = () => {
           </select>
         </div>
 
-        <div className="upload-actions">
+        <div className="upload-actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? 'Saving...' : editingQuestion ? 'Update Question' : 'Save Question'}
+          </button>
+          <button type="button" className="btn btn-outline-warning" onClick={handleSaveDraft} disabled={loading}>
+            <i className="fas fa-save me-1"></i>
+            {loading ? 'Saving...' : 'Save as Draft'}
           </button>
           <button type="button" className="btn btn-outline-secondary" onClick={resetForm}>Clear Form</button>
           <button type="button" className="btn btn-secondary" onClick={() => navigate('/admin/dashboard?section=questions')}>View All Questions</button>

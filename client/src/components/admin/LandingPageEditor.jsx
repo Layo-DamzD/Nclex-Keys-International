@@ -979,13 +979,50 @@ const LandingPageEditor = () => {
                 {selectedBlock.type === 'image' ? (
                   <>
                     <label>
-                      Image URL
+                      Image URL (or upload below)
                       <input
                         value={selectedBlock.src || ''}
                         onChange={(e) => updateBlock(selectedBlock.id, { src: e.target.value })}
-                        placeholder="/images/logo.png.jpg"
+                        placeholder="/images/logo.png or https://..."
                       />
                     </label>
+                    <label>
+                      Upload Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const token = sessionStorage.getItem('adminToken');
+                            const res = await axios.post('/api/admin/content/upload', formData, {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'multipart/form-data',
+                              },
+                            });
+                            const uploadedUrl = res?.data?.fileUrl;
+                            if (uploadedUrl) {
+                              updateBlock(selectedBlock.id, { src: uploadedUrl });
+                            }
+                          } catch (err) {
+                            alert('Failed to upload image: ' + (err.response?.data?.message || err.message));
+                          }
+                        }}
+                      />
+                    </label>
+                    {selectedBlock.src && (
+                      <div style={{ marginTop: '8px' }}>
+                        <img 
+                          src={selectedBlock.src} 
+                          alt="Preview" 
+                          style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        />
+                      </div>
+                    )}
                     <label>
                       Alt Text
                       <input
@@ -1028,14 +1065,52 @@ const LandingPageEditor = () => {
                           onChange={(e) => updateBlock(selectedBlock.id, { accent: e.target.value })}
                         />
                       </label>
-                      <label>
-                        Image URL
-                        <input
-                          value={selectedBlock.imageUrl || ''}
-                          onChange={(e) => updateBlock(selectedBlock.id, { imageUrl: e.target.value })}
-                        />
-                      </label>
                     </div>
+                    <label>
+                      Card Image URL (or upload below)
+                      <input
+                        value={selectedBlock.imageUrl || ''}
+                        onChange={(e) => updateBlock(selectedBlock.id, { imageUrl: e.target.value })}
+                        placeholder="/images/photo.jpg or https://..."
+                      />
+                    </label>
+                    <label>
+                      Upload Card Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const token = sessionStorage.getItem('adminToken');
+                            const res = await axios.post('/api/admin/content/upload', formData, {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'multipart/form-data',
+                              },
+                            });
+                            const uploadedUrl = res?.data?.fileUrl;
+                            if (uploadedUrl) {
+                              updateBlock(selectedBlock.id, { imageUrl: uploadedUrl });
+                            }
+                          } catch (err) {
+                            alert('Failed to upload image: ' + (err.response?.data?.message || err.message));
+                          }
+                        }}
+                      />
+                    </label>
+                    {selectedBlock.imageUrl && (
+                      <div style={{ marginTop: '8px' }}>
+                        <img 
+                          src={selectedBlock.imageUrl} 
+                          alt="Card preview" 
+                          style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        />
+                      </div>
+                    )}
                   </>
                 ) : null}
 
