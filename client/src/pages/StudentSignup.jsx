@@ -247,16 +247,12 @@ const StudentSignup = () => {
       payload.otp = otpValue;
     }
 
-    if (otpValue) {
-      // Use verify-otp-and-register endpoint
-      const response = await axios.post('/api/auth/student/verify-otp-and-register', payload);
-      // Redirect to login page with success message
-      navigate('/login', { state: { message: 'Registration successful! Please login to continue.' } });
-    } else {
-      // Use regular register endpoint (email not configured)
-      await axios.post('/api/auth/student/register', payload);
-      navigate('/login', { state: { message: 'Registration successful! Please login.' } });
-    }
+    // Always use verify-otp-and-register endpoint - it handles both cases
+    // (with OTP when email configured, without OTP when email not configured)
+    const response = await axios.post('/api/auth/student/verify-otp-and-register', payload);
+    
+    // Redirect to login page with success message
+    navigate('/login', { state: { message: 'Registration successful! Please login to continue.' } });
   };
 
   // Resend OTP
