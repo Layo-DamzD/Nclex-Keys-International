@@ -14135,3 +14135,397 @@ body.student-bg,
   background: #e8edf3 !important; /* Dull calm gray-blue - reduces brightness */
   min-height: 100vh;
 }
+
+/* ============================================
+   THEME TOGGLE BUTTON
+   ============================================ */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: #ffffff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.theme-toggle-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+  transform: scale(1.05);
+}
+
+/* Grey mode toggle button */
+.theme-grey .theme-toggle-btn {
+  background: #4b5563;
+  border-color: #6b7280;
+  color: #fbbf24;
+}
+
+.theme-grey .theme-toggle-btn:hover {
+  background: #6b7280;
+  border-color: #9ca3af;
+  color: #fcd34d;
+}
+
+/* ============================================
+   GREY MODE THEME (Not Black - Soft Grey)
+   ============================================ */
+.theme-grey {
+  --grey-bg-primary: #6b7280;
+  --grey-bg-secondary: #9ca3af;
+  --grey-bg-card: #e5e7eb;
+  --grey-text-primary: #1f2937;
+  --grey-text-secondary: #4b5563;
+  --grey-border: #d1d5db;
+  --grey-accent: #6366f1;
+}
+
+/* Grey mode body and main backgrounds */
+.theme-grey body,
+.theme-grey .student-dashboard-shell,
+.theme-grey .main-content,
+.theme-grey .admin-dashboard-shell {
+  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 50%, #d1d5db 100%) !important;
+  min-height: 100vh;
+}
+
+/* Grey mode sidebar */
+.theme-grey .sidebar,
+.theme-grey .student-sidebar,
+.theme-grey .admin-sidebar {
+  background: linear-gradient(180deg, #4b5563 0%, #6b7280 100%) !important;
+  border-right: 1px solid #9ca3af !important;
+}
+
+.theme-grey .sidebar-header,
+.theme-grey .sidebar .sidebar-header,
+.theme-grey .student-sidebar .sidebar-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(156, 163, 175, 0.3) !important;
+}
+
+.theme-grey .sidebar-nav a,
+.theme-grey .sidebar .nav-link,
+.theme-grey .student-sidebar .nav-link {
+  color: #e5e7eb !important;
+}
+
+.theme-grey .sidebar-nav a:hover,
+.theme-grey .sidebar-nav a.active,
+.theme-grey .sidebar .nav-link:hover,
+.theme-grey .sidebar .nav-link.active {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+/* Grey mode cards */
+.theme-grey .stats-card,
+.theme-grey .card,
+.theme-grey .chart-container,
+.theme-grey .test-card,
+.theme-grey .module-card,
+.theme-grey .progress-container,
+.theme-grey .content-section,
+.theme-grey .performance-container,
+.theme-grey .test-table,
+.theme-grey .dashboard-header {
+  background: #e5e7eb !important;
+  border: 1px solid #d1d5db !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Grey mode text */
+.theme-grey h1,
+.theme-grey h2,
+.theme-grey h3,
+.theme-grey h4,
+.theme-grey h5,
+.theme-grey .greeting h1 {
+  color: #1f2937 !important;
+}
+
+.theme-grey .text-muted,
+.theme-grey .greeting .text-muted {
+  color: #4b5563 !important;
+}
+
+.theme-grey p,
+.theme-grey span,
+.theme-grey li,
+.theme-grey label {
+  color: #374151 !important;
+}
+
+/* Grey mode form controls */
+.theme-grey .form-control,
+.theme-grey .form-select,
+.theme-grey input,
+.theme-grey select,
+.theme-grey textarea {
+  background: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+  color: #1f2937 !important;
+}
+
+.theme-grey .form-control:focus,
+.theme-grey .form-select:focus,
+.theme-grey input:focus,
+.theme-grey select:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+
+/* Grey mode buttons */
+.theme-grey .btn-primary {
+  background: #6366f1 !important;
+  border-color: #6366f1 !important;
+  color: #ffffff !important;
+}
+
+.theme-grey .btn-primary:hover {
+  background: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+}
+
+.theme-grey .btn-outline-primary {
+  background: transparent !important;
+  border-color: #6366f1 !important;
+  color: #6366f1 !important;
+}
+
+.theme-grey .btn-outline-primary:hover {
+  background: #6366f1 !important;
+  color: #ffffff !important;
+}
+
+.theme-grey .btn-secondary,
+.theme-grey .btn-outline-secondary {
+  background: #9ca3af !important;
+  border-color: #9ca3af !important;
+  color: #1f2937 !important;
+}
+
+.theme-grey .btn-secondary:hover,
+.theme-grey .btn-outline-secondary:hover {
+  background: #6b7280 !important;
+  border-color: #6b7280 !important;
+}
+
+/* Grey mode tables */
+.theme-grey .data-table,
+.theme-grey .test-table,
+.theme-grey table {
+  background: #e5e7eb !important;
+}
+
+.theme-grey .data-table th,
+.theme-grey .test-table th,
+.theme-grey table th {
+  background: #d1d5db !important;
+  color: #1f2937 !important;
+  border-color: #9ca3af !important;
+}
+
+.theme-grey .data-table td,
+.theme-grey .test-table td,
+.theme-grey table td {
+  background: #e5e7eb !important;
+  color: #374151 !important;
+  border-color: #d1d5db !important;
+}
+
+.theme-grey .data-table tr:hover td,
+.theme-grey .test-table tr:hover td,
+.theme-grey table tr:hover td {
+  background: #d1d5db !important;
+}
+
+/* Grey mode test interface */
+.theme-grey .test-interface,
+.theme-grey .question-container,
+.theme-grey .options-container {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+.theme-grey .option {
+  background: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+  color: #1f2937 !important;
+}
+
+.theme-grey .option:hover {
+  background: #e5e7eb !important;
+  border-color: #6366f1 !important;
+}
+
+.theme-grey .option.selected {
+  background: #c7d2fe !important;
+  border-color: #6366f1 !important;
+}
+
+/* Grey mode modals */
+.theme-grey .modal-content {
+  background: #e5e7eb !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.theme-grey .modal-header {
+  background: #d1d5db !important;
+  border-color: #9ca3af !important;
+}
+
+.theme-grey .modal-footer {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+/* Grey mode alerts */
+.theme-grey .alert {
+  border-color: #d1d5db !important;
+}
+
+.theme-grey .alert-warning {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.theme-grey .alert-danger {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.theme-grey .alert-success {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+}
+
+.theme-grey .alert-info {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+}
+
+/* Grey mode badges */
+.theme-grey .badge {
+  background: #9ca3af !important;
+  color: #1f2937 !important;
+}
+
+.theme-grey .badge.bg-success {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.theme-grey .badge.bg-warning {
+  background: #f59e0b !important;
+  color: #1f2937 !important;
+}
+
+.theme-grey .badge.bg-danger {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+/* Grey mode dropdown */
+.theme-grey .dropdown-menu {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+.theme-grey .dropdown-item {
+  color: #374151 !important;
+}
+
+.theme-grey .dropdown-item:hover {
+  background: #d1d5db !important;
+  color: #1f2937 !important;
+}
+
+/* Grey mode profile section */
+.theme-grey .profile-card,
+.theme-grey .profile-section {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+/* Grey mode stats cards with accent colors */
+.theme-grey .stats-card.stat-total {
+  border-left: 4px solid #6366f1 !important;
+}
+
+.theme-grey .stats-card.stat-average {
+  border-left: 4px solid #10b981 !important;
+}
+
+.theme-grey .stats-card.stat-best {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.theme-grey .stats-card.stat-questions {
+  border-left: 4px solid #ec4899 !important;
+}
+
+/* Keep text readable in grey mode */
+.theme-grey .stats-card .stat-value,
+.theme-grey .stats-card .stat-label {
+  color: #1f2937 !important;
+}
+
+/* Grey mode study materials */
+.theme-grey .study-materials .card {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+.theme-grey .study-materials .card-footer {
+  background: #d1d5db !important;
+  border-color: #d1d5db !important;
+}
+
+/* Grey mode feedback modal */
+.theme-grey .student-feedback-modal {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+.theme-grey .student-feedback-modal .modal-card {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+/* Grey mode notification dropdown */
+.theme-grey .dashboard-notification-dropdown {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+.theme-grey .dashboard-notification-dropdown-item {
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+}
+
+.theme-grey .dashboard-notification-dropdown-item:hover {
+  background: #e5e7eb !important;
+}
+
+/* Grey mode activity feed */
+.theme-grey .activity-item,
+.theme-grey .activity-feed-item {
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Grey mode week review popup */
+.theme-grey .weekly-review-popup,
+.theme-grey .student-notification-popup-card {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+/* End of Grey Mode Styles */

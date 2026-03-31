@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const AppThemeContext = createContext(null);
+
+// Grey mode theme storage
+const GREY_MODE_KEY = 'nclexkeys:grey-mode';
 
 const isThemeExcludedRoute = (pathname = '') => {
   // Landing page keeps purple gradient
@@ -34,7 +37,38 @@ export const AppThemeProvider = ({ children }) => {
   const location = useLocation();
   const isThemeEnabled = !isThemeExcludedRoute(location.pathname);
   const isAdminPage = isAdminRoute(location.pathname);
+  
+  // Grey mode state
+  const [isGreyMode, setIsGreyMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem(GREY_MODE_KEY);
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
 
+  // Apply grey mode class
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+
+    if (isGreyMode && isThemeEnabled) {
+      root.classList.add('theme-grey');
+      body.classList.add('theme-grey');
+    } else {
+      root.classList.remove('theme-grey');
+      body.classList.remove('theme-grey');
+    }
+
+    try {
+      localStorage.setItem(GREY_MODE_KEY, String(isGreyMode));
+    } catch {
+      // Ignore
+    }
+  }, [isGreyMode, isThemeEnabled]);
+
+  // Apply route-based theme
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
@@ -56,7 +90,7 @@ export const AppThemeProvider = ({ children }) => {
         const userStr = localStorage.getItem('user');
         if (userStr) {
           const user = JSON.parse(userStr);
-          if (user.role === 'super-admin') {
+          if (user.role === 'super-admin' || user.role === 'superadmin') {
             root.setAttribute('data-admin-role', 'super-admin');
             body.classList.add('admin-super-bg');
           } else {
@@ -78,12 +112,18 @@ export const AppThemeProvider = ({ children }) => {
     }
   }, [isThemeEnabled, isAdminPage, location.pathname]);
 
+  const toggleGreyMode = () => {
+    setIsGreyMode(prev => !prev);
+  };
+
   const value = useMemo(
     () => ({
       isThemeEnabled,
       isAdminPage,
+      isGreyMode,
+      toggleGreyMode,
     }),
-    [isThemeEnabled, isAdminPage]
+    [isThemeEnabled, isAdminPage, isGreyMode]
   );
 
   return <AppThemeContext.Provider value={value}>{children}</AppThemeContext.Provider>;

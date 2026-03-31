@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PwaInstallButton from './PwaInstallButton';
+import { useAppTheme } from '../context/AppThemeContext';
 
 const DashboardHeader = ({
   userName,
@@ -15,6 +16,7 @@ const DashboardHeader = ({
   const notificationMenuRef = useRef(null);
   const currentDate = new Date().toLocaleDateString('en-GB');
   const unreadLabel = unreadNotificationCount > 99 ? '99+' : String(unreadNotificationCount);
+  const { isGreyMode, toggleGreyMode } = useAppTheme();
 
   useEffect(() => {
     const updateTime = () => {
@@ -66,6 +68,17 @@ const DashboardHeader = ({
         <p className="mb-0 text-muted">{daysUntilExam}</p>
       </div>
       <div className="header-actions">
+        {/* Theme Toggle */}
+        <button
+          type="button"
+          className="theme-toggle-btn"
+          onClick={toggleGreyMode}
+          aria-label={isGreyMode ? 'Switch to light mode' : 'Switch to grey mode'}
+          title={isGreyMode ? 'Switch to light mode' : 'Switch to grey mode'}
+        >
+          <i className={`fas ${isGreyMode ? 'fa-sun' : 'fa-moon'}`}></i>
+        </button>
+        
         <PwaInstallButton
           variant="dashboard"
           className="dashboard-install-app-btn"
