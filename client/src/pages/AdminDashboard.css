@@ -1058,7 +1058,7 @@
 
 /* Super Admin - Deep Blue theme */
 .admin-dashboard-page:not(.admin-regular) .sidebar {
-  background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
+  background: linear-gradient(180deg, #7c3aed 0%, #4c1d95 50%, #1e1b4b 100%);
 }
 
 .admin-dashboard-page:not(.admin-regular) .sidebar-header {
@@ -1067,33 +1067,38 @@
 
 .admin-dashboard-page:not(.admin-regular) .nav-link.active {
   background: #fff;
-  color: #1d4ed8;
-  box-shadow: 0 2px 8px rgba(29, 78, 216, 0.3);
+  color: #7c3aed;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
 }
 
 .admin-dashboard-page:not(.admin-regular) .user-avatar {
-  background: #1d4ed8;
-  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
+  background: linear-gradient(135deg, #7c3aed, #4c1d95);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
 }
 
 .admin-dashboard-page:not(.admin-regular) .btn-primary {
-  background: #1d4ed8;
+  background: #7c3aed;
 }
 
 .admin-dashboard-page:not(.admin-regular) .btn-primary:hover {
-  background: #1e40af;
+  background: #6d28d9;
 }
 
 .admin-dashboard-page:not(.admin-regular) .header h1 span {
-  color: #1d4ed8;
+  color: #7c3aed;
 }
 
 .admin-dashboard-page:not(.admin-regular) .time-display .time {
-  color: #1d4ed8;
+  color: #7c3aed;
 }
 
 .admin-dashboard-page:not(.admin-regular) .stat-card {
-  border-top-color: #1d4ed8 !important;
+  border-top-color: #7c3aed !important;
+}
+
+.admin-dashboard-page:not(.admin-regular) .logo-icon {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  color: #fff;
 }
 
 /* Admin pages use soft backgrounds based on role - easy on the eyes */
@@ -1352,9 +1357,162 @@ html[data-app-theme='dark'] .admin-dashboard-page.admin-regular .sidebar-header 
   background: transparent;
 }
 
-/* Dark mode - Super Admin stays deep blue */
+/* Dark mode - Super Admin stays purple gradient black */
 html[data-app-theme='dark'] .admin-dashboard-page:not(.admin-regular) .sidebar {
-  background: linear-gradient(180deg, #1e40af 0%, #1d4ed8 100%);
+  background: linear-gradient(180deg, #7c3aed 0%, #4c1d95 50%, #1e1b4b 100%);
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page:not(.admin-regular) .sidebar-header {
+  background: transparent;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page:not(.admin-regular) .nav-link.active {
+  background: #fff;
+  color: #7c3aed;
+}
+
+html[data-app-theme='dark'] .admin-dashboard-page:not(.admin-regular) .user-avatar {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+}
+
+/* theme-grey class support for Admin Dashboard */
+.theme-grey .admin-dashboard-page,
+.theme-grey .admin-dashboard-page.admin-container,
+.theme-grey .admin-dashboard-page .main-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f1a 100%) !important;
+}
+
+.theme-grey .admin-dashboard-page .header,
+.theme-grey .admin-dashboard-page .stat-card,
+.theme-grey .admin-dashboard-page .form-card,
+.theme-grey .admin-dashboard-page .manage-questions .data-table-container,
+.theme-grey .admin-dashboard-page .admin-analytics-card,
+.theme-grey .admin-dashboard-page .all-students .data-table-container {
+  background: #2d2d44 !important;
+  border-color: #3f3f5a !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.theme-grey .admin-dashboard-page .header h1,
+.theme-grey .admin-dashboard-page .stat-number,
+.theme-grey .admin-dashboard-page .admin-section-title,
+.theme-grey .admin-dashboard-page .admin-analytics-card h3,
+.theme-grey .admin-dashboard-page .user-name,
+.theme-grey .admin-dashboard-page .recent-question-text {
+  color: #f1f5f9 !important;
+}
+
+.theme-grey .admin-dashboard-page .time-display .date,
+.theme-grey .admin-dashboard-page .user-role-label,
+.theme-grey .admin-dashboard-page .recent-question-meta,
+.theme-grey .admin-dashboard-page .stat-card h3,
+.theme-grey .admin-dashboard-page .bulk-import-help,
+.theme-grey .admin-dashboard-page .admin-analytics-subtitle {
+  color: #94a3b8 !important;
+}
+
+.theme-grey .admin-dashboard-page .btn-outline-secondary {
+  background: #3f3f5a !important;
+  color: #f1f5f9 !important;
+  border-color: #3f3f5a !important;
+}
+
+.theme-grey .admin-dashboard-page .btn-outline-secondary:hover {
+  background: #4f4f6a !important;
+}
+
+.theme-grey .admin-dashboard-page .form-control,
+.theme-grey .admin-dashboard-page .form-select,
+.theme-grey .admin-dashboard-page select.form-control,
+.theme-grey .admin-dashboard-page textarea.form-control {
+  background: #1a1a2e !important;
+  color: #f1f5f9 !important;
+  border-color: #3f3f5a !important;
+}
+
+.theme-grey .admin-dashboard-page .form-control::placeholder {
+  color: #64748b !important;
+}
+
+.theme-grey .admin-dashboard-page .manage-questions .data-table thead th,
+.theme-grey .admin-dashboard-page .admin-analytics-table thead th {
+  background: #1a1a2e !important;
+  color: #f1f5f9 !important;
+  border-bottom-color: #3f3f5a !important;
+}
+
+.theme-grey .admin-dashboard-page .manage-questions .data-table tbody td,
+.theme-grey .admin-dashboard-page .admin-analytics-table td {
+  color: #e2e8f0 !important;
+  border-bottom-color: #3f3f5a !important;
+  background: transparent !important;
+}
+
+.theme-grey .admin-dashboard-page .mq-id-text {
+  background: #1a1a2e !important;
+  border-color: #3f3f5a !important;
+  color: #94a3b8 !important;
+}
+
+.theme-grey .admin-dashboard-page .upload-question .form-control,
+.theme-grey .admin-dashboard-page .upload-question .type-btn,
+.theme-grey .admin-dashboard-page .upload-question .option-index {
+  background: #1a1a2e !important;
+  color: #f1f5f9 !important;
+  border-color: #3f3f5a !important;
+}
+
+.theme-grey .admin-dashboard-page .upload-question .form-label,
+.theme-grey .admin-dashboard-page .upload-question .text-muted {
+  color: #94a3b8 !important;
+}
+
+.theme-grey .admin-dashboard-page .upload-question .type-btn.active {
+  background: #6366f1 !important;
+  border-color: #6366f1 !important;
+  color: #fff !important;
+}
+
+/* Dark mode - Regular Admin sidebar stays blue */
+.theme-grey .admin-dashboard-page.admin-regular .sidebar {
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%) !important;
+}
+
+/* Dark mode - Super Admin sidebar stays purple gradient black */
+.theme-grey .admin-dashboard-page:not(.admin-regular) .sidebar {
+  background: linear-gradient(180deg, #7c3aed 0%, #4c1d95 50%, #1e1b4b 100%) !important;
+}
+
+.theme-grey .admin-dashboard-page:not(.admin-regular) .nav-link.active {
+  background: #fff !important;
+  color: #7c3aed !important;
+}
+
+.theme-grey .admin-dashboard-page:not(.admin-regular) .user-avatar {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed) !important;
+}
+
+.theme-grey .admin-dashboard-page .all-students .data-table tbody td {
+  background: transparent !important;
+  border-bottom-color: #3f3f5a !important;
+}
+
+.theme-grey .admin-dashboard-page .all-students .data-table thead th {
+  background: #1a1a2e !important;
+  color: #f1f5f9 !important;
+}
+
+.theme-grey .admin-dashboard-page .all-students h1,
+.theme-grey .admin-dashboard-page .all-students h3,
+.theme-grey .admin-dashboard-page .all-students h4,
+.theme-grey .admin-dashboard-page .all-students th,
+.theme-grey .admin-dashboard-page .all-students td,
+.theme-grey .admin-dashboard-page .all-students strong {
+  color: #e2e8f0 !important;
+}
+
+.theme-grey .admin-dashboard-page .all-students .text-muted {
+  color: #94a3b8 !important;
 }
 
 html[data-app-theme='dark'] .admin-dashboard-page .form-control,
