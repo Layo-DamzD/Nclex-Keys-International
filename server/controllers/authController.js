@@ -815,8 +815,7 @@ const sendStudentSignupOtp = async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    // Check if a STUDENT (not pending_verification) already exists with this email
-    // Only block if there's an actual student account, not a pending verification record
+    // Check if a STUDENT already exists with this email
     const existingStudent = await User.findOne({ 
       email: exactRegex(email), 
       role: 'student' 
@@ -825,7 +824,7 @@ const sendStudentSignupOtp = async (req, res) => {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
-    // VALIDATE ACCESS CODE FIRST - so users know early if their code is wrong
+    // VALIDATE ACCESS CODE FIRST
     console.log('[SEND OTP] Access code check:', { 
       provided: normalizeAccessCode(accessCode), 
       expected: normalizeAccessCode(STUDENT_SIGNUP_ACCESS_CODE),
@@ -839,38 +838,61 @@ const sendStudentSignupOtp = async (req, res) => {
       });
     }
 
-    // Check if email is configured
+    // Check if email is configured - if NOT, skip OTP entirely
     if (!isEmailConfigured()) {
-      // If email not configured, allow signup without OTP
-      console.log('[SEND OTP] Email not configured, skipping OTP');
+      console.log('[SEND OTP] Email not configured, skipping OTP - allowing direct signup');
       return res.json({ 
-        message: 'OTP sent successfully',
+        message: 'Proceeding with registration',
         emailConfigured: false,
-        skipOtp: true
+        skipOtp: true  // This tells frontend to skip OTP step
       });
     }
 
+    // Email IS configured - proceed with OTP flow
     // Generate OTP and hash it
     const otp = generateOtp();
     const hashedOtp = await hashValue(otp);
 
-    // Delete any existing pending_verification user for this email first
-    // This ensures a clean slate for each OTP request
-    await User.deleteMany({ 
-      email: exactRegex(email), 
-      role: 'pending_verification' 
-    });
-    console.log('[SEND OTP] Cleaned up old pending_verification users for:', email);
+    // Try to delete any existing users with this email that have expired OTP
+    try {
+      await User.deleteMany({ 
+        email: exactRegex(email), 
+        role: 'pending_verification',
+        emailVerificationExpire: { $lt: Date.now() }
+      });
+    } catch (delErr) {
+      console.log('[SEND OTP] Could not delete expired pending users (may not exist):', delErr.message);
+    }
 
-    // Create a new temporary user record with OTP (not fully registered yet)
-    await User.create({
-      email,
-      emailVerificationCode: hashedOtp,
-      emailVerificationExpire: Date.now() + 10 * 60 * 1000, // 10 minutes
-      role: 'pending_verification',
-      name: 'pending', // Required field, will be updated on registration
-      password: 'pending' // Required field, will be updated on registration
-    });
+    // Try to find or create a pending verification record
+    // Use findOneAndUpdate with upsert to avoid enum validation issues
+    let pendingUser = await User.findOne({ email: exactRegex(email) });
+    
+    if (pendingUser && pendingUser.role === 'student') {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    if (pendingUser) {
+      // Update existing record with new OTP
+      pendingUser.emailVerificationCode = hashedOtp;
+      pendingUser.emailVerificationExpire = Date.now() + 10 * 60 * 1000;
+      await pendingUser.save();
+    } else {
+      // Create new pending record - use 'student' role but mark as unverified
+      // This avoids enum validation issues
+      pendingUser = await User.create({
+        email,
+        emailVerificationCode: hashedOtp,
+        emailVerificationExpire: Date.now() + 10 * 60 * 1000, // 10 minutes
+        role: 'student',
+        name: req.body?.name || 'Pending Verification',
+        password: await hashValue(crypto.randomBytes(32).toString('hex')), // Random temp password
+        emailVerified: false,
+        country: 'pending' // Temp value, will be updated on verification
+      });
+    }
+
+    console.log('[SEND OTP] Created/updated pending verification record for:', email);
 
     // Send OTP email
     console.log('[SEND OTP] Sending OTP email to:', email);
@@ -882,6 +904,8 @@ const sendStudentSignupOtp = async (req, res) => {
 
     if (!emailResult.sent) {
       console.error('[SEND OTP] Failed to send email:', emailResult);
+      // Delete the pending user since email failed
+      await User.deleteOne({ _id: pendingUser._id });
       return res.status(500).json({ 
         message: 'Failed to send OTP email. Please try again.',
         reason: emailResult.reason 
@@ -906,7 +930,7 @@ const verifyOtpAndRegisterStudent = async (req, res) => {
   try {
     const { name, email, password, program, phone, country, examDate, deviceId, deviceLabel, accessCode, otp } = req.body;
 
-    console.log('[VERIFY OTP] Request received:', { email, hasOtp: !!otp });
+    console.log('[VERIFY OTP] Request received:', { email, hasOtp: !!otp, name, country });
 
     // Validate required fields
     if (!name || !email || !password || !country || !accessCode) {
@@ -920,34 +944,107 @@ const verifyOtpAndRegisterStudent = async (req, res) => {
       });
     }
 
-    // Check if user already exists with role student
-    const existingStudent = await User.findOne({ email: exactRegex(email), role: 'student' });
-    if (existingStudent) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
+    // If email is NOT configured, skip OTP entirely and create user directly
+    if (!isEmailConfigured()) {
+      console.log('[VERIFY OTP] Email not configured, creating user directly without OTP');
+      
+      // Check if verified student already exists
+      const existingVerified = await User.findOne({ 
+        email: exactRegex(email), 
+        role: 'student',
+        $or: [
+          { emailVerified: true },
+          { country: { $ne: 'pending' } }
+        ]
+      });
+      
+      if (existingVerified) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
 
-    // If email is configured, verify OTP
-    if (isEmailConfigured() && otp) {
-      const pendingUser = await User.findOne({
+      // Delete any unverified/pending users with this email
+      await User.deleteMany({ 
         email: exactRegex(email),
-        emailVerificationExpire: { $gt: Date.now() }
+        emailVerified: false
       });
 
-      if (!pendingUser || !pendingUser.emailVerificationCode) {
-        return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
+      // Create the student account directly
+      const normalizedDeviceId = normalizeDeviceId(deviceId);
+      const trustedDevices = normalizedDeviceId
+        ? [{
+            deviceId: normalizedDeviceId,
+            label: normalizeDeviceLabel(deviceLabel) || 'Signup Device',
+            verifiedAt: new Date(),
+            lastUsedAt: new Date()
+          }]
+        : [];
+
+      const user = await User.create({
+        name,
+        email,
+        password,
+        role: 'student',
+        program,
+        phone,
+        country: String(country).trim(),
+        examDate: examDate || null,
+        trustedDevices,
+        subscriptionStartDate: new Date(),
+        emailVerified: false
+      });
+
+      const claimedLead = await claimLatestPublicTestResultForUser(user);
+      if (claimedLead) {
+        await user.save();
       }
 
-      const otpMatches = await bcrypt.compare(String(otp), pendingUser.emailVerificationCode);
-      if (!otpMatches) {
-        return res.status(401).json({ message: 'Invalid OTP. Please try again.' });
-      }
+      // Send welcome email (fire and forget)
+      sendStudentWelcomeEmail({
+        to: user.email,
+        name: user.name,
+        isSelfSignup: true
+      }).catch((err) => console.error('Failed to send welcome email:', err));
 
-      // Delete the pending verification user so we can create the actual student
-      await User.deleteOne({ _id: pendingUser._id });
-      console.log('[VERIFY OTP] Deleted pending verification user for:', email);
+      console.log('[VERIFY OTP] Registration successful (no OTP) for:', email);
+      
+      return res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        examDate: user.examDate,
+        country: user.country,
+        subscriptionStartDate: user.subscriptionStartDate,
+        subscriptionExpiresAt: new Date(new Date(user.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
+        emailVerified: false,
+        token: generateToken(user._id),
+        redirectToLogin: true
+      });
     }
 
-    // Create the student account
+    // Email IS configured - verify OTP
+    console.log('[VERIFY OTP] Email configured, verifying OTP');
+    
+    // Find the pending user (created during send-otp)
+    const pendingUser = await User.findOne({
+      email: exactRegex(email),
+      emailVerificationExpire: { $gt: Date.now() }
+    });
+
+    console.log('[VERIFY OTP] Found pending user:', pendingUser ? { id: pendingUser._id, hasCode: !!pendingUser.emailVerificationCode } : null);
+
+    if (!pendingUser || !pendingUser.emailVerificationCode) {
+      return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
+    }
+
+    const otpMatches = await bcrypt.compare(String(otp), pendingUser.emailVerificationCode);
+    console.log('[VERIFY OTP] OTP matches:', otpMatches);
+    
+    if (!otpMatches) {
+      return res.status(401).json({ message: 'Invalid OTP. Please try again.' });
+    }
+
+    // Update the pending user with actual registration data
     const normalizedDeviceId = normalizeDeviceId(deviceId);
     const trustedDevices = normalizedDeviceId
       ? [{
@@ -958,47 +1055,47 @@ const verifyOtpAndRegisterStudent = async (req, res) => {
         }]
       : [];
 
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: 'student',
-      program,
-      phone,
-      country: String(country).trim(),
-      examDate: examDate || null,
-      trustedDevices,
-      subscriptionStartDate: new Date(),
-      emailVerified: isEmailConfigured() && otp
-    });
+    // Update the existing user record instead of creating new one
+    pendingUser.name = name;
+    pendingUser.password = password; // Will be hashed by pre-save hook
+    pendingUser.program = program;
+    pendingUser.phone = phone;
+    pendingUser.country = String(country).trim();
+    pendingUser.examDate = examDate || null;
+    pendingUser.trustedDevices = trustedDevices;
+    pendingUser.subscriptionStartDate = new Date();
+    pendingUser.emailVerified = true;
+    pendingUser.emailVerificationCode = undefined;
+    pendingUser.emailVerificationExpire = undefined;
 
-    const claimedLead = await claimLatestPublicTestResultForUser(user);
+    await pendingUser.save();
+
+    const claimedLead = await claimLatestPublicTestResultForUser(pendingUser);
     if (claimedLead) {
-      await user.save();
+      await pendingUser.save();
     }
 
-    // Send welcome email to new student (fire and forget)
+    // Send welcome email (fire and forget)
     sendStudentWelcomeEmail({
-      to: user.email,
-      name: user.name,
+      to: pendingUser.email,
+      name: pendingUser.name,
       isSelfSignup: true
     }).catch((err) => console.error('Failed to send welcome email:', err));
 
     console.log('[VERIFY OTP] Registration successful for:', email);
     
-    // Return success - frontend will redirect to login page
     res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      examDate: user.examDate,
-      country: user.country,
-      subscriptionStartDate: user.subscriptionStartDate,
-      subscriptionExpiresAt: new Date(new Date(user.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
-      emailVerified: user.emailVerified,
-      token: generateToken(user._id),
-      redirectToLogin: true  // Signal to frontend to redirect to login
+      _id: pendingUser._id,
+      name: pendingUser.name,
+      email: pendingUser.email,
+      role: pendingUser.role,
+      examDate: pendingUser.examDate,
+      country: pendingUser.country,
+      subscriptionStartDate: pendingUser.subscriptionStartDate,
+      subscriptionExpiresAt: new Date(new Date(pendingUser.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
+      emailVerified: true,
+      token: generateToken(pendingUser._id),
+      redirectToLogin: true
     });
   } catch (error) {
     console.error('Error in verify and register:', error);
