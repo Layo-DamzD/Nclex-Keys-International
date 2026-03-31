@@ -129,7 +129,11 @@ const TestSession = () => {
   const dashboardReturnPath = settings?.returnTo || '/dashboard';
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(settings.timed ? settings.totalQuestions * 60 : null);
+  // 2 minutes per question for NCLEX-style timing (was 1 minute which is too short)
+  const [timeLeft, setTimeLeft] = useState(settings.timed ? settings.totalQuestions * 120 : null);
+  // Per-question time tracking
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [questionTimeSpent, setQuestionTimeSpent] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [results, setResults] = useState([]);
   const [submittedResultId, setSubmittedResultId] = useState('');
@@ -168,6 +172,11 @@ const TestSession = () => {
   const [dragItems, setDragItems] = useState([]);
   const [caseDragItems, setCaseDragItems] = useState({});
   const hideInProgressAnswerHints = Boolean(settings?.tutorMode || settings?.timed);
+
+  // Reset question start time when question changes
+  useEffect(() => {
+    setQuestionStartTime(Date.now());
+  }, [currentIndex, caseIndex]);
 
   useEffect(() => {
     const blockEvent = (event) => {
@@ -418,7 +427,17 @@ const TestSession = () => {
 
   const handleNext = () => {
     if (isPaused) return;
+    // Track time spent on current question before moving
     const q = questions[currentIndex];
+    if (q) {
+      const timeSpentOnQuestion = Math.round((Date.now() - questionStartTime) / 1000);
+      setQuestionTimeSpent(prev => ({
+        ...prev,
+        [q._id]: (prev[q._id] || 0) + timeSpentOnQuestion
+      }));
+    }
+    setQuestionStartTime(Date.now());
+    
     if (q?.type === 'case-study') {
       if (caseIndex < q.questions.length - 1) {
         setCaseIndex(caseIndex + 1);
@@ -433,7 +452,17 @@ const TestSession = () => {
 
   const handlePrev = () => {
     if (isPaused) return;
+    // Track time spent on current question before moving
     const q = questions[currentIndex];
+    if (q) {
+      const timeSpentOnQuestion = Math.round((Date.now() - questionStartTime) / 1000);
+      setQuestionTimeSpent(prev => ({
+        ...prev,
+        [q._id]: (prev[q._id] || 0) + timeSpentOnQuestion
+      }));
+    }
+    setQuestionStartTime(Date.now());
+    
     if (q?.type === 'case-study') {
       if (caseIndex > 0) {
         setCaseIndex(caseIndex - 1);
@@ -512,6 +541,17 @@ const TestSession = () => {
   };
 
   const goToQuestion = (index) => {
+    // Track time spent on current question before jumping
+    const q = questions[currentIndex];
+    if (q) {
+      const timeSpentOnQuestion = Math.round((Date.now() - questionStartTime) / 1000);
+      setQuestionTimeSpent(prev => ({
+        ...prev,
+        [q._id]: (prev[q._id] || 0) + timeSpentOnQuestion
+      }));
+    }
+    setQuestionStartTime(Date.now());
+    
     setCurrentIndex(index);
     setCaseIndex(0);
     setShowNavigatorModal(false);
@@ -584,6 +624,36 @@ const TestSession = () => {
   };
 
   // Correctness helpers
+  // Normalize answer to letter format (A, B, C, D, etc.)
+  // Handles: "A", "a", "1", 1, "Option 1", "option 1", etc.
+  const normalizeToLetter = (answer) => {
+    if (answer === null || answer === undefined) return '';
+    const str = String(answer).trim().toUpperCase();
+    
+    // Already a letter (A-Z)
+    if (/^[A-Z]$/.test(str)) return str;
+    
+    // Number format (1-26) -> convert to letter
+    const numMatch = str.match(/^(\d+)$/);
+    if (numMatch) {
+      const num = parseInt(numMatch[1], 10);
+      if (num >= 1 && num <= 26) {
+        return String.fromCharCode(64 + num); // 1->A, 2->B, etc.
+      }
+    }
+    
+    // "Option X" or "OPTION X" format
+    const optionMatch = str.match(/OPTION\s*(\d+)/i);
+    if (optionMatch) {
+      const num = parseInt(optionMatch[1], 10);
+      if (num >= 1 && num <= 26) {
+        return String.fromCharCode(64 + num);
+      }
+    }
+    
+    return str; // Return as-is if no match
+  };
+  
   const isFillBlankCorrect = (userAnswer, correctAnswer) => {
     if (!userAnswer || !correctAnswer) return false;
     const user = userAnswer.trim().toLowerCase();
@@ -622,11 +692,12 @@ const TestSession = () => {
   };
 
   const evaluateSataAnswer = (userAnswer, correctAnswer) => {
+    // Normalize all answers to letter format
     const user = Array.isArray(userAnswer)
-      ? [...new Set(userAnswer.map((v) => String(v || '').trim()).filter(Boolean))]
+      ? [...new Set(userAnswer.map((v) => normalizeToLetter(v)).filter(Boolean))]
       : [];
     const correct = Array.isArray(correctAnswer)
-      ? [...new Set(correctAnswer.map((v) => String(v || '').trim()).filter(Boolean))]
+      ? [...new Set(correctAnswer.map((v) => normalizeToLetter(v)).filter(Boolean))]
       : [];
 
     const totalMarks = Math.max(correct.length, 1);
@@ -662,7 +733,10 @@ const TestSession = () => {
           const userAnswer = caseAnswers[subQ._id];
           let isCorrect = false;
           if (subQ.type === 'multiple-choice') {
-            isCorrect = userAnswer === subQ.correctAnswer;
+            // Normalize both answers to letter format (handles "2" vs "B" differences)
+            const normalizedUser = normalizeToLetter(userAnswer);
+            const normalizedCorrect = normalizeToLetter(subQ.correctAnswer);
+            isCorrect = normalizedUser === normalizedCorrect && normalizedUser !== '';
           } else if (subQ.type === 'sata') {
             const sata = evaluateSataAnswer(userAnswer, subQ.correctAnswer);
             isCorrect = sata.isCorrect;
@@ -709,13 +783,17 @@ const TestSession = () => {
             hotspotTargets: subQ.hotspotTargets,
             clozeTemplate: subQ.clozeTemplate,
             clozeBlanks: subQ.clozeBlanks,
+            timeSpentSeconds: questionTimeSpent[subQ._id] || 0,
           });
         });
       } else {
         const userAnswer = answers[q._id];
         let isCorrect = false;
         if (q.type === 'multiple-choice') {
-          isCorrect = userAnswer === q.correctAnswer;
+          // Normalize both answers to letter format (handles "2" vs "B" differences)
+          const normalizedUser = normalizeToLetter(userAnswer);
+          const normalizedCorrect = normalizeToLetter(q.correctAnswer);
+          isCorrect = normalizedUser === normalizedCorrect && normalizedUser !== '';
         } else if (q.type === 'sata') {
           const sata = evaluateSataAnswer(userAnswer, q.correctAnswer);
           isCorrect = sata.isCorrect;
@@ -761,6 +839,7 @@ const TestSession = () => {
           hotspotTargets: q.hotspotTargets,
           clozeTemplate: q.clozeTemplate,
           clozeBlanks: q.clozeBlanks,
+          timeSpentSeconds: questionTimeSpent[q._id] || 0,
         });
       }
     });
@@ -777,7 +856,7 @@ const TestSession = () => {
         answers: { ...answers, ...caseAnswers },
         results: allResults,
         totalQuestions: allResults.length,
-        timeTaken: settings.timed ? (settings.totalQuestions * 60 - timeLeft) / 60 : 0,
+        timeTaken: settings.timed ? (settings.totalQuestions * 120 - timeLeft) / 60 : 0,
         passed: (earnedTotal / possibleTotal) >= 0.7,
         isCustomTest: !settings?.fromPreparedTest,
         proctoring: isProctored ? {

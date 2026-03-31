@@ -242,15 +242,32 @@ const StudentDashboard = () => {
     };
   }, [loading, user?._id]);
 
+  // Show welcome celebration only once per user (stored in database)
   useEffect(() => {
     if (loading || !user?._id) return;
 
-    const seenKey = `student-welcome-celebration:${user._id}`;
-    if (localStorage.getItem(seenKey) === 'done') return;
+    // Check if user has already seen welcome (from database via login response)
+    if (user.hasSeenWelcome) return;
 
     setShowWelcomeCelebration(true);
-    localStorage.setItem(seenKey, 'done');
-  }, [loading, user?._id, user?.createdAt]);
+  }, [loading, user?._id, user?.hasSeenWelcome]);
+
+  // Mark welcome as seen when user dismisses it
+  const handleWelcomeClose = async () => {
+    setShowWelcomeCelebration(false);
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await axios.post('/api/student/mark-welcome-seen', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        // Refresh user data to ensure hasSeenWelcome is updated in context
+        refreshUser();
+      }
+    } catch (error) {
+      console.error('Failed to mark welcome as seen:', error);
+    }
+  };
 
   useEffect(() => {
     if (loading || !user?._id) return;
@@ -372,7 +389,7 @@ const StudentDashboard = () => {
 
       {showWelcomeCelebration && (
         <div className="student-notification-popup-overlay" role="dialog" aria-modal="true" aria-label="Welcome celebration">
-          <div className="student-notification-popup-backdrop" onClick={() => setShowWelcomeCelebration(false)} />
+          <div className="student-notification-popup-backdrop" onClick={handleWelcomeClose} />
           <div className="student-notification-popup-card">
             <div className="student-notification-popup-header">
               <div className="student-notification-popup-icon"><i className="fas fa-champagne-glasses" /></div>
@@ -380,7 +397,7 @@ const StudentDashboard = () => {
                 <div className="student-notification-popup-eyebrow">🎉 Welcome</div>
                 <h3>We are happy to have you on-board!</h3>
               </div>
-              <button type="button" className="student-notification-popup-close" onClick={() => setShowWelcomeCelebration(false)} aria-label="Close">
+              <button type="button" className="student-notification-popup-close" onClick={handleWelcomeClose} aria-label="Close">
                 <i className="fas fa-times" />
               </button>
             </div>
@@ -388,7 +405,7 @@ const StudentDashboard = () => {
               <p>Pop champagne 🍾 — your NCLEX journey starts here. We are excited to support your success.</p>
             </div>
             <div className="student-notification-popup-footer">
-              <button type="button" className="btn btn-primary" onClick={() => setShowWelcomeCelebration(false)}>Let&apos;s Go</button>
+              <button type="button" className="btn btn-primary" onClick={handleWelcomeClose}>Let&apos;s Go</button>
             </div>
           </div>
         </div>

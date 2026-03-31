@@ -1523,6 +1523,25 @@ const getQuestionStatusCounts = async (req, res) => {
   }
 };
 
+// @desc    Mark welcome celebration as seen
+// @route   POST /api/student/mark-welcome-seen
+// @access  Private
+const markWelcomeSeen = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const user = await User.findById(studentId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    user.hasSeenWelcome = true;
+    await user.save();
+    res.json({ success: true, message: 'Welcome marked as seen' });
+  } catch (error) {
+    console.error('Error marking welcome as seen:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getRecentTests,
@@ -1556,5 +1575,6 @@ module.exports = {
   getExamSupportMessages,
   sendExamSupportMessage,
   getClientNeedsCounts,
-  getQuestionStatusCounts
+  getQuestionStatusCounts,
+  markWelcomeSeen
 };

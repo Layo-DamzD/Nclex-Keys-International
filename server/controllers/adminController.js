@@ -8,6 +8,7 @@ const Activity = require('../models/Activity');
 const ExamSupportMessage = require('../models/ExamSupportMessage');
 const Image = require('../models/Image');
 const { sendPushNotificationMulticast } = require('../services/firebaseAdmin');
+const { sendStudentWelcomeEmail } = require('../services/emailService');
 const fs = require('fs');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
@@ -1023,6 +1024,13 @@ const createStudentByAdmin = async (req, res) => {
       examDate,
       subscriptionStartDate,
     });
+
+    // Send welcome email to new student (fire and forget)
+    sendStudentWelcomeEmail({
+      to: user.email,
+      name: user.name,
+      isSelfSignup: false
+    }).catch((err) => console.error('Failed to send welcome email:', err));
 
     res.status(201).json({
       message: 'Student account created and activated successfully',

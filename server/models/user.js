@@ -72,7 +72,13 @@ const userSchema = new mongoose.Schema({
     percentage: { type: Number, default: 0 },
     submittedAt: { type: Date, default: null },
     reviewedAt: { type: Date, default: null }
-  }
+  },
+  // Track if user has seen the welcome celebration (persists across devices)
+  hasSeenWelcome: { type: Boolean, default: false },
+  // Email verification for self-signup
+  emailVerified: { type: Boolean, default: false },
+  emailVerificationCode: { type: String },
+  emailVerificationExpire: { type: Date }
 });
 
 userSchema.pre('save', async function () {

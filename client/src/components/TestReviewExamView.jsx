@@ -1,6 +1,36 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 
+// Normalize answer to letter format (A, B, C, D, etc.)
+// Handles: "A", "a", "1", 1, "Option 1", "option 1", etc.
+const normalizeToLetter = (answer) => {
+  if (answer === null || answer === undefined) return '';
+  const str = String(answer).trim().toUpperCase();
+  
+  // Already a letter (A-Z)
+  if (/^[A-Z]$/.test(str)) return str;
+  
+  // Number format (1-26) -> convert to letter
+  const numMatch = str.match(/^(\d+)$/);
+  if (numMatch) {
+    const num = parseInt(numMatch[1], 10);
+    if (num >= 1 && num <= 26) {
+      return String.fromCharCode(64 + num); // 1->A, 2->B, etc.
+    }
+  }
+  
+  // "Option X" or "OPTION X" format
+  const optionMatch = str.match(/OPTION\s*(\d+)/i);
+  if (optionMatch) {
+    const num = parseInt(optionMatch[1], 10);
+    if (num >= 1 && num <= 26) {
+      return String.fromCharCode(64 + num);
+    }
+  }
+  
+  return str; // Return as-is if no match
+};
+
 const normalizeTypeLabel = (type) => {
   if (!type) return 'Unknown';
   return String(type)
@@ -472,8 +502,17 @@ const TestReviewExamView = ({
                   const letter = String.fromCharCode(65 + idx);
                   const userAns = active.userAnswer;
                   const correctAns = active.correctAnswer;
-                  const selected = Array.isArray(userAns) ? userAns.includes(letter) : userAns === letter;
-                  const correct = Array.isArray(correctAns) ? correctAns.includes(letter) : correctAns === letter;
+                  
+                  // Normalize answers for comparison (handles "2" vs "B" differences)
+                  const normalizedUser = Array.isArray(userAns) 
+                    ? userAns.map(v => normalizeToLetter(v))
+                    : normalizeToLetter(userAns);
+                  const normalizedCorrect = Array.isArray(correctAns)
+                    ? correctAns.map(v => normalizeToLetter(v))
+                    : normalizeToLetter(correctAns);
+                  
+                  const selected = Array.isArray(normalizedUser) ? normalizedUser.includes(letter) : normalizedUser === letter;
+                  const correct = Array.isArray(normalizedCorrect) ? normalizedCorrect.includes(letter) : normalizedCorrect === letter;
                   const isWrong = selected && !correct;
                   const isCorrectNotSelected = correct && !selected;
 
@@ -521,7 +560,6 @@ const TestReviewExamView = ({
               <div className="mt-3">
                 <div className="label mb-1">Hotspot Target</div>
                 <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
-                <div className="small text-muted mt-1">Correct: {formatCorrectAnswer(active)}</div>
               </div>
             )}
 
@@ -529,7 +567,6 @@ const TestReviewExamView = ({
               <div className="mt-3">
                 <div className="label mb-1">Cloze Responses</div>
                 <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
-                <div className="small text-muted mt-1">Correct: {formatCorrectAnswer(active)}</div>
               </div>
             )}
 
@@ -546,17 +583,6 @@ const TestReviewExamView = ({
           <div className="exam-review-runtime-explanation-column">
             <div className="exam-review-runtime-explanation-tab">Explanation</div>
             <div className="exam-review-rationale-box exam-review-rationale-runtime">
-              <div className="exam-review-answer-grid exam-review-answer-grid-runtime">
-                <div>
-                  <div className="label">Your answer</div>
-                  <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
-                </div>
-                <div>
-                  <div className="label">Correct answer</div>
-                  <div className="value">{formatCorrectAnswer(active)}</div>
-                </div>
-              </div>
-
               {active.rationale && (<div className="rationale-text-block"><strong>Rationale:</strong> {active.rationale}</div>)}
               {active.rationaleImageUrl && (
                 <div className="mt-2">

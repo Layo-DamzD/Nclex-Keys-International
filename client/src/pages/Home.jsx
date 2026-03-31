@@ -68,6 +68,70 @@ const Home = () => {
     AOS.refresh(); // Refresh AOS after dynamic content loads
   }, [isStructured, config]);
 
+  // Preload testimonial images IMMEDIATELY on page entry (before config even loads)
+  useEffect(() => {
+    // Start fetching testimonial config immediately
+    const preloadTestimonialImages = async () => {
+      try {
+        // Fetch the landing page config directly to get testimonials
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://nclex-keys-international.onrender.com';
+        const response = await fetch(`${apiUrl}/api/landing-page/home`);
+        const configData = await response.json();
+        
+        const testimonialContent =
+          configData?.sections?.testimonials ||
+          configData?.sections?.successStories ||
+          configData?.sections?.success ||
+          configData?.sections?.successStory ||
+          { items: [] };
+        
+        const testimonials = testimonialContent?.items || [];
+        
+        if (testimonials.length > 0) {
+          console.log('[Home] Preloading testimonial images immediately on mount...');
+          testimonials.forEach((testimonial, index) => {
+            const imgUrl = testimonial.imageUrl || testimonial.avatar;
+            if (imgUrl) {
+              const img = new window.Image();
+              img.src = imgUrl;
+              console.log(`[Home] Preloaded testimonial image ${index + 1}/${testimonials.length}`);
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('[Home] Could not preload testimonial images:', error);
+      }
+    };
+    
+    preloadTestimonialImages();
+  }, []); // Empty dependency array - runs immediately on mount
+
+  // Also preload from sections when config loads (backup)
+  useEffect(() => {
+    if (!sections) return;
+    
+    const testimonialContent =
+      sections.testimonials ||
+      sections.successStories ||
+      sections.success ||
+      sections.successStory ||
+      { items: [] };
+    
+    const testimonials = testimonialContent?.items || [];
+    
+    if (testimonials.length > 0) {
+      console.log('[Home] Preloading testimonial images from sections...');
+      testimonials.forEach((testimonial, index) => {
+        const imgUrl = testimonial.imageUrl || testimonial.avatar;
+        if (imgUrl) {
+          const img = new window.Image();
+          img.src = imgUrl;
+          console.log(`[Home] Preloading testimonial image ${index + 1}/${testimonials.length}`);
+        }
+      });
+    }
+  }, [sections]);
+
   const renderStructuredSection = (sectionKey) => {
     console.log('[Home] Rendering section:', sectionKey);
     

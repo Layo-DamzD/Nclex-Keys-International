@@ -445,6 +445,141 @@ const sendPublicTestLeadEmail = async ({
   }
 };
 
+// Welcome email for new students
+const sendStudentWelcomeEmail = async ({
+  to,
+  name,
+  isSelfSignup = false
+}) => {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'not_configured' };
+  }
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    return { sent: false, reason: 'transporter_unavailable' };
+  }
+
+  const displayName = name || 'there';
+  const subject = 'Welcome to NCLEX KEYS International - Your Journey Starts Here!';
+  const text = [
+    `Hello ${displayName},`,
+    '',
+    'Welcome to NCLEX KEYS International! We are thrilled to have you on board.',
+    '',
+    'Your NCLEX journey starts here. We are committed to supporting your success every step of the way.',
+    '',
+    'Here\'s what you can do next:',
+    '1. Complete your profile setup',
+    '2. Take a diagnostic test to assess your knowledge',
+    '3. Explore our study materials and resources',
+    '',
+    'If you have any questions, our support team is here to help.',
+    '',
+    'Best regards,',
+    'The NCLEX KEYS International Team'
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:600px;margin:0 auto;padding:24px;">
+      <h2 style="margin:0 0 12px;color:#1d4ed8;">Welcome to NCLEX KEYS International! 🎉</h2>
+      <p>Hello ${displayName},</p>
+      <p>We are thrilled to have you on board. Your NCLEX journey starts here!</p>
+      <p>We are committed to supporting your success every step of the way.</p>
+      <h3 style="margin-top:24px;color:#111827;">Here's what you can do next:</h3>
+      <ol style="margin:12px 0;padding-left:24px;">
+        <li style="margin:8px 0;">Complete your profile setup</li>
+        <li style="margin:8px 0;">Take a diagnostic test to assess your knowledge</li>
+        <li style="margin:8px 0;">Explore our study materials and resources</li>
+      </ol>
+      <p style="margin-top:20px;">If you have any questions, our support team is here to help.</p>
+      <p style="margin-top:24px;color:#6b7280;">Best regards,<br>The NCLEX KEYS International Team</p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
+};
+
+// OTP verification email for student self-signup
+const sendStudentOtpEmail = async ({
+  to,
+  name,
+  otp
+}) => {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'not_configured' };
+  }
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    return { sent: false, reason: 'transporter_unavailable' };
+  }
+
+  const displayName = name || 'there';
+  const subject = 'NCLEX KEYS International - Verify Your Email';
+  const text = [
+    `Hello ${displayName},`,
+    '',
+    'Thank you for signing up with NCLEX KEYS International!',
+    '',
+    `Your email verification code is: ${otp}`,
+    '',
+    'This code expires in 10 minutes.',
+    '',
+    'If you did not create an account, please ignore this email.',
+    '',
+    'Best regards,',
+    'The NCLEX KEYS International Team'
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:600px;margin:0 auto;padding:24px;">
+      <h2 style="margin:0 0 12px;color:#1d4ed8;">NCLEX KEYS International</h2>
+      <p>Hello ${displayName},</p>
+      <p>Thank you for signing up with NCLEX KEYS International!</p>
+      <p>Please verify your email address using the code below:</p>
+      <div style="display:inline-block;font-size:28px;letter-spacing:6px;font-weight:700;background:#eef2ff;color:#1d4ed8;padding:12px 16px;border-radius:8px;margin:16px 0;">
+        ${otp}
+      </div>
+      <p style="margin-top:16px;">This code expires in <strong>10 minutes</strong>.</p>
+      <p style="color:#6b7280;">If you did not create an account, please ignore this email.</p>
+      <p style="margin-top:24px;color:#6b7280;">Best regards,<br>The NCLEX KEYS International Team</p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
+};
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
@@ -453,5 +588,7 @@ module.exports = {
   sendAdminAccessCodeEmail,
   sendPublicTestLeadEmail,
   sendExamSupportUsageEmail,
-  buildResetUrl
+  buildResetUrl,
+  sendStudentWelcomeEmail,
+  sendStudentOtpEmail
 };

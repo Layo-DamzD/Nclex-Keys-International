@@ -16,7 +16,9 @@ const {
   resetAdminPassword,
   forgotAdminAccessCode,
   resetPasswordWithOtp,
-  resetAdminPasswordWithOtp
+  resetAdminPasswordWithOtp,
+  sendStudentSignupOtp,
+  verifyOtpAndRegisterStudent
 } = require('../controllers/authController');
 const { protect, superAdminOnly } = require('../middleware/authMiddleware');
 const User = require('../models/user');
@@ -57,6 +59,8 @@ router.post('/student/register', registerStudent);
 router.post('/student/login', loginStudent);
 router.post('/student/verify-face', verifyStudentFace);
 router.post('/student/verify-public-test-email', verifyPublicTestEmail);
+router.post('/student/send-otp', sendStudentSignupOtp);
+router.post('/student/verify-otp-and-register', verifyOtpAndRegisterStudent);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 router.post('/reset-password-otp', resetPasswordWithOtp);

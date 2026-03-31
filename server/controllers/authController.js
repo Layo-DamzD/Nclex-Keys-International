@@ -9,6 +9,8 @@ const {
   sendPasswordResetEmail,
   sendPasswordResetOtpEmail,
   sendAdminAccessCodeEmail,
+  sendStudentWelcomeEmail,
+  sendStudentOtpEmail,
   isEmailConfigured
 } = require('../services/emailService');
 
@@ -259,6 +261,13 @@ const registerStudent = async (req, res) => {
       await user.save();
     }
 
+    // Send welcome email to new student (fire and forget)
+    sendStudentWelcomeEmail({
+      to: user.email,
+      name: user.name,
+      isSelfSignup: true
+    }).catch((err) => console.error('Failed to send welcome email:', err));
+
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -337,6 +346,7 @@ const loginStudent = async (req, res) => {
       country: user.country,
       subscriptionStartDate: user.subscriptionStartDate,
       subscriptionExpiresAt: new Date(new Date(user.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
+      hasSeenWelcome: user.hasSeenWelcome || false,
       token: generateToken(user._id)
     });
   } catch (error) {
@@ -791,6 +801,178 @@ const forgotAdminAccessCode = async (req, res) => {
   }
 };
 
+// ===== STUDENT OTP VERIFICATION FOR SELF-SIGNUP =====
+// @desc    Send OTP to verify email before student registration
+// @route   POST /api/auth/student/send-otp
+// @access  Public
+const sendStudentSignupOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: exactRegex(email) });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    // Check if email is configured
+    if (!isEmailConfigured()) {
+      // If email not configured, allow signup without OTP
+      return res.json({ 
+        message: 'OTP sent successfully',
+        emailConfigured: false,
+        skipOtp: true
+      });
+    }
+
+    // Generate OTP and hash it
+    const otp = generateOtp();
+    const hashedOtp = await hashValue(otp);
+
+    // Create a temporary user record with OTP (not fully registered yet)
+    // We'll use a temporary approach: store OTP in a temp collection or use the user model
+    // For simplicity, we'll create a pending user with emailVerificationCode
+    const pendingUser = await User.findOneAndUpdate(
+      { email: exactRegex(email) },
+      {
+        email,
+        emailVerificationCode: hashedOtp,
+        emailVerificationExpire: Date.now() + 10 * 60 * 1000, // 10 minutes
+        role: 'pending_verification'
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: false }
+    );
+
+    // Send OTP email
+    const emailResult = await sendStudentOtpEmail({
+      to: email,
+      name: req.body?.name || 'there',
+      otp
+    });
+
+    if (!emailResult.sent) {
+      return res.status(500).json({ 
+        message: 'Failed to send OTP email. Please try again.',
+        reason: emailResult.reason 
+      });
+    }
+
+    res.json({ 
+      message: 'OTP sent to your email. Please verify to complete registration.',
+      emailConfigured: true
+    });
+  } catch (error) {
+    console.error('Error sending signup OTP:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Verify OTP and complete student registration
+// @route   POST /api/auth/student/verify-otp-and-register
+// @access  Public
+const verifyOtpAndRegisterStudent = async (req, res) => {
+  try {
+    const { name, email, password, program, phone, country, examDate, deviceId, deviceLabel, accessCode, otp } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password || !country || !accessCode) {
+      return res.status(400).json({ message: 'All required fields must be provided' });
+    }
+
+    // Validate access code
+    if (normalizeAccessCode(accessCode) !== normalizeAccessCode(STUDENT_SIGNUP_ACCESS_CODE)) {
+      return res.status(403).json({
+        message: `Message ${SIGNUP_ACCESS_HELP_NUMBER} on WhatsApp to get your access code.`
+      });
+    }
+
+    // Check if user already exists with role student
+    const existingStudent = await User.findOne({ email: exactRegex(email), role: 'student' });
+    if (existingStudent) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // If email is configured, verify OTP
+    if (isEmailConfigured() && otp) {
+      const pendingUser = await User.findOne({
+        email: exactRegex(email),
+        emailVerificationExpire: { $gt: Date.now() }
+      });
+
+      if (!pendingUser || !pendingUser.emailVerificationCode) {
+        return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
+      }
+
+      const otpMatches = await bcrypt.compare(String(otp), pendingUser.emailVerificationCode);
+      if (!otpMatches) {
+        return res.status(401).json({ message: 'Invalid OTP. Please try again.' });
+      }
+
+      // Clear OTP fields
+      pendingUser.emailVerificationCode = undefined;
+      pendingUser.emailVerificationExpire = undefined;
+      await pendingUser.save();
+    }
+
+    // Create the student account
+    const normalizedDeviceId = normalizeDeviceId(deviceId);
+    const trustedDevices = normalizedDeviceId
+      ? [{
+          deviceId: normalizedDeviceId,
+          label: normalizeDeviceLabel(deviceLabel) || 'Signup Device',
+          verifiedAt: new Date(),
+          lastUsedAt: new Date()
+        }]
+      : [];
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: 'student',
+      program,
+      phone,
+      country: String(country).trim(),
+      examDate: examDate || null,
+      trustedDevices,
+      subscriptionStartDate: new Date(),
+      emailVerified: isEmailConfigured() && otp
+    });
+
+    const claimedLead = await claimLatestPublicTestResultForUser(user);
+    if (claimedLead) {
+      await user.save();
+    }
+
+    // Send welcome email to new student (fire and forget)
+    sendStudentWelcomeEmail({
+      to: user.email,
+      name: user.name,
+      isSelfSignup: true
+    }).catch((err) => console.error('Failed to send welcome email:', err));
+
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      examDate: user.examDate,
+      country: user.country,
+      subscriptionStartDate: user.subscriptionStartDate,
+      subscriptionExpiresAt: new Date(new Date(user.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
+      emailVerified: user.emailVerified,
+      token: generateToken(user._id)
+    });
+  } catch (error) {
+    console.error('Error in verify and register:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 // ===== PROFILE =====
 const getMe = async (req, res) => {
   try {
@@ -824,5 +1006,7 @@ module.exports = {
   resetAdminPassword,
   resetPasswordWithOtp,
   resetAdminPasswordWithOtp,
-  forgotAdminAccessCode
+  forgotAdminAccessCode,
+  sendStudentSignupOtp,
+  verifyOtpAndRegisterStudent
 };
