@@ -46,9 +46,13 @@ const StudentLogin = () => {
   const techOfficerRawNumber = '07038377480';
   const techOfficerWhatsAppDigits = techOfficerRawNumber.replace(/\D/g, '');
   const isSuspendedAccountError = /(account|acct) has been suspended/i.test(loginError);
+  const isSubscriptionExpiredError = /subscription has expired|renew your subscription/i.test(loginError);
+  const showSupportLink = isSuspendedAccountError || isSubscriptionExpiredError;
   const techOfficerWhatsappLink = techOfficerWhatsAppDigits
     ? `https://wa.me/${techOfficerWhatsAppDigits}?text=${encodeURIComponent(
-      'Hello Tech Officer, my NCLEX KEYS account was suspended and I need help logging in.'
+      isSubscriptionExpiredError
+        ? 'Hello, my NCLEX KEYS subscription has expired and I need to renew it.'
+        : 'Hello Tech Officer, my NCLEX KEYS account was suspended and I need help logging in.'
     )}`
     : '';
 
@@ -154,7 +158,7 @@ const StudentLogin = () => {
           {loginError && (
             <div className="lamp-login-alert" role="alert">
               <div>{loginError}</div>
-              {isSuspendedAccountError && techOfficerWhatsappLink && (
+              {showSupportLink && techOfficerWhatsappLink && (
                 <div className="mt-2">
                   <a
                     href={techOfficerWhatsappLink}
@@ -162,7 +166,8 @@ const StudentLogin = () => {
                     rel="noreferrer"
                     className="lamp-login-whatsapp-link"
                   >
-                    07038377480 (WhatsApp)
+                    <i className="fab fa-whatsapp me-2"></i>
+                    Contact Support on WhatsApp
                   </a>
                 </div>
               )}

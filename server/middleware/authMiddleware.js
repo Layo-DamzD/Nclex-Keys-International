@@ -5,9 +5,10 @@ const STUDENT_SUBSCRIPTION_DAYS = 30;
 
 const isStudentSubscriptionExpired = (user) => {
   if (!user || user.role !== 'student') return false;
-  const createdAt = user.createdAt ? new Date(user.createdAt) : null;
-  if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
-  const expiry = new Date(createdAt.getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
+  // Use subscriptionStartDate if available, fallback to createdAt
+  const startDate = user.subscriptionStartDate ? new Date(user.subscriptionStartDate) : (user.createdAt ? new Date(user.createdAt) : null);
+  if (!startDate || Number.isNaN(startDate.getTime())) return false;
+  const expiry = new Date(startDate.getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
   return Date.now() > expiry.getTime();
 };
 
@@ -30,7 +31,7 @@ const protect = async (req, res, next) => {
       }
 
       if (req.user.status && req.user.status !== 'active') {
-        return res.status(403).json({ message: 'Your subscription has expired. Please renew to continue.' });
+        return res.status(403).json({ message: 'Your subscription has expired. Kindly renew your subscription to continue enjoying the service.' });
       }
 
       next();
