@@ -13070,11 +13070,6 @@ html[data-app-theme='dark'] .case-study-session .question-panel {
   color: #1e293b;
 }
 
-/* Remove dark mode toggle for students */
-.student-dashboard-shell .theme-toggle-btn {
-  display: none !important;
-}
-
 /* Student Sidebar Styling - GREEN THEME */
 .student-sidebar {
   background: linear-gradient(180deg, #198754 0%, #157347 100%) !important;
