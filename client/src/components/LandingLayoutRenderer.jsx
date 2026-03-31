@@ -94,6 +94,99 @@ const renderImageBlock = (block) => {
   return <img src={resolveMediaUrl(block.src)} alt={block.alt || 'Landing'} className="landing-block-image" />;
 };
 
+// Helper to extract YouTube video ID from URL
+const getYouTubeId = (url) => {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
+// Helper to extract Vimeo video ID from URL
+const getVimeoId = (url) => {
+  if (!url) return null;
+  const match = url.match(/vimeo\.com\/(\d+)/);
+  return match ? match[1] : null;
+};
+
+const renderVideoBlock = (block) => {
+  const videoUrl = block.videoUrl || '';
+  
+  if (!videoUrl) {
+    return (
+      <div className="landing-block-video-placeholder">
+        <i className="fas fa-video" />
+        <span>Add video URL</span>
+      </div>
+    );
+  }
+
+  const youtubeId = getYouTubeId(videoUrl);
+  const vimeoId = getVimeoId(videoUrl);
+  const isVideoFile = /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(videoUrl);
+
+  // YouTube embed
+  if (youtubeId) {
+    const src = `https://www.youtube.com/embed/${youtubeId}?rel=0${block.autoplay ? '&autoplay=1&mute=1' : ''}${block.controls !== false ? '' : '&controls=0'}`;
+    return (
+      <iframe
+        src={src}
+        title="YouTube video"
+        className="landing-block-video-embed"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    );
+  }
+
+  // Vimeo embed
+  if (vimeoId) {
+    const src = `https://player.vimeo.com/video/${vimeoId}?${block.autoplay ? 'autoplay=1&muted=1' : ''}`;
+    return (
+      <iframe
+        src={src}
+        title="Vimeo video"
+        className="landing-block-video-embed"
+        frameBorder="0"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+      />
+    );
+  }
+
+  // Direct video file
+  if (isVideoFile) {
+    return (
+      <video
+        src={resolveMediaUrl(videoUrl)}
+        className="landing-block-video-native"
+        controls={block.controls !== false}
+        autoPlay={block.autoplay}
+        muted={block.autoplay}
+        playsInline
+      />
+    );
+  }
+
+  // Fallback: try to show as iframe (may work for some video platforms)
+  return (
+    <iframe
+      src={videoUrl}
+      title="Video"
+      className="landing-block-video-embed"
+      frameBorder="0"
+      allowFullScreen
+    />
+  );
+};
+
 const renderCardBlock = (block) => {
   const accent = block.accent || '#2563eb';
   return (
@@ -132,6 +225,8 @@ const renderBlockInner = (block, isEditor) => {
       return renderButtonBlock(block, isEditor);
     case 'image':
       return renderImageBlock(block);
+    case 'video':
+      return renderVideoBlock(block);
     case 'card':
       return renderCardBlock(block);
     case 'box':

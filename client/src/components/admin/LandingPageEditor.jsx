@@ -45,6 +45,21 @@ const createBlock = (type) => {
       alt: 'Image',
     };
   }
+  if (type === 'video') {
+    return {
+      id,
+      type: 'video',
+      x: 80,
+      y: 80,
+      width: 400,
+      height: 225,
+      zIndex: 1,
+      videoUrl: '',
+      videoType: 'url', // 'url' or 'upload'
+      autoplay: false,
+      controls: true,
+    };
+  }
   if (type === 'card') {
     return {
       id,
@@ -727,6 +742,9 @@ const LandingPageEditor = () => {
               <button type="button" onClick={() => addBlock('image')}>
                 <i className="fas fa-image" /> Image
               </button>
+              <button type="button" onClick={() => addBlock('video')}>
+                <i className="fas fa-video" /> Video
+              </button>
               <button type="button" onClick={() => addBlock('card')}>
                 <i className="fas fa-id-card" /> Card
               </button>
@@ -979,13 +997,50 @@ const LandingPageEditor = () => {
                 {selectedBlock.type === 'image' ? (
                   <>
                     <label>
-                      Image URL
+                      Image URL (or upload below)
                       <input
                         value={selectedBlock.src || ''}
                         onChange={(e) => updateBlock(selectedBlock.id, { src: e.target.value })}
-                        placeholder="/images/logo.png.jpg"
+                        placeholder="/images/logo.png or https://..."
                       />
                     </label>
+                    <label>
+                      Upload Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const token = sessionStorage.getItem('adminToken');
+                            const res = await axios.post('/api/admin/content/upload', formData, {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'multipart/form-data',
+                              },
+                            });
+                            const uploadedUrl = res?.data?.fileUrl;
+                            if (uploadedUrl) {
+                              updateBlock(selectedBlock.id, { src: uploadedUrl });
+                            }
+                          } catch (err) {
+                            alert('Failed to upload image: ' + (err.response?.data?.message || err.message));
+                          }
+                        }}
+                      />
+                    </label>
+                    {selectedBlock.src && (
+                      <div style={{ marginTop: '8px' }}>
+                        <img 
+                          src={selectedBlock.src} 
+                          alt="Preview" 
+                          style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        />
+                      </div>
+                    )}
                     <label>
                       Alt Text
                       <input
@@ -1028,12 +1083,119 @@ const LandingPageEditor = () => {
                           onChange={(e) => updateBlock(selectedBlock.id, { accent: e.target.value })}
                         />
                       </label>
-                      <label>
-                        Image URL
-                        <input
-                          value={selectedBlock.imageUrl || ''}
-                          onChange={(e) => updateBlock(selectedBlock.id, { imageUrl: e.target.value })}
+                    </div>
+                    <label>
+                      Card Image URL (or upload below)
+                      <input
+                        value={selectedBlock.imageUrl || ''}
+                        onChange={(e) => updateBlock(selectedBlock.id, { imageUrl: e.target.value })}
+                        placeholder="/images/photo.jpg or https://..."
+                      />
+                    </label>
+                    <label>
+                      Upload Card Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const token = sessionStorage.getItem('adminToken');
+                            const res = await axios.post('/api/admin/content/upload', formData, {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'multipart/form-data',
+                              },
+                            });
+                            const uploadedUrl = res?.data?.fileUrl;
+                            if (uploadedUrl) {
+                              updateBlock(selectedBlock.id, { imageUrl: uploadedUrl });
+                            }
+                          } catch (err) {
+                            alert('Failed to upload image: ' + (err.response?.data?.message || err.message));
+                          }
+                        }}
+                      />
+                    </label>
+                    {selectedBlock.imageUrl && (
+                      <div style={{ marginTop: '8px' }}>
+                        <img 
+                          src={selectedBlock.imageUrl} 
+                          alt="Card preview" 
+                          style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                         />
+                      </div>
+                    )}
+                  </>
+                ) : null}
+
+                {selectedBlock.type === 'video' ? (
+                  <>
+                    <label>
+                      Video URL (YouTube, Vimeo, or direct video link)
+                      <input
+                        value={selectedBlock.videoUrl || ''}
+                        onChange={(e) => updateBlock(selectedBlock.id, { videoUrl: e.target.value })}
+                        placeholder="https://youtube.com/watch?v=... or https://..."
+                      />
+                    </label>
+                    <label>
+                      Or Upload Video File
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const token = sessionStorage.getItem('adminToken');
+                            const res = await axios.post('/api/admin/content/upload', formData, {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'multipart/form-data',
+                              },
+                            });
+                            const uploadedUrl = res?.data?.fileUrl;
+                            if (uploadedUrl) {
+                              updateBlock(selectedBlock.id, { videoUrl: uploadedUrl, videoType: 'upload' });
+                            }
+                          } catch (err) {
+                            alert('Failed to upload video: ' + (err.response?.data?.message || err.message));
+                          }
+                        }}
+                      />
+                    </label>
+                    {selectedBlock.videoUrl && (
+                      <div style={{ marginTop: '8px', padding: '8px', background: '#f1f5f9', borderRadius: '8px' }}>
+                        <small style={{ color: '#64748b', wordBreak: 'break-all' }}>
+                          <i className="fas fa-video me-1"></i>
+                          {selectedBlock.videoUrl.length > 50 ? selectedBlock.videoUrl.substring(0, 50) + '...' : selectedBlock.videoUrl}
+                        </small>
+                      </div>
+                    )}
+                    <div className="landing-editor-field-grid" style={{ marginTop: '12px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedBlock.autoplay || false}
+                          onChange={(e) => updateBlock(selectedBlock.id, { autoplay: e.target.checked })}
+                          style={{ width: 'auto' }}
+                        />
+                        Autoplay
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedBlock.controls !== false}
+                          onChange={(e) => updateBlock(selectedBlock.id, { controls: e.target.checked })}
+                          style={{ width: 'auto' }}
+                        />
+                        Show Controls
                       </label>
                     </div>
                   </>

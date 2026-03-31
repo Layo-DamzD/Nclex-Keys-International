@@ -22,19 +22,21 @@ const QUESTION_TYPES = [
 ];
 
 
-const CaseStudyBuilder = () => {
+const CaseStudyBuilder = ({ editId: propEditId }) => {
   const createSectionId = () => `section-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const navigate = useNavigate();
   const location = useLocation();
-  const { id } = useParams(); // for editing
-  const editingId = id || location?.state?.caseStudyId || '';
+  const { id } = useParams(); // for editing from route params
+  
+  // Get edit ID from props (passed from AdminDashboard), route params, or location state
+  const editingId = propEditId || id || location?.state?.caseStudyId || '';
   const isEditing = Boolean(editingId);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('details'); // details, sections, questions
 
-  // List view state
+  // List view state - show list if not editing
   const [showList, setShowList] = useState(!isEditing);
   const [caseStudies, setCaseStudies] = useState([]);
   const [listLoading, setListLoading] = useState(false);
@@ -53,6 +55,10 @@ const CaseStudyBuilder = () => {
 
   // For adding new sections
   const [newSection, setNewSection] = useState({ title: '', content: '' });
+  
+  // For editing sections
+  const [editingSectionIndex, setEditingSectionIndex] = useState(-1);
+  const [editSectionData, setEditSectionData] = useState({ title: '', content: '' });
 
   // For adding new questions
   const [currentQuestion, setCurrentQuestion] = useState({
@@ -93,6 +99,15 @@ const CaseStudyBuilder = () => {
     }
   }, [editingId]);
 
+  // Handle editId prop changes from parent (AdminDashboard)
+  useEffect(() => {
+    if (propEditId) {
+      setShowList(false);
+      setLoading(true);
+      fetchCaseStudy();
+    }
+  }, [propEditId]);
+
   useEffect(() => {
     if (showList) {
       fetchCaseStudies();
@@ -131,7 +146,8 @@ const CaseStudyBuilder = () => {
   };
 
   const handleEditCaseStudy = (caseStudyId) => {
-    navigate(`/admin/dashboard?section=case-studies`, { state: { caseStudyId } });
+    // Navigate with URL parameter for proper routing
+    navigate(`/admin/dashboard?section=case-studies/edit/${caseStudyId}`);
     setShowList(false);
   };
 
@@ -214,6 +230,39 @@ const CaseStudyBuilder = () => {
       ...prev,
       sections: prev.sections.filter((_, i) => i !== index)
     }));
+    // Cancel editing if the section being edited is removed
+    if (editingSectionIndex === index) {
+      setEditingSectionIndex(-1);
+      setEditSectionData({ title: '', content: '' });
+    }
+  };
+
+  const startEditSection = (index) => {
+    const section = caseStudy.sections[index];
+    setEditingSectionIndex(index);
+    setEditSectionData({ title: section.title, content: section.content, sectionId: section.sectionId });
+  };
+
+  const cancelEditSection = () => {
+    setEditingSectionIndex(-1);
+    setEditSectionData({ title: '', content: '' });
+  };
+
+  const saveEditSection = () => {
+    if (!editSectionData.title || !editSectionData.content) {
+      alert('Please enter both title and content');
+      return;
+    }
+    setCaseStudy(prev => ({
+      ...prev,
+      sections: prev.sections.map((section, i) => 
+        i === editingSectionIndex 
+          ? { ...editSectionData, sectionId: section.sectionId || createSectionId() }
+          : section
+      )
+    }));
+    setEditingSectionIndex(-1);
+    setEditSectionData({ title: '', content: '' });
   };
 
   // Question management
@@ -633,18 +682,66 @@ const CaseStudyBuilder = () => {
             <div className="section-list mb-4">
               {caseStudy.sections.map((section, index) => (
                 <div key={index} className="card mb-2">
-                  <div className="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                      <h6>{section.title}</h6>
-                      <p className="mb-0 small">{section.content.substring(0, 100)}...</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger"
-                      onClick={() => removeSection(index)}
-                    >
-                      Remove
-                    </button>
+                  <div className="card-body">
+                    {editingSectionIndex === index ? (
+                      // Edit mode
+                      <div className="edit-section-form">
+                        <div className="form-group mb-2">
+                          <label className="form-label">Section Title</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={editSectionData.title}
+                            onChange={(e) => setEditSectionData({ ...editSectionData, title: e.target.value })}
+                            placeholder="e.g., Vital Signs, Lab Results, Nurses' Notes"
+                          />
+                        </div>
+                        <div className="form-group mb-2">
+                          <label className="form-label">Content</label>
+                          <textarea
+                            className="form-control"
+                            rows="4"
+                            value={editSectionData.content}
+                            onChange={(e) => setEditSectionData({ ...editSectionData, content: e.target.value })}
+                            placeholder="Enter the patient data..."
+                          />
+                        </div>
+                        <div className="d-flex gap-2">
+                          <button type="button" className="btn btn-success btn-sm" onClick={saveEditSection}>
+                            <i className="fas fa-save me-1"></i> Save
+                          </button>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={cancelEditSection}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // View mode
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <h6>{section.title}</h6>
+                          <p className="mb-0 small text-muted">{section.content.substring(0, 100)}{section.content.length > 100 ? '...' : ''}</p>
+                        </div>
+                        <div className="d-flex gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => startEditSection(index)}
+                            title="Edit section"
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => removeSection(index)}
+                            title="Remove section"
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

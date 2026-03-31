@@ -36,6 +36,9 @@ const UploadQuestion = () => {
   const [difficulty, setDifficulty] = useState('medium');
   const [, setHighlightStart] = useState(0);
   const [, setHighlightEnd] = useState(0);
+  // New highlight click-to-select states
+  const [highlightSelectableWords, setHighlightSelectableWords] = useState([]); // array of word indices that are clickable
+  const [highlightCorrectWords, setHighlightCorrectWords] = useState([]); // array of word indices that are correct
   const [dragDropItems, setDragDropItems] = useState(['', '', '', '']);
   const [matrixColumns, setMatrixColumns] = useState(['Column 1', 'Column 2', 'Column 3']);
   const [matrixRows, setMatrixRows] = useState([
@@ -108,6 +111,9 @@ const UploadQuestion = () => {
           }))
         : [{ key: 'blank1', optionsText: '', correctAnswer: '' }]
     );
+    // Load highlight clickable words data
+    setHighlightSelectableWords(Array.isArray(editingQuestion.highlightSelectableWords) ? editingQuestion.highlightSelectableWords : []);
+    setHighlightCorrectWords(Array.isArray(editingQuestion.highlightCorrectWords) ? editingQuestion.highlightCorrectWords : []);
   }, [editingQuestion]);
 
   useEffect(() => {
@@ -197,6 +203,8 @@ const UploadQuestion = () => {
     setDifficulty('medium');
     setHighlightStart(0);
     setHighlightEnd(0);
+    setHighlightSelectableWords([]);
+    setHighlightCorrectWords([]);
     setDragDropItems(['', '', '', '']);
     setMatrixColumns(['Column 1', 'Column 2', 'Column 3']);
     setMatrixRows([
@@ -375,7 +383,22 @@ const UploadQuestion = () => {
     } else if (type === 'fill-blank') {
       questionData.correctAnswer = correctAnswer;
     } else if (type === 'highlight') {
-      questionData.correctAnswer = correctAnswer;
+      // New click-to-select highlight
+      if (highlightSelectableWords.length === 0) {
+        setError('Please select at least one clickable word');
+        setLoading(false);
+        return;
+      }
+      if (highlightCorrectWords.length === 0) {
+        setError('Please select at least one correct word');
+        setLoading(false);
+        return;
+      }
+      questionData.highlightSelectableWords = highlightSelectableWords;
+      questionData.highlightCorrectWords = highlightCorrectWords;
+      // Store the correct word text as correctAnswer for backward compatibility
+      const words = questionText.split(/\s+/).filter(w => w.trim());
+      questionData.correctAnswer = highlightCorrectWords.map(idx => words[idx]).join('|');
     } else if (type === 'drag-drop') {
       const items = dragDropItems.filter((item) => item.trim() !== '');
       if (items.length < 2) {
@@ -507,6 +530,58 @@ const UploadQuestion = () => {
       navigate('/admin/dashboard?section=questions');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save question');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save as Draft - minimal validation, saves current state
+  const handleSaveDraft = async () => {
+    setLoading(true);
+    setError('');
+
+    const questionData = {
+      type,
+      category,
+      subcategory,
+      clientNeed,
+      clientNeedSubcategory,
+      isNextGen,
+      questionText,
+      questionImageUrl,
+      rationale,
+      rationaleImageUrl,
+      difficulty,
+      isDraft: true, // Mark as draft
+      options: options.filter((opt) => opt.trim() !== ''),
+      correctAnswer: correctAnswer || '',
+      highlightSelectableWords,
+      highlightCorrectWords,
+      dragDropItems: dragDropItems.filter((item) => item.trim() !== ''),
+      matrixColumns,
+      matrixRows,
+      hotspotImageUrl,
+      hotspotTargets,
+      clozeTemplate,
+      clozeBlanks,
+    };
+
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      if (editingQuestion) {
+        await axios.put(`/api/admin/questions/${editingQuestion._id}`, questionData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Draft updated successfully!');
+      } else {
+        await axios.post('/api/admin/questions', questionData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Draft saved successfully!');
+      }
+      navigate('/admin/dashboard?section=questions');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save draft');
     } finally {
       setLoading(false);
     }
@@ -700,29 +775,138 @@ const UploadQuestion = () => {
         {type === 'highlight' && (
           <>
             <div className="form-group">
-              <label className="form-label">Text to Highlight</label>
+              <label className="form-label">Sentence / Question Text</label>
               <textarea
                 className="form-control highlight-textarea"
-                rows="6"
+                rows="3"
                 value={questionText}
-                onChange={(e) => setQuestionText(e.target.value)}
+                onChange={(e) => {
+                  setQuestionText(e.target.value);
+                  // Reset selections when text changes
+                  setHighlightSelectableWords([]);
+                  setHighlightCorrectWords([]);
+                }}
+                placeholder="e.g., I am a boy, what am I?"
                 required
               />
+              <small className="text-muted">Enter the sentence. Words will be split by spaces.</small>
             </div>
-            <div className="form-group">
-              <small className="text-muted">Enter the exact text fragment the student should highlight (no index numbers needed).</small>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Correct Answer (highlighted text)</label>
-              <input
-                type="text"
-                className="form-control"
-                value={correctAnswer}
-                onChange={(e) => setCorrectAnswer(e.target.value)}
-                placeholder="Enter what should be highlighted"
-                required
-              />
-            </div>
+            
+            {questionText.trim() && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Step 1: Click words to make them <strong style={{ color: '#3b82f6' }}>SELECTABLE</strong> (blue = selectable)</label>
+                  <div 
+                    className="highlight-word-picker"
+                    style={{ 
+                      padding: '16px', 
+                      background: '#f8fafc', 
+                      borderRadius: '8px', 
+                      border: '1px solid #e2e8f0',
+                      lineHeight: '2'
+                    }}
+                  >
+                    {questionText.split(/\s+/).filter(w => w.trim()).map((word, idx) => {
+                      const isSelectable = highlightSelectableWords.includes(idx);
+                      const isCorrect = highlightCorrectWords.includes(idx);
+                      return (
+                        <span
+                          key={idx}
+                          onClick={() => {
+                            if (isSelectable) {
+                              // Remove from selectable
+                              setHighlightSelectableWords(prev => prev.filter(i => i !== idx));
+                              // Also remove from correct if it was correct
+                              setHighlightCorrectWords(prev => prev.filter(i => i !== idx));
+                            } else {
+                              // Add to selectable
+                              setHighlightSelectableWords(prev => [...prev, idx]);
+                            }
+                          }}
+                          style={{
+                            display: 'inline-block',
+                            padding: '4px 10px',
+                            margin: '4px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            border: isCorrect ? '2px solid #22c55e' : isSelectable ? '2px solid #3b82f6' : '2px solid #e2e8f0',
+                            background: isCorrect ? '#dcfce7' : isSelectable ? '#dbeafe' : '#fff',
+                            color: isCorrect ? '#166534' : isSelectable ? '#1e40af' : '#64748b',
+                            fontWeight: isCorrect ? 600 : 400,
+                            transition: 'all 0.15s'
+                          }}
+                          title={isCorrect ? 'Correct answer (click to deselect)' : isSelectable ? 'Selectable (click to deselect)' : 'Click to make selectable'}
+                        >
+                          {word}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <small className="text-muted">Click on words to toggle them as selectable. Selected words turn blue.</small>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Step 2: Click selectable words to mark them as <strong style={{ color: '#22c55e' }}>CORRECT</strong> (green = correct answer)</label>
+                  <div 
+                    className="highlight-correct-picker"
+                    style={{ 
+                      padding: '16px', 
+                      background: '#f0fdf4', 
+                      borderRadius: '8px', 
+                      border: '1px solid #bbf7d0',
+                      lineHeight: '2'
+                    }}
+                  >
+                    {highlightSelectableWords.length === 0 ? (
+                      <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No selectable words yet. Select words above first.</span>
+                    ) : (
+                      questionText.split(/\s+/).filter(w => w.trim()).map((word, idx) => {
+                        const isSelectable = highlightSelectableWords.includes(idx);
+                        if (!isSelectable) return null;
+                        const isCorrect = highlightCorrectWords.includes(idx);
+                        return (
+                          <span
+                            key={idx}
+                            onClick={() => {
+                              if (isCorrect) {
+                                setHighlightCorrectWords(prev => prev.filter(i => i !== idx));
+                              } else {
+                                setHighlightCorrectWords(prev => [...prev, idx]);
+                              }
+                            }}
+                            style={{
+                              display: 'inline-block',
+                              padding: '4px 10px',
+                              margin: '4px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              border: isCorrect ? '2px solid #22c55e' : '2px solid #3b82f6',
+                              background: isCorrect ? '#dcfce7' : '#dbeafe',
+                              color: isCorrect ? '#166534' : '#1e40af',
+                              fontWeight: isCorrect ? 600 : 400,
+                              transition: 'all 0.15s'
+                            }}
+                            title={isCorrect ? 'Click to remove from correct answers' : 'Click to mark as correct answer'}
+                          >
+                            {word}
+                            {isCorrect && <span style={{ marginLeft: '4px' }}>✓</span>}
+                          </span>
+                        );
+                      })
+                    )}
+                  </div>
+                  <small className="text-muted">Click on blue words to mark them as correct answers (turns green).</small>
+                </div>
+
+                <div className="form-group" style={{ padding: '12px', background: '#fef3c7', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                  <strong>Summary:</strong>
+                  <ul style={{ margin: '8px 0 0 20px' }}>
+                    <li>Selectable words: {highlightSelectableWords.length} - {highlightSelectableWords.map(idx => `"${questionText.split(/\s+/).filter(w => w.trim())[idx]}"`).join(', ') || 'None'}</li>
+                    <li>Correct answer(s): {highlightCorrectWords.length} - {highlightCorrectWords.map(idx => `"${questionText.split(/\s+/).filter(w => w.trim())[idx]}"`).join(', ') || 'None'}</li>
+                  </ul>
+                </div>
+              </>
+            )}
           </>
         )}
 
@@ -1106,9 +1290,13 @@ const UploadQuestion = () => {
           </select>
         </div>
 
-        <div className="upload-actions">
+        <div className="upload-actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? 'Saving...' : editingQuestion ? 'Update Question' : 'Save Question'}
+          </button>
+          <button type="button" className="btn btn-outline-warning" onClick={handleSaveDraft} disabled={loading}>
+            <i className="fas fa-save me-1"></i>
+            {loading ? 'Saving...' : 'Save as Draft'}
           </button>
           <button type="button" className="btn btn-outline-secondary" onClick={resetForm}>Clear Form</button>
           <button type="button" className="btn btn-secondary" onClick={() => navigate('/admin/dashboard?section=questions')}>View All Questions</button>

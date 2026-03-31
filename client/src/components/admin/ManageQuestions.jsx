@@ -372,10 +372,30 @@ const ManageQuestions = ({ onSectionChange }) => {
                   <span className="mq-id-text">{q._id?.substring(0, 8)}</span>
                 </td>
                 <td className="mq-question-cell">
-                  {(() => {
-                    const cleanText = cleanQuestionPrefix(q.questionText);
-                    return cleanText.length > 70 ? `${cleanText.substring(0, 70)}...` : cleanText;
-                  })()}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {q.isDraft && (
+                      <span 
+                        className="badge" 
+                        style={{ 
+                          background: '#fef3c7', 
+                          color: '#92400e', 
+                          fontSize: '10px', 
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                          flexShrink: 0
+                        }}
+                      >
+                        DRAFT
+                      </span>
+                    )}
+                    <span>
+                      {(() => {
+                        const cleanText = cleanQuestionPrefix(q.questionText);
+                        return cleanText.length > 70 ? `${cleanText.substring(0, 70)}...` : cleanText;
+                      })()}
+                    </span>
+                  </div>
                 </td>
                 <td>
                   <span className={`badge ${getTypeBadge(q.type)}`}>

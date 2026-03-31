@@ -137,11 +137,15 @@ const Testimonials = ({ content = {} }) => {
 
   // Update Bootstrap carousel when slide changes
   useEffect(() => {
-    if (carouselRef.current) {
-      const carousel = new window.bootstrap.Carousel(carouselRef.current, {
-        interval: 5000,
-        ride: 'carousel'
-      });
+    if (carouselRef.current && window.bootstrap?.Carousel) {
+      try {
+        const carousel = new window.bootstrap.Carousel(carouselRef.current, {
+          interval: 5000,
+          ride: 'carousel'
+        });
+      } catch (err) {
+        console.warn('[Testimonials] Bootstrap carousel init failed:', err);
+      }
     }
   }, [loadedImages.size]);
 
