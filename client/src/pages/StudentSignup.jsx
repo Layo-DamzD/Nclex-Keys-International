@@ -249,9 +249,8 @@ const StudentSignup = () => {
     if (otpValue) {
       // Use verify-otp-and-register endpoint
       const response = await axios.post('/api/auth/student/verify-otp-and-register', payload);
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data));
-      navigate('/dashboard', { state: { message: 'Registration successful! Welcome to NCLEX KEYS.' } });
+      // Redirect to login page with success message
+      navigate('/login', { state: { message: 'Registration successful! Please login to continue.' } });
     } else {
       // Use regular register endpoint (email not configured)
       await axios.post('/api/auth/student/register', payload);

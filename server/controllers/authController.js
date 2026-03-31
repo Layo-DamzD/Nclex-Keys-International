@@ -815,9 +815,13 @@ const sendStudentSignupOtp = async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email: exactRegex(email) });
-    if (existingUser) {
+    // Check if a STUDENT (not pending_verification) already exists with this email
+    // Only block if there's an actual student account, not a pending verification record
+    const existingStudent = await User.findOne({ 
+      email: exactRegex(email), 
+      role: 'student' 
+    });
+    if (existingStudent) {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
@@ -843,7 +847,8 @@ const sendStudentSignupOtp = async (req, res) => {
     const otp = generateOtp();
     const hashedOtp = await hashValue(otp);
 
-    // Create a temporary user record with OTP (not fully registered yet)
+    // Create or update a temporary user record with OTP (not fully registered yet)
+    // This allows resending OTP if user goes back and tries again
     await User.findOneAndUpdate(
       { email: exactRegex(email) },
       {
@@ -925,10 +930,9 @@ const verifyOtpAndRegisterStudent = async (req, res) => {
         return res.status(401).json({ message: 'Invalid OTP. Please try again.' });
       }
 
-      // Clear OTP fields
-      pendingUser.emailVerificationCode = undefined;
-      pendingUser.emailVerificationExpire = undefined;
-      await pendingUser.save();
+      // Delete the pending verification user so we can create the actual student
+      await User.deleteOne({ _id: pendingUser._id });
+      console.log('[VERIFY OTP] Deleted pending verification user for:', email);
     }
 
     // Create the student account
@@ -969,6 +973,8 @@ const verifyOtpAndRegisterStudent = async (req, res) => {
     }).catch((err) => console.error('Failed to send welcome email:', err));
 
     console.log('[VERIFY OTP] Registration successful for:', email);
+    
+    // Return success - frontend will redirect to login page
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -979,7 +985,8 @@ const verifyOtpAndRegisterStudent = async (req, res) => {
       subscriptionStartDate: user.subscriptionStartDate,
       subscriptionExpiresAt: new Date(new Date(user.subscriptionStartDate).getTime() + STUDENT_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000),
       emailVerified: user.emailVerified,
-      token: generateToken(user._id)
+      token: generateToken(user._id),
+      redirectToLogin: true  // Signal to frontend to redirect to login
     });
   } catch (error) {
     console.error('Error in verify and register:', error);
