@@ -22,6 +22,7 @@ import AdminApproval from '../components/admin/AdminApproval';
 import ExamSupportChat from '../components/admin/ExamSupportChat';
 import AdminSettings from '../components/admin/AdminSettings';
 import PwaInstallButton from '../components/PwaInstallButton';
+import { useAppTheme } from '../context/AppThemeContext';
 import './AdminDashboard.css';
 
 const MOBILE_BREAKPOINT = 992;
@@ -56,6 +57,7 @@ const AdminDashboard = () => {
   const user = JSON.parse(sessionStorage.getItem('adminUser') || '{}');
   const userRole = user.role;
   const [sidebarBadges, setSidebarBadges] = useState({});
+  const { isGreyMode, toggleGreyMode } = useAppTheme();
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
 
@@ -263,6 +265,17 @@ const AdminDashboard = () => {
               label="Install App"
               compactLabel="Install"
             />
+
+            {/* Theme Toggle */}
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={toggleGreyMode}
+              aria-label={isGreyMode ? 'Switch to light mode' : 'Switch to grey mode'}
+              title={isGreyMode ? 'Switch to light mode' : 'Switch to grey mode'}
+            >
+              <i className={`fas ${isGreyMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            </button>
 
             <div className="time-display">
               <div className="time">
