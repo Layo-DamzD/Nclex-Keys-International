@@ -253,7 +253,7 @@ const getPublicLandingPageConfig = async (req, res) => {
 
   try {
     console.log('[PublicLandingPage] Querying database...');
-    const doc = await LandingPageConfig.findOne({ pageKey }).lean().maxTimeMS(10000);
+    const doc = await LandingPageConfig.findOne({ pageKey }).lean().maxTimeMS(3000);
     console.log('[PublicLandingPage] Query result:', doc ? 'found' : 'not found');
     
     if (!doc) {
