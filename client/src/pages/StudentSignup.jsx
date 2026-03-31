@@ -160,7 +160,8 @@ const StudentSignup = () => {
   const accessHelpWaLink = `https://wa.me/${accessHelpNumber.replace(/\D/g, '')}?text=${encodeURIComponent(
     'Hello, I need my student signup access code for NCLEX KEYS.'
   )}`;
-  const showAccessHelp = /access code/i.test(signupError) || /access code/i.test(otpError);
+  // Only show WhatsApp help for actual "wrong access code" errors, not generic messages
+  const showAccessHelp = /Message.*WhatsApp.*access code/i.test(signupError) || /Message.*WhatsApp.*access code/i.test(otpError);
 
   useEffect(() => {
     document.body.classList.add('signup-love-rain-active');

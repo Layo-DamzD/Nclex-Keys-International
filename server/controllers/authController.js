@@ -826,7 +826,14 @@ const sendStudentSignupOtp = async (req, res) => {
     }
 
     // VALIDATE ACCESS CODE FIRST - so users know early if their code is wrong
+    console.log('[SEND OTP] Access code check:', { 
+      provided: normalizeAccessCode(accessCode), 
+      expected: normalizeAccessCode(STUDENT_SIGNUP_ACCESS_CODE),
+      match: normalizeAccessCode(accessCode) === normalizeAccessCode(STUDENT_SIGNUP_ACCESS_CODE)
+    });
+    
     if (normalizeAccessCode(accessCode) !== normalizeAccessCode(STUDENT_SIGNUP_ACCESS_CODE)) {
+      console.log('[SEND OTP] Access code MISMATCH');
       return res.status(403).json({
         message: `Message ${SIGNUP_ACCESS_HELP_NUMBER} on WhatsApp to get your access code.`
       });
@@ -847,18 +854,23 @@ const sendStudentSignupOtp = async (req, res) => {
     const otp = generateOtp();
     const hashedOtp = await hashValue(otp);
 
-    // Create or update a temporary user record with OTP (not fully registered yet)
-    // This allows resending OTP if user goes back and tries again
-    await User.findOneAndUpdate(
-      { email: exactRegex(email) },
-      {
-        email,
-        emailVerificationCode: hashedOtp,
-        emailVerificationExpire: Date.now() + 10 * 60 * 1000, // 10 minutes
-        role: 'pending_verification'
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: false }
-    );
+    // Delete any existing pending_verification user for this email first
+    // This ensures a clean slate for each OTP request
+    await User.deleteMany({ 
+      email: exactRegex(email), 
+      role: 'pending_verification' 
+    });
+    console.log('[SEND OTP] Cleaned up old pending_verification users for:', email);
+
+    // Create a new temporary user record with OTP (not fully registered yet)
+    await User.create({
+      email,
+      emailVerificationCode: hashedOtp,
+      emailVerificationExpire: Date.now() + 10 * 60 * 1000, // 10 minutes
+      role: 'pending_verification',
+      name: 'pending', // Required field, will be updated on registration
+      password: 'pending' // Required field, will be updated on registration
+    });
 
     // Send OTP email
     console.log('[SEND OTP] Sending OTP email to:', email);
