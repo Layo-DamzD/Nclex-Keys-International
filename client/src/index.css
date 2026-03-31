@@ -14170,57 +14170,33 @@ body.student-bg,
 }
 
 /* ============================================
-   GREY MODE THEME (Not Black - Soft Grey)
+   DARK MODE THEME (Grey/Dark - Not Black)
+   Keep sidebar GREEN, darken main content only
    ============================================ */
 .theme-grey {
-  --grey-bg-primary: #6b7280;
-  --grey-bg-secondary: #9ca3af;
-  --grey-bg-card: #e5e7eb;
-  --grey-text-primary: #1f2937;
-  --grey-text-secondary: #4b5563;
-  --grey-border: #d1d5db;
-  --grey-accent: #6366f1;
+  --dark-bg-primary: #1a1a2e;
+  --dark-bg-secondary: #16213e;
+  --dark-bg-card: #2d2d44;
+  --dark-text-primary: #f1f5f9;
+  --dark-text-secondary: #94a3b8;
+  --dark-border: #3f3f5a;
+  --dark-accent: #6366f1;
 }
 
-/* Grey mode body and main backgrounds */
-.theme-grey body,
+/* Dark mode - MAIN CONTENT AREA ONLY (not sidebar) */
 .theme-grey .student-dashboard-shell,
-.theme-grey .main-content,
 .theme-grey .admin-dashboard-shell {
-  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 50%, #d1d5db 100%) !important;
-  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f1a 100%) !important;
 }
 
-/* Grey mode sidebar */
-.theme-grey .sidebar,
-.theme-grey .student-sidebar,
-.theme-grey .admin-sidebar {
-  background: linear-gradient(180deg, #4b5563 0%, #6b7280 100%) !important;
-  border-right: 1px solid #9ca3af !important;
-}
-
-.theme-grey .sidebar-header,
-.theme-grey .sidebar .sidebar-header,
-.theme-grey .student-sidebar .sidebar-header {
+.theme-grey .main-content {
   background: transparent !important;
-  border-bottom: 1px solid rgba(156, 163, 175, 0.3) !important;
 }
 
-.theme-grey .sidebar-nav a,
-.theme-grey .sidebar .nav-link,
-.theme-grey .student-sidebar .nav-link {
-  color: #e5e7eb !important;
-}
+/* SIDEBAR - KEEP GREEN, DO NOT CHANGE */
+/* We explicitly do NOT style the sidebar in dark mode */
 
-.theme-grey .sidebar-nav a:hover,
-.theme-grey .sidebar-nav a.active,
-.theme-grey .sidebar .nav-link:hover,
-.theme-grey .sidebar .nav-link.active {
-  background: rgba(255, 255, 255, 0.15) !important;
-  color: #ffffff !important;
-}
-
-/* Grey mode cards */
+/* Dark mode CARDS */
 .theme-grey .stats-card,
 .theme-grey .card,
 .theme-grey .chart-container,
@@ -14230,43 +14206,60 @@ body.student-bg,
 .theme-grey .content-section,
 .theme-grey .performance-container,
 .theme-grey .test-table,
-.theme-grey .dashboard-header {
-  background: #e5e7eb !important;
-  border: 1px solid #d1d5db !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+.theme-grey .dashboard-header,
+.theme-grey .form-card,
+.theme-grey .test-interface,
+.theme-grey .question-container,
+.theme-grey .options-container,
+.theme-grey .category-card,
+.theme-grey .test-customization {
+  background: #2d2d44 !important;
+  border: 1px solid #3f3f5a !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  color: #f1f5f9 !important;
 }
 
-/* Grey mode text */
+/* Dark mode HEADINGS - WHITE */
 .theme-grey h1,
 .theme-grey h2,
 .theme-grey h3,
 .theme-grey h4,
 .theme-grey h5,
+.theme-grey h6,
 .theme-grey .greeting h1 {
-  color: #1f2937 !important;
+  color: #f1f5f9 !important;
 }
 
+/* Dark mode TEXT */
 .theme-grey .text-muted,
 .theme-grey .greeting .text-muted {
-  color: #4b5563 !important;
+  color: #94a3b8 !important;
 }
 
 .theme-grey p,
-.theme-grey span,
+.theme-grey span:not(.badge):not(.btn),
 .theme-grey li,
-.theme-grey label {
-  color: #374151 !important;
+.theme-grey label,
+.theme-grey td,
+.theme-grey th {
+  color: #e2e8f0 !important;
 }
 
-/* Grey mode form controls */
+/* Dark mode FORM CONTROLS */
 .theme-grey .form-control,
 .theme-grey .form-select,
 .theme-grey input,
 .theme-grey select,
 .theme-grey textarea {
-  background: #f3f4f6 !important;
-  border: 1px solid #d1d5db !important;
-  color: #1f2937 !important;
+  background: #1a1a2e !important;
+  border: 1px solid #3f3f5a !important;
+  color: #f1f5f9 !important;
+}
+
+.theme-grey .form-control::placeholder,
+.theme-grey input::placeholder,
+.theme-grey textarea::placeholder {
+  color: #64748b !important;
 }
 
 .theme-grey .form-control:focus,
@@ -14274,10 +14267,10 @@ body.student-bg,
 .theme-grey input:focus,
 .theme-grey select:focus {
   border-color: #6366f1 !important;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3) !important;
 }
 
-/* Grey mode buttons */
+/* Dark mode BUTTONS */
 .theme-grey .btn-primary {
   background: #6366f1 !important;
   border-color: #6366f1 !important;
@@ -14292,7 +14285,7 @@ body.student-bg,
 .theme-grey .btn-outline-primary {
   background: transparent !important;
   border-color: #6366f1 !important;
-  color: #6366f1 !important;
+  color: #818cf8 !important;
 }
 
 .theme-grey .btn-outline-primary:hover {
@@ -14302,125 +14295,138 @@ body.student-bg,
 
 .theme-grey .btn-secondary,
 .theme-grey .btn-outline-secondary {
-  background: #9ca3af !important;
-  border-color: #9ca3af !important;
-  color: #1f2937 !important;
+  background: #3f3f5a !important;
+  border-color: #3f3f5a !important;
+  color: #f1f5f9 !important;
 }
 
 .theme-grey .btn-secondary:hover,
 .theme-grey .btn-outline-secondary:hover {
-  background: #6b7280 !important;
-  border-color: #6b7280 !important;
+  background: #4f4f6a !important;
+  border-color: #4f4f6a !important;
 }
 
-/* Grey mode tables */
+.theme-grey .btn-danger {
+  background: #ef4444 !important;
+  border-color: #ef4444 !important;
+}
+
+.theme-grey .btn-success {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+}
+
+/* Dark mode TABLES */
 .theme-grey .data-table,
 .theme-grey .test-table,
 .theme-grey table {
-  background: #e5e7eb !important;
+  background: #2d2d44 !important;
+  border-color: #3f3f5a !important;
 }
 
 .theme-grey .data-table th,
 .theme-grey .test-table th,
 .theme-grey table th {
-  background: #d1d5db !important;
-  color: #1f2937 !important;
-  border-color: #9ca3af !important;
+  background: #1a1a2e !important;
+  color: #f1f5f9 !important;
+  border-color: #3f3f5a !important;
 }
 
 .theme-grey .data-table td,
 .theme-grey .test-table td,
 .theme-grey table td {
-  background: #e5e7eb !important;
-  color: #374151 !important;
-  border-color: #d1d5db !important;
+  background: #2d2d44 !important;
+  color: #e2e8f0 !important;
+  border-color: #3f3f5a !important;
 }
 
 .theme-grey .data-table tr:hover td,
 .theme-grey .test-table tr:hover td,
 .theme-grey table tr:hover td {
-  background: #d1d5db !important;
+  background: #3d3d54 !important;
 }
 
-/* Grey mode test interface */
-.theme-grey .test-interface,
-.theme-grey .question-container,
-.theme-grey .options-container {
-  background: #e5e7eb !important;
-  border-color: #d1d5db !important;
-}
-
+/* Dark mode TEST OPTIONS */
 .theme-grey .option {
-  background: #f3f4f6 !important;
-  border: 1px solid #d1d5db !important;
-  color: #1f2937 !important;
+  background: #1a1a2e !important;
+  border: 2px solid #3f3f5a !important;
+  color: #f1f5f9 !important;
 }
 
 .theme-grey .option:hover {
-  background: #e5e7eb !important;
+  background: #2d2d44 !important;
   border-color: #6366f1 !important;
 }
 
 .theme-grey .option.selected {
-  background: #c7d2fe !important;
+  background: #312e81 !important;
   border-color: #6366f1 !important;
 }
 
-/* Grey mode modals */
+/* Dark mode MODALS */
 .theme-grey .modal-content {
-  background: #e5e7eb !important;
-  border: 1px solid #d1d5db !important;
+  background: #2d2d44 !important;
+  border: 1px solid #3f3f5a !important;
 }
 
 .theme-grey .modal-header {
-  background: #d1d5db !important;
-  border-color: #9ca3af !important;
+  background: #1a1a2e !important;
+  border-color: #3f3f5a !important;
+  color: #f1f5f9 !important;
 }
 
 .theme-grey .modal-footer {
-  background: #e5e7eb !important;
-  border-color: #d1d5db !important;
+  background: #2d2d44 !important;
+  border-color: #3f3f5a !important;
 }
 
-/* Grey mode alerts */
+.theme-grey .modal-title {
+  color: #f1f5f9 !important;
+}
+
+/* Dark mode ALERTS */
 .theme-grey .alert {
-  border-color: #d1d5db !important;
+  border-color: #3f3f5a !important;
 }
 
 .theme-grey .alert-warning {
-  background: #fef3c7 !important;
-  color: #92400e !important;
+  background: #422006 !important;
+  color: #fcd34d !important;
+  border-left: 4px solid #f59e0b !important;
 }
 
 .theme-grey .alert-danger {
-  background: #fee2e2 !important;
-  color: #991b1b !important;
+  background: #450a0a !important;
+  color: #fca5a5 !important;
+  border-left: 4px solid #ef4444 !important;
 }
 
 .theme-grey .alert-success {
-  background: #d1fae5 !important;
-  color: #065f46 !important;
+  background: #052e16 !important;
+  color: #86efac !important;
+  border-left: 4px solid #22c55e !important;
 }
 
 .theme-grey .alert-info {
-  background: #dbeafe !important;
-  color: #1e40af !important;
+  background: #0c1e3c !important;
+  color: #93c5fd !important;
+  border-left: 4px solid #3b82f6 !important;
 }
 
-/* Grey mode badges */
+/* Dark mode BADGES */
 .theme-grey .badge {
-  background: #9ca3af !important;
-  color: #1f2937 !important;
+  background: #3f3f5a !important;
+  color: #f1f5f9 !important;
 }
 
 .theme-grey .badge.bg-success {
-  background: #10b981 !important;
+  background: #22c55e !important;
   color: #ffffff !important;
 }
 
 .theme-grey .badge.bg-warning {
   background: #f59e0b !important;
-  color: #1f2937 !important;
+  color: #1a1a2e !important;
 }
 
 .theme-grey .badge.bg-danger {
@@ -14428,35 +14434,40 @@ body.student-bg,
   color: #ffffff !important;
 }
 
-/* Grey mode dropdown */
+.theme-grey .badge.bg-primary {
+  background: #6366f1 !important;
+  color: #ffffff !important;
+}
+
+/* Dark mode DROPDOWN */
 .theme-grey .dropdown-menu {
-  background: #e5e7eb !important;
-  border-color: #d1d5db !important;
+  background: #2d2d44 !important;
+  border-color: #3f3f5a !important;
 }
 
 .theme-grey .dropdown-item {
-  color: #374151 !important;
+  color: #e2e8f0 !important;
 }
 
 .theme-grey .dropdown-item:hover {
-  background: #d1d5db !important;
-  color: #1f2937 !important;
+  background: #3d3d54 !important;
+  color: #f1f5f9 !important;
 }
 
-/* Grey mode profile section */
+/* Dark mode PROFILE */
 .theme-grey .profile-card,
 .theme-grey .profile-section {
-  background: #e5e7eb !important;
-  border-color: #d1d5db !important;
+  background: #2d2d44 !important;
+  border-color: #3f3f5a !important;
 }
 
-/* Grey mode stats cards with accent colors */
+/* Dark mode STATS CARDS with accent borders */
 .theme-grey .stats-card.stat-total {
   border-left: 4px solid #6366f1 !important;
 }
 
 .theme-grey .stats-card.stat-average {
-  border-left: 4px solid #10b981 !important;
+  border-left: 4px solid #22c55e !important;
 }
 
 .theme-grey .stats-card.stat-best {
@@ -14467,60 +14478,142 @@ body.student-bg,
   border-left: 4px solid #ec4899 !important;
 }
 
-/* Keep text readable in grey mode */
-.theme-grey .stats-card .stat-value,
-.theme-grey .stats-card .stat-label {
-  color: #1f2937 !important;
+.theme-grey .stats-card .stat-value {
+  color: #f1f5f9 !important;
 }
 
-/* Grey mode study materials */
+.theme-grey .stats-card .stat-label {
+  color: #94a3b8 !important;
+}
+
+/* Dark mode STUDY MATERIALS */
 .theme-grey .study-materials .card {
-  background: #e5e7eb !important;
-  border-color: #d1d5db !important;
+  background: #2d2d44 !important;
+  border-color: #3f3f5a !important;
 }
 
 .theme-grey .study-materials .card-footer {
-  background: #d1d5db !important;
-  border-color: #d1d5db !important;
+  background: #1a1a2e !important;
+  border-color: #3f3f5a !important;
 }
 
-/* Grey mode feedback modal */
+/* Dark mode FEEDBACK MODAL */
 .theme-grey .student-feedback-modal {
-  background: rgba(0, 0, 0, 0.5) !important;
+  background: rgba(0, 0, 0, 0.7) !important;
 }
 
 .theme-grey .student-feedback-modal .modal-card {
-  background: #e5e7eb !important;
-  border-color: #d1d5db !important;
+  background: #2d2d44 !important;
+  border-color: #3f3f5a !important;
 }
 
-/* Grey mode notification dropdown */
+/* Dark mode NOTIFICATION DROPDOWN */
 .theme-grey .dashboard-notification-dropdown {
-  background: #e5e7eb !important;
-  border-color: #d1d5db !important;
+  background: #2d2d44 !important;
+  border-color: #3f3f5a !important;
 }
 
 .theme-grey .dashboard-notification-dropdown-item {
-  background: #f3f4f6 !important;
-  border-color: #d1d5db !important;
+  background: #1a1a2e !important;
+  border-color: #3f3f5a !important;
 }
 
 .theme-grey .dashboard-notification-dropdown-item:hover {
-  background: #e5e7eb !important;
+  background: #3d3d54 !important;
 }
 
-/* Grey mode activity feed */
+.theme-grey .dashboard-notification-dropdown-item-title {
+  color: #f1f5f9 !important;
+}
+
+.theme-grey .dashboard-notification-dropdown-item-body {
+  color: #94a3b8 !important;
+}
+
+/* Dark mode ACTIVITY FEED */
 .theme-grey .activity-item,
 .theme-grey .activity-feed-item {
-  background: #f3f4f6 !important;
-  border-color: #d1d5db !important;
+  background: #1a1a2e !important;
+  border-color: #3f3f5a !important;
 }
 
-/* Grey mode week review popup */
+/* Dark mode WEEK REVIEW POPUP */
 .theme-grey .weekly-review-popup,
 .theme-grey .student-notification-popup-card {
-  background: #e5e7eb !important;
-  border-color: #d1d5db !important;
+  background: #2d2d44 !important;
+  border-color: #3f3f5a !important;
 }
 
-/* End of Grey Mode Styles */
+.theme-grey .student-notification-popup-eyebrow {
+  color: #94a3b8 !important;
+}
+
+.theme-grey .student-notification-popup-body {
+  color: #e2e8f0 !important;
+}
+
+/* Dark mode NAVBAR on dashboard */
+.theme-grey .dashboard-header {
+  background: #2d2d44 !important;
+  border-bottom: 1px solid #3f3f5a !important;
+}
+
+/* Dark mode toggle button styling */
+.theme-grey .theme-toggle-btn {
+  background: #3f3f5a !important;
+  border-color: #6366f1 !important;
+  color: #fbbf24 !important;
+}
+
+.theme-grey .theme-toggle-btn:hover {
+  background: #4f4f6a !important;
+  border-color: #818cf8 !important;
+  color: #fcd34d !important;
+}
+
+/* Dark mode RECENT TESTS */
+.theme-grey .recent-tests-item {
+  background: #1a1a2e !important;
+  border-color: #3f3f5a !important;
+}
+
+/* Dark mode CLOCK in header */
+.theme-grey .dashboard-clock-badge {
+  background: #1a1a2e !important;
+  border-color: #3f3f5a !important;
+  color: #f1f5f9 !important;
+}
+
+/* Dark mode INSTALL BUTTON */
+.theme-grey .dashboard-install-app-btn {
+  background: #3f3f5a !important;
+  border-color: #3f3f5a !important;
+  color: #f1f5f9 !important;
+}
+
+.theme-grey .dashboard-install-app-btn:hover {
+  background: #4f4f6a !important;
+}
+
+/* Dark mode NOTIFICATION BELL */
+.theme-grey .dashboard-notification-bell {
+  background: #3f3f5a !important;
+  border-color: #3f3f5a !important;
+  color: #f1f5f9 !important;
+}
+
+/* Dark mode for test customization categories */
+.theme-grey .category-card {
+  background: #1a1a2e !important;
+  border-color: #3f3f5a !important;
+}
+
+.theme-grey .category-header {
+  color: #f1f5f9 !important;
+}
+
+.theme-grey .subcategory-list label {
+  color: #e2e8f0 !important;
+}
+
+/* End of Dark Mode Styles */
