@@ -160,7 +160,7 @@ const StudentSignup = () => {
   const accessHelpWaLink = `https://wa.me/${accessHelpNumber.replace(/\D/g, '')}?text=${encodeURIComponent(
     'Hello, I need my student signup access code for NCLEX KEYS.'
   )}`;
-  const showAccessHelp = /access code/i.test(signupError);
+  const showAccessHelp = /access code/i.test(signupError) || /access code/i.test(otpError);
 
   useEffect(() => {
     document.body.classList.add('signup-love-rain-active');
@@ -188,7 +188,8 @@ const StudentSignup = () => {
     try {
       const response = await axios.post('/api/auth/student/send-otp', {
         email: data.email,
-        name: `${data.firstName} ${data.lastName}`
+        name: `${data.firstName} ${data.lastName}`,
+        accessCode: data.accessCode  // ⭐ Include access code for early validation
       });
       
       if (response.data.skipOtp) {
@@ -268,7 +269,8 @@ const StudentSignup = () => {
       const data = getValues();
       await axios.post('/api/auth/student/send-otp', {
         email: data.email,
-        name: `${data.firstName} ${data.lastName}`
+        name: `${data.firstName} ${data.lastName}`,
+        accessCode: data.accessCode  // ⭐ Include access code for early validation
       });
       setResendDisabled(true);
       setCountdown(60);
@@ -477,7 +479,13 @@ const StudentSignup = () => {
               <>
                 {otpError && (
                   <div className="alert alert-danger">
-                    {otpError}
+                    {showAccessHelp ? (
+                      <a href={accessHelpWaLink} target="_blank" rel="noreferrer">
+                        Message {accessHelpNumber} on WhatsApp to get your access code
+                      </a>
+                    ) : (
+                      <div>{otpError}</div>
+                    )}
                   </div>
                 )}
 

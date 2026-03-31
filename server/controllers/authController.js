@@ -807,7 +807,9 @@ const forgotAdminAccessCode = async (req, res) => {
 // @access  Public
 const sendStudentSignupOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, accessCode } = req.body;
+    
+    console.log('[SEND OTP] Request received:', { email, accessCode });
     
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
@@ -819,9 +821,17 @@ const sendStudentSignupOtp = async (req, res) => {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
+    // VALIDATE ACCESS CODE FIRST - so users know early if their code is wrong
+    if (normalizeAccessCode(accessCode) !== normalizeAccessCode(STUDENT_SIGNUP_ACCESS_CODE)) {
+      return res.status(403).json({
+        message: `Message ${SIGNUP_ACCESS_HELP_NUMBER} on WhatsApp to get your access code.`
+      });
+    }
+
     // Check if email is configured
     if (!isEmailConfigured()) {
       // If email not configured, allow signup without OTP
+      console.log('[SEND OTP] Email not configured, skipping OTP');
       return res.json({ 
         message: 'OTP sent successfully',
         emailConfigured: false,
@@ -834,9 +844,7 @@ const sendStudentSignupOtp = async (req, res) => {
     const hashedOtp = await hashValue(otp);
 
     // Create a temporary user record with OTP (not fully registered yet)
-    // We'll use a temporary approach: store OTP in a temp collection or use the user model
-    // For simplicity, we'll create a pending user with emailVerificationCode
-    const pendingUser = await User.findOneAndUpdate(
+    await User.findOneAndUpdate(
       { email: exactRegex(email) },
       {
         email,
@@ -848,6 +856,7 @@ const sendStudentSignupOtp = async (req, res) => {
     );
 
     // Send OTP email
+    console.log('[SEND OTP] Sending OTP email to:', email);
     const emailResult = await sendStudentOtpEmail({
       to: email,
       name: req.body?.name || 'there',
@@ -855,12 +864,14 @@ const sendStudentSignupOtp = async (req, res) => {
     });
 
     if (!emailResult.sent) {
+      console.error('[SEND OTP] Failed to send email:', emailResult);
       return res.status(500).json({ 
         message: 'Failed to send OTP email. Please try again.',
         reason: emailResult.reason 
       });
     }
 
+    console.log('[SEND OTP] OTP sent successfully to:', email);
     res.json({ 
       message: 'OTP sent to your email. Please verify to complete registration.',
       emailConfigured: true
@@ -878,12 +889,14 @@ const verifyOtpAndRegisterStudent = async (req, res) => {
   try {
     const { name, email, password, program, phone, country, examDate, deviceId, deviceLabel, accessCode, otp } = req.body;
 
+    console.log('[VERIFY OTP] Request received:', { email, hasOtp: !!otp });
+
     // Validate required fields
     if (!name || !email || !password || !country || !accessCode) {
       return res.status(400).json({ message: 'All required fields must be provided' });
     }
 
-    // Validate access code
+    // Validate access code again (for security)
     if (normalizeAccessCode(accessCode) !== normalizeAccessCode(STUDENT_SIGNUP_ACCESS_CODE)) {
       return res.status(403).json({
         message: `Message ${SIGNUP_ACCESS_HELP_NUMBER} on WhatsApp to get your access code.`
@@ -955,6 +968,7 @@ const verifyOtpAndRegisterStudent = async (req, res) => {
       isSelfSignup: true
     }).catch((err) => console.error('Failed to send welcome email:', err));
 
+    console.log('[VERIFY OTP] Registration successful for:', email);
     res.status(201).json({
       _id: user._id,
       name: user.name,

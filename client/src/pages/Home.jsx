@@ -79,6 +79,42 @@ const Home = () => {
     AOS.refresh(); // Refresh AOS after dynamic content loads
   }, [isStructured, config]);
 
+  // ⭐ PRELOAD SUCCESS STORIES IMMEDIATELY ON PAGE ENTRY
+  useEffect(() => {
+    const preloadTestimonialImages = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://nclex-keys-international.onrender.com';
+        const response = await fetch(`${apiUrl}/api/landing-page/home`);
+        const configData = await response.json();
+        
+        const testimonialContent =
+          configData?.sections?.testimonials ||
+          configData?.sections?.successStories ||
+          configData?.sections?.success ||
+          configData?.sections?.successStory ||
+          { items: [] };
+        
+        const testimonials = testimonialContent?.items || [];
+        
+        if (testimonials.length > 0) {
+          console.log('[Home] 🚀 Preloading', testimonials.length, 'testimonial images immediately on page entry...');
+          testimonials.forEach((testimonial, index) => {
+            const imgUrl = testimonial.imageUrl || testimonial.avatar;
+            if (imgUrl) {
+              const img = new window.Image();
+              img.src = imgUrl;
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('[Home] Could not preload testimonial images:', err);
+      }
+    };
+    
+    // Run immediately on mount
+    preloadTestimonialImages();
+  }, []); // Empty deps - runs once on mount
+
   // Error boundary - if render fails, show fallback
   useEffect(() => {
     const handleError = (event) => {
