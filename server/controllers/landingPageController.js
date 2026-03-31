@@ -25,6 +25,7 @@ const getDefaultConfig = (pageKey) => {
         badgeText: '97% First-Time Pass Rate',
         titleBefore: 'Unlock Your ',
         titleHighlight: 'NCLEX Success',
+        titleHighlightColor: '#22c55e',
         titleAfter: ' with Expert Coaching',
         description:
           'NCLEX KEYS International provides comprehensive training for nursing graduates to pass the NCLEX-RN/PN exams with confidence. Join thousands of successful nurses.',
@@ -35,7 +36,8 @@ const getDefaultConfig = (pageKey) => {
         ],
         ctaText: 'Get Started',
         ctaUrl: '/signup',
-        videoUrl: 'https://www.youtube.com/embed/7ILVwUsfrAc',
+        videoUrl: 'https://www.youtube.com/embed/aq7fhW5PccI',
+        imageUrl: '',
         gradientStart: '#0d6efd',
         gradientEnd: '#6f42c1',
       },

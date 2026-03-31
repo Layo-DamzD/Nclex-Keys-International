@@ -36,14 +36,15 @@ const DEFAULT_HOME_CONFIG = {
       badgeText: '97% First-Time Pass Rate',
       titleBefore: 'Unlock Your ',
       titleHighlight: 'NCLEX Success',
-      titleHighlightColor: '#86efac',
+      titleHighlightColor: '#22c55e',
       titleAfter: ' with Expert Coaching',
       description:
         'NCLEX KEYS International provides comprehensive training for nursing graduates to pass the NCLEX-RN/PN exams with confidence. Join thousands of successful nurses.',
       features: ['Personalized Study Plans', '10,000+ Practice Questions', 'Live Virtual Classes'],
       ctaText: 'Get Started',
       ctaUrl: '/signup',
-      videoUrl: 'https://www.youtube.com/embed/7ILVwUsfrAc',
+      videoUrl: 'https://www.youtube.com/embed/aq7fhW5PccI',
+      imageUrl: '',
       gradientStart: '#0d6efd',
       gradientEnd: '#6f42c1',
     },
@@ -567,7 +568,7 @@ const LandingPageStudio = () => {
           <label>Badge Text<input value={hero.badgeText || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.badgeText = e.target.value; })} /></label>
           <label>Title (Before Highlight)<input value={hero.titleBefore || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleBefore = e.target.value; })} /></label>
           <label>Title Highlight<input value={hero.titleHighlight || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleHighlight = e.target.value; })} /></label>
-          <label>Title Highlight Color<input type="color" value={hero.titleHighlightColor || '#86efac'} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleHighlightColor = e.target.value; })} /></label>
+          <label>Title Highlight Color<input type="color" value={hero.titleHighlightColor || '#22c55e'} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleHighlightColor = e.target.value; })} /></label>
           <label>Title (After Highlight)<input value={hero.titleAfter || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.titleAfter = e.target.value; })} /></label>
           <label>Description<textarea rows={4} value={hero.description || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.description = e.target.value; })} /></label>
           <label>Features (one per line)<textarea rows={4} value={(hero.features || []).join('\n')} onChange={(e) => mutateConfig((next) => { next.sections.hero.features = parseLines(e.target.value); })} /></label>
@@ -575,7 +576,69 @@ const LandingPageStudio = () => {
             <label>CTA Text<input value={hero.ctaText || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.ctaText = e.target.value; })} /></label>
             <label>CTA URL<input value={hero.ctaUrl || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.ctaUrl = e.target.value; })} /></label>
           </div>
-          <label>Video URL<input value={hero.videoUrl || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.videoUrl = e.target.value; })} /></label>
+          
+          {/* Media Section - Video URL */}
+          <div className="landing-studio-card">
+            <h4>Media (Video & Image)</h4>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '12px' }}>
+              You can set a YouTube video, upload an image, or both. If both are set, the image will show with a play button overlay.
+            </p>
+            <label>
+              YouTube Video URL
+              <input 
+                value={hero.videoUrl || ''} 
+                placeholder="https://www.youtube.com/embed/VIDEO_ID"
+                onChange={(e) => mutateConfig((next) => { next.sections.hero.videoUrl = e.target.value; })} 
+              />
+            </label>
+            <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+              Use embed format: https://www.youtube.com/embed/VIDEO_ID
+            </p>
+            
+            {/* Image Upload */}
+            <div className="landing-studio-upload-block">
+              <div className="landing-studio-upload-row">
+                <input
+                  id="hero-image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    onImageInputChange(e, {
+                      fieldKey: 'hero-image',
+                      onUploaded: (uploadedUrl) =>
+                        mutateConfig((next) => { next.sections.hero.imageUrl = withCacheBust(uploadedUrl); })
+                    })
+                  }
+                />
+                <label htmlFor="hero-image-upload" className="landing-studio-upload-btn">
+                  <i className={`fas ${uploadingField === 'hero-image' ? 'fa-spinner fa-spin' : 'fa-upload'}`} />
+                  {uploadingField === 'hero-image' ? 'Uploading...' : 'Upload Image'}
+                </label>
+                <button
+                  type="button"
+                  className="landing-studio-danger-btn"
+                  onClick={() => mutateConfig((next) => { next.sections.hero.imageUrl = ''; })}
+                  disabled={!hero.imageUrl}
+                >
+                  Remove Image
+                </button>
+              </div>
+              {hero.imageUrl ? (
+                <div className="landing-studio-upload-preview">
+                  <img
+                    src={resolveMediaUrl(hero.imageUrl)}
+                    data-raw-src={hero.imageUrl}
+                    data-fallback-index="0"
+                    onError={handleImageFallback}
+                    alt="Hero media"
+                  />
+                </div>
+              ) : (
+                <div className="landing-studio-upload-hint">Upload an image to show instead of or alongside the video.</div>
+              )}
+            </div>
+          </div>
+          
           <div className="landing-studio-two-col">
             <label>Gradient Start<input value={hero.gradientStart || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.gradientStart = e.target.value; })} /></label>
             <label>Gradient End<input value={hero.gradientEnd || ''} onChange={(e) => mutateConfig((next) => { next.sections.hero.gradientEnd = e.target.value; })} /></label>

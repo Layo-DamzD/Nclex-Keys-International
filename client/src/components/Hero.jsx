@@ -11,15 +11,20 @@ const DEFAULT_CONTENT = {
   features: ['Personalized Study Plans', '10,000+ Practice Questions', 'Live Virtual Classes'],
   ctaText: 'Get Started',
   ctaUrl: '/signup',
-  videoUrl: 'https://www.youtube.com/embed/7ILVwUsfrAc',
+  videoUrl: 'https://www.youtube.com/embed/aq7fhW5PccI',
+  imageUrl: '', // Optional image alongside or instead of video
   gradientStart: '#0d6efd',
   gradientEnd: '#6f42c1',
-  titleHighlightColor: '#dc2626',
+  titleHighlightColor: '#22c55e', // Green to match branding
 };
 
 const Hero = ({ content = {} }) => {
   const data = { ...DEFAULT_CONTENT, ...content };
   const features = Array.isArray(data.features) && data.features.length ? data.features : DEFAULT_CONTENT.features;
+  
+  // Determine what to show in the media section
+  const hasImage = data.imageUrl && data.imageUrl.trim() !== '';
+  const hasVideo = data.videoUrl && data.videoUrl.trim() !== '';
 
   return (
     <section id="home" className="hero-section" style={{ 
@@ -46,7 +51,7 @@ const Hero = ({ content = {} }) => {
             </div>
             <h1 className="hero-title display-3 fw-bold mb-4">
               {data.titleBefore}
-              <span style={{ color: data.titleHighlightColor || '#dc2626', fontWeight: 800 }}>
+              <span style={{ color: data.titleHighlightColor || '#22c55e', fontWeight: 800 }}>
                 {data.titleHighlight}
               </span>
               {data.titleAfter}
@@ -69,7 +74,7 @@ const Hero = ({ content = {} }) => {
             </div>
           </div>
 
-          {/* Video Column - Right, flush to edge */}
+          {/* Media Column - Right, flush to edge */}
           <div className="col-lg-6 nki-hero-media-col" data-aos="fade-left" style={{ paddingRight: 0 }}>
             <div className="hero-image nki-hero-media-shell" style={{ 
               borderRadius: '20px 0 0 20px',
@@ -79,16 +84,83 @@ const Hero = ({ content = {} }) => {
               marginLeft: 'auto',
               maxWidth: '100%' 
             }}>
-              <iframe 
-                className="nki-hero-video-embed"
-                width="100%" 
-                height="380" 
-                src={data.videoUrl} 
-                title="NCLEX Success Story" 
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                allowFullScreen
-              ></iframe>
+              {/* Show image if available */}
+              {hasImage && (
+                <img 
+                  src={data.imageUrl}
+                  alt="NCLEX Success"
+                  style={{ 
+                    width: '100%', 
+                    height: 'auto',
+                    display: 'block',
+                    objectFit: 'cover'
+                  }}
+                />
+              )}
+              {/* Show video if available and no image, or show video below image if both exist */}
+              {hasVideo && !hasImage && (
+                <iframe 
+                  className="nki-hero-video-embed"
+                  width="100%" 
+                  height="380" 
+                  src={data.videoUrl} 
+                  title="NCLEX Success Story" 
+                  frameBorder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  allowFullScreen
+                ></iframe>
+              )}
+              {/* If both image and video exist, show image with play button overlay linking to video */}
+              {hasImage && hasVideo && (
+                <div style={{ position: 'relative' }}>
+                  <img 
+                    src={data.imageUrl}
+                    alt="NCLEX Success"
+                    style={{ 
+                      width: '100%', 
+                      height: 'auto',
+                      display: 'block',
+                      objectFit: 'cover'
+                    }}
+                  />
+                  <a 
+                    href={data.videoUrl.replace('/embed/', '/watch?v=')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: '80px',
+                      height: '80px',
+                      background: 'rgba(255,255,255,0.9)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textDecoration: 'none',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+                    }}
+                  >
+                    <i className="fas fa-play" style={{ color: '#6f42c1', fontSize: '2rem', marginLeft: '5px' }}></i>
+                  </a>
+                </div>
+              )}
+              {/* Fallback if no media */}
+              {!hasImage && !hasVideo && (
+                <div style={{ 
+                  width: '100%', 
+                  height: '380px', 
+                  background: 'rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white'
+                }}>
+                  <i className="fas fa-image" style={{ fontSize: '4rem', opacity: 0.5 }}></i>
+                </div>
+              )}
             </div>
           </div>
         </div>
