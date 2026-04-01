@@ -14219,29 +14219,58 @@ body.student-bg,
   color: #f1f5f9 !important;
 }
 
-/* Dark mode HEADINGS - WHITE */
-.theme-grey h1,
-.theme-grey h2,
-.theme-grey h3,
-.theme-grey h4,
-.theme-grey h5,
-.theme-grey h6,
+/* Dark mode - Targeted container text color for inheritance */
+.theme-grey .student-dashboard-shell,
+.theme-grey .admin-dashboard-shell,
+.theme-grey .admin-dashboard-page .main-content {
+  color: #e2e8f0 !important;
+}
+
+/* Dark mode HEADINGS - only inside themed containers */
+.theme-grey .student-dashboard-shell h1,
+.theme-grey .student-dashboard-shell h2,
+.theme-grey .student-dashboard-shell h3,
+.theme-grey .student-dashboard-shell h4,
+.theme-grey .student-dashboard-shell h5,
+.theme-grey .student-dashboard-shell h6,
+.theme-grey .admin-dashboard-shell h1,
+.theme-grey .admin-dashboard-shell h2,
+.theme-grey .admin-dashboard-shell h3,
+.theme-grey .admin-dashboard-shell h4,
+.theme-grey .admin-dashboard-shell h5,
+.theme-grey .admin-dashboard-shell h6,
+.theme-grey .admin-dashboard-page .main-content h1,
+.theme-grey .admin-dashboard-page .main-content h2,
+.theme-grey .admin-dashboard-page .main-content h3,
+.theme-grey .admin-dashboard-page .main-content h4,
+.theme-grey .admin-dashboard-page .main-content h5,
+.theme-grey .admin-dashboard-page .main-content h6,
 .theme-grey .greeting h1 {
   color: #f1f5f9 !important;
 }
 
-/* Dark mode TEXT */
+/* Dark mode TEXT - muted */
 .theme-grey .text-muted,
 .theme-grey .greeting .text-muted {
   color: #94a3b8 !important;
 }
 
-.theme-grey p,
-.theme-grey span:not(.badge):not(.btn),
-.theme-grey li,
-.theme-grey label,
-.theme-grey td,
-.theme-grey th {
+/* Dark mode TEXT - targeted p, li, label, td, th inside themed containers only */
+.theme-grey .student-dashboard-shell p,
+.theme-grey .student-dashboard-shell li,
+.theme-grey .student-dashboard-shell label,
+.theme-grey .student-dashboard-shell td,
+.theme-grey .student-dashboard-shell th,
+.theme-grey .admin-dashboard-shell p,
+.theme-grey .admin-dashboard-shell li,
+.theme-grey .admin-dashboard-shell label,
+.theme-grey .admin-dashboard-shell td,
+.theme-grey .admin-dashboard-shell th,
+.theme-grey .admin-dashboard-page .main-content p,
+.theme-grey .admin-dashboard-page .main-content li,
+.theme-grey .admin-dashboard-page .main-content label,
+.theme-grey .admin-dashboard-page .main-content td,
+.theme-grey .admin-dashboard-page .main-content th {
   color: #e2e8f0 !important;
 }
 
@@ -14614,6 +14643,16 @@ body.student-bg,
 
 .theme-grey .subcategory-list label {
   color: #e2e8f0 !important;
+}
+
+/* Smooth theme transitions */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.theme-grey * {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.25s;
+  transition-timing-function: ease;
 }
 
 /* End of Dark Mode Styles */

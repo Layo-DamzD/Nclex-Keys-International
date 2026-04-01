@@ -57,7 +57,15 @@ const AdminDashboard = () => {
   const user = JSON.parse(sessionStorage.getItem('adminUser') || '{}');
   const userRole = user.role;
   const [sidebarBadges, setSidebarBadges] = useState({});
+  const [sidebarTheme, setSidebarTheme] = useState(() =>
+    localStorage.getItem('nclexkeys:admin-sidebar-theme') || 'purple'
+  );
   const { isGreyMode, toggleGreyMode } = useAppTheme();
+
+  const handleSidebarThemeChange = useCallback((theme) => {
+    setSidebarTheme(theme);
+    localStorage.setItem('nclexkeys:admin-sidebar-theme', theme);
+  }, []);
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
 
@@ -195,7 +203,7 @@ const AdminDashboard = () => {
 
   return (
     <div
-      className={`admin-dashboard-page admin-container ${userRole === 'admin' ? 'admin-regular' : 'admin-super'} ${isMobileViewport ? 'admin-mobile' : 'admin-desktop'}`}
+      className={`admin-dashboard-page admin-container ${userRole === 'admin' ? 'admin-regular' : 'admin-super'} ${isMobileViewport ? 'admin-mobile' : 'admin-desktop'} sidebar-theme-${sidebarTheme}`}
       style={{ display: 'flex', minHeight: '100vh', width: '100%' }}
     >
       {isMobileViewport && !sidebarCollapsed && (
@@ -215,6 +223,7 @@ const AdminDashboard = () => {
         userRole={userRole}
         isMobileViewport={isMobileViewport}
         sectionBadges={sidebarBadges}
+        sidebarTheme={sidebarTheme}
       />
 
       {sidebarCollapsed && (
@@ -402,7 +411,10 @@ const AdminDashboard = () => {
 
         {activeSection === 'settings' && (
           <div className="section active">
-            <AdminSettings />
+            <AdminSettings
+              sidebarTheme={sidebarTheme}
+              onSidebarThemeChange={handleSidebarThemeChange}
+            />
           </div>
         )}
       </main>

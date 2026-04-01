@@ -2364,3 +2364,122 @@ html[data-app-theme='dark'] .admin-dashboard-page.admin-super .btn-primary {
 html[data-app-theme='dark'] .admin-dashboard-page.admin-super .btn-primary:hover {
   background: #1e40af;
 }
+
+/* ============================================
+   Sidebar Theme Variants (Super Admin only)
+   ============================================ */
+
+/* Purple Gradient (default) */
+.admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-purple {
+  background: linear-gradient(180deg, #7c3aed 0%, #4c1d95 50%, #1e1b4b 100%) !important;
+}
+.admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-purple .nav-link.active {
+  color: #7c3aed !important;
+}
+
+/* Black Gradient */
+.admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-black {
+  background: linear-gradient(180deg, #374151 0%, #1f2937 50%, #111827 100%) !important;
+}
+.admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-black .nav-link.active {
+  color: #374151 !important;
+}
+
+/* Red Gradient */
+.admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-red {
+  background: linear-gradient(180deg, #dc2626 0%, #991b1b 50%, #450a0a 100%) !important;
+}
+.admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-red .nav-link.active {
+  color: #dc2626 !important;
+}
+
+/* Blue Gradient */
+.admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-blue {
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 50%, #1e3a5f 100%) !important;
+}
+.admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-blue .nav-link.active {
+  color: #2563eb !important;
+}
+
+/* Dark mode variants for sidebar themes */
+.theme-grey .admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-black {
+  background: linear-gradient(180deg, #1f2937 0%, #111827 50%, #030712 100%) !important;
+}
+.theme-grey .admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-red {
+  background: linear-gradient(180deg, #991b1b 0%, #7f1d1d 50%, #450a0a 100%) !important;
+}
+.theme-grey .admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-blue {
+  background: linear-gradient(180deg, #1d4ed8 0%, #1e3a5f 50%, #172554 100%) !important;
+}
+.theme-grey .admin-dashboard-page:not(.admin-regular) .sidebar.sidebar-theme-purple .nav-link.active {
+  color: #a78bfa !important;
+}
+
+/* Sidebar theme selector styling */
+.admin-sidebar-theme-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin-sidebar-theme-selector .admin-sidebar-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.admin-sidebar-theme-option {
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, transform 0.15s;
+}
+.admin-sidebar-theme-option:hover {
+  transform: translateY(-1px);
+}
+.admin-sidebar-theme-option.active {
+  border-width: 2px;
+  border-style: solid;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.admin-sidebar-theme-option.sidebar-theme-preview-purple {
+  background: linear-gradient(135deg, #7c3aed, #4c1d95, #1e1b4b);
+  color: #fff;
+  border-color: #7c3aed;
+}
+.admin-sidebar-theme-option.sidebar-theme-preview-purple.active {
+  border-color: #7c3aed;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+.admin-sidebar-theme-option.sidebar-theme-preview-black {
+  background: linear-gradient(135deg, #374151, #1f2937, #111827);
+  color: #fff;
+  border-color: #374151;
+}
+.admin-sidebar-theme-option.sidebar-theme-preview-black.active {
+  border-color: #374151;
+  box-shadow: 0 2px 8px rgba(55, 65, 81, 0.3);
+}
+.admin-sidebar-theme-option.sidebar-theme-preview-red {
+  background: linear-gradient(135deg, #dc2626, #991b1b, #450a0a);
+  color: #fff;
+  border-color: #dc2626;
+}
+.admin-sidebar-theme-option.sidebar-theme-preview-red.active {
+  border-color: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+.admin-sidebar-theme-option.sidebar-theme-preview-blue {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8, #1e3a5f);
+  color: #fff;
+  border-color: #2563eb;
+}
+.admin-sidebar-theme-option.sidebar-theme-preview-blue.active {
+  border-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+.admin-sidebar-theme-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: 4px;
+}

@@ -34,7 +34,9 @@ const submitTest = async (req, res) => {
       return true;
     };
 
-    // Track seen and incorrect questions
+    // Pre-track seen questions and omitted questions (these don't depend on correctness evaluation)
+    const questionIds = [...new Set(results.map((r) => String(r.questionId)).filter(Boolean))];
+
     for (const result of results) {
       const qid = result.questionId;
       const qidStr = String(qid);
@@ -58,11 +60,155 @@ const submitTest = async (req, res) => {
           user.customTestOmittedQuestions = user.customTestOmittedQuestions.filter((id) => String(id) !== qidStr);
         }
       }
+    }
 
-      // Handle incorrect questions
-      if (!result.isCorrect) {
+    // Fetch question docs for server-side evaluation
+    const questionDocs = await Question.find({ _id: { $in: questionIds } })
+      .select('_id type category subcategory questionText questionImageUrl options correctAnswer rationale rationaleImageUrl matrixRows matrixColumns hotspotImageUrl hotspotTargets clozeTemplate clozeBlanks');
+    const questionMap = new Map(questionDocs.map((q) => [String(q._id), q]));
+
+    // Server-side answer normalization helper (mirrors client-side normalizeToLetter)
+    const serverNormalizeToLetter = (answer) => {
+      if (answer === null || answer === undefined) return '';
+      const str = String(answer).trim().toUpperCase();
+      if (/^[A-Z]$/.test(str)) return str;
+      const numMatch = str.match(/^(\d+)$/);
+      if (numMatch) {
+        const num = parseInt(numMatch[1], 10);
+        if (num >= 1 && num <= 26) return String.fromCharCode(64 + num);
+      }
+      const optionMatch = str.match(/OPTION\s*(\d+)/i);
+      if (optionMatch) {
+        const num = parseInt(optionMatch[1], 10);
+        if (num >= 1 && num <= 26) return String.fromCharCode(64 + num);
+      }
+      return str;
+    };
+
+    // Server-side answer evaluation (deterministic, does not trust client)
+    const serverEvaluateAnswer = (result, q) => {
+      const userAnswer = result.userAnswer;
+      const correctAnswer = q?.correctAnswer;
+      const type = result.type || q?.type;
+
+      if (type === 'multiple-choice') {
+        const normUser = serverNormalizeToLetter(userAnswer);
+        const normCorrect = serverNormalizeToLetter(correctAnswer);
+        return { isCorrect: normUser === normCorrect && normUser !== '', earnedMarks: (normUser === normCorrect && normUser !== '') ? 1 : 0, totalMarks: 1 };
+      }
+
+      if (type === 'sata') {
+        const parseToArray = (answer) => {
+          if (!answer) return [];
+          if (Array.isArray(answer)) return answer.map(v => serverNormalizeToLetter(v)).filter(Boolean);
+          const str = String(answer).trim();
+          if (str.includes(',')) return str.split(',').map(v => serverNormalizeToLetter(v.trim())).filter(Boolean);
+          if (/^[A-Za-z]+$/.test(str)) return str.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+          if (str.includes(' ')) return str.split(/\s+/).map(v => serverNormalizeToLetter(v.trim())).filter(Boolean);
+          const norm = serverNormalizeToLetter(str);
+          return norm ? [norm] : [];
+        };
+        const userArr = [...new Set(Array.isArray(userAnswer) ? userAnswer.map(v => serverNormalizeToLetter(v)).filter(Boolean) : parseToArray(userAnswer))];
+        const correctArr = [...new Set(parseToArray(correctAnswer))];
+        const totalMarks = Math.max(correctArr.length, 1);
+        const correctPicked = userArr.filter(c => correctArr.includes(c)).length;
+        const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
+        const earnedMarks = Math.max(correctPicked - wrongPicked, 0);
+        let isCorrect = false;
+        if (earnedMarks >= totalMarks) isCorrect = true;
+        else if (earnedMarks > 0) isCorrect = 'partial';
+        return { isCorrect, earnedMarks, totalMarks };
+      }
+
+      if (type === 'fill-blank') {
+        if (!userAnswer || !correctAnswer) return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
+        const acceptable = String(correctAnswer).split(';').map(a => a.trim().toLowerCase());
+        const isCorrect = acceptable.includes(String(userAnswer).trim().toLowerCase());
+        return { isCorrect, earnedMarks: isCorrect ? 1 : 0, totalMarks: 1 };
+      }
+
+      if (type === 'highlight') {
+        if (!userAnswer || !correctAnswer) return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
+        const correctOptions = String(correctAnswer).split('|').map(a => a.trim().toLowerCase());
+        const isCorrect = correctOptions.includes(String(userAnswer).trim().toLowerCase());
+        return { isCorrect, earnedMarks: isCorrect ? 1 : 0, totalMarks: 1 };
+      }
+
+      if (type === 'drag-drop') {
+        const isCorrect = String(userAnswer || '') === String(correctAnswer || '');
+        return { isCorrect, earnedMarks: isCorrect ? 1 : 0, totalMarks: 1 };
+      }
+
+      if (type === 'matrix') {
+        if (!userAnswer || !Array.isArray(userAnswer) || !Array.isArray(q?.matrixRows)) return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
+        const isCorrect = q.matrixRows.every((row, i) => userAnswer[i] === row.correctColumn);
+        return { isCorrect, earnedMarks: isCorrect ? 1 : 0, totalMarks: 1 };
+      }
+
+      if (type === 'hotspot') {
+        const isCorrect = String(userAnswer || '').trim() === String(correctAnswer || '').trim();
+        return { isCorrect, earnedMarks: isCorrect ? 1 : 0, totalMarks: 1 };
+      }
+
+      if (type === 'bowtie') {
+        if (!userAnswer || !correctAnswer || typeof userAnswer !== 'object' || typeof correctAnswer !== 'object') return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
+        const requiredKeys = ['condition', 'actionLeft', 'actionRight', 'parameterLeft', 'parameterRight'];
+        const isCorrect = requiredKeys.every(key => String(userAnswer?.[key] || '').trim() === String(correctAnswer?.[key] || '').trim());
+        return { isCorrect, earnedMarks: isCorrect ? 1 : 0, totalMarks: 1 };
+      }
+
+      if (type === 'cloze-dropdown') {
+        if (!userAnswer || !correctAnswer || typeof correctAnswer !== 'object') return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
+        const expectedKeys = Object.keys(correctAnswer);
+        if (!expectedKeys.length) return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
+        const isCorrect = expectedKeys.every(key => String(userAnswer?.[key] || '').trim() === String(correctAnswer[key] || '').trim());
+        return { isCorrect, earnedMarks: isCorrect ? 1 : 0, totalMarks: 1 };
+      }
+
+      // Fallback: use client-provided evaluation
+      return { isCorrect: result.isCorrect || false, earnedMarks: result.earnedMarks ?? (result.isCorrect ? 1 : 0), totalMarks: result.totalMarks ?? 1 };
+    };
+
+    const enrichedAnswers = results.map((result) => {
+      const q = questionMap.get(String(result.questionId));
+      // Re-evaluate answer server-side using the correctAnswer from the database
+      const evaluation = serverEvaluateAnswer(result, q);
+      return {
+        ...result,
+        type: result.type || q?.type,
+        category: result.category || q?.category,
+        subcategory: result.subcategory || q?.subcategory,
+        questionText: result.questionText || q?.questionText,
+        questionImageUrl: result.questionImageUrl || q?.questionImageUrl,
+        options: result.options || q?.options,
+        correctAnswer: result.correctAnswer || q?.correctAnswer,
+        rationale: result.rationale || q?.rationale,
+        rationaleImageUrl: result.rationaleImageUrl || q?.rationaleImageUrl,
+        hotspotImageUrl: result.hotspotImageUrl || q?.hotspotImageUrl,
+        hotspotTargets: result.hotspotTargets || q?.hotspotTargets,
+        clozeTemplate: result.clozeTemplate || q?.clozeTemplate,
+        clozeBlanks: result.clozeBlanks || q?.clozeBlanks,
+        matrixRows: result.matrixRows || q?.matrixRows,
+        matrixColumns: result.matrixColumns || q?.matrixColumns,
+        // Override client-provided evaluation with server-side evaluation
+        isCorrect: evaluation.isCorrect,
+        earnedMarks: evaluation.earnedMarks,
+        totalMarks: evaluation.totalMarks,
+      };
+    });
+
+    // Track incorrect questions using SERVER-EVALUATED results
+    for (const enriched of enrichedAnswers) {
+      const qid = enriched.questionId;
+      if (enriched.isCorrect === true || enriched.isCorrect === 'partial') {
+        // If answered correctly or partially, remove from incorrect questions if present
+        user.incorrectQuestions = user.incorrectQuestions.filter(
+          item => item.questionId.toString() !== String(qid)
+        );
+      } else {
+        // Handle incorrect questions
         const existing = user.incorrectQuestions.find(
-          item => item.questionId.toString() === qid
+          item => item.questionId.toString() === String(qid)
         );
         if (existing) {
           existing.attemptCount += 1;
@@ -74,39 +220,10 @@ const submitTest = async (req, res) => {
             lastAttempted: new Date()
           });
         }
-      } else {
-        // If answered correctly, remove from incorrect questions if present
-        user.incorrectQuestions = user.incorrectQuestions.filter(
-          item => item.questionId.toString() !== qid
-        );
       }
     }
 
     await user.save();
-
-    const questionIds = [...new Set(results.map((r) => String(r.questionId)).filter(Boolean))];
-    const questionDocs = await Question.find({ _id: { $in: questionIds } })
-      .select('_id type category subcategory questionText questionImageUrl options rationale rationaleImageUrl hotspotImageUrl hotspotTargets clozeTemplate clozeBlanks');
-    const questionMap = new Map(questionDocs.map((q) => [String(q._id), q]));
-
-    const enrichedAnswers = results.map((result) => {
-      const q = questionMap.get(String(result.questionId));
-      return {
-        ...result,
-        type: result.type || q?.type,
-        category: result.category || q?.category,
-        subcategory: result.subcategory || q?.subcategory,
-        questionText: result.questionText || q?.questionText,
-        questionImageUrl: result.questionImageUrl || q?.questionImageUrl,
-        options: result.options || q?.options,
-        rationale: result.rationale || q?.rationale,
-        rationaleImageUrl: result.rationaleImageUrl || q?.rationaleImageUrl,
-        hotspotImageUrl: result.hotspotImageUrl || q?.hotspotImageUrl,
-        hotspotTargets: result.hotspotTargets || q?.hotspotTargets,
-        clozeTemplate: result.clozeTemplate || q?.clozeTemplate,
-        clozeBlanks: result.clozeBlanks || q?.clozeBlanks
-      };
-    });
 
     const earnedScore = enrichedAnswers.reduce((sum, row) => (
       sum + Number(row?.earnedMarks ?? (row?.isCorrect === true ? 1 : 0))
@@ -226,7 +343,7 @@ const getSubcategoryCounts = async (req, res) => {
 // @access  Private
 const generateTest = async (req, res) => {
   try {
-    const { subcategories, selections, questionCount, timed, tutorMode, filterMode, clientNeedsSelections, includeTraditional, includeNextGen } = req.body;
+    const { subcategories, selections, questionCount, timed, tutorMode, filterMode, clientNeedsSelections, includeTraditional, includeNextGen, difficulty } = req.body;
     
     let query = {};
     
@@ -266,6 +383,11 @@ const generateTest = async (req, res) => {
     }
     // If both are true or both are false, don't filter by isNextGen
 
+    // Filter by difficulty (e.g., for Assessment mode which uses 'hard')
+    if (difficulty) {
+      query.difficulty = difficulty;
+    }
+
     const matchingCount = await Question.countDocuments(query);
     if (matchingCount < questionCount) {
         return res.status(400).json({
@@ -301,7 +423,10 @@ const generateTest = async (req, res) => {
             questions: Array.isArray(q.questions) ? q.questions : []
           }
         : {}),
-      ...(tutorMode && { correctAnswer: q.correctAnswer, rationale: q.rationale })
+      // Always include correctAnswer so the client can evaluate answers at submit time.
+      // Rationale is only shown in tutor mode or during review.
+      ...(tutorMode ? { rationale: q.rationale } : {}),
+      correctAnswer: q.correctAnswer
     }));
 
     res.json({
@@ -535,7 +660,21 @@ const redoQuestion = async (req, res) => {
       return res.status(404).json({ message: 'Question not found' });
     }
     
-    const isCorrect = question.correctAnswer === answer;
+    // Normalize both answers for comparison (handles "2" vs "B", "b" vs "B", etc.)
+    const normalizeAnswer = (val) => {
+      if (val === null || val === undefined) return '';
+      const str = String(val).trim().toUpperCase();
+      if (/^[A-Z]$/.test(str)) return str;
+      const numMatch = str.match(/^(\d+)$/);
+      if (numMatch) {
+        const num = parseInt(numMatch[1], 10);
+        if (num >= 1 && num <= 26) return String.fromCharCode(64 + num);
+      }
+      return str;
+    };
+    const normalizedUser = normalizeAnswer(answer);
+    const normalizedCorrect = normalizeAnswer(question.correctAnswer);
+    const isCorrect = normalizedUser === normalizedCorrect && normalizedUser !== '';
     
     if (isCorrect) {
       await User.findByIdAndUpdate(studentId, {

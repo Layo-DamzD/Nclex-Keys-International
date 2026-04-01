@@ -32,7 +32,7 @@ const TestCustomization = () => {
   const [questionCountInput, setQuestionCountInput] = useState('75'); // For allowing empty input display
   const [timed, setTimed] = useState(true);
   const [tutorMode, setTutorMode] = useState(false);
-  const [testType, setTestType] = useState('custom'); // 'custom', 'cat', 'practice'
+  const [testType, setTestType] = useState('assessment'); // 'assessment', 'cat', 'practice'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
@@ -74,6 +74,19 @@ const TestCustomization = () => {
   });
 
   const navigate = useNavigate();
+
+  // Auto-select all subcategories when switching to Assessment mode
+  useEffect(() => {
+    if (testType === 'assessment') {
+      const allPairs = Object.entries(categoryMap).flatMap(([category, subcategories]) =>
+        subcategories.map(sub => getPairKey(category, sub))
+      );
+      setSelectedSubcategoryPairs(allPairs);
+      // Expand all categories so user can see all are selected
+      const allCategories = Object.keys(categoryMap);
+      setExpandedCategory(allCategories[0] || null);
+    }
+  }, [testType]);
 
   const handleTimedToggle = (checked) => {
     setTimed(checked);
@@ -255,13 +268,19 @@ const TestCustomization = () => {
   }, [selectedClientNeeds, clientNeedsCounts, clientNeedsTotal]);
 
   const selectedStats = useMemo(() => {
-    const selectedPairs = selectedSubcategoryPairs.length > 0
-      ? selectedSubcategoryPairs
-      : Object.entries(categoryMap).flatMap(([category, subcategories]) => (
-          subcategories.map((subcategory) => getPairKey(category, subcategory))
-        ));
+    // When no subcategories are explicitly selected, show the total Q-bank count
+    // from statusCounts (which counts ALL questions regardless of category matching)
+    // This fixes the bug where some DB questions have different category/subcategory
+    // values than the CATEGORIES constant, causing undercounting.
+    if (selectedSubcategoryPairs.length === 0) {
+      return {
+        available: statusCounts.total || 0,
+        used: 0,
+        omitted: 0,
+      };
+    }
 
-    return selectedPairs.reduce((totals, pairKey) => {
+    return selectedSubcategoryPairs.reduce((totals, pairKey) => {
       const [category, subcategory] = pairKey.split(':::');
       const available = getSubcategoryCount(category, subcategory);
       const used = getUsedSubcategoryCount(category, subcategory);
@@ -273,7 +292,7 @@ const TestCustomization = () => {
         omitted: totals.omitted + omitted,
       };
     }, { available: 0, used: 0, omitted: 0 });
-  }, [selectedSubcategoryPairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap]);
+  }, [selectedSubcategoryPairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts]);
 
   const questionRangeMin = 5;
   const questionRangeMax = 150;
@@ -346,9 +365,10 @@ const TestCustomization = () => {
       return;
     }
 
-    // Handle Practice Test mode - auto-enable tutor mode
-    const effectiveTutorMode = testType === 'practice' ? true : tutorMode;
-    const effectiveTimed = testType === 'practice' ? false : timed; // Practice tests are untimed by default
+    // Handle Assessment mode - auto-enable tutor mode and timed, filter hard difficulty
+    const isAssessment = testType === 'assessment';
+    const effectiveTutorMode = isAssessment ? true : (testType === 'practice' ? true : tutorMode);
+    const effectiveTimed = isAssessment ? true : (testType === 'practice' ? false : timed);
 
     if (categoryTab === 'clientNeeds') {
       if (currentAvailable === 0) {
@@ -360,7 +380,8 @@ const TestCustomization = () => {
         return;
       }
     } else {
-      if (selectedSubcategoryPairs.length === 0) {
+      // Assessment auto-selects all subcategories, so skip the empty check
+      if (!isAssessment && selectedSubcategoryPairs.length === 0) {
         setError('Select at least one subcategory');
         return;
       }
@@ -397,11 +418,16 @@ const TestCustomization = () => {
           timed: effectiveTimed,
           tutorMode: effectiveTutorMode,
           statusFilters,
-          testType
+          testType,
+          ...(isAssessment ? { difficulty: 'hard' } : {})
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        navigate('/test-session', { state: { ...response.data, testType } });
+        const navData = { ...response.data, testType };
+        if (isAssessment) {
+          navData.settings = { ...navData.settings, testName: 'Assessment' };
+        }
+        navigate('/test-session', { state: navData });
       } else {
         // Standard mode - submit with categories
         const selections = selectedSubcategoryPairs.map((pairKey) => {
@@ -415,11 +441,16 @@ const TestCustomization = () => {
           timed: effectiveTimed,
           tutorMode: effectiveTutorMode,
           statusFilters,
-          testType
+          testType,
+          ...(isAssessment ? { difficulty: 'hard' } : {})
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        navigate('/test-session', { state: { ...response.data, testType } });
+        const navData = { ...response.data, testType };
+        if (isAssessment) {
+          navData.settings = { ...navData.settings, testName: 'Assessment' };
+        }
+        navigate('/test-session', { state: navData });
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to generate test');
@@ -458,22 +489,22 @@ const TestCustomization = () => {
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={() => setTestType('custom')}
+            onClick={() => setTestType('assessment')}
             style={{
               flex: 1,
               minWidth: '120px',
               padding: '12px 16px',
-              border: testType === 'custom' ? '2px solid #059669' : '1px solid #d1d5db',
+              border: testType === 'assessment' ? '2px solid #059669' : '1px solid #d1d5db',
               borderRadius: '8px',
-              background: testType === 'custom' ? '#ecfdf5' : '#fff',
-              color: testType === 'custom' ? '#059669' : '#374151',
+              background: testType === 'assessment' ? '#ecfdf5' : '#fff',
+              color: testType === 'assessment' ? '#059669' : '#374151',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.2s'
             }}
           >
-            <i className="fas fa-sliders-h me-2"></i>
-            Custom Test
+            <i className="fas fa-clipboard-check me-2"></i>
+            Assessment
           </button>
           <button
             type="button"
@@ -514,6 +545,12 @@ const TestCustomization = () => {
             Practice Test
           </button>
         </div>
+        {testType === 'assessment' && (
+          <div style={{ marginTop: '12px', padding: '10px', background: '#ecfdf5', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
+            <i className="fas fa-info-circle me-2" style={{ color: '#059669' }}></i>
+            Assessment mode tests your knowledge across all subjects with hard difficulty questions. All categories are automatically selected.
+          </div>
+        )}
         {testType === 'cat' && (
           <div style={{ marginTop: '12px', padding: '10px', background: '#f5f3ff', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
             <i className="fas fa-info-circle me-2" style={{ color: '#7c3aed' }}></i>
@@ -532,42 +569,22 @@ const TestCustomization = () => {
       {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
       
       <form onSubmit={handleSubmit}>
-        {/* Test Mode Section - Only show for Custom Test */}
-        {testType === 'custom' && (
+        {/* Assessment Settings */}
+        {testType === 'assessment' && (
           <div className="test-mode-section" style={{
             marginBottom: '20px',
             padding: '16px',
-            background: '#f8fafc',
+            background: '#ecfdf5',
             borderRadius: '8px',
-            border: '1px solid #e2e8f0'
+            border: '1px solid #059669'
           }}>
-            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '12px', display: 'block' }}>
-              Test Mode
+            <label style={{ fontWeight: 600, color: '#059669', marginBottom: '8px', display: 'block' }}>
+              <i className="fas fa-clipboard-check me-2"></i>
+              Assessment Settings
             </label>
-            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-              <div className="form-check form-switch" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="tutorSwitch"
-                  checked={tutorMode}
-                  onChange={(e) => handleTutorToggle(e.target.checked)}
-                  style={{ width: '40px', height: '20px', cursor: 'pointer' }}
-                />
-                <label className="form-check-label" htmlFor="tutorSwitch" style={{ fontWeight: 500 }}>Tutor</label>
-              </div>
-              <div className="form-check form-switch" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="timedSwitch"
-                  checked={timed}
-                  onChange={(e) => handleTimedToggle(e.target.checked)}
-                  style={{ width: '40px', height: '20px', cursor: 'pointer' }}
-                />
-                <label className="form-check-label" htmlFor="timedSwitch" style={{ fontWeight: 500 }}>Timed</label>
-              </div>
-            </div>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
+              Assessment mode automatically selects <strong>all subjects</strong> with <strong>hard difficulty</strong> questions. Tutor Mode and timer are both enabled for a realistic exam experience.
+            </p>
           </div>
         )}
 
@@ -997,7 +1014,7 @@ const TestCustomization = () => {
         >
           {loading 
             ? (testType === 'cat' ? 'Starting CAT...' : 'Generating...') 
-            : (testType === 'cat' ? 'START CAT EXAM' : testType === 'practice' ? 'START PRACTICE TEST' : 'GENERATE TEST')}
+            : (testType === 'cat' ? 'START CAT EXAM' : testType === 'practice' ? 'START PRACTICE TEST' : 'START ASSESSMENT')}
         </button>
       </form>
     </div>

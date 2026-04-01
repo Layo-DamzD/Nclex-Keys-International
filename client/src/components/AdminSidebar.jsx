@@ -8,7 +8,8 @@ const AdminSidebar = ({
   toggleSidebar,
   userRole,
   isMobileViewport = false,
-  sectionBadges = {}
+  sectionBadges = {},
+  sidebarTheme = 'purple'
 }) => {
   const navigate = useNavigate();
 
@@ -98,7 +99,7 @@ const AdminSidebar = ({
   };
 
   return (
-    <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <div className={`sidebar sidebar-theme-${sidebarTheme} ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header" style={{ position: 'relative' }}>
         <button
           onClick={toggleSidebar}

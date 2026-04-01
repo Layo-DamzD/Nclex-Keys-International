@@ -121,11 +121,164 @@ const CalculatorModal = ({ show, onClose }) => {
   );
 };
 
+// --- Assessment Speedometer Gauge Component ---
+const AssessmentGauge = ({ percentage }) => {
+  const cx = 100;
+  const cy = 90;
+  const r = 70;
+  const strokeWidth = 18;
+  const clampedPct = Math.max(0, Math.min(100, percentage));
+
+  const segments = [
+    { start: 0, end: Math.PI * 0.2, color: '#ef4444' },
+    { start: Math.PI * 0.2, end: Math.PI * 0.4, color: '#f97316' },
+    { start: Math.PI * 0.4, end: Math.PI * 0.6, color: '#eab308' },
+    { start: Math.PI * 0.6, end: Math.PI * 0.8, color: '#84cc16' },
+    { start: Math.PI * 0.8, end: Math.PI, color: '#22c55e' },
+  ];
+
+  // polarToCart: angle 0 = left, π/2 = top, π = right
+  const polarToCart = (angle) => ({
+    x: cx - r * Math.cos(angle),
+    y: cy - r * Math.sin(angle),
+  });
+
+  const arcPath = (startAngle, endAngle) => {
+    const s = polarToCart(startAngle);
+    const e = polarToCart(endAngle);
+    return `M ${s.x} ${s.y} A ${r} ${r} 0 0 0 ${e.x} ${e.y}`;
+  };
+
+  const getGaugeColor = (p) => {
+    if (p < 30) return '#ef4444';
+    if (p < 50) return '#f97316';
+    if (p < 65) return '#eab308';
+    if (p < 80) return '#84cc16';
+    return '#22c55e';
+  };
+
+  const getLabel = (p) => {
+    if (p < 30) return 'Very Low';
+    if (p < 50) return 'Low';
+    if (p < 65) return 'Moderate';
+    if (p < 80) return 'High';
+    return 'Very High';
+  };
+
+  // Needle calculation
+  const needleAngle = (clampedPct / 100) * Math.PI;
+  const needleR = r - strokeWidth / 2 - 4;
+  const needleTip = {
+    x: cx - needleR * Math.cos(needleAngle),
+    y: cy - needleR * Math.sin(needleAngle),
+  };
+
+  // Segment boundary tick marks
+  const tickMarks = segments.map((seg) => {
+    const tickR1 = r + strokeWidth / 2 + 2;
+    const tickR2 = r + strokeWidth / 2 + 6;
+    const pt1 = {
+      x: cx - tickR1 * Math.cos(seg.start),
+      y: cy - tickR1 * Math.sin(seg.start),
+    };
+    const pt2 = {
+      x: cx - tickR2 * Math.cos(seg.start),
+      y: cy - tickR2 * Math.sin(seg.start),
+    };
+    return { x1: pt1.x, y1: pt1.y, x2: pt2.x, y2: pt2.y };
+  });
+  // Add last boundary
+  const lastTickR1 = r + strokeWidth / 2 + 2;
+  const lastTickR2 = r + strokeWidth / 2 + 6;
+  tickMarks.push({
+    x1: cx - lastTickR1 * Math.cos(Math.PI),
+    y1: cy - lastTickR1 * Math.sin(Math.PI),
+    x2: cx - lastTickR2 * Math.cos(Math.PI),
+    y2: cy - lastTickR2 * Math.sin(Math.PI),
+  });
+
+  return (
+    <div style={{ textAlign: 'center', padding: '10px 0' }}>
+      <svg width="200" height="120" viewBox="0 0 200 120">
+        {/* Background track */}
+        <path
+          d={arcPath(0, Math.PI)}
+          fill="none"
+          stroke="#e5e7eb"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+        />
+        {/* Colored segments */}
+        {segments.map((seg, i) => (
+          <path
+            key={i}
+            d={arcPath(seg.start + 0.008, seg.end - 0.008)}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth={strokeWidth - 2}
+            strokeLinecap="round"
+            opacity={0.9}
+          />
+        ))}
+        {/* Tick marks at boundaries */}
+        {tickMarks.map((tick, i) => (
+          <line
+            key={i}
+            x1={tick.x1} y1={tick.y1}
+            x2={tick.x2} y2={tick.y2}
+            stroke="#9ca3af"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
+        ))}
+        {/* Needle shadow */}
+        <line
+          x1={cx + 1} y1={cy + 1}
+          x2={needleTip.x + 1} y2={needleTip.y + 1}
+          stroke="#00000015"
+          strokeWidth={3}
+          strokeLinecap="round"
+        />
+        {/* Needle */}
+        <line
+          x1={cx} y1={cy}
+          x2={needleTip.x} y2={needleTip.y}
+          stroke="#1f2937"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+        />
+        {/* Center cap */}
+        <circle cx={cx} cy={cy} r={6} fill="#1f2937" />
+        <circle cx={cx} cy={cy} r={3} fill="#fff" />
+      </svg>
+      {/* Score percentage */}
+      <div style={{
+        fontSize: '2.25rem',
+        fontWeight: 800,
+        color: getGaugeColor(clampedPct),
+        lineHeight: 1,
+        marginTop: '-8px',
+      }}>
+        {percentage}%
+      </div>
+      {/* Category label */}
+      <div style={{
+        fontSize: '0.95rem',
+        fontWeight: 600,
+        color: getGaugeColor(clampedPct),
+        marginTop: '6px',
+      }}>
+        {getLabel(percentage)} Chance of Passing NCLEX
+      </div>
+    </div>
+  );
+};
+
 // --- Main TestSession Component ---
 const TestSession = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { questions, settings } = location.state || { questions: [], settings: {} };
+  const { questions, settings, testType } = location.state || { questions: [], settings: {} };
   const dashboardReturnPath = settings?.returnTo || '/dashboard';
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -1176,13 +1329,180 @@ const TestSession = () => {
 
   // --- Submitted view (results) ---
   if (submitted) {
-    // Directly show results - navigation to test summary happens automatically after API success
+    // Common result calculations
     const correctCount = results.filter((r) => r.isCorrect === true).length;
     const partialCount = results.filter((r) => r.isCorrect === 'partial').length;
     const incorrectCount = results.length - correctCount - partialCount;
     const earnedTotal = results.reduce((sum, row) => sum + Number(row?.earnedMarks ?? (row?.isCorrect === true ? 1 : 0)), 0);
     const possibleTotal = results.reduce((sum, row) => sum + Number(row?.totalMarks ?? 1), 0) || 1;
     const percentage = Math.round((earnedTotal / possibleTotal) * 100);
+    const omittedCount = results.filter(r => {
+      const ans = r.userAnswer;
+      if (ans === undefined || ans === null) return true;
+      if (typeof ans === 'string' && ans.trim() === '') return true;
+      if (Array.isArray(ans) && ans.length === 0) return true;
+      if (typeof ans === 'object' && !Array.isArray(ans) && Object.keys(ans).length === 0) return true;
+      return false;
+    }).length;
+    const totalTimeSeconds = settings.timed ? (settings.totalQuestions || 0) * 120 : 0;
+    const timeTakenSeconds = Math.max(0, totalTimeSeconds - (timeLeft || 0));
+    const formatTimeTaken = (secs) => {
+      if (secs >= 3600) {
+        const h = Math.floor(secs / 3600);
+        const m = Math.floor((secs % 3600) / 60);
+        const s = secs % 60;
+        return s > 0 ? `${h}h ${m}m ${s}s` : `${h}h ${m}m`;
+      }
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      return s > 0 ? `${m}m ${s}s` : `${m}m`;
+    };
+    const isAssessment = testType === 'assessment';
+
+    // === Assessment Results View ===
+    if (isAssessment) {
+      return (
+        <div className="test-results" style={{ maxWidth: '560px', margin: '0 auto' }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <h3 style={{ fontWeight: 700, fontSize: '1.5rem', color: '#1f2937', marginBottom: '4px' }}>
+              Assessment Results
+            </h3>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>
+              {settings?.testName || 'Assessment'} &bull; {new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+
+          {/* Speedometer Gauge */}
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '28px 20px 20px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+            marginBottom: '20px',
+          }}>
+            <AssessmentGauge percentage={percentage} />
+          </div>
+
+          {/* Summary Stats - Top row: Total, Correct, Incorrect */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '12px',
+            marginBottom: '12px',
+          }}>
+            <div style={{
+              textAlign: 'center',
+              padding: '14px 8px',
+              background: '#f9fafb',
+              borderRadius: '10px',
+              border: '1px solid #e5e7eb',
+            }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#1f2937', lineHeight: 1.1 }}>
+                {results.length}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500, marginTop: '4px' }}>
+                Total Questions
+              </div>
+            </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '14px 8px',
+              background: '#f0fdf4',
+              borderRadius: '10px',
+              border: '1px solid #bbf7d0',
+            }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#16a34a', lineHeight: 1.1 }}>
+                {correctCount}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 500, marginTop: '4px' }}>
+                Correct
+              </div>
+            </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '14px 8px',
+              background: '#fef2f2',
+              borderRadius: '10px',
+              border: '1px solid #fecaca',
+            }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#dc2626', lineHeight: 1.1 }}>
+                {incorrectCount + partialCount}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 500, marginTop: '4px' }}>
+                Incorrect
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Stats - Bottom row: Omitted, Time Taken */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '12px',
+            marginBottom: '24px',
+          }}>
+            <div style={{
+              textAlign: 'center',
+              padding: '14px 8px',
+              background: '#fffbeb',
+              borderRadius: '10px',
+              border: '1px solid #fde68a',
+            }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#d97706', lineHeight: 1.1 }}>
+                {omittedCount}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 500, marginTop: '4px' }}>
+                Omitted
+              </div>
+            </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '14px 8px',
+              background: '#eff6ff',
+              borderRadius: '10px',
+              border: '1px solid #bfdbfe',
+            }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#2563eb', lineHeight: 1.1 }}>
+                {formatTimeTaken(timeTakenSeconds)}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 500, marginTop: '4px' }}>
+                Time Taken
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                if (!submittedResultId) {
+                  window.alert('Review summary is still being prepared. Please try again in a moment.');
+                  return;
+                }
+                navigate(`/test-review/${submittedResultId}`);
+              }}
+              disabled={!submittedResultId}
+            >
+              Open Test Summary &amp; Review
+            </button>
+            <button className="btn btn-secondary" onClick={() => navigate(dashboardReturnPath)}>
+              Back to Dashboard
+            </button>
+          </div>
+
+          {submitReviewError && <div className="alert alert-warning mt-3">{submitReviewError}</div>}
+        </div>
+      );
+    }
+
+    // === Non-Assessment Results View (existing behavior) ===
     const passed = percentage >= 70;
 
     const chartData = {

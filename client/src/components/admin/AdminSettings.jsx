@@ -8,7 +8,7 @@ const formatDateTime = (value) => {
   return date.toLocaleString();
 };
 
-const AdminSettings = () => {
+const AdminSettings = ({ sidebarTheme = 'purple', onSidebarThemeChange }) => {
   const token = useMemo(() => sessionStorage.getItem('adminToken'), []);
 
   const [loading, setLoading] = useState(true);
@@ -145,6 +145,15 @@ const AdminSettings = () => {
     return normalizedRole === 'superadmin' ? 'Super Admin' : 'Admin';
   }, [settings?.role]);
 
+  const isSuperAdmin = roleLabel === 'Super Admin';
+
+  const sidebarThemeOptions = [
+    { id: 'purple', label: 'Purple', previewClass: 'sidebar-theme-preview-purple' },
+    { id: 'black', label: 'Black', previewClass: 'sidebar-theme-preview-black' },
+    { id: 'red', label: 'Red', previewClass: 'sidebar-theme-preview-red' },
+    { id: 'blue', label: 'Blue', previewClass: 'sidebar-theme-preview-blue' }
+  ];
+
   const deviceLogins = Array.isArray(settings?.deviceLogins) ? settings.deviceLogins : [];
 
   if (loading) {
@@ -161,6 +170,29 @@ const AdminSettings = () => {
         <h1>Admin Settings</h1>
         <p style={{ color: '#64748b' }}>Update your profile and tighten account security</p>
       </div>
+
+      {isSuperAdmin && (
+        <div className="form-card" style={{ marginBottom: '24px' }}>
+          <h3 className="admin-section-title">Sidebar Theme</h3>
+          <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '14px' }}>
+            Customize the sidebar gradient for your Super Admin dashboard.
+          </p>
+          <div className="admin-sidebar-theme-selector">
+            <div className="admin-sidebar-theme-grid">
+              {sidebarThemeOptions.map((opt) => (
+                <button
+                  type="button"
+                  key={opt.id}
+                  className={`admin-sidebar-theme-option ${opt.previewClass} ${sidebarTheme === opt.id ? 'active' : ''}`}
+                  onClick={() => onSidebarThemeChange(opt.id)}
+                >
+                  <div className="admin-sidebar-theme-label">{opt.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="form-card" style={{ marginBottom: '24px' }}>
         <h3 className="admin-section-title">Account Info</h3>

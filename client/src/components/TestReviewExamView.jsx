@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import AssessmentSpeedometer from './AssessmentSpeedometer';
 
 const normalizeToLetter = (answer) => {
   if (answer === null || answer === undefined) return '';
@@ -131,13 +132,19 @@ const formatMarksLabel = (item) => {
     return `${earned}/${total}`;
   }
 
-  // For other questions, each question = 1 point
+  // Prioritize server-evaluated earnedMarks/totalMarks (set by submitTest evaluation)
+  if (item?.earnedMarks !== undefined && item?.earnedMarks !== null) {
+    const total = item?.totalMarks ?? 1;
+    return `${item.earnedMarks}/${total}`;
+  }
+
+  // Fallback for legacy data without server evaluation
   const mark = item?.marks ?? item?.scorePerQuestion ?? item?.points;
   if (mark === null || mark === undefined || mark === '') {
     return item?.isCorrect === true ? '1/1' : '0/1';
   }
   const total = item?.totalMarks ?? item?.maxMarks ?? 1;
-  const earned = item?.earnedMarks ?? (item?.isCorrect === true ? mark : 0);
+  const earned = item?.isCorrect === true ? mark : 0;
   return `${earned}/${total}`;
 };
 
@@ -342,6 +349,7 @@ const TestReviewExamView = ({
   const percent = Number(testResult?.percentage) || 0;
   const totalQuestions = Number(testResult?.totalQuestions) || answers.length || 0;
   const score = Number(testResult?.score) || 0;
+  const isAssessment = String(testResult?.testName || '').toLowerCase() === 'assessment';
   const dateLabel = testResult?.date ? new Date(testResult.date).toLocaleDateString('en-GB') : '';
   const timeTaken = testResult?.timeTaken;
   const timeTakenLabel = formatMinutesLabel(timeTaken);
@@ -576,7 +584,7 @@ const TestReviewExamView = ({
                       style={bgStyle}
                     >
                       <span className="exam-review-runtime-option-indicator" />
-                      <span className="exam-review-runtime-option-number">{idx + 1}.</span>
+                      <span className="exam-review-runtime-option-number">{letter}.</span>
                       <span
                         className="exam-review-runtime-option-text"
                         style={isWrong ? { textDecoration: 'line-through', color: '#dc2626' } : correct ? { color: '#166534', fontWeight: 600 } : {}}
@@ -938,9 +946,9 @@ const TestReviewExamView = ({
             <div
               className="exam-review-score-progress-fill"
               style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
-            />
-            <span className="exam-review-score-progress-tag">{percent}%</span>
+            />\n            <span className="exam-review-score-progress-tag">{percent}%</span>
           </div>
+          {isAssessment && <AssessmentSpeedometer percentage={percent} size={180} />}
         </div>
 
         <div className="exam-review-insight-strip">
@@ -1095,10 +1103,10 @@ const TestReviewExamView = ({
               <span>Total Questions</span>
               <strong>{totalQuestions}</strong>
             </div>
-            <div className="exam-review-report-metric">
-              <span>Points</span>
-              <strong>{summary.totalEarnedMarks}/{summary.totalPossibleMarks}</strong>
-            </div>
+              <div className="exam-review-report-metric">
+                <span>Points</span>
+                <strong>{summary.totalEarnedMarks}/{summary.totalPossibleMarks}</strong>
+              </div>
             <div className="exam-review-report-metric">
               <span>Score</span>
               <strong>{score}/{totalQuestions}</strong>
@@ -1109,21 +1117,26 @@ const TestReviewExamView = ({
             </div>
           </div>
 
-          <div className="exam-review-score-card exam-review-score-card-report">
-            <div
-              className="exam-review-score-ring"
-              style={{ '--score-angle': `${Math.max(0, Math.min(100, percent)) * 3.6}deg` }}
-            >
-              <div className="exam-review-score-inner">
-                <div className="exam-review-score-value">{percent}%</div>
-                <div className="exam-review-score-label">Score</div>
+            <div className="exam-review-score-card exam-review-score-card-report">
+              <div
+                className="exam-review-score-ring"
+                style={{ '--score-angle': `${Math.max(0, Math.min(100, percent)) * 3.6}deg` }}
+              >
+                <div className="exam-review-score-inner">
+                  <div className="exam-review-score-value">{percent}%</div>
+                  <div className="exam-review-score-label">Score</div>
+                </div>
+              </div>
+              <div className="exam-review-score-meta exam-review-score-meta-report">
+                <div><strong>{summary.totalEarnedMarks}</strong> / {summary.totalPossibleMarks} Points</div>
+                <div>{summary.correct} Correct of {totalQuestions}</div>
               </div>
             </div>
-            <div className="exam-review-score-meta exam-review-score-meta-report">
-              <div><strong>{summary.totalEarnedMarks}</strong> / {summary.totalPossibleMarks} Points</div>
-              <div>{summary.correct} Correct of {totalQuestions}</div>
-            </div>
-          </div>
+            {isAssessment && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '12px 0' }}>
+                <AssessmentSpeedometer percentage={percent} size={200} />
+              </div>
+            )}
 
           <div className="exam-review-report-side">
             <div className="exam-review-report-breakdown">
