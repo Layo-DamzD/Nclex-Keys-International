@@ -893,13 +893,39 @@ const TestSession = () => {
   };
 
   const evaluateSataAnswer = (userAnswer, correctAnswer) => {
-    // Normalize all answers to letter format
+    // Helper to parse correctAnswer which might be array or string
+    const parseAnswerToArray = (answer) => {
+      if (!answer) return [];
+      // Already an array
+      if (Array.isArray(answer)) {
+        return answer.map(v => normalizeToLetter(v)).filter(Boolean);
+      }
+      // String format: could be "A,B,C", "A, B, C", "ABC", or "1,2,3"
+      const str = String(answer).trim();
+      // Check if it's comma-separated
+      if (str.includes(',')) {
+        return str.split(',').map(v => normalizeToLetter(v.trim())).filter(Boolean);
+      }
+      // Check if it's a string of letters like "ABC" or "acd"
+      if (/^[A-Za-z]+$/.test(str)) {
+        return str.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+      }
+      // Check if it's space-separated
+      if (str.includes(' ')) {
+        return str.split(/\s+/).map(v => normalizeToLetter(v.trim())).filter(Boolean);
+      }
+      // Single value
+      const normalized = normalizeToLetter(str);
+      return normalized ? [normalized] : [];
+    };
+
+    // Normalize user answer
     const user = Array.isArray(userAnswer)
       ? [...new Set(userAnswer.map((v) => normalizeToLetter(v)).filter(Boolean))]
       : [];
-    const correct = Array.isArray(correctAnswer)
-      ? [...new Set(correctAnswer.map((v) => normalizeToLetter(v)).filter(Boolean))]
-      : [];
+    
+    // Normalize correct answer (handle both array and string formats)
+    const correct = [...new Set(parseAnswerToArray(correctAnswer))];
 
     const totalMarks = Math.max(correct.length, 1);
     const correctPicked = user.filter((choice) => correct.includes(choice)).length;
@@ -2418,80 +2444,171 @@ const TestSession = () => {
         )}
       </div>
 
-      {/* Question Navigator Modal */}
+      {/* Question Navigator Dropdown */}
       {showNavigatorModal && (
         <div
-          className="modal fade show d-block"
-          style={{ background: 'rgba(0,0,0,0.5)' }}
+          className="navigator-dropdown-overlay"
           onClick={() => setShowNavigatorModal(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1040
+          }}
         >
-          <div className="modal-dialog modal-dialog-centered modal-lg" onClick={e => e.stopPropagation()}>
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Question Navigator</h5>
-                <button type="button" className="btn-close" onClick={() => setShowNavigatorModal(false)}></button>
-              </div>
-              <div className="modal-body">
-                {/* All Question Numbers - Click to Jump */}
-                <div className="mb-2 text-muted small">Click any question number to jump directly:</div>
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '6px',
-                  maxHeight: '350px',
-                  overflowY: 'auto',
-                  padding: '10px',
-                  background: '#f8fafc',
-                  borderRadius: '8px'
-                }}>
-                  {questions.map((q, idx) => {
-                    const isAnswered = q.type === 'case-study'
-                      ? q.questions?.some(subQ => caseAnswers[subQ._id] !== undefined)
-                      : answers[q._id] !== undefined;
-                    const isCurrent = idx === currentIndex;
+          <div
+            className="navigator-dropdown-container"
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: '#fff',
+              borderRadius: '12px',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#f8fafc'
+            }}>
+              <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#1e3a5f' }}>
+                <i className="fas fa-list-ol me-2"></i>Question Navigator
+              </h5>
+              <button
+                type="button"
+                onClick={() => setShowNavigatorModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div style={{
+              padding: '12px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              background: '#fff',
+              display: 'flex',
+              gap: '16px',
+              flexWrap: 'wrap',
+              fontSize: '0.85rem'
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: 16, height: 16, background: '#dbeafe', border: '2px solid #3b82f6', borderRadius: 4 }}></span>
+                Current
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: 16, height: 16, background: '#3b82f6', borderRadius: 4 }}></span>
+                Answered
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: 16, height: 16, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 4 }}></span>
+                Omitted
+              </span>
+            </div>
 
-                    return (
-                      <button
-                        key={q._id || idx}
-                        type="button"
-                        onClick={() => goToQuestion(idx)}
-                        style={{
-                          width: '40px',
-                          height: '40px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: isCurrent ? 'bold' : '600',
-                          border: isCurrent ? '3px solid #1d4ed8' : isAnswered ? '2px solid #22c55e' : '1px solid #cbd5e1',
-                          backgroundColor: isCurrent
-                            ? '#dbeafe'
-                            : isAnswered
-                              ? '#dcfce7'
-                              : '#fff',
-                          color: '#1e3a5f',
-                          borderRadius: '6px',
-                          fontSize: '0.95rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s'
-                        }}
-                        title={`Question ${idx + 1}${q.type === 'case-study' ? ' (Case Study)' : ''} - ${isAnswered ? 'Answered' : 'Unanswered'}`}
-                      >
-                        {idx + 1}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 d-flex gap-3 justify-content-center flex-wrap">
-                  <span><span style={{ display: 'inline-block', width: 18, height: 18, background: '#dbeafe', border: '2px solid #1d4ed8', borderRadius: 4, marginRight: 6, verticalAlign: 'middle' }}></span> Current</span>
-                  <span><span style={{ display: 'inline-block', width: 18, height: 18, background: '#dcfce7', border: '2px solid #22c55e', borderRadius: 4, marginRight: 6, verticalAlign: 'middle' }}></span> Answered</span>
-                  <span><span style={{ display: 'inline-block', width: 18, height: 18, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 4, marginRight: 6, verticalAlign: 'middle' }}></span> Unanswered</span>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-primary" onClick={() => setShowNavigatorModal(false)}>
-                  Close
-                </button>
-              </div>
+            <div style={{
+              padding: '16px',
+              overflowY: 'auto',
+              flex: 1,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(50px, 1fr))',
+              gap: '8px',
+              alignContent: 'start'
+            }}>
+              {questions.map((q, idx) => {
+                const isAnswered = q.type === 'case-study'
+                  ? q.questions?.some(subQ => caseAnswers[subQ._id] !== undefined)
+                  : answers[q._id] !== undefined;
+                const isCurrent = idx === currentIndex;
+
+                // Color coding: Blue=answered, White=omitted, Yellow=Current
+                let bgColor = '#fff';
+                let borderColor = '#cbd5e1';
+                let textColor = '#374151';
+                
+                if (isCurrent) {
+                  bgColor = '#fef3c7'; // Yellow
+                  borderColor = '#f59e0b';
+                  textColor = '#92400e';
+                } else if (isAnswered) {
+                  bgColor = '#3b82f6'; // Blue
+                  borderColor = '#2563eb';
+                  textColor = '#fff';
+                } else {
+                  bgColor = '#fff'; // White for omitted
+                  borderColor = '#cbd5e1';
+                  textColor = '#374151';
+                }
+
+                return (
+                  <button
+                    key={q._id || idx}
+                    type="button"
+                    onClick={() => goToQuestion(idx)}
+                    style={{
+                      width: '100%',
+                      aspectRatio: '1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                      border: `2px solid ${borderColor}`,
+                      backgroundColor: bgColor,
+                      color: textColor,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      boxShadow: isCurrent ? '0 2px 8px rgba(245, 158, 11, 0.3)' : 'none'
+                    }}
+                    title={`Question ${idx + 1}${q.type === 'case-study' ? ' (Case Study)' : ''} - ${isAnswered ? 'Answered' : 'Omitted'}`}
+                  >
+                    {idx + 1}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{
+              padding: '12px 20px',
+              borderTop: '1px solid #e2e8f0',
+              background: '#f8fafc',
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowNavigatorModal(false)}
+                style={{
+                  background: '#3b82f6',
+                  border: 'none',
+                  padding: '8px 20px',
+                  borderRadius: '6px'
+                }}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

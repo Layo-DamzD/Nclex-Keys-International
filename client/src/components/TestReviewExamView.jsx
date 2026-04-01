@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 
-// Normalize answer to letter format (A, B, C, D, etc.)
-// Handles: "A", "a", "1", 1, "Option 1", "option 1", etc.
 const normalizeToLetter = (answer) => {
   if (answer === null || answer === undefined) return '';
   const str = String(answer).trim().toUpperCase();
@@ -29,6 +27,32 @@ const normalizeToLetter = (answer) => {
   }
   
   return str; // Return as-is if no match
+};
+
+// Helper to parse correctAnswer which might be array or string for SATA
+const parseSataAnswerToArray = (answer) => {
+  if (!answer) return [];
+  // Already an array
+  if (Array.isArray(answer)) {
+    return answer.map(v => normalizeToLetter(v)).filter(Boolean);
+  }
+  // String format: could be "A,B,C", "A, B, C", "ABC", or "1,2,3"
+  const str = String(answer).trim();
+  // Check if it's comma-separated
+  if (str.includes(',')) {
+    return str.split(',').map(v => normalizeToLetter(v.trim())).filter(Boolean);
+  }
+  // Check if it's a string of letters like "ABC" or "acd"
+  if (/^[A-Za-z]+$/.test(str)) {
+    return str.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+  }
+  // Check if it's space-separated
+  if (str.includes(' ')) {
+    return str.split(/\s+/).map(v => normalizeToLetter(v.trim())).filter(Boolean);
+  }
+  // Single value
+  const normalized = normalizeToLetter(str);
+  return normalized ? [normalized] : [];
 };
 
 const normalizeTypeLabel = (type) => {
@@ -227,6 +251,7 @@ const TestReviewExamView = ({
   const [runtimeBooting, setRuntimeBooting] = useState(false);
   const [activeSummaryTab, setActiveSummaryTab] = useState('results');
   const [answerFilter, setAnswerFilter] = useState('all');
+  const [showNavigatorDropdown, setShowNavigatorDropdown] = useState(false);
 
   useEffect(() => {
     const blockEvent = (event) => {
@@ -504,12 +529,21 @@ const TestReviewExamView = ({
                   const correctAns = active.correctAnswer;
                   
                   // Normalize answers for comparison (handles "2" vs "B" differences)
-                  const normalizedUser = Array.isArray(userAns) 
-                    ? userAns.map(v => normalizeToLetter(v))
-                    : normalizeToLetter(userAns);
-                  const normalizedCorrect = Array.isArray(correctAns)
-                    ? correctAns.map(v => normalizeToLetter(v))
-                    : normalizeToLetter(correctAns);
+                  // For SATA, use parseSataAnswerToArray to handle string/array formats
+                  let normalizedUser;
+                  let normalizedCorrect;
+                  
+                  if (active.type === 'sata') {
+                    normalizedUser = parseSataAnswerToArray(userAns);
+                    normalizedCorrect = parseSataAnswerToArray(correctAns);
+                  } else {
+                    normalizedUser = Array.isArray(userAns) 
+                      ? userAns.map(v => normalizeToLetter(v))
+                      : normalizeToLetter(userAns);
+                    normalizedCorrect = Array.isArray(correctAns)
+                      ? correctAns.map(v => normalizeToLetter(v))
+                      : normalizeToLetter(correctAns);
+                  }
                   
                   const selected = Array.isArray(normalizedUser) ? normalizedUser.includes(letter) : normalizedUser === letter;
                   const correct = Array.isArray(normalizedCorrect) ? normalizedCorrect.includes(letter) : normalizedCorrect === letter;
@@ -606,7 +640,7 @@ const TestReviewExamView = ({
           >
             <i className="fas fa-arrow-left"></i> Previous
           </button>
-          <button type="button" className="exam-toolbar-btn" onClick={scrollToQuestionList}>
+          <button type="button" className="exam-toolbar-btn" onClick={() => setShowNavigatorDropdown(true)}>
             <i className="fas fa-map"></i> Navigator
           </button>
           <button
@@ -618,6 +652,189 @@ const TestReviewExamView = ({
             Next <i className="fas fa-arrow-right"></i>
           </button>
         </div>
+
+        {/* Question Navigator Dropdown */}
+        {showNavigatorDropdown && (
+          <div
+            className="navigator-dropdown-overlay"
+            onClick={() => setShowNavigatorDropdown(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1040
+            }}
+          >
+            <div
+              className="navigator-dropdown-container"
+              onClick={e => e.stopPropagation()}
+              style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: '#fff',
+                borderRadius: '12px',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                maxWidth: '500px',
+                width: '90%',
+                maxHeight: '80vh',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <div style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: '#f8fafc'
+              }}>
+                <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#1e3a5f' }}>
+                  <i className="fas fa-list-ol me-2"></i>Question Navigator
+                </h5>
+                <button
+                  type="button"
+                  onClick={() => setShowNavigatorDropdown(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    color: '#6b7280'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div style={{
+                padding: '12px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                background: '#fff',
+                display: 'flex',
+                gap: '16px',
+                flexWrap: 'wrap',
+                fontSize: '0.85rem'
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: 16, height: 16, background: '#dbeafe', border: '2px solid #3b82f6', borderRadius: 4 }}></span>
+                  Current
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: 16, height: 16, background: '#22c55e', borderRadius: 4 }}></span>
+                  Correct
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: 16, height: 16, background: '#ef4444', borderRadius: 4 }}></span>
+                  Incorrect
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: 16, height: 16, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 4 }}></span>
+                  Omitted
+                </span>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                overflowY: 'auto',
+                flex: 1,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(50px, 1fr))',
+                gap: '8px',
+                alignContent: 'start'
+              }}>
+                {answers.map((item, idx) => {
+                  const isCurrent = idx === activeQuestionIndex;
+                  const status = getAnswerStatusMeta(item);
+                  
+                  // Color coding: Red=incorrect, Green=correct, White=omitted, Blue=current
+                  let bgColor = '#fff';
+                  let borderColor = '#cbd5e1';
+                  let textColor = '#374151';
+                  
+                  if (isCurrent) {
+                    bgColor = '#dbeafe'; // Light blue for current
+                    borderColor = '#3b82f6';
+                    textColor = '#1e40af';
+                  } else if (status.tone === 'correct') {
+                    bgColor = '#22c55e'; // Green for correct
+                    borderColor = '#16a34a';
+                    textColor = '#fff';
+                  } else if (status.tone === 'incorrect') {
+                    bgColor = '#ef4444'; // Red for incorrect
+                    borderColor = '#dc2626';
+                    textColor = '#fff';
+                  } else if (status.tone === 'partial') {
+                    bgColor = '#f59e0b'; // Orange for partial
+                    borderColor = '#d97706';
+                    textColor = '#fff';
+                  } else {
+                    bgColor = '#fff'; // White for omitted
+                    borderColor = '#cbd5e1';
+                    textColor = '#374151';
+                  }
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setActiveQuestionIndex(idx);
+                        setShowNavigatorDropdown(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        aspectRatio: '1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 600,
+                        fontSize: '0.95rem',
+                        border: `2px solid ${borderColor}`,
+                        backgroundColor: bgColor,
+                        color: textColor,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        boxShadow: isCurrent ? '0 2px 8px rgba(59, 130, 246, 0.3)' : 'none'
+                      }}
+                      title={`Question ${idx + 1} - ${status.label}`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{
+                padding: '12px 20px',
+                borderTop: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                display: 'flex',
+                justifyContent: 'flex-end'
+              }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setShowNavigatorDropdown(false)}
+                  style={{
+                    background: '#3b82f6',
+                    border: 'none',
+                    padding: '8px 20px',
+                    borderRadius: '6px'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
