@@ -600,6 +600,25 @@ const sendTestAssignmentEmail = async ({
 
   const displayName = studentName || 'there';
   const subject = `NCLEX KEYS International - New Test Assigned: ${testTitle}`;
+  const proctoringTextBlock = proctored ? [
+    '',
+    '⚠️  PROCTORED EXAM — IMPORTANT RULES:',
+    '',
+    '• You must allow camera and microphone access before starting.',
+    '• You must remain in fullscreen mode for the entire test.',
+    '• Do NOT switch tabs, minimize the window, or leave the test.',
+    '• Your webcam will take periodic snapshots during the exam.',
+    '• 3 violations will result in AUTOMATIC SUBMISSION of your test.',
+    '',
+    'Violations include:',
+    '  1. Switching to another tab or minimizing the browser',
+    '  2. Clicking away from the test window',
+    '  3. Exiting fullscreen mode',
+    '',
+    'Make sure you are in a quiet, well-lit room with no distractions before starting.',
+    ''
+  ] : [];
+
   const text = [
     `Hello ${displayName},`,
     '',
@@ -607,7 +626,7 @@ const sendTestAssignmentEmail = async ({
     '',
     `Test: ${testTitle}`,
     `Duration: ${duration} minutes`,
-    ...(proctored ? ['Note: This is a proctored exam — camera and microphone checks will apply.', ''] : []),
+    ...proctoringTextBlock,
     'Log in to your account to take the test when you are ready.',
     '',
     'Good luck!',
@@ -616,6 +635,31 @@ const sendTestAssignmentEmail = async ({
   ].join('\n');
 
   const baseUrl = getClientBaseUrl();
+
+  const proctoringHtmlBlock = proctored ? `
+      <div style="margin:20px 0;padding:20px;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;">
+        <h3 style="margin:0 0 12px;color:#dc2626;font-size:16px;">⚠️ PROCTORED EXAM — IMPORTANT RULES</h3>
+        <ul style="margin:0 0 16px;padding-left:20px;color:#374151;line-height:1.8;">
+          <li>You must allow <strong>camera and microphone</strong> access before starting.</li>
+          <li>You must remain in <strong>fullscreen mode</strong> for the entire test.</li>
+          <li>Do <strong>NOT</strong> switch tabs, minimize the window, or leave the test.</li>
+          <li>Your webcam will take <strong>periodic snapshots</strong> during the exam.</li>
+          <li><strong style="color:#dc2626;">3 violations = automatic submission</strong> of your test.</li>
+        </ul>
+        <div style="background:#fff;border:1px solid #fca5a5;border-radius:8px;padding:14px;">
+          <p style="margin:0 0 8px;font-weight:700;color:#991b1b;font-size:14px;">What counts as a violation:</p>
+          <ol style="margin:0;padding-left:20px;color:#374151;line-height:2;font-size:14px;">
+            <li>Switching to another tab or minimizing the browser</li>
+            <li>Clicking away from the test window</li>
+            <li>Exiting fullscreen mode (pressing Escape, etc.)</li>
+          </ol>
+        </div>
+        <p style="margin:14px 0 0;color:#991b1b;font-size:14px;">
+          📸 Make sure you are in a <strong>quiet, well-lit room</strong> with no distractions before starting.
+        </p>
+      </div>
+  ` : '';
+
   const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:600px;margin:0 auto;padding:24px;">
       <h2 style="margin:0 0 12px;color:#1d4ed8;">NCLEX KEYS International</h2>
@@ -632,6 +676,7 @@ const sendTestAssignmentEmail = async ({
         </tr>
         ${proctored ? `<tr><td style="font-weight:700;">Proctored</td><td style="color:#dc2626;font-weight:600;">Yes — camera &amp; mic required</td></tr>` : ''}
       </table>
+      ${proctoringHtmlBlock}
       <p style="margin:20px 0;">
         <a href="${baseUrl}/login" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">
           Log In to Take Test
