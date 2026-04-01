@@ -32,7 +32,7 @@ const TestCustomization = () => {
   const [questionCountInput, setQuestionCountInput] = useState('75'); // For allowing empty input display
   const [timed, setTimed] = useState(true);
   const [tutorMode, setTutorMode] = useState(false);
-  const [testType, setTestType] = useState('assessment'); // 'assessment', 'cat', 'practice'
+  const [testType, setTestType] = useState('practice'); // 'practice', 'cat', 'assessment'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
@@ -75,18 +75,7 @@ const TestCustomization = () => {
 
   const navigate = useNavigate();
 
-  // Auto-select all subcategories when switching to Assessment mode
-  useEffect(() => {
-    if (testType === 'assessment') {
-      const allPairs = Object.entries(categoryMap).flatMap(([category, subcategories]) =>
-        subcategories.map(sub => getPairKey(category, sub))
-      );
-      setSelectedSubcategoryPairs(allPairs);
-      // Expand all categories so user can see all are selected
-      const allCategories = Object.keys(categoryMap);
-      setExpandedCategory(allCategories[0] || null);
-    }
-  }, [testType]);
+  // No auto-select needed for practice mode (user chooses manually)
 
   const handleTimedToggle = (checked) => {
     setTimed(checked);
@@ -366,10 +355,11 @@ const TestCustomization = () => {
       return;
     }
 
-    // Handle Assessment mode - auto-enable tutor mode and timed, filter hard difficulty
+    // Assessment always uses CAT (handled above). For practice, let user choose timed/tutor.
     const isAssessment = testType === 'assessment';
-    const effectiveTutorMode = isAssessment ? true : (testType === 'practice' ? true : tutorMode);
-    const effectiveTimed = isAssessment ? true : (testType === 'practice' ? false : timed);
+    const isPractice = testType === 'practice';
+    const effectiveTutorMode = isAssessment ? true : tutorMode;
+    const effectiveTimed = isAssessment ? true : timed;
 
     if (categoryTab === 'clientNeeds') {
       if (currentAvailable === 0) {
@@ -490,22 +480,22 @@ const TestCustomization = () => {
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={() => setTestType('assessment')}
+            onClick={() => setTestType('practice')}
             style={{
               flex: 1,
               minWidth: '120px',
               padding: '12px 16px',
-              border: testType === 'assessment' ? '2px solid #059669' : '1px solid #d1d5db',
+              border: testType === 'practice' ? '2px solid #0ea5e9' : '1px solid #d1d5db',
               borderRadius: '8px',
-              background: testType === 'assessment' ? '#ecfdf5' : '#fff',
-              color: testType === 'assessment' ? '#059669' : '#374151',
+              background: testType === 'practice' ? '#f0f9ff' : '#fff',
+              color: testType === 'practice' ? '#0ea5e9' : '#374151',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.2s'
             }}
           >
-            <i className="fas fa-clipboard-check me-2"></i>
-            Assessment
+            <i className="fas fa-graduation-cap me-2"></i>
+            Practice Test
           </button>
           <button
             type="button"
@@ -528,22 +518,22 @@ const TestCustomization = () => {
           </button>
           <button
             type="button"
-            onClick={() => setTestType('practice')}
+            onClick={() => setTestType('assessment')}
             style={{
               flex: 1,
               minWidth: '120px',
               padding: '12px 16px',
-              border: testType === 'practice' ? '2px solid #0ea5e9' : '1px solid #d1d5db',
+              border: testType === 'assessment' ? '2px solid #059669' : '1px solid #d1d5db',
               borderRadius: '8px',
-              background: testType === 'practice' ? '#f0f9ff' : '#fff',
-              color: testType === 'practice' ? '#0ea5e9' : '#374151',
+              background: testType === 'assessment' ? '#ecfdf5' : '#fff',
+              color: testType === 'assessment' ? '#059669' : '#374151',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.2s'
             }}
           >
-            <i className="fas fa-graduation-cap me-2"></i>
-            Practice Test
+            <i className="fas fa-clipboard-check me-2"></i>
+            Assessment
           </button>
         </div>
         {testType === 'assessment' && (
@@ -589,7 +579,7 @@ const TestCustomization = () => {
           </div>
         )}
 
-        {/* Practice Test Info */}
+        {/* Practice Test Settings */}
         {testType === 'practice' && (
           <div className="test-mode-section" style={{
             marginBottom: '20px',
@@ -602,9 +592,41 @@ const TestCustomization = () => {
               <i className="fas fa-graduation-cap me-2"></i>
               Practice Test Settings
             </label>
-            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
-              Practice Test mode automatically enables <strong>Tutor Mode</strong> (immediate feedback) and disables the timer for a relaxed learning experience.
+            <p style={{ margin: '0 0 12px', color: '#6b7280', fontSize: '0.9rem' }}>
+              Choose how you want to practice — with or without a timer, and with or without immediate feedback.
             </p>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                onClick={() => handleTimedToggle(!timed)}>
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="practiceTimed"
+                  checked={timed}
+                  onChange={() => handleTimedToggle(!timed)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0ea5e9' }}
+                />
+                <label className="form-check-label" htmlFor="practiceTimed"
+                  style={{ fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                  <i className="fas fa-clock me-1"></i> Timed
+                </label>
+              </div>
+              <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                onClick={() => handleTutorToggle(!tutorMode)}>
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="practiceTutor"
+                  checked={tutorMode}
+                  onChange={() => handleTutorToggle(!tutorMode)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0ea5e9' }}
+                />
+                <label className="form-check-label" htmlFor="practiceTutor"
+                  style={{ fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                  <i className="fas fa-eye me-1"></i> Tutor Mode (immediate feedback)
+                </label>
+              </div>
+            </div>
           </div>
         )}
 
@@ -627,7 +649,7 @@ const TestCustomization = () => {
           </div>
         )}
 
-        {/* Question Status Filter Section - Hide for CAT and Assessment mode */}
+        {/* Question Bank Info - Hide for CAT and Assessment mode */}
         {testType !== 'cat' && testType !== 'assessment' && (
           <div className="question-status-section" style={{
             marginBottom: '20px',
@@ -636,78 +658,29 @@ const TestCustomization = () => {
             borderRadius: '8px',
             border: '1px solid #e2e8f0'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label style={{ fontWeight: 600, color: '#374151' }}>
-                Question Status
+                Question Bank
               </label>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>
-                  {currentAvailable} questions available
-                </span>
-                <span style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '2px' }}>
-                  {totalQuestionBank} total in Q-Bank
-                </span>
+              <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                onClick={handleSelectAllSubjects}>
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  checked={categoryTab === 'clientNeeds'
+                    ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
+                    : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length}
+                  onChange={() => {}}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
+                />\n                <label style={{
+                  fontWeight: 600,
+                  color: '#059669',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem'
+                }}>
+                  Select All ({totalQuestionBank})
+                </label>
               </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {[
-                { key: 'unused', label: 'Unused', count: statusCounts.unused, ngnCount: statusCounts.unusedNgn },
-                { key: 'incorrect', label: 'Incorrect', count: statusCounts.incorrect, ngnCount: statusCounts.incorrectNgn },
-                { key: 'marked', label: 'Marked', count: statusCounts.marked, ngnCount: statusCounts.markedNgn },
-                { key: 'omitted', label: 'Omitted', count: statusCounts.omitted, ngnCount: statusCounts.omittedNgn },
-                { key: 'correct', label: 'Correct', count: statusCounts.correct, ngnCount: statusCounts.correctNgn }
-              ].map(({ key, label, count, ngnCount }) => (
-                <div 
-                  key={key}
-                  className="form-check" 
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '6px',
-                    padding: '8px 12px',
-                    background: statusFilters[key] ? '#e0f2fe' : '#fff',
-                    borderRadius: '6px',
-                    border: statusFilters[key] ? '1px solid #0ea5e9' : '1px solid #e2e8f0',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onClick={() => setStatusFilters(prev => ({ ...prev, [key]: !prev[key] }))}
-                >
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    id={`${key}Check`}
-                    checked={statusFilters[key]}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setStatusFilters(prev => ({ ...prev, [key]: e.target.checked }));
-                    }}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0ea5e9' }}
-                  />
-                  <label 
-                    className="form-check-label" 
-                    htmlFor={`${key}Check`} 
-                    style={{ 
-                      fontWeight: 500,
-                      color: statusFilters[key] ? '#0369a1' : '#374151',
-                      cursor: 'pointer',
-                      marginRight: '4px'
-                    }}
-                  >
-                    {label}
-                  </label>
-                  <span style={{
-                    background: statusFilters[key] ? '#0ea5e9' : '#e2e8f0',
-                    color: statusFilters[key] ? '#fff' : '#64748b',
-                    padding: '2px 6px',
-                    borderRadius: '10px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600
-                  }}>
-                    {count} ({ngnCount} NGN)
-                  </span>
-                </div>
-              ))}
             </div>
           </div>
         )}
