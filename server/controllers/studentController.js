@@ -1609,30 +1609,41 @@ const getQuestionStatusCounts = async (req, res) => {
     // Get all questions to calculate counts
     const allQuestions = await Question.find({}, '_id isNextGen');
     const allQuestionIds = allQuestions.map(q => String(q._id));
+    const questionMap = new Map(allQuestions.map(q => [String(q._id), q]));
 
     // Get question IDs by status
     const seenQuestionIds = new Set((user.seenQuestions || []).map(id => String(id)));
     const incorrectQuestionIds = new Set((user.incorrectQuestions || []).map(id => String(id)));
-    const markedQuestions = user.markedQuestions || [];
+    const markedSet = new Set((user.markedQuestions || []).map(id => String(id)));
     const omittedQuestionIds = new Set((user.customTestOmittedQuestions || []).map(id => String(id)));
-    const usedQuestionIds = new Set((user.customTestUsedQuestions || []).map(id => String(id)));
 
-    // Calculate correct questions (seen but not incorrect)
-    const correctQuestionIds = new Set(
-      [...seenQuestionIds].filter(id => !incorrectQuestionIds.has(id))
-    );
-
-    // Calculate unused questions (not seen yet)
+    // Unused = not seen at all
     const unusedQuestionIds = new Set(
       allQuestionIds.filter(id => !seenQuestionIds.has(id))
     );
 
+    // Now partition SEEN questions into mutually exclusive categories:
+    // 1. Omitted: seen AND in customTestOmittedQuestions (student saw but skipped)
+    // 2. Incorrect: seen AND in incorrectQuestions
+    // 3. Marked: seen AND in markedQuestions (but not already in omitted or incorrect)
+    // 4. Correct: remaining seen questions (answered and correct)
+    const seenNotOmitted = new Set(
+      [...seenQuestionIds].filter(id => !omittedQuestionIds.has(id))
+    );
+    const seenNotOmittedNotIncorrect = new Set(
+      [...seenNotOmitted].filter(id => !incorrectQuestionIds.has(id))
+    );
+    const seenNotOmittedNotIncorrectNotMarked = new Set(
+      [...seenNotOmittedNotIncorrect].filter(id => !markedSet.has(id))
+    );
+    const correctQuestionIds = seenNotOmittedNotIncorrectNotMarked;
+
     // Helper to count NGN questions
-    const countWithNgn = (questionIds) => {
+    const countWithNgn = (questionIdSet) => {
       let count = 0;
       let ngnCount = 0;
-      questionIds.forEach(id => {
-        const q = allQuestions.find(question => String(question._id) === id);
+      questionIdSet.forEach(id => {
+        const q = questionMap.get(id);
         if (q) {
           count++;
           if (q.isNextGen) ngnCount++;
@@ -1643,7 +1654,7 @@ const getQuestionStatusCounts = async (req, res) => {
 
     const unused = countWithNgn(unusedQuestionIds);
     const incorrect = countWithNgn(incorrectQuestionIds);
-    const marked = countWithNgn(new Set(markedQuestions.map(id => String(id))));
+    const marked = countWithNgn(markedSet);
     const omitted = countWithNgn(omittedQuestionIds);
     const correct = countWithNgn(correctQuestionIds);
 
