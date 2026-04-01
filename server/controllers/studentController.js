@@ -984,6 +984,7 @@ const isCATAnswerCorrect = (question, answer) => {
 const startCATSession = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const testType = req.body?.testType || 'cat';
     
     // Get all active questions with IRT parameters
       const questions = await Question.find({
@@ -1011,6 +1012,7 @@ const startCATSession = async (req, res) => {
     // Create session record
     const session = {
       studentId,
+      testType,
       startTime: new Date(),
       administered: [],
       responses: [],
@@ -1107,9 +1109,10 @@ const submitCATAnswer = async (req, res) => {
       const passed = (session.theta - 1.96 * session.se) > session.engine.passingStandard;
       
       // Save test result
+      const testName = session.testType === 'assessment' ? 'Assessment' : 'CAT Adaptive Test';
       const testResult = new TestResult({
         student: studentId,
-        testName: 'CAT Adaptive Test',
+        testName,
         date: new Date(),
         score: session.responses.filter(r => r === 1).length,
         totalQuestions: session.administered.length,

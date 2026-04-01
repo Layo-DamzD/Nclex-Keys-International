@@ -580,6 +580,87 @@ const sendStudentOtpEmail = async ({
   }
 };
 
+// Email notification when admin assigns a test to a student
+const sendTestAssignmentEmail = async ({
+  to,
+  studentName,
+  testTitle,
+  duration,
+  proctored = false,
+  adminName = 'Your Tutor'
+}) => {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'not_configured' };
+  }
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    return { sent: false, reason: 'transporter_unavailable' };
+  }
+
+  const displayName = studentName || 'there';
+  const subject = `NCLEX KEYS International - New Test Assigned: ${testTitle}`;
+  const text = [
+    `Hello ${displayName},`,
+    '',
+    `${adminName} has assigned a new test to you.`,
+    '',
+    `Test: ${testTitle}`,
+    `Duration: ${duration} minutes`,
+    ...(proctored ? ['Note: This is a proctored exam — camera and microphone checks will apply.', ''] : []),
+    'Log in to your account to take the test when you are ready.',
+    '',
+    'Good luck!',
+    '',
+    'NCLEX KEYS International'
+  ].join('\n');
+
+  const baseUrl = getClientBaseUrl();
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:600px;margin:0 auto;padding:24px;">
+      <h2 style="margin:0 0 12px;color:#1d4ed8;">NCLEX KEYS International</h2>
+      <p>Hello ${displayName},</p>
+      <p><strong>${adminName}</strong> has assigned a new test to you:</p>
+      <table cellpadding="10" cellspacing="0" style="width:100%;border-collapse:collapse;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:16px 0;">
+        <tr>
+          <td style="font-weight:700;width:140px;border-bottom:1px solid #e5e7eb;">Test</td>
+          <td style="border-bottom:1px solid #e5e7eb;">${testTitle}</td>
+        </tr>
+        <tr>
+          <td style="font-weight:700;">Duration</td>
+          <td>${duration} minutes</td>
+        </tr>
+        ${proctored ? `<tr><td style="font-weight:700;">Proctored</td><td style="color:#dc2626;font-weight:600;">Yes — camera &amp; mic required</td></tr>` : ''}
+      </table>
+      <p style="margin:20px 0;">
+        <a href="${baseUrl}/login" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">
+          Log In to Take Test
+        </a>
+      </p>
+      <p style="color:#6b7280;">If the button does not work, go to: ${baseUrl}/login</p>
+      <p style="margin-top:20px;">Good luck with your test!</p>
+      <p style="margin-top:24px;color:#6b7280;">Best regards,<br>The NCLEX KEYS International Team</p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
+};
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
@@ -590,5 +671,6 @@ module.exports = {
   sendExamSupportUsageEmail,
   buildResetUrl,
   sendStudentWelcomeEmail,
-  sendStudentOtpEmail
+  sendStudentOtpEmail,
+  sendTestAssignmentEmail
 };

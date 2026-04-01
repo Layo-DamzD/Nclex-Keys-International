@@ -8,7 +8,7 @@ const Activity = require('../models/Activity');
 const ExamSupportMessage = require('../models/ExamSupportMessage');
 const Image = require('../models/Image');
 const { sendPushNotificationMulticast } = require('../services/firebaseAdmin');
-const { sendStudentWelcomeEmail } = require('../services/emailService');
+const { sendStudentWelcomeEmail, sendTestAssignmentEmail } = require('../services/emailService');
 const fs = require('fs');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
@@ -152,7 +152,7 @@ const exportQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getQuestions = async (req, res) => {
   try {
-    const { category, subcategory, type, difficulty } = req.query;
+    const { category, subcategory, type, difficulty, clientNeed } = req.query;
     const rawPage = Number(req.query.page || 1);
     const rawLimit = String(req.query.limit || '10').trim().toLowerCase();
     const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
@@ -164,6 +164,7 @@ const getQuestions = async (req, res) => {
     if (subcategory) filter.subcategory = subcategory;
     if (type) filter.type = type;
     if (difficulty) filter.difficulty = String(difficulty).toLowerCase();
+    if (clientNeed) filter.clientNeed = clientNeed;
 
     const total = await Question.countDocuments(filter);
     let query = Question.find(filter)
@@ -947,6 +948,28 @@ const createAdminTest = async (req, res) => {
           metadata: { ...(item.metadata || {}), isNotification: true }
         }));
         await Activity.insertMany(fallback);
+      }
+
+      // Send email notifications to assigned students
+      try {
+        const students = await User.find({ _id: { $in: studentsForAssignment }, role: 'student' })
+          .select('name email')
+          .lean();
+        const adminName = req.user?.name || 'Your Tutor';
+        const emailPromises = students.map((student) =>
+          sendTestAssignmentEmail({
+            to: student.email,
+            studentName: student.name,
+            testTitle: String(title).trim(),
+            duration: Number(duration),
+            proctored: Boolean(proctored),
+            adminName
+          })
+        );
+        await Promise.allSettled(emailPromises);
+      } catch (emailError) {
+        console.error('Failed to send test assignment emails:', emailError?.message);
+        // Don't fail the test creation if emails fail
       }
     }
 

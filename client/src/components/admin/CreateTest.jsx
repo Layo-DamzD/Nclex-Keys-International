@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
+import { NCLEX_CLIENT_NEEDS_CATEGORIES, CLIENT_NEEDS } from '../../constants/ClientNeeds';
 
 const CreateTest = () => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ const CreateTest = () => {
   const [studentsError, setStudentsError] = useState('');
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [questions, setQuestions] = useState([]);
-  const [filters, setFilters] = useState({ category: '', subcategory: '', type: '', difficulty: '' });
+  const [filters, setFilters] = useState({ categoryType: 'subject', category: '', subcategory: '', clientNeed: '', type: '', difficulty: '' });
 
   const [testData, setTestData] = useState({
     title: '',
@@ -63,8 +64,9 @@ const CreateTest = () => {
       const adminToken = sessionStorage.getItem('adminToken');
       const params = new URLSearchParams({
         limit: '100',
-        ...(filters.category && { category: filters.category }),
-        ...(filters.subcategory && { subcategory: filters.subcategory }),
+        ...(filters.categoryType === 'subject' && filters.category && { category: filters.category }),
+        ...(filters.categoryType === 'subject' && filters.subcategory && { subcategory: filters.subcategory }),
+        ...(filters.categoryType === 'clientNeed' && filters.clientNeed && { clientNeed: filters.clientNeed }),
         ...(filters.type && { type: filters.type }),
         ...(filters.difficulty && { difficulty: filters.difficulty }),
       });
@@ -295,25 +297,51 @@ const CreateTest = () => {
           <div className="upload-grid-four" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px' }}>
             <select
               className="form-control"
-              value={filters.category}
-              onChange={(e) => setFilters({ ...filters, category: e.target.value, subcategory: '' })}
+              value={filters.categoryType}
+              onChange={(e) => setFilters({ ...filters, categoryType: e.target.value, category: '', subcategory: '', clientNeed: '' })}
             >
-              <option value="">All Categories</option>
-              {Object.keys(CATEGORIES).map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
+              <option value="subject">By Subject</option>
+              <option value="clientNeed">By Client Need</option>
             </select>
-            <select
-              className="form-control"
-              value={filters.subcategory}
-              onChange={(e) => setFilters({ ...filters, subcategory: e.target.value })}
-              disabled={!filters.category}
-            >
-              <option value="">All Subcategories</option>
-              {filters.category && CATEGORIES[filters.category]?.map(sub => (
-                <option key={sub} value={sub}>{sub}</option>
-              ))}
-            </select>
+            {filters.categoryType === 'subject' ? (
+              <>
+                <select
+                  className="form-control"
+                  value={filters.category}
+                  onChange={(e) => setFilters({ ...filters, category: e.target.value, subcategory: '' })}
+                >
+                  <option value="">All Subjects</option>
+                  {Object.keys(CATEGORIES).map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <select
+                  className="form-control"
+                  value={filters.subcategory}
+                  onChange={(e) => setFilters({ ...filters, subcategory: e.target.value })}
+                  disabled={!filters.category}
+                >
+                  <option value="">All Subcategories</option>
+                  {filters.category && CATEGORIES[filters.category]?.map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <>
+                <select
+                  className="form-control"
+                  value={filters.clientNeed}
+                  onChange={(e) => setFilters({ ...filters, clientNeed: e.target.value })}
+                >
+                  <option value="">All Client Needs</option>
+                  {Object.keys(CLIENT_NEEDS).map(cn => (
+                    <option key={cn} value={cn}>{cn}</option>
+                  ))}
+                </select>
+                <div></div>
+              </>
+            )}
             <select
               className="form-control"
               value={filters.type}

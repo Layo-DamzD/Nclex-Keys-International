@@ -347,16 +347,17 @@ const TestCustomization = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Handle CAT mode - redirect to CAT session
-    if (testType === 'cat') {
+    // Handle Assessment mode - same as CAT (real NCLEX adaptive testing)
+    if (testType === 'assessment' || testType === 'cat') {
       setLoading(true);
       setError('');
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.post('/api/student/cat/start', {}, {
+        const response = await axios.post('/api/student/cat/start', { testType }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        navigate('/cat-session', { state: response.data });
+        const navData = { ...response.data, testType };
+        navigate('/cat-session', { state: navData });
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to start CAT session. Make sure there are enough calibrated questions.');
       } finally {
@@ -548,7 +549,7 @@ const TestCustomization = () => {
         {testType === 'assessment' && (
           <div style={{ marginTop: '12px', padding: '10px', background: '#ecfdf5', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
             <i className="fas fa-info-circle me-2" style={{ color: '#059669' }}></i>
-            Assessment mode tests your knowledge across all subjects with hard difficulty questions. All categories are automatically selected.
+            Assessment uses real NCLEX Computerized Adaptive Testing (CAT) — questions adapt to your ability level in real time, just like the actual exam.
           </div>
         )}
         {testType === 'cat' && (
@@ -569,7 +570,7 @@ const TestCustomization = () => {
       {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
       
       <form onSubmit={handleSubmit}>
-        {/* Assessment Settings */}
+        {/* Assessment Settings - Same as CAT */}
         {testType === 'assessment' && (
           <div className="test-mode-section" style={{
             marginBottom: '20px',
@@ -579,11 +580,11 @@ const TestCustomization = () => {
             border: '1px solid #059669'
           }}>
             <label style={{ fontWeight: 600, color: '#059669', marginBottom: '8px', display: 'block' }}>
-              <i className="fas fa-clipboard-check me-2"></i>
-              Assessment Settings
+              <i className="fas fa-brain me-2"></i>
+              Assessment (NCLEX CAT)
             </label>
             <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
-              Assessment mode automatically selects <strong>all subjects</strong> with <strong>hard difficulty</strong> questions. Tutor Mode and timer are both enabled for a realistic exam experience.
+              Assessment mode uses real NCLEX Computerized Adaptive Testing. The algorithm selects questions based on your ability, adjusting difficulty as you answer. The test ends when the system determines your result with 95% confidence — just like the actual NCLEX.
             </p>
           </div>
         )}
@@ -626,8 +627,8 @@ const TestCustomization = () => {
           </div>
         )}
 
-        {/* Question Status Filter Section - Hide for CAT mode */}
-        {testType !== 'cat' && (
+        {/* Question Status Filter Section - Hide for CAT and Assessment mode */}
+        {testType !== 'cat' && testType !== 'assessment' && (
           <div className="question-status-section" style={{
             marginBottom: '20px',
             padding: '16px',
@@ -711,8 +712,8 @@ const TestCustomization = () => {
           </div>
         )}
 
-        {/* Question Category Section - Hide for CAT mode */}
-        {testType !== 'cat' && (
+        {/* Question Category Section - Hide for CAT and Assessment mode */}
+        {testType !== 'cat' && testType !== 'assessment' && (
           <div className="question-category-section" style={{
             marginBottom: '20px',
             border: '1px solid #e2e8f0',
@@ -934,8 +935,8 @@ const TestCustomization = () => {
         </div>
         )}
 
-        {/* Number of Questions - Hide for CAT mode */}
-        {testType !== 'cat' && (
+        {/* Number of Questions - Hide for CAT and Assessment mode */}
+        {testType !== 'cat' && testType !== 'assessment' && (
           <div className="question-count-section" style={{
             marginBottom: '20px',
             padding: '16px',
