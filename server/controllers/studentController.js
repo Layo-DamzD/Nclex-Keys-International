@@ -1607,68 +1607,45 @@ const getQuestionStatusCounts = async (req, res) => {
     const user = await User.findById(studentId);
 
     // Get all questions to calculate counts
-    const allQuestions = await Question.find({}, '_id isNextGen');
+    const allQuestions = await Question.find({}, '_id');
     const allQuestionIds = allQuestions.map(q => String(q._id));
-    const questionMap = new Map(allQuestions.map(q => [String(q._id), q]));
 
-    // Get question IDs by status
-    const seenQuestionIds = new Set((user.seenQuestions || []).map(id => String(id)));
-    const incorrectQuestionIds = new Set((user.incorrectQuestions || []).map(id => String(id)));
+    // Get status sets from user document
+    const seenSet = new Set((user.seenQuestions || []).map(id => String(id)));
+    const incorrectSet = new Set((user.incorrectQuestions || []).map(id => String(id)));
     const markedSet = new Set((user.markedQuestions || []).map(id => String(id)));
-    const omittedQuestionIds = new Set((user.customTestOmittedQuestions || []).map(id => String(id)));
+    const omittedSet = new Set((user.customTestOmittedQuestions || []).map(id => String(id)));
 
-    // Unused = not seen at all
-    const unusedQuestionIds = new Set(
-      allQuestionIds.filter(id => !seenQuestionIds.has(id))
-    );
+    // Partition ALL questions into MUTUALLY EXCLUSIVE categories using priority:
+    // Each question gets exactly ONE status. Priority order: Marked > Omitted > Incorrect > Correct > Unused
+    // This ensures: unused + correct + incorrect + marked + omitted === total (always)
+    let counts = { unused: 0, correct: 0, incorrect: 0, marked: 0, omitted: 0 };
 
-    // Now partition SEEN questions into mutually exclusive categories:
-    // 1. Omitted: seen AND in customTestOmittedQuestions (student saw but skipped)
-    // 2. Incorrect: seen AND in incorrectQuestions
-    // 3. Marked: seen AND in markedQuestions (but not already in omitted or incorrect)
-    // 4. Correct: remaining seen questions (answered and correct)
-    const seenNotOmitted = new Set(
-      [...seenQuestionIds].filter(id => !omittedQuestionIds.has(id))
-    );
-    const seenNotOmittedNotIncorrect = new Set(
-      [...seenNotOmitted].filter(id => !incorrectQuestionIds.has(id))
-    );
-    const seenNotOmittedNotIncorrectNotMarked = new Set(
-      [...seenNotOmittedNotIncorrect].filter(id => !markedSet.has(id))
-    );
-    const correctQuestionIds = seenNotOmittedNotIncorrectNotMarked;
-
-    // Helper to count NGN questions
-    const countWithNgn = (questionIdSet) => {
-      let count = 0;
-      let ngnCount = 0;
-      questionIdSet.forEach(id => {
-        const q = questionMap.get(id);
-        if (q) {
-          count++;
-          if (q.isNextGen) ngnCount++;
-        }
-      });
-      return { count, ngnCount };
-    };
-
-    const unused = countWithNgn(unusedQuestionIds);
-    const incorrect = countWithNgn(incorrectQuestionIds);
-    const marked = countWithNgn(markedSet);
-    const omitted = countWithNgn(omittedQuestionIds);
-    const correct = countWithNgn(correctQuestionIds);
+    for (const qId of allQuestionIds) {
+      if (markedSet.has(qId)) {
+        counts.marked++;
+      } else if (omittedSet.has(qId)) {
+        counts.omitted++;
+      } else if (incorrectSet.has(qId)) {
+        counts.incorrect++;
+      } else if (seenSet.has(qId)) {
+        counts.correct++;
+      } else {
+        counts.unused++;
+      }
+    }
 
     res.json({
-      unused: unused.count,
-      unusedNgn: unused.ngnCount,
-      incorrect: incorrect.count,
-      incorrectNgn: incorrect.ngnCount,
-      marked: marked.count,
-      markedNgn: marked.ngnCount,
-      omitted: omitted.count,
-      omittedNgn: omitted.ngnCount,
-      correct: correct.count,
-      correctNgn: correct.ngnCount,
+      unused: counts.unused,
+      unusedNgn: 0,
+      incorrect: counts.incorrect,
+      incorrectNgn: 0,
+      marked: counts.marked,
+      markedNgn: 0,
+      omitted: counts.omitted,
+      omittedNgn: 0,
+      correct: counts.correct,
+      correctNgn: 0,
       total: allQuestions.length
     });
   } catch (error) {
