@@ -29,8 +29,10 @@ const TestCustomization = () => {
   const [selectedSubcategoryPairs, setSelectedSubcategoryPairs] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [questionCount, setQuestionCount] = useState(75);
+  const [questionCountInput, setQuestionCountInput] = useState('75'); // For allowing empty input display
   const [timed, setTimed] = useState(true);
   const [tutorMode, setTutorMode] = useState(false);
+  const [testType, setTestType] = useState('custom'); // 'custom', 'cat', 'practice'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
@@ -67,7 +69,8 @@ const TestCustomization = () => {
     omitted: 0,
     omittedNgn: 0,
     correct: 0,
-    correctNgn: 0
+    correctNgn: 0,
+    total: 0
   });
 
   const navigate = useNavigate();
@@ -188,7 +191,8 @@ const TestCustomization = () => {
             omitted: statusResponse.data?.omitted || 0,
             omittedNgn: statusResponse.data?.omittedNgn || 0,
             correct: statusResponse.data?.correct || 0,
-            correctNgn: statusResponse.data?.correctNgn || 0
+            correctNgn: statusResponse.data?.correctNgn || 0,
+            total: statusResponse.data?.total || 0
           });
         } catch (statusErr) {
           console.error('Failed to load question status counts', statusErr);
@@ -316,6 +320,8 @@ const TestCustomization = () => {
   };
 
   // Get current stats based on selected tab
+  // Total questions in the question bank
+  const totalQuestionBank = statusCounts.total || 0;
   const currentAvailable = categoryTab === 'clientNeeds' ? selectedClientNeedsTotal : selectedStats.available;
   const maxAllowed = Math.min(questionRangeMax, currentAvailable);
 
@@ -414,6 +420,90 @@ const TestCustomization = () => {
         Create Test
       </h3>
       
+      {/* Test Type Selection */}
+      <div className="test-type-section" style={{
+        marginBottom: '20px',
+        padding: '16px',
+        background: '#f0fdf4',
+        borderRadius: '8px',
+        border: '1px solid #a7f3d0'
+      }}>
+        <label style={{ fontWeight: 600, color: '#374151', marginBottom: '12px', display: 'block' }}>
+          Test Type
+        </label>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setTestType('custom')}
+            style={{
+              flex: 1,
+              minWidth: '120px',
+              padding: '12px 16px',
+              border: testType === 'custom' ? '2px solid #059669' : '1px solid #d1d5db',
+              borderRadius: '8px',
+              background: testType === 'custom' ? '#ecfdf5' : '#fff',
+              color: testType === 'custom' ? '#059669' : '#374151',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <i className="fas fa-sliders-h me-2"></i>
+            Custom Test
+          </button>
+          <button
+            type="button"
+            onClick={() => setTestType('cat')}
+            style={{
+              flex: 1,
+              minWidth: '120px',
+              padding: '12px 16px',
+              border: testType === 'cat' ? '2px solid #7c3aed' : '1px solid #d1d5db',
+              borderRadius: '8px',
+              background: testType === 'cat' ? '#f5f3ff' : '#fff',
+              color: testType === 'cat' ? '#7c3aed' : '#374151',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <i className="fas fa-brain me-2"></i>
+            CAT Mode
+          </button>
+          <button
+            type="button"
+            onClick={() => setTestType('practice')}
+            style={{
+              flex: 1,
+              minWidth: '120px',
+              padding: '12px 16px',
+              border: testType === 'practice' ? '2px solid #0ea5e9' : '1px solid #d1d5db',
+              borderRadius: '8px',
+              background: testType === 'practice' ? '#f0f9ff' : '#fff',
+              color: testType === 'practice' ? '#0ea5e9' : '#374151',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <i className="fas fa-graduation-cap me-2"></i>
+            Practice Test
+          </button>
+        </div>
+        {testType === 'cat' && (
+          <div style={{ marginTop: '12px', padding: '10px', background: '#f5f3ff', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
+            <i className="fas fa-info-circle me-2" style={{ color: '#7c3aed' }}></i>
+            CAT (Computerized Adaptive Testing) adapts question difficulty based on your performance, similar to the real NCLEX.
+          </div>
+        )}
+        {testType === 'practice' && (
+          <div style={{ marginTop: '12px', padding: '10px', background: '#f0f9ff', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
+            <i className="fas fa-info-circle me-2" style={{ color: '#0ea5e9' }}></i>
+            Practice Test mode provides a relaxed learning environment with immediate feedback after each question.
+          </div>
+        )}
+      </div>
+      
       {error && <div className="alert alert-danger">{error}</div>}
       {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
       
@@ -467,9 +557,14 @@ const TestCustomization = () => {
             <label style={{ fontWeight: 600, color: '#374151' }}>
               Question Status
             </label>
-            <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>
-              {currentAvailable} questions available
-            </span>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>
+                {currentAvailable} questions available
+              </span>
+              <span style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '2px' }}>
+                {totalQuestionBank} total in Q-Bank
+              </span>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             {[
@@ -773,11 +868,33 @@ const TestCustomization = () => {
           <input
             type="number"
             className="form-control"
-            value={questionCount}
+            value={questionCountInput}
             onChange={(e) => {
-              const value = parseInt(e.target.value, 10);
+              const inputValue = e.target.value;
+              // Allow empty input for clearing
+              setQuestionCountInput(inputValue);
+              if (inputValue === '') {
+                // Don't update questionCount while typing, just keep input empty
+                return;
+              }
+              const value = parseInt(inputValue, 10);
               if (!isNaN(value)) {
-                setQuestionCount(Math.max(questionRangeMin, Math.min(maxAllowed, value)));
+                // Only clamp on blur, not during typing
+                setQuestionCount(value);
+              }
+            }}
+            onBlur={(e) => {
+              // Clamp value when user leaves the field
+              const value = parseInt(e.target.value, 10);
+              if (isNaN(value) || value < questionRangeMin) {
+                setQuestionCount(questionRangeMin);
+                setQuestionCountInput(String(questionRangeMin));
+              } else if (value > maxAllowed) {
+                setQuestionCount(maxAllowed);
+                setQuestionCountInput(String(maxAllowed));
+              } else {
+                setQuestionCount(value);
+                setQuestionCountInput(String(value));
               }
             }}
             min={questionRangeMin}

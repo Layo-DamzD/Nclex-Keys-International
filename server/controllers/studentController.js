@@ -1515,7 +1515,8 @@ const getQuestionStatusCounts = async (req, res) => {
       omitted: omitted.count,
       omittedNgn: omitted.ngnCount,
       correct: correct.count,
-      correctNgn: correct.ngnCount
+      correctNgn: correct.ngnCount,
+      total: allQuestions.length
     });
   } catch (error) {
     console.error('Error fetching question status counts:', error);
