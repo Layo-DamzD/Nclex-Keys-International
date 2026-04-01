@@ -649,37 +649,124 @@ const TestCustomization = () => {
           </div>
         )}
 
-        {/* Question Bank Info - Hide for CAT and Assessment mode */}
+        {/* Question Bank Status Bar - UWorld style - Hide for CAT and Assessment mode */}
         {testType !== 'cat' && testType !== 'assessment' && (
-          <div className="question-status-section" style={{
+          <div style={{
             marginBottom: '20px',
-            padding: '16px',
-            background: '#f8fafc',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0'
+            background: '#fff',
+            borderRadius: '10px',
+            border: '1px solid #e5e7eb',
+            overflow: 'hidden'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label style={{ fontWeight: 600, color: '#374151' }}>
-                Question Bank
-              </label>
-              <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+            {/* Progress bar at the very top */}
+            <div style={{ height: '4px', background: '#f1f5f9' }}>
+              <div style={{
+                height: '100%',
+                width: `${Math.min(100, totalQuestionBank > 0 ? ((statusCounts.correct + statusCounts.incorrect + statusCounts.omitted) / totalQuestionBank) * 100 : 0)}%`,
+                background: 'linear-gradient(90deg, #22c55e 0%, #3b82f6 100%)',
+                borderRadius: '0 2px 2px 0',
+                transition: 'width 0.4s ease'
+              }} />
+            </div>
+
+            {/* Header row */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '14px 18px 10px',
+              borderBottom: '1px solid #f1f5f9'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fas fa-database" style={{ color: '#6366f1', fontSize: '0.9rem' }}></i>
+                <span style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}>Question Bank</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
                 onClick={handleSelectAllSubjects}>
                 <input
                   type="checkbox"
-                  className="form-check-input"
                   checked={categoryTab === 'clientNeeds'
                     ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
                     : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length}
                   onChange={() => {}}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#059669' }}
-                />\n                <label style={{
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#6366f1' }}
+                />
+                <label style={{
                   fontWeight: 600,
-                  color: '#059669',
+                  color: '#6366f1',
                   cursor: 'pointer',
-                  fontSize: '0.95rem'
+                  fontSize: '0.85rem'
                 }}>
-                  Select All ({totalQuestionBank})
+                  Select All
                 </label>
+              </div>
+            </div>
+
+            {/* Status pills row - UWorld style */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              padding: '12px 18px 16px',
+              flexWrap: 'wrap'
+            }}>
+              {/* Total */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', background: '#f1f5f9', borderRadius: '20px', border: '1px solid #e2e8f0'
+              }}>
+                <i className="fas fa-layer-group" style={{ fontSize: '0.7rem', color: '#64748b' }}></i>
+                <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.85rem' }}>{totalQuestionBank}</span>
+                <span style={{ fontWeight: 500, color: '#94a3b8', fontSize: '0.75rem' }}>Total</span>
+              </div>
+
+              {/* Unused */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', background: '#eff6ff', borderRadius: '20px', border: '1px solid #bfdbfe'
+              }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></div>
+                <span style={{ fontWeight: 700, color: '#1e40af', fontSize: '0.85rem' }}>{statusCounts.unused}</span>
+                <span style={{ fontWeight: 500, color: '#93c5fd', fontSize: '0.75rem' }}>Unused</span>
+              </div>
+
+              {/* Correct */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', background: '#f0fdf4', borderRadius: '20px', border: '1px solid #bbf7d0'
+              }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div>
+                <span style={{ fontWeight: 700, color: '#166534', fontSize: '0.85rem' }}>{statusCounts.correct}</span>
+                <span style={{ fontWeight: 500, color: '#86efac', fontSize: '0.75rem' }}>Correct</span>
+              </div>
+
+              {/* Incorrect */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', background: '#fef2f2', borderRadius: '20px', border: '1px solid #fecaca'
+              }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }}></div>
+                <span style={{ fontWeight: 700, color: '#991b1b', fontSize: '0.85rem' }}>{statusCounts.incorrect}</span>
+                <span style={{ fontWeight: 500, color: '#fca5a5', fontSize: '0.75rem' }}>Incorrect</span>
+              </div>
+
+              {/* Marked */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', background: '#fffbeb', borderRadius: '20px', border: '1px solid #fde68a'
+              }}>
+                <i className="fas fa-bookmark" style={{ fontSize: '0.65rem', color: '#f59e0b' }}></i>
+                <span style={{ fontWeight: 700, color: '#92400e', fontSize: '0.85rem' }}>{statusCounts.marked}</span>
+                <span style={{ fontWeight: 500, color: '#fcd34d', fontSize: '0.75rem' }}>Marked</span>
+              </div>
+
+              {/* Omitted */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0'
+              }}>
+                <i className="fas fa-minus-circle" style={{ fontSize: '0.65rem', color: '#94a3b8' }}></i>
+                <span style={{ fontWeight: 700, color: '#475569', fontSize: '0.85rem' }}>{statusCounts.omitted}</span>
+                <span style={{ fontWeight: 500, color: '#cbd5e1', fontSize: '0.75rem' }}>Omitted</span>
               </div>
             </div>
           </div>
