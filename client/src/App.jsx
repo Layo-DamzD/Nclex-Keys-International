@@ -16,6 +16,7 @@ import Brainiac from './pages/Brainiac';
 import PublicKnowledgeTest from './pages/PublicKnowledgeTest';
 import ProtectedRoute from './components/ProtectedRoute';
 import TestSession from './components/TestSession';
+import CatSession from './components/CatSession';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminRoute from './components/AdminRoute';
 import AdminSecret from './pages/AdminSecret';
@@ -54,6 +55,11 @@ function App() {
           <Route path="/test-session" element={
             <ProtectedRoute>
               <TestSession />
+            </ProtectedRoute>
+          } />
+          <Route path="/cat-session" element={
+            <ProtectedRoute>
+              <CatSession />
             </ProtectedRoute>
           } />
           <Route path="/test-review/:resultId" element={

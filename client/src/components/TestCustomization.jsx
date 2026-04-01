@@ -328,6 +328,28 @@ const TestCustomization = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Handle CAT mode - redirect to CAT session
+    if (testType === 'cat') {
+      setLoading(true);
+      setError('');
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post('/api/student/cat/start', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        navigate('/cat-session', { state: response.data });
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to start CAT session. Make sure there are enough calibrated questions.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Handle Practice Test mode - auto-enable tutor mode
+    const effectiveTutorMode = testType === 'practice' ? true : tutorMode;
+    const effectiveTimed = testType === 'practice' ? false : timed; // Practice tests are untimed by default
+
     if (categoryTab === 'clientNeeds') {
       if (currentAvailable === 0) {
         setError('No questions are available in the selected client needs.');
@@ -372,13 +394,14 @@ const TestCustomization = () => {
           clientNeedsSelections: clientNeedsSelections,
           filterMode: 'clientNeeds',
           questionCount,
-          timed,
-          tutorMode,
-          statusFilters
+          timed: effectiveTimed,
+          tutorMode: effectiveTutorMode,
+          statusFilters,
+          testType
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        navigate('/test-session', { state: response.data });
+        navigate('/test-session', { state: { ...response.data, testType } });
       } else {
         // Standard mode - submit with categories
         const selections = selectedSubcategoryPairs.map((pairKey) => {
@@ -389,13 +412,14 @@ const TestCustomization = () => {
           selections,
           subcategories: selections.map((item) => item.subcategory),
           questionCount,
-          timed,
-          tutorMode,
-          statusFilters
+          timed: effectiveTimed,
+          tutorMode: effectiveTutorMode,
+          statusFilters,
+          testType
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        navigate('/test-session', { state: response.data });
+        navigate('/test-session', { state: { ...response.data, testType } });
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to generate test');
@@ -508,133 +532,176 @@ const TestCustomization = () => {
       {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
       
       <form onSubmit={handleSubmit}>
-        {/* Test Mode Section */}
-        <div className="test-mode-section" style={{
-          marginBottom: '20px',
-          padding: '16px',
-          background: '#f8fafc',
-          borderRadius: '8px',
-          border: '1px solid #e2e8f0'
-        }}>
-          <label style={{ fontWeight: 600, color: '#374151', marginBottom: '12px', display: 'block' }}>
-            Test Mode
-          </label>
-          <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-            <div className="form-check form-switch" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="tutorSwitch"
-                checked={tutorMode}
-                onChange={(e) => handleTutorToggle(e.target.checked)}
-                style={{ width: '40px', height: '20px', cursor: 'pointer' }}
-              />
-              <label className="form-check-label" htmlFor="tutorSwitch" style={{ fontWeight: 500 }}>Tutor</label>
-            </div>
-            <div className="form-check form-switch" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="timedSwitch"
-                checked={timed}
-                onChange={(e) => handleTimedToggle(e.target.checked)}
-                style={{ width: '40px', height: '20px', cursor: 'pointer' }}
-              />
-              <label className="form-check-label" htmlFor="timedSwitch" style={{ fontWeight: 500 }}>Timed</label>
-            </div>
-          </div>
-        </div>
-
-        {/* Question Status Filter Section */}
-        <div className="question-status-section" style={{
-          marginBottom: '20px',
-          padding: '16px',
-          background: '#f8fafc',
-          borderRadius: '8px',
-          border: '1px solid #e2e8f0'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <label style={{ fontWeight: 600, color: '#374151' }}>
-              Question Status
+        {/* Test Mode Section - Only show for Custom Test */}
+        {testType === 'custom' && (
+          <div className="test-mode-section" style={{
+            marginBottom: '20px',
+            padding: '16px',
+            background: '#f8fafc',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0'
+          }}>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '12px', display: 'block' }}>
+              Test Mode
             </label>
-            <div style={{ textAlign: 'right' }}>
-              <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>
-                {currentAvailable} questions available
-              </span>
-              <span style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '2px' }}>
-                {totalQuestionBank} total in Q-Bank
-              </span>
+            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+              <div className="form-check form-switch" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="tutorSwitch"
+                  checked={tutorMode}
+                  onChange={(e) => handleTutorToggle(e.target.checked)}
+                  style={{ width: '40px', height: '20px', cursor: 'pointer' }}
+                />
+                <label className="form-check-label" htmlFor="tutorSwitch" style={{ fontWeight: 500 }}>Tutor</label>
+              </div>
+              <div className="form-check form-switch" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="timedSwitch"
+                  checked={timed}
+                  onChange={(e) => handleTimedToggle(e.target.checked)}
+                  style={{ width: '40px', height: '20px', cursor: 'pointer' }}
+                />
+                <label className="form-check-label" htmlFor="timedSwitch" style={{ fontWeight: 500 }}>Timed</label>
+              </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            {[
-              { key: 'unused', label: 'Unused', count: statusCounts.unused, ngnCount: statusCounts.unusedNgn },
-              { key: 'incorrect', label: 'Incorrect', count: statusCounts.incorrect, ngnCount: statusCounts.incorrectNgn },
-              { key: 'marked', label: 'Marked', count: statusCounts.marked, ngnCount: statusCounts.markedNgn },
-              { key: 'omitted', label: 'Omitted', count: statusCounts.omitted, ngnCount: statusCounts.omittedNgn },
-              { key: 'correct', label: 'Correct', count: statusCounts.correct, ngnCount: statusCounts.correctNgn }
-            ].map(({ key, label, count, ngnCount }) => (
-              <div 
-                key={key}
-                className="form-check" 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px',
-                  padding: '8px 12px',
-                  background: statusFilters[key] ? '#e0f2fe' : '#fff',
-                  borderRadius: '6px',
-                  border: statusFilters[key] ? '1px solid #0ea5e9' : '1px solid #e2e8f0',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onClick={() => setStatusFilters(prev => ({ ...prev, [key]: !prev[key] }))}
-              >
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id={`${key}Check`}
-                  checked={statusFilters[key]}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setStatusFilters(prev => ({ ...prev, [key]: e.target.checked }));
-                  }}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0ea5e9' }}
-                />
-                <label 
-                  className="form-check-label" 
-                  htmlFor={`${key}Check`} 
-                  style={{ 
-                    fontWeight: 500,
-                    color: statusFilters[key] ? '#0369a1' : '#374151',
-                    cursor: 'pointer',
-                    marginRight: '4px'
-                  }}
-                >
-                  {label}
-                </label>
-                <span style={{
-                  background: statusFilters[key] ? '#0ea5e9' : '#e2e8f0',
-                  color: statusFilters[key] ? '#fff' : '#64748b',
-                  padding: '2px 6px',
-                  borderRadius: '10px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600
-                }}>
-                  {count} ({ngnCount} NGN)
+        )}
+
+        {/* Practice Test Info */}
+        {testType === 'practice' && (
+          <div className="test-mode-section" style={{
+            marginBottom: '20px',
+            padding: '16px',
+            background: '#f0f9ff',
+            borderRadius: '8px',
+            border: '1px solid #0ea5e9'
+          }}>
+            <label style={{ fontWeight: 600, color: '#0369a1', marginBottom: '8px', display: 'block' }}>
+              <i className="fas fa-graduation-cap me-2"></i>
+              Practice Test Settings
+            </label>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
+              Practice Test mode automatically enables <strong>Tutor Mode</strong> (immediate feedback) and disables the timer for a relaxed learning experience.
+            </p>
+          </div>
+        )}
+
+        {/* CAT Info */}
+        {testType === 'cat' && (
+          <div className="test-mode-section" style={{
+            marginBottom: '20px',
+            padding: '16px',
+            background: '#f5f3ff',
+            borderRadius: '8px',
+            border: '1px solid #7c3aed'
+          }}>
+            <label style={{ fontWeight: 600, color: '#6d28d9', marginBottom: '8px', display: 'block' }}>
+              <i className="fas fa-brain me-2"></i>
+              CAT Mode Settings
+            </label>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
+              CAT (Computerized Adaptive Testing) automatically selects questions based on your ability level. The test ends when the algorithm determines a pass/fail result with 95% confidence. No need to select categories or question count.
+            </p>
+          </div>
+        )}
+
+        {/* Question Status Filter Section - Hide for CAT mode */}
+        {testType !== 'cat' && (
+          <div className="question-status-section" style={{
+            marginBottom: '20px',
+            padding: '16px',
+            background: '#f8fafc',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <label style={{ fontWeight: 600, color: '#374151' }}>
+                Question Status
+              </label>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>
+                  {currentAvailable} questions available
+                </span>
+                <span style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '2px' }}>
+                  {totalQuestionBank} total in Q-Bank
                 </span>
               </div>
-            ))}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {[
+                { key: 'unused', label: 'Unused', count: statusCounts.unused, ngnCount: statusCounts.unusedNgn },
+                { key: 'incorrect', label: 'Incorrect', count: statusCounts.incorrect, ngnCount: statusCounts.incorrectNgn },
+                { key: 'marked', label: 'Marked', count: statusCounts.marked, ngnCount: statusCounts.markedNgn },
+                { key: 'omitted', label: 'Omitted', count: statusCounts.omitted, ngnCount: statusCounts.omittedNgn },
+                { key: 'correct', label: 'Correct', count: statusCounts.correct, ngnCount: statusCounts.correctNgn }
+              ].map(({ key, label, count, ngnCount }) => (
+                <div 
+                  key={key}
+                  className="form-check" 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px',
+                    padding: '8px 12px',
+                    background: statusFilters[key] ? '#e0f2fe' : '#fff',
+                    borderRadius: '6px',
+                    border: statusFilters[key] ? '1px solid #0ea5e9' : '1px solid #e2e8f0',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onClick={() => setStatusFilters(prev => ({ ...prev, [key]: !prev[key] }))}
+                >
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id={`${key}Check`}
+                    checked={statusFilters[key]}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setStatusFilters(prev => ({ ...prev, [key]: e.target.checked }));
+                    }}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0ea5e9' }}
+                  />
+                  <label 
+                    className="form-check-label" 
+                    htmlFor={`${key}Check`} 
+                    style={{ 
+                      fontWeight: 500,
+                      color: statusFilters[key] ? '#0369a1' : '#374151',
+                      cursor: 'pointer',
+                      marginRight: '4px'
+                    }}
+                  >
+                    {label}
+                  </label>
+                  <span style={{
+                    background: statusFilters[key] ? '#0ea5e9' : '#e2e8f0',
+                    color: statusFilters[key] ? '#fff' : '#64748b',
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600
+                  }}>
+                    {count} ({ngnCount} NGN)
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Question Category Section */}
-        <div className="question-category-section" style={{
-          marginBottom: '20px',
-          border: '1px solid #e2e8f0',
-          borderRadius: '8px',
-          overflow: 'hidden'
-        }}>
+        {/* Question Category Section - Hide for CAT mode */}
+        {testType !== 'cat' && (
+          <div className="question-category-section" style={{
+            marginBottom: '20px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            overflow: 'hidden'
+          }}>
           {/* Tabs */}
           <div style={{
             display: 'flex',
@@ -848,15 +915,17 @@ const TestCustomization = () => {
             )}
           </div>
         </div>
+        )}
 
-        {/* Number of Questions */}
-        <div className="question-count-section" style={{
-          marginBottom: '20px',
-          padding: '16px',
-          background: '#f0fdf4',
-          borderRadius: '8px',
-          border: '1px solid #a7f3d0'
-        }}>
+        {/* Number of Questions - Hide for CAT mode */}
+        {testType !== 'cat' && (
+          <div className="question-count-section" style={{
+            marginBottom: '20px',
+            padding: '16px',
+            background: '#f0fdf4',
+            borderRadius: '8px',
+            border: '1px solid #a7f3d0'
+          }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ fontWeight: 600, color: '#374151' }}>
               No. of Questions
@@ -909,6 +978,7 @@ const TestCustomization = () => {
             }}
           />
         </div>
+        )}
 
         {/* Generate Test Button */}
         <button
@@ -916,7 +986,7 @@ const TestCustomization = () => {
           className="btn btn-primary w-100"
           disabled={loading}
           style={{
-            background: '#059669',
+            background: testType === 'cat' ? '#7c3aed' : testType === 'practice' ? '#0ea5e9' : '#059669',
             border: 'none',
             padding: '14px 24px',
             fontSize: '1.1rem',
@@ -925,7 +995,9 @@ const TestCustomization = () => {
             transition: 'all 0.2s'
           }}
         >
-          {loading ? 'Generating...' : 'GENERATE TEST'}
+          {loading 
+            ? (testType === 'cat' ? 'Starting CAT...' : 'Generating...') 
+            : (testType === 'cat' ? 'START CAT EXAM' : testType === 'practice' ? 'START PRACTICE TEST' : 'GENERATE TEST')}
         </button>
       </form>
     </div>
