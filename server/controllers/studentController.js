@@ -85,6 +85,35 @@ const submitTest = async (req, res) => {
       return str;
     };
 
+    // Resolve a value to a letter by matching against options text (for text-based correctAnswers)
+    const serverResolveToLetter = (val, options) => {
+      const s = String(val ?? '').trim();
+      if (!s) return null;
+      const norm = serverNormalizeToLetter(s);
+      if (/^[A-Z]$/.test(norm)) return norm;
+      const num = parseInt(s, 10);
+      if (num >= 1 && num <= 26 && String(num) === s) return String.fromCharCode(64 + num);
+      // Match against option text
+      if (Array.isArray(options)) {
+        const lower = s.toLowerCase();
+        for (let i = 0; i < options.length; i++) {
+          if (options[i] && String(options[i]).trim().toLowerCase() === lower) {
+            return String.fromCharCode(65 + i);
+          }
+        }
+        // Partial match fallback
+        for (let i = 0; i < options.length; i++) {
+          if (options[i]) {
+            const optLower = String(options[i]).toLowerCase();
+            if (optLower.includes(lower) || lower.includes(optLower)) {
+              return String.fromCharCode(65 + i);
+            }
+          }
+        }
+      }
+      return null;
+    };
+
     // Server-side answer evaluation (deterministic, does not trust client)
     const serverEvaluateAnswer = (result, q) => {
       const userAnswer = result.userAnswer;
@@ -93,23 +122,44 @@ const submitTest = async (req, res) => {
 
       if (type === 'multiple-choice') {
         const normUser = serverNormalizeToLetter(userAnswer);
+        const opts = q?.options || [];
+        // Try letter match first, then text match
         const normCorrect = serverNormalizeToLetter(correctAnswer);
-        return { isCorrect: normUser === normCorrect && normUser !== '', earnedMarks: (normUser === normCorrect && normUser !== '') ? 1 : 0, totalMarks: 1 };
+        let resolvedCorrect = normCorrect;
+        if (!/^[A-Z]$/.test(normCorrect)) {
+          const textMatch = serverResolveToLetter(correctAnswer, opts);
+          if (textMatch) resolvedCorrect = textMatch;
+        }
+        return { isCorrect: normUser === resolvedCorrect && normUser !== '', earnedMarks: (normUser === resolvedCorrect && normUser !== '') ? 1 : 0, totalMarks: 1 };
       }
 
       if (type === 'sata') {
-        const parseToArray = (answer) => {
+        const opts = q?.options || [];
+        const parseToArray = (answer, useTextMatch) => {
           if (!answer) return [];
-          if (Array.isArray(answer)) return answer.map(v => serverNormalizeToLetter(v)).filter(Boolean);
+          if (Array.isArray(answer)) return answer.map(v => useTextMatch ? (serverResolveToLetter(v, opts) || serverNormalizeToLetter(v)) : serverNormalizeToLetter(v)).filter(Boolean);
           const str = String(answer).trim();
-          if (str.includes(',')) return str.split(',').map(v => serverNormalizeToLetter(v.trim())).filter(Boolean);
-          if (/^[A-Za-z]+$/.test(str)) return str.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
-          if (str.includes(' ')) return str.split(/\s+/).map(v => serverNormalizeToLetter(v.trim())).filter(Boolean);
-          const norm = serverNormalizeToLetter(str);
-          return norm ? [norm] : [];
+          if (str.includes(',')) return str.split(',').map(v => {
+            const resolved = serverResolveToLetter(v.trim(), opts);
+            return resolved || serverNormalizeToLetter(v.trim());
+          }).filter(Boolean);
+          if (str.includes(';')) return str.split(';').map(v => {
+            const resolved = serverResolveToLetter(v.trim(), opts);
+            return resolved || serverNormalizeToLetter(v.trim());
+          }).filter(Boolean);
+          if (/^[A-Za-z]+$/.test(str) && str.length <= 26) return str.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+          if (str.includes(' ')) return str.split(/\s+/).map(v => {
+            const resolved = serverResolveToLetter(v.trim(), opts);
+            return resolved || serverNormalizeToLetter(v.trim());
+          }).filter(Boolean);
+          const resolved = serverResolveToLetter(str, opts);
+          return resolved ? [resolved] : (serverNormalizeToLetter(str) ? [serverNormalizeToLetter(str)] : []);
         };
-        const userArr = [...new Set(Array.isArray(userAnswer) ? userAnswer.map(v => serverNormalizeToLetter(v)).filter(Boolean) : parseToArray(userAnswer))];
-        const correctArr = [...new Set(parseToArray(correctAnswer))];
+        const userArr = [...new Set(Array.isArray(userAnswer) ? userAnswer.map(v => {
+          const resolved = serverResolveToLetter(v, opts);
+          return resolved || serverNormalizeToLetter(v);
+        }).filter(Boolean) : parseToArray(userAnswer, true))];
+        const correctArr = [...new Set(parseToArray(correctAnswer, true))];
         const totalMarks = Math.max(correctArr.length, 1);
         const correctPicked = userArr.filter(c => correctArr.includes(c)).length;
         const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
@@ -951,18 +1001,46 @@ const normalizeCATValue = (value) => {
   return value;
 };
 
+// Resolve value to letter for CAT (handles text-based correctAnswers)
+const resolveCATToLetter = (val, options) => {
+  const s = String(val ?? '').trim();
+  if (!s) return null;
+  const upper = s.toUpperCase();
+  if (/^[A-Z]$/.test(upper)) return upper;
+  const num = parseInt(s, 10);
+  if (num >= 1 && num <= 26 && String(num) === s) return String.fromCharCode(64 + num);
+  if (Array.isArray(options)) {
+    const lower = s.toLowerCase();
+    for (let i = 0; i < options.length; i++) {
+      if (options[i] && String(options[i]).trim().toLowerCase() === lower) {
+        return String.fromCharCode(65 + i);
+      }
+    }
+    for (let i = 0; i < options.length; i++) {
+      if (options[i]) {
+        const optLower = String(options[i]).toLowerCase();
+        if (optLower.includes(lower) || lower.includes(optLower)) {
+          return String.fromCharCode(65 + i);
+        }
+      }
+    }
+  }
+  return upper.length === 1 && /[A-Z]/.test(upper) ? upper : null;
+};
+
 const isCATAnswerCorrect = (question, answer) => {
   if (!question) return false;
   const expected = question.correctAnswer;
+  const opts = question.options || [];
 
   if (Array.isArray(expected) || Array.isArray(answer)) {
     const expectedArr = Array.isArray(expected) ? expected : [expected];
     const answerArr = Array.isArray(answer) ? answer : [answer];
 
-    // SATA answers should be order-insensitive; most other array answers are order-sensitive.
+    // SATA answers should be order-insensitive
     if (question.type === 'sata') {
-      const a = expectedArr.map(normalizeCATValue).sort();
-      const b = answerArr.map(normalizeCATValue).sort();
+      const a = expectedArr.map(v => resolveCATToLetter(v, opts) || normalizeCATValue(v)).filter(Boolean).sort();
+      const b = answerArr.map(v => resolveCATToLetter(v, opts) || normalizeCATValue(v)).filter(Boolean).sort();
       return JSON.stringify(a) === JSON.stringify(b);
     }
 
@@ -975,7 +1053,17 @@ const isCATAnswerCorrect = (question, answer) => {
     return JSON.stringify(expected) === JSON.stringify(answer);
   }
 
-  return normalizeCATValue(expected) === normalizeCATValue(answer);
+  // For MCQ: try letter match, then text match
+  const normExpected = normalizeCATValue(expected);
+  const normAnswer = normalizeCATValue(answer);
+  if (normExpected === normAnswer) return true;
+
+  // Text match fallback
+  const letterA = resolveCATToLetter(expected, opts);
+  const letterB = resolveCATToLetter(answer, opts);
+  if (letterA && letterB) return letterA === letterB;
+
+  return false;
 };
 
 // @desc    Start a CAT session

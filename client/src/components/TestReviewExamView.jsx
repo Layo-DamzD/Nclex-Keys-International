@@ -30,6 +30,68 @@ const normalizeToLetter = (answer) => {
   return str; // Return as-is if no match
 };
 
+// Resolve correctAnswer to letter(s), handling both letter format (A, B) and text format
+const resolveCorrectToLetters = (correctAnswer, options = [], type) => {
+  if (!correctAnswer && correctAnswer !== 0) return [];
+  const opts = Array.isArray(options) ? options : [];
+
+  // Helper: check if a single value matches an option (by letter or text)
+  const matchToLetter = (val) => {
+    const s = String(val ?? '').trim();
+    if (!s) return null;
+    const norm = normalizeToLetter(s);
+    // Already a single letter A-Z
+    if (/^[A-Z]$/.test(norm)) return norm;
+    // Number 1-26 -> letter
+    const num = parseInt(s, 10);
+    if (num >= 1 && num <= 26 && String(num) === s) return String.fromCharCode(64 + num);
+    // Try matching against option text (case-insensitive, trimmed)
+    const lower = s.toLowerCase();
+    for (let i = 0; i < opts.length; i++) {
+      if (opts[i] && opts[i].trim().toLowerCase() === lower) {
+        return String.fromCharCode(65 + i);
+      }
+    }
+    // Try partial match (text contained in option or option contained in text)
+    for (let i = 0; i < opts.length; i++) {
+      if (opts[i] && (opts[i].toLowerCase().includes(lower) || lower.includes(opts[i].toLowerCase()))) {
+        return String.fromCharCode(65 + i);
+      }
+    }
+    return norm.length === 1 && /[A-Z]/.test(norm) ? norm : null;
+  };
+
+  // Array of answers
+  if (Array.isArray(correctAnswer)) {
+    return correctAnswer.map(matchToLetter).filter(Boolean);
+  }
+
+  const str = String(correctAnswer).trim();
+
+  // For SATA: could be "A,B,C", "A, B, C", "ABC", or text values separated by commas/semicolons
+  if (type === 'sata') {
+    // Try comma-separated
+    if (str.includes(',')) {
+      return str.split(',').map(v => matchToLetter(v.trim())).filter(Boolean);
+    }
+    // Try semicolon-separated
+    if (str.includes(';')) {
+      return str.split(';').map(v => matchToLetter(v.trim())).filter(Boolean);
+    }
+    // Try concatenated letters like "ABC"
+    if (/^[A-Za-z]+$/.test(str)) {
+      return str.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+    }
+    // Single value
+    const letter = matchToLetter(str);
+    return letter ? [letter] : [];
+  }
+
+  // For MCQ and others: single value
+  const letter = matchToLetter(str);
+  return letter ? [letter] : [];
+};
+
 // Helper to parse correctAnswer which might be array or string for SATA
 const parseSataAnswerToArray = (answer) => {
   if (!answer) return [];
@@ -535,26 +597,21 @@ const TestReviewExamView = ({
                   const letter = String.fromCharCode(65 + idx);
                   const userAns = active.userAnswer;
                   const correctAns = active.correctAnswer;
-                  
-                  // Normalize answers for comparison (handles "2" vs "B" differences)
-                  // For SATA, use parseSataAnswerToArray to handle string/array formats
+
+                  // Normalize user answer to letter(s)
                   let normalizedUser;
-                  let normalizedCorrect;
-                  
                   if (active.type === 'sata') {
                     normalizedUser = parseSataAnswerToArray(userAns);
-                    normalizedCorrect = parseSataAnswerToArray(correctAns);
                   } else {
-                    normalizedUser = Array.isArray(userAns) 
+                    normalizedUser = Array.isArray(userAns)
                       ? userAns.map(v => normalizeToLetter(v))
                       : normalizeToLetter(userAns);
-                    normalizedCorrect = Array.isArray(correctAns)
-                      ? correctAns.map(v => normalizeToLetter(v))
-                      : normalizeToLetter(correctAns);
                   }
-                  
+
+                  // Resolve correct answer to letter(s) — handles both letter and text formats
+                  const correctLetters = resolveCorrectToLetters(correctAns, active.options, active.type);
+                  const correct = correctLetters.includes(letter);
                   const selected = Array.isArray(normalizedUser) ? normalizedUser.includes(letter) : normalizedUser === letter;
-                  const correct = Array.isArray(normalizedCorrect) ? normalizedCorrect.includes(letter) : normalizedCorrect === letter;
                   const isWrong = selected && !correct;
                   const isCorrectNotSelected = correct && !selected;
 
