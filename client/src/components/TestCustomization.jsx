@@ -702,14 +702,15 @@ const TestCustomization = () => {
               </div>
             </div>
 
-            {/* Status pills row - UWorld style */}
+            {/* Status pills row - clickable toggles */}
             <div style={{
               display: 'flex',
               gap: '8px',
               padding: '12px 18px 16px',
-              flexWrap: 'wrap'
+              flexWrap: 'wrap',
+              alignItems: 'center'
             }}>
-              {/* Total */}
+              {/* Total (always visible, not toggleable) */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '6px 14px', background: '#f1f5f9', borderRadius: '20px', border: '1px solid #e2e8f0'
@@ -720,54 +721,121 @@ const TestCustomization = () => {
               </div>
 
               {/* Unused */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', background: '#eff6ff', borderRadius: '20px', border: '1px solid #bfdbfe'
-              }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></div>
-                <span style={{ fontWeight: 700, color: '#1e40af', fontSize: '0.85rem' }}>{statusCounts.unused}</span>
-                <span style={{ fontWeight: 500, color: '#93c5fd', fontSize: '0.75rem' }}>Unused</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setStatusFilters(prev => ({ ...prev, unused: !prev.unused }))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '6px 14px',
+                  background: statusFilters.unused ? '#dbeafe' : '#f8fafc',
+                  borderRadius: '20px',
+                  border: statusFilters.unused ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: statusFilters.unused ? '0 1px 4px rgba(59,130,246,0.25)' : 'none'
+                }}
+              >
+                <div style={{
+                  width: '10px', height: '10px', borderRadius: '50%',
+                  background: statusFilters.unused ? '#3b82f6' : '#cbd5e1',
+                  transition: 'all 0.2s'
+                }}></div>
+                <span style={{ fontWeight: 700, color: statusFilters.unused ? '#1e40af' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.unused}</span>
+                <span style={{ fontWeight: 500, color: statusFilters.unused ? '#3b82f6' : '#cbd5e1', fontSize: '0.75rem' }}>Unused</span>
+                {statusFilters.unused && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#3b82f6' }}></i>}
+              </button>
 
               {/* Correct */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', background: '#f0fdf4', borderRadius: '20px', border: '1px solid #bbf7d0'
-              }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div>
-                <span style={{ fontWeight: 700, color: '#166534', fontSize: '0.85rem' }}>{statusCounts.correct}</span>
-                <span style={{ fontWeight: 500, color: '#86efac', fontSize: '0.75rem' }}>Correct</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setStatusFilters(prev => ({ ...prev, correct: !prev.correct }))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '6px 14px',
+                  background: statusFilters.correct ? '#dcfce7' : '#f8fafc',
+                  borderRadius: '20px',
+                  border: statusFilters.correct ? '2px solid #22c55e' : '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: statusFilters.correct ? '0 1px 4px rgba(34,197,94,0.25)' : 'none'
+                }}
+              >
+                <div style={{
+                  width: '10px', height: '10px', borderRadius: '50%',
+                  background: statusFilters.correct ? '#22c55e' : '#cbd5e1',
+                  transition: 'all 0.2s'
+                }}></div>
+                <span style={{ fontWeight: 700, color: statusFilters.correct ? '#166534' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.correct}</span>
+                <span style={{ fontWeight: 500, color: statusFilters.correct ? '#22c55e' : '#cbd5e1', fontSize: '0.75rem' }}>Correct</span>
+                {statusFilters.correct && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#22c55e' }}></i>}
+              </button>
 
               {/* Incorrect */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', background: '#fef2f2', borderRadius: '20px', border: '1px solid #fecaca'
-              }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }}></div>
-                <span style={{ fontWeight: 700, color: '#991b1b', fontSize: '0.85rem' }}>{statusCounts.incorrect}</span>
-                <span style={{ fontWeight: 500, color: '#fca5a5', fontSize: '0.75rem' }}>Incorrect</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setStatusFilters(prev => ({ ...prev, incorrect: !prev.incorrect }))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '6px 14px',
+                  background: statusFilters.incorrect ? '#fee2e2' : '#f8fafc',
+                  borderRadius: '20px',
+                  border: statusFilters.incorrect ? '2px solid #ef4444' : '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: statusFilters.incorrect ? '0 1px 4px rgba(239,68,68,0.25)' : 'none'
+                }}
+              >
+                <div style={{
+                  width: '10px', height: '10px', borderRadius: '50%',
+                  background: statusFilters.incorrect ? '#ef4444' : '#cbd5e1',
+                  transition: 'all 0.2s'
+                }}></div>
+                <span style={{ fontWeight: 700, color: statusFilters.incorrect ? '#991b1b' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.incorrect}</span>
+                <span style={{ fontWeight: 500, color: statusFilters.incorrect ? '#ef4444' : '#cbd5e1', fontSize: '0.75rem' }}>Incorrect</span>
+                {statusFilters.incorrect && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#ef4444' }}></i>}
+              </button>
 
               {/* Marked */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', background: '#fffbeb', borderRadius: '20px', border: '1px solid #fde68a'
-              }}>
-                <i className="fas fa-bookmark" style={{ fontSize: '0.65rem', color: '#f59e0b' }}></i>
-                <span style={{ fontWeight: 700, color: '#92400e', fontSize: '0.85rem' }}>{statusCounts.marked}</span>
-                <span style={{ fontWeight: 500, color: '#fcd34d', fontSize: '0.75rem' }}>Marked</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setStatusFilters(prev => ({ ...prev, marked: !prev.marked }))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '6px 14px',
+                  background: statusFilters.marked ? '#fef3c7' : '#f8fafc',
+                  borderRadius: '20px',
+                  border: statusFilters.marked ? '2px solid #f59e0b' : '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: statusFilters.marked ? '0 1px 4px rgba(245,158,11,0.25)' : 'none'
+                }}
+              >
+                <i className="fas fa-bookmark" style={{ fontSize: '0.65rem', color: statusFilters.marked ? '#f59e0b' : '#cbd5e1' }}></i>
+                <span style={{ fontWeight: 700, color: statusFilters.marked ? '#92400e' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.marked}</span>
+                <span style={{ fontWeight: 500, color: statusFilters.marked ? '#f59e0b' : '#cbd5e1', fontSize: '0.75rem' }}>Marked</span>
+                {statusFilters.marked && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#f59e0b' }}></i>}
+              </button>
 
               {/* Omitted */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0'
-              }}>
-                <i className="fas fa-minus-circle" style={{ fontSize: '0.65rem', color: '#94a3b8' }}></i>
-                <span style={{ fontWeight: 700, color: '#475569', fontSize: '0.85rem' }}>{statusCounts.omitted}</span>
-                <span style={{ fontWeight: 500, color: '#cbd5e1', fontSize: '0.75rem' }}>Omitted</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setStatusFilters(prev => ({ ...prev, omitted: !prev.omitted }))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '6px 14px',
+                  background: statusFilters.omitted ? '#f1f5f9' : '#f8fafc',
+                  borderRadius: '20px',
+                  border: statusFilters.omitted ? '2px solid #64748b' : '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: statusFilters.omitted ? '0 1px 4px rgba(100,116,139,0.25)' : 'none'
+                }}
+              >
+                <i className="fas fa-minus-circle" style={{ fontSize: '0.65rem', color: statusFilters.omitted ? '#64748b' : '#cbd5e1' }}></i>
+                <span style={{ fontWeight: 700, color: statusFilters.omitted ? '#475569' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.omitted}</span>
+                <span style={{ fontWeight: 500, color: statusFilters.omitted ? '#64748b' : '#cbd5e1', fontSize: '0.75rem' }}>Omitted</span>
+                {statusFilters.omitted && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#64748b' }}></i>}
+              </button>
             </div>
           </div>
         )}
@@ -828,19 +896,35 @@ const TestCustomization = () => {
             borderBottom: '1px solid #e2e8f0',
             background: '#fff'
           }}>
-            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                type="checkbox"
-                className="form-check-input"
-                id="selectAllCategories"
-                checked={categoryTab === 'clientNeeds' 
+            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                role="checkbox"
+                aria-checked={categoryTab === 'clientNeeds' 
                   ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
-                  : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length
-                }
-                onChange={categoryTab === 'clientNeeds' ? handleSelectAllClientNeeds : handleSelectAllSubjects}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <label className="form-check-label" htmlFor="selectAllCategories" style={{ fontWeight: 500 }}>
+                  : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length}
+                onClick={categoryTab === 'clientNeeds' ? handleSelectAllClientNeeds : handleSelectAllSubjects}
+                onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); (categoryTab === 'clientNeeds' ? handleSelectAllClientNeeds : handleSelectAllSubjects)(); } }}
+                tabIndex={0}
+                style={{
+                  width: '22px', height: '22px', borderRadius: '6px',
+                  border: '2px solid #a7f3d0',
+                  background: (categoryTab === 'clientNeeds' 
+                    ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
+                    : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length) ? '#059669' : '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0
+                }}
+              >
+                {(categoryTab === 'clientNeeds' 
+                  ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
+                  : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length) && (
+                  <i className="fas fa-check" style={{ fontSize: '0.7rem', color: '#fff' }}></i>
+                )}
+              </div>
+              <label
+                onClick={categoryTab === 'clientNeeds' ? handleSelectAllClientNeeds : handleSelectAllSubjects}
+                style={{ fontWeight: 600, cursor: 'pointer', color: '#374151', fontSize: '0.95rem' }}
+              >
                 Select All
               </label>
             </div>
@@ -870,22 +954,30 @@ const TestCustomization = () => {
                           border: isSelected ? '1px solid #6ee7b7' : '1px solid #e2e8f0',
                           transition: 'all 0.2s'
                         }}>
-                          <input
-                            type="checkbox"
-                            className="form-check-input"
-                            id={`cn-${clientNeed}`}
-                            checked={isSelected}
-                            onChange={() => handleClientNeedToggle(clientNeed)}
-                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                          />
+                          <div
+                            role="checkbox"
+                            aria-checked={isSelected}
+                            onClick={() => handleClientNeedToggle(clientNeed)}
+                            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleClientNeedToggle(clientNeed); } }}
+                            tabIndex={0}
+                            style={{
+                              width: '22px', height: '22px', borderRadius: '6px',
+                              border: isSelected ? '2px solid #059669' : '2px solid #a7f3d0',
+                              background: isSelected ? '#059669' : '#fff',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0
+                            }}
+                          >
+                            {isSelected && <i className="fas fa-check" style={{ fontSize: '0.7rem', color: '#fff' }}></i>}
+                          </div>
                           <label 
-                            className="form-check-label" 
-                            htmlFor={`cn-${clientNeed}`}
+                            onClick={() => handleClientNeedToggle(clientNeed)}
                             style={{ 
                               flex: 1, 
                               cursor: 'pointer',
                               fontWeight: 500,
-                              color: '#374151'
+                              color: '#374151',
+                              fontSize: '0.9rem'
                             }}
                           >
                             {clientNeed}
@@ -957,18 +1049,25 @@ const TestCustomization = () => {
                                 gap: '6px',
                                 padding: '6px 0'
                               }}>
-                                <input
-                                  type="checkbox"
-                                  className="form-check-input"
-                                  id={`${category}-${sub}`}
-                                  checked={isSubcategorySelected(category, sub)}
-                                  onChange={() => handleSubcategoryToggle(category, sub)}
-                                  style={{ width: '16px', height: '16px' }}
-                                />
+                                <div
+                                  role="checkbox"
+                                  aria-checked={isSubcategorySelected(category, sub)}
+                                  onClick={() => handleSubcategoryToggle(category, sub)}
+                                  onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleSubcategoryToggle(category, sub); } }}
+                                  tabIndex={0}
+                                  style={{
+                                    width: '20px', height: '20px', borderRadius: '5px',
+                                    border: isSubcategorySelected(category, sub) ? '2px solid #059669' : '2px solid #d1d5db',
+                                    background: isSubcategorySelected(category, sub) ? '#059669' : '#fff',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0
+                                  }}
+                                >
+                                  {isSubcategorySelected(category, sub) && <i className="fas fa-check" style={{ fontSize: '0.65rem', color: '#fff' }}></i>}
+                                </div>
                                 <label 
-                                  className="form-check-label" 
-                                  htmlFor={`${category}-${sub}`}
-                                  style={{ flex: 1, fontSize: '0.9rem', color: '#475569' }}
+                                  onClick={() => handleSubcategoryToggle(category, sub)}
+                                  style={{ flex: 1, fontSize: '0.9rem', color: '#475569', cursor: 'pointer' }}
                                 >
                                   {sub}
                                 </label>
