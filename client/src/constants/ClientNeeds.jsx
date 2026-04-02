@@ -1,24 +1,39 @@
 // NCLEX Client Needs Framework
-// This is the official NCLEX test plan categorization
+// Includes NCSBN Clinical Judgment Measurement Model (CJMM) categories
 // Used for both student test creation and admin question categorization
 
-// The NCLEX Client Needs Categories used for test creation
+// The 16 NCLEX Client Needs Categories used for test creation
 // These are the primary categories students select when creating tests
 export const NCLEX_CLIENT_NEEDS_CATEGORIES = [
+  'Analyze Cues',
   'Basic Care and Comfort',
   'Clinical Judgment',
   'Coordinated Care',
+  'Evaluate Outcomes',
   'Health Promotion and Maintenance',
   'Management of Care',
   'Pharmacological and Parenteral Therapies',
   'Physiological Adaptation',
+  'Prioritization of Care',
+  'Prioritize Hypotheses',
+  'Psychosocial Integrity',
+  'Recognize Cues',
   'Reduction of Risk Potential',
   'Safety and Infection Control',
-  'Teaching and Learning'
+  'Take Actions'
 ];
 
-// Main categories structure (used for organizing questions in database)
+// Main categories structure with subcategories
 export const CLIENT_NEEDS = {
+  "Analyze Cues": [
+    "Data Collection",
+    "Assessment Findings",
+    "Laboratory and Diagnostic Results",
+    "Client History",
+    "Physical Examination",
+    "Vital Signs Interpretation"
+  ],
+
   "Basic Care and Comfort": [
     "Alternative and Complementary Therapies",
     "Assistive Devices",
@@ -56,6 +71,15 @@ export const CLIENT_NEEDS = {
     "Resource Management",
     "Staff Education",
     "Supervision"
+  ],
+
+  "Evaluate Outcomes": [
+    "Evaluating Effectiveness of Interventions",
+    "Comparing Outcomes with Expected Results",
+    "Reassessing Client Condition",
+    "Modifying the Plan of Care",
+    "Documenting Client Responses",
+    "Identifying Unmet Outcomes"
   ],
 
   "Health Promotion and Maintenance": [
@@ -109,6 +133,54 @@ export const CLIENT_NEEDS = {
     "Unexpected Response to Therapies"
   ],
 
+  "Prioritization of Care": [
+    "Airway Breathing Circulation",
+    "Maslow's Hierarchy of Needs",
+    "ABC Priority Framework",
+    "Acute vs Chronic Conditions",
+    "Unstable vs Stable Clients",
+    "Life-Threatening Conditions",
+    "Time-Critical Interventions"
+  ],
+
+  "Prioritize Hypotheses": [
+    "Generating Nursing Diagnoses",
+    "Ranking Potential Problems",
+    "Identifying Primary vs Secondary Problems",
+    "Comparing Competing Hypotheses",
+    "Evidence-Based Reasoning",
+    "Clinical Significance Assessment",
+    "Risk vs Actual Problems"
+  ],
+
+  "Psychosocial Integrity": [
+    "Abuse/Neglect",
+    "Behavioral Interventions",
+    "Chemical and Other Dependencies",
+    "Coping Mechanisms",
+    "Crisis Intervention",
+    "Cultural Awareness",
+    "End of Life Care",
+    "Grief and Loss",
+    "Mental Health Concepts",
+    "Religious and Spiritual Influences on Health",
+    "Sensory/Perceptual Alterations",
+    "Situational Role Changes",
+    "Stress Management",
+    "Support Systems",
+    "Therapeutic Communication",
+    "Therapeutic Environment"
+  ],
+
+  "Recognize Cues": [
+    "Identifying Significant Data",
+    "Distinguishing Relevant from Irrelevant Cues",
+    "Recognizing Patterns in Client Data",
+    "Identifying Changes in Client Status",
+    "Clustering Related Assessment Findings",
+    "Recognizing Complications and Emergencies"
+  ],
+
   "Reduction of Risk Potential": [
     "Changes/Abnormalities in Vital Signs",
     "Diagnostic Tests",
@@ -134,19 +206,29 @@ export const CLIENT_NEEDS = {
     "Use of Restraints/Safety Devices"
   ],
 
-  "Teaching and Learning": [
-    "Client Education",
-    "Health Literacy",
-    "Learning Styles",
-    "Patient Teaching Plan",
-    "Teaching Strategies",
-    "Evaluation of Learning"
+  "Take Actions": [
+    "Implementing Nursing Interventions",
+    "Medication Administration Actions",
+    "Client Education and Health Teaching",
+    "Coordinating Care Activities",
+    "Emergency Interventions",
+    "Delegating and Supervising Care",
+    "Therapeutic Procedures"
   ]
 };
 
 // Extended subcategories for more detailed categorization
 // Used by admin when uploading questions
 export const CLIENT_NEEDS_EXTENDED = {
+  "Analyze Cues": [
+    "Data Collection",
+    "Assessment Findings",
+    "Laboratory and Diagnostic Results",
+    "Client History",
+    "Physical Examination",
+    "Vital Signs Interpretation"
+  ],
+
   "Basic Care and Comfort": [
     "Alternative and Complementary Therapies",
     "Assistive Devices",
@@ -184,6 +266,15 @@ export const CLIENT_NEEDS_EXTENDED = {
     "Resource Management",
     "Staff Education",
     "Supervision"
+  ],
+
+  "Evaluate Outcomes": [
+    "Evaluating Effectiveness of Interventions",
+    "Comparing Outcomes with Expected Results",
+    "Reassessing Client Condition",
+    "Modifying the Plan of Care",
+    "Documenting Client Responses",
+    "Identifying Unmet Outcomes"
   ],
 
   "Health Promotion and Maintenance": [
@@ -237,6 +328,54 @@ export const CLIENT_NEEDS_EXTENDED = {
     "Unexpected Response to Therapies"
   ],
 
+  "Prioritization of Care": [
+    "Airway Breathing Circulation",
+    "Maslow's Hierarchy of Needs",
+    "ABC Priority Framework",
+    "Acute vs Chronic Conditions",
+    "Unstable vs Stable Clients",
+    "Life-Threatening Conditions",
+    "Time-Critical Interventions"
+  ],
+
+  "Prioritize Hypotheses": [
+    "Generating Nursing Diagnoses",
+    "Ranking Potential Problems",
+    "Identifying Primary vs Secondary Problems",
+    "Comparing Competing Hypotheses",
+    "Evidence-Based Reasoning",
+    "Clinical Significance Assessment",
+    "Risk vs Actual Problems"
+  ],
+
+  "Psychosocial Integrity": [
+    "Abuse/Neglect",
+    "Behavioral Interventions",
+    "Chemical and Other Dependencies",
+    "Coping Mechanisms",
+    "Crisis Intervention",
+    "Cultural Awareness",
+    "End of Life Care",
+    "Grief and Loss",
+    "Mental Health Concepts",
+    "Religious and Spiritual Influences on Health",
+    "Sensory/Perceptual Alterations",
+    "Situational Role Changes",
+    "Stress Management",
+    "Support Systems",
+    "Therapeutic Communication",
+    "Therapeutic Environment"
+  ],
+
+  "Recognize Cues": [
+    "Identifying Significant Data",
+    "Distinguishing Relevant from Irrelevant Cues",
+    "Recognizing Patterns in Client Data",
+    "Identifying Changes in Client Status",
+    "Clustering Related Assessment Findings",
+    "Recognizing Complications and Emergencies"
+  ],
+
   "Reduction of Risk Potential": [
     "Changes/Abnormalities in Vital Signs",
     "Diagnostic Tests",
@@ -262,13 +401,14 @@ export const CLIENT_NEEDS_EXTENDED = {
     "Use of Restraints/Safety Devices"
   ],
 
-  "Teaching and Learning": [
-    "Client Education",
-    "Health Literacy",
-    "Learning Styles",
-    "Patient Teaching Plan",
-    "Teaching Strategies",
-    "Evaluation of Learning"
+  "Take Actions": [
+    "Implementing Nursing Interventions",
+    "Medication Administration Actions",
+    "Client Education and Health Teaching",
+    "Coordinating Care Activities",
+    "Emergency Interventions",
+    "Delegating and Supervising Care",
+    "Therapeutic Procedures"
   ]
 };
 
