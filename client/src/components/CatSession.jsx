@@ -506,10 +506,13 @@ const CatSession = () => {
 
     setIsCorrect(wasCorrect);
 
-    // CAT: no rationale during exam — proceed immediately to next question or results
+    // CAT: no rationale during exam — proceed immediately to next question or review
     if (response.data.status === 'completed') {
-      setStatus('completed');
-      setResult(response.data.result);
+      // Skip completion screen — go straight to test review
+      if (response.data.result?._id) {
+        navigate(`/test-review/${response.data.result._id}`);
+      }
+      return;
     } else {
       setCurrentQuestion(response.data.question);
       setQuestionNumber(response.data.questionNumber);
