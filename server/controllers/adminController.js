@@ -117,13 +117,15 @@ const exportQuestions = async (req, res) => {
     
     // Define CSV headers - MUST match import expected headers (lowercase)
     // type, category, subcategory, questiontext are required for import
-    const headers = ['type', 'category', 'subcategory', 'questiontext', 'options', 'correctanswer', 'rationale', 'difficulty'];
+    const headers = ['type', 'category', 'subcategory', 'clientneed', 'clientneedsubcategory', 'questiontext', 'options', 'correctanswer', 'rationale', 'difficulty'];
     
     // Convert questions to CSV rows with proper escaping
     const rows = questions.map(q => [
       escapeCsvField(q.type || ''),
       escapeCsvField(q.category || ''),
       escapeCsvField(q.subcategory || ''),
+      escapeCsvField(q.clientNeed || ''),
+      escapeCsvField(q.clientNeedSubcategory || ''),
       escapeCsvField(q.questionText || ''),
       escapeCsvField(q.options ? q.options.join('; ') : ''),
       escapeCsvField(Array.isArray(q.correctAnswer) ? q.correctAnswer.join(';') : (q.correctAnswer || '')),
@@ -495,6 +497,8 @@ const bulkImportQuestions = async (req, res) => {
         type: row.type,
         category: row.category,
         subcategory: row.subcategory,
+        clientNeed: String(row.clientneed || '').trim(),
+        clientNeedSubcategory: String(row.clientneedsubcategory || '').trim(),
         questionText: normalizeImportedText(row.questiontext),
         options,
         correctAnswer,
