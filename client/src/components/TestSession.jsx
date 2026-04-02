@@ -1327,10 +1327,34 @@ const TestSession = () => {
     );
   }
 
-  // --- Submitted view (results) ---
+  // --- Submitted view: redirect to test review immediately ---
   if (submitted) {
-    // Common result calculations
-    const correctCount = results.filter((r) => r.isCorrect === true).length;
+    if (submittedResultId) {
+      // Navigate to review (may already be navigating from handleSubmit, but ensure it)
+      navigate(`/test-review/${submittedResultId}`);
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f9fafb' }}>
+          <div style={{ textAlign: 'center' }}>
+            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: '#3b82f6' }}></i>
+            <p style={{ marginTop: '16px', color: '#6b7280', fontSize: '1.1rem' }}>Loading test summary...</p>
+          </div>
+        </div>
+      );
+    }
+    // No result ID yet (error case) — show fallback with dashboard option
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f9fafb' }}>
+        <div style={{ textAlign: 'center', background: '#fff', padding: '40px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+          <i className="fas fa-check-circle" style={{ fontSize: '3rem', color: '#22c55e', marginBottom: '16px' }}></i>
+          <h3 style={{ color: '#1f2937', marginBottom: '8px' }}>Test Submitted!</h3>
+          {submitReviewError && <p style={{ color: '#dc2626', fontSize: '0.9rem', marginBottom: '16px' }}>{submitReviewError}</p>}
+          <button className="btn btn-primary" onClick={() => navigate(dashboardReturnPath)}>
+            <i className="fas fa-home me-2"></i>Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
     const partialCount = results.filter((r) => r.isCorrect === 'partial').length;
     const incorrectCount = results.length - correctCount - partialCount;
     const earnedTotal = results.reduce((sum, row) => sum + Number(row?.earnedMarks ?? (row?.isCorrect === true ? 1 : 0)), 0);
