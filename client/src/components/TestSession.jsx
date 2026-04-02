@@ -293,6 +293,7 @@ const TestSession = () => {
   const [submitReviewError, setSubmitReviewError] = useState('');
   const [showReview] = useState(false);
   const [filter] = useState('all');
+  const [markedQuestions, setMarkedQuestions] = useState({});
   const [showCalculator, setShowCalculator] = useState(false);
   const [showNavigatorModal, setShowNavigatorModal] = useState(false);
   const [activeCaseTabByQuestion, setActiveCaseTabByQuestion] = useState({});
@@ -1335,8 +1336,9 @@ const TestSession = () => {
       return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f9fafb' }}>
           <div style={{ textAlign: 'center' }}>
-            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: '#3b82f6' }}></i>
-            <p style={{ marginTop: '16px', color: '#6b7280', fontSize: '1.1rem' }}>Loading test summary...</p>
+            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2.5rem', color: '#059669' }}></i>
+            <p style={{ marginTop: '20px', color: '#374151', fontSize: '1.15rem', fontWeight: 600 }}>Test completed!</p>
+            <p style={{ marginTop: '8px', color: '#6b7280', fontSize: '0.95rem' }}>Loading test analysis, kindly be patient...</p>
           </div>
         </div>
       );
@@ -1378,8 +1380,21 @@ const TestSession = () => {
     return (
       <div className="test-session case-study-session app-no-copy" style={{ position: 'relative' }}>
         <div className="test-header">
-          <div className="d-flex align-items-center">
+          <div className="d-flex align-items-center gap-2">
             <h3 className="mb-0 me-3">Case Study {currentIndex + 1} of {questions.length} – Q{caseIndex + 1}/{currentQ.questions.length}</h3>
+            <span style={{
+              fontSize: '0.72rem',
+              background: '#f1f5f9',
+              color: '#64748b',
+              padding: '3px 10px',
+              borderRadius: '6px',
+              border: '1px solid #e2e8f0',
+              fontFamily: 'monospace',
+              fontWeight: 600,
+              letterSpacing: '0.5px'
+            }}>
+              Q-{String(subQ._id).slice(-8).toUpperCase()}
+            </span>
           </div>
           <div className="d-flex align-items-center gap-2">
             {settings.timed && <div className="timer">Time left: {formatTime(timeLeft)}</div>}
@@ -1900,8 +1915,21 @@ const TestSession = () => {
   return (
     <div className="test-session exam-runtime-skin app-no-copy" style={{ position: 'relative' }}>
       <div className="test-header">
-        <div className="d-flex align-items-center">
+        <div className="d-flex align-items-center gap-2">
           <h3 className="mb-0 me-3">Question {currentIndex + 1} of {questions.length}</h3>
+          <span style={{
+            fontSize: '0.72rem',
+            background: '#f1f5f9',
+            color: '#64748b',
+            padding: '3px 10px',
+            borderRadius: '6px',
+            border: '1px solid #e2e8f0',
+            fontFamily: 'monospace',
+            fontWeight: 600,
+            letterSpacing: '0.5px'
+          }}>
+            Q-{String(currentQ._id).slice(-8).toUpperCase()}
+          </span>
         </div>
         <div className="d-flex align-items-center gap-2">
           {settings.timed && <div className="timer">Time left: {formatTime(timeLeft)}</div>}
@@ -1917,6 +1945,15 @@ const TestSession = () => {
         </button>
         <button type="button" className="exam-toolbar-btn" onClick={clearCurrentQuestionAnswer} disabled={isPaused}>
           <i className="fas fa-eraser"></i> Clear
+        </button>
+        <button
+          type="button"
+          className="exam-toolbar-btn"
+          onClick={() => setMarkedQuestions(prev => ({ ...prev, [currentQ._id]: !prev[currentQ._id] }))}
+          disabled={isPaused}
+          style={{ color: markedQuestions[currentQ._id] ? '#f59e0b' : undefined, fontWeight: markedQuestions[currentQ._id] ? 700 : undefined, background: markedQuestions[currentQ._id] ? '#fffbeb' : undefined, borderColor: markedQuestions[currentQ._id] ? '#f59e0b' : undefined }}
+        >
+          <i className={`fas fa-flag${markedQuestions[currentQ._id] ? '' : ' '}`}></i> {markedQuestions[currentQ._id] ? 'Marked' : 'Mark'}
         </button>
       </div>
 
@@ -2205,6 +2242,19 @@ const TestSession = () => {
         </button>
         <button className="btn btn-secondary" onClick={handlePrev} disabled={shouldDisablePrev()}>
           Previous
+        </button>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => setMarkedQuestions(prev => ({ ...prev, [currentQ._id]: !prev[currentQ._id] }))}
+          disabled={isPaused}
+          style={{
+            background: markedQuestions[currentQ._id] ? '#f59e0b' : '#6b7280',
+            borderColor: markedQuestions[currentQ._id] ? '#f59e0b' : '#6b7280',
+            color: '#fff', fontWeight: 600
+          }}
+        >
+          <i className={`fas fa-flag${markedQuestions[currentQ._id] ? '' : ' '}`}></i> {markedQuestions[currentQ._id] ? 'Marked' : 'Mark'}
         </button>
         <button className="btn btn-primary" onClick={openQuestionNavigator} disabled={isPaused}>
           Navigator
