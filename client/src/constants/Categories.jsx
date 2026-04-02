@@ -3,9 +3,29 @@ export const CATEGORIES = {
     "Acid Base Balance",
     "Audio/Visual",
     "Cardiovascular System",
-    "Drug Administration",
     "Electrolyte Imbalance",
     "Endocrine",
+    "Gastrointestinal",
+    "Genitourinary",
+    "Hematological",
+    "Immunology",
+    "Musculoskeletal",
+    "Neurological",
+    "Oncology",
+    "Prioritization",
+    "Reproductive Health",
+    "Respiratory",
+    "Skills and Procedures",
+    "Substance Abuse"
+  ],
+
+  "Child Health": [
+    "Acid Base Balance",
+    "Audio/Visual",
+    "Cardiovascular System",
+    "Drug Administration",
+    "Endocrine",
+    "Fluid and Electrolyte Imbalance",
     "Gastrointestinal",
     "Genitourinary",
     "Growth and Development",
@@ -21,82 +41,98 @@ export const CATEGORIES = {
     "Nutrition",
     "Oncology",
     "Prioritization",
-    "Prevention",
-    "Reproductive Health",
     "Respiratory",
     "Safety",
-    "Skills and Procedures",
-    "Substance Abuse"
-  ],
-
-  "Child Health": [
-    "Cardiovascular",
-    "Endocrine",
-    "Gastrointestinal",
-    "Growth & Development",
-    "Hematological",
-    "Immunology",
-    "Infectious Disease",
-    "Integumentary",
-    "Musculoskeletal",
-    "Neurological",
-    "Respiratory",
-    "Genitourinary"
+    "Skills and Procedures"
   ],
 
   "Critical Care": [
-    "Cardiovascular Emergencies",
-    "Neurological Emergencies",
-    "Respiratory Emergencies",
-    "Shock",
-    "Multi-Organ Dysfunction",
-    "Trauma",
-    "Post-Operative Care"
+    "Critical Care",
+    "Prioritization"
   ],
 
   "Fundamentals": [
-    "Basic Care & Comfort",
-    "Communication",
-    "Development Throughout the Life Span",
+    "Basic Care and Comfort",
+    "Drug Administration",
     "Ethical/Legal",
-    "Fluid, Electrolyte, Acid-Base Balance",
-    "Medication Administration",
-    "Safety/Infection Control",
-    "Skills/Procedures"
+    "Fluid and Electrolyte Imbalance",
+    "Infection Control",
+    "Infection Prevention",
+    "Nutrition",
+    "Prioritization",
+    "Safety",
+    "Skills and Procedures"
   ],
 
   "Leadership & Management": [
-    "Assignment/Delegation",
-    "Management Concepts",
-    "Prioritization",
-    "Ethical/Legal",
-    "Leadership & Management"
+    "Delegation",
+    "Management of Care",
+    "Prioritization"
   ],
 
   "Maternal & Newborn Health": [
     "Antepartum",
-    "Labor/Delivery",
+    "Intrapartum",
+    "Maternal Newborn",
     "Postpartum",
-    "Newborn",
-    "Reproductive"
+    "Prioritization",
+    "Reproductive Health"
   ],
 
   "Mental Health": [
-    "Mental Health Concepts",
-    "Communication"
+    "Anxiety Disorders",
+    "Cognitive Disorders",
+    "Coping Mechanisms",
+    "Defence Mechanism",
+    "Eating Disorder",
+    "Ethical/Legal",
+    "Grief",
+    "Mood Disorders",
+    "Neurodevelopmental Disorder",
+    "Personality Disorder",
+    "Prioritization",
+    "Psychiatric Medications",
+    "Psychotic Disorders",
+    "Skills and Procedures",
+    "Sleep Disorders",
+    "Substance Abuse",
+    "Therapeutic Communication"
   ],
 
   "Pharmacology": [
-    "Cardiovascular Medications",
-    "Endocrine Medications",
-    "Gastrointestinal Medications",
-    "Neurological Medications",
-    "Respiratory Medications",
-    "Pain Management",
-    "Antibiotics",
+    "Anxiety Disorders",
+    "Audio/Visual",
+    "Cardiovascular System",
+    "Cognitive Disorders",
+    "Coping Mechanisms",
+    "Defence Mechanism",
+    "Drug Administration",
+    "Eating Disorder",
+    "Endocrine",
+    "Ethical/Legal",
+    "Gastrointestinal",
+    "Genitourinary",
+    "Grief",
+    "Hematological",
+    "Herbal Remedies",
+    "Immunology",
+    "Multisystem",
+    "Mood Disorders",
+    "Musculoskeletal",
+    "Neurodevelopmental Disorder",
+    "Neurological",
+    "Nutrition",
+    "Personality Disorder",
+    "Prioritization",
     "Psychiatric Medications",
-    "Vitamins & Supplements",
-    "Drug Administration"
+    "Psychotic Disorders",
+    "Respiratory",
+    "Safety",
+    "Skills and Procedures",
+    "Sleep Disorders",
+    "Substance Abuse",
+    "Therapeutic Communication",
+    "Visual"
   ]
 };
 
