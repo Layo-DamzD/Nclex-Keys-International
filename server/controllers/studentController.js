@@ -992,17 +992,17 @@ const startCATSession = async (req, res) => {
         irtDifficulty: { $exists: true }
       }).lean();
     
-    if (questions.length < 75) {
-      return res.status(400).json({ 
-        message: 'Insufficient calibrated questions for CAT. Need at least 75.' 
+    if (questions.length < 85) {
+      return res.status(400).json({
+        message: 'Insufficient calibrated questions for CAT. Need at least 85.'
       });
     }
     
     // Create CAT engine
     const engine = new CATEngine({
       passingStandard: 0.0, // θ_cut
-      minItems: 75,
-      maxItems: 265,
+      minItems: 85,
+      maxItems: 150,
       targetSE: 0.3
     });
     

@@ -235,7 +235,7 @@ const CatSession = () => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showRationale, setShowRationale] = useState(false);
+  // showRationale is unused in CAT — rationale shown only in review after exam
   const [isCorrect, setIsCorrect] = useState(null);
 
   // Timer: 2 minutes per question
@@ -289,7 +289,7 @@ const CatSession = () => {
 
   // Timer effect
   useEffect(() => {
-    if (status === 'completed' || showRationale || loading) return;
+    if (status === 'completed' || loading) return;
     if (timeLeft <= 0) {
       // Auto-submit with no answer when time runs out
       submitAnswerWithCurrent();
@@ -299,7 +299,7 @@ const CatSession = () => {
       setTimeLeft(prev => prev - 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, status, showRationale, loading]);
+  }, [timeLeft, status, loading]);
 
   // Initialize drag-drop when question changes
   useEffect(() => {
@@ -344,7 +344,6 @@ const CatSession = () => {
     setActiveCaseTabByQuestion({});
     setTimeLeft(120);
     setError('');
-    setShowRationale(false);
     setIsCorrect(null);
   }, [currentQuestion?._id]);
 
@@ -506,28 +505,23 @@ const CatSession = () => {
     }
 
     setIsCorrect(wasCorrect);
-    setShowRationale(true);
 
-    // After 2 seconds, proceed to next question or show results
-    setTimeout(() => {
-      setShowRationale(false);
+    // CAT: no rationale during exam — proceed immediately to next question or results
+    if (response.data.status === 'completed') {
+      setStatus('completed');
+      setResult(response.data.result);
+    } else {
+      setCurrentQuestion(response.data.question);
+      setQuestionNumber(response.data.questionNumber);
+      setTheta(response.data.theta);
+      setSe(response.data.se);
+    }
 
-      if (response.data.status === 'completed') {
-        setStatus('completed');
-        setResult(response.data.result);
-      } else {
-        setCurrentQuestion(response.data.question);
-        setQuestionNumber(response.data.questionNumber);
-        setTheta(response.data.theta);
-        setSe(response.data.se);
-      }
-
-      setLoading(false);
-    }, 2000);
+    setLoading(false);
   };
 
   const submitAnswer = () => {
-    if (loading || showRationale) return;
+    if (loading) return;
     if (!hasValidAnswer()) {
       setError('Please select an answer before submitting.');
       return;
@@ -922,7 +916,7 @@ const CatSession = () => {
               key={idx}
               className={`option ${isSelected ? 'selected' : ''}`}
               onClick={() => {
-                if (showRationale || loading) return;
+                if (loading) return;
                 if (isCase) {
                   handleCaseAnswer(questionId, letter);
                 } else {
@@ -954,7 +948,7 @@ const CatSession = () => {
               key={idx}
               className={`option ${selected ? 'selected' : ''}`}
               onClick={() => {
-                if (showRationale || loading) return;
+                if (loading) return;
                 if (isCase) {
                   const current = caseAnswers[questionId] || [];
                   if (current.includes(letter)) {
@@ -995,7 +989,7 @@ const CatSession = () => {
           className="form-control form-control-lg"
           placeholder="Type your answer"
           value={value}
-          disabled={showRationale || loading}
+          disabled={loading}
           onChange={setter}
         />
       </div>
@@ -1038,13 +1032,13 @@ const CatSession = () => {
             return (
               <span
                 key={idx}
-                onClick={() => !showRationale && !loading && setter(word)}
+                onClick={() => !loading && setter(word)}
                 style={{
                   display: 'inline-block',
                   padding: '6px 14px',
                   margin: '4px',
                   borderRadius: '8px',
-                  cursor: (showRationale || loading) ? 'default' : 'pointer',
+                  cursor: loading ? 'default' : 'pointer',
                   border: isSelected ? '2px solid #22c55e' : '2px solid #3b82f6',
                   background: isSelected ? '#dcfce7' : '#dbeafe',
                   color: isSelected ? '#166534' : '#1e40af',
@@ -1179,7 +1173,7 @@ const CatSession = () => {
                       type="radio"
                       name={`matrix-${q._id}-${rowIdx}`}
                       value={colIdx}
-                      disabled={showRationale || loading}
+                      disabled={loading}
                       checked={currentMatrixAns[rowIdx] === colIdx}
                       onChange={() => {
                         const newAnswers = [...currentMatrixAns];
@@ -1223,7 +1217,7 @@ const CatSession = () => {
               <button
                 key={`${target.id}-${idx}`}
                 type="button"
-                disabled={showRationale || loading}
+                disabled={loading}
                 onClick={() => setter(target.id)}
                 title={target.label || target.id}
                 style={{
@@ -1272,7 +1266,7 @@ const CatSession = () => {
                 key={`sel-${key}-${idx}`}
                 className="form-select form-select-sm d-inline-block mx-1"
                 style={{ width: 'auto', minWidth: 170 }}
-                disabled={showRationale || loading}
+                disabled={loading}
                 value={value}
                 onChange={(e) => {
                   const current = { ...currentCloze };
@@ -1313,7 +1307,7 @@ const CatSession = () => {
               <select
                 className="form-control"
                 value={currentBowtie.actionLeft || ''}
-                disabled={showRationale || loading}
+                disabled={loading}
                 onChange={(e) => updateField('actionLeft', e.target.value)}
               >
                 <option value="">Select Action</option>
@@ -1327,7 +1321,7 @@ const CatSession = () => {
               <select
                 className="form-control"
                 value={currentBowtie.actionRight || ''}
-                disabled={showRationale || loading}
+                disabled={loading}
                 onChange={(e) => updateField('actionRight', e.target.value)}
               >
                 <option value="">Select Action</option>
@@ -1350,7 +1344,7 @@ const CatSession = () => {
               <select
                 className="form-control"
                 value={currentBowtie.condition || ''}
-                disabled={showRationale || loading}
+                disabled={loading}
                 onChange={(e) => updateField('condition', e.target.value)}
               >
                 <option value="">Select Condition</option>
@@ -1373,7 +1367,7 @@ const CatSession = () => {
               <select
                 className="form-control"
                 value={currentBowtie.parameterLeft || ''}
-                disabled={showRationale || loading}
+                disabled={loading}
                 onChange={(e) => updateField('parameterLeft', e.target.value)}
               >
                 <option value="">Select Parameter</option>
@@ -1387,7 +1381,7 @@ const CatSession = () => {
               <select
                 className="form-control"
                 value={currentBowtie.parameterRight || ''}
-                disabled={showRationale || loading}
+                disabled={loading}
                 onChange={(e) => updateField('parameterRight', e.target.value)}
               >
                 <option value="">Select Parameter</option>
@@ -1439,7 +1433,7 @@ const CatSession = () => {
   // ========================
   // PROGRESS BAR
   // ========================
-  const progressPercent = Math.min(100, Math.round((questionNumber / 75) * 100));
+  const progressPercent = Math.min(100, Math.round((questionNumber / 150) * 100));
 
   // ========================
   // CASE STUDY LAYOUT
@@ -1487,7 +1481,7 @@ const CatSession = () => {
           gap: '12px',
         }}>
           <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-            Question {questionNumber}/75 (min)
+            Question {questionNumber}/85 (min)
           </span>
           <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
             <div style={{ width: `${progressPercent}%`, height: '100%', background: '#34d399', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
@@ -1578,43 +1572,6 @@ const CatSession = () => {
           </div>
         </div>
 
-        {/* Rationale overlay */}
-        {showRationale && (
-          <div style={{
-            margin: '16px 16px 0',
-            padding: '20px',
-            background: isCorrect ? '#ecfdf5' : '#fef2f2',
-            borderRadius: '10px',
-            border: `1px solid ${isCorrect ? '#10b981' : '#ef4444'}`
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <i className={`fas ${isCorrect ? 'fa-check-circle' : 'fa-times-circle'}`}
-                style={{ color: isCorrect ? '#10b981' : '#ef4444', fontSize: '1.2rem' }}></i>
-              <strong style={{ color: isCorrect ? '#059669' : '#dc2626', fontSize: '1.05rem' }}>
-                {isCorrect ? 'Correct!' : 'Incorrect'}
-              </strong>
-            </div>
-            <p style={{ margin: 0, color: '#374151', lineHeight: 1.6 }}>
-              <strong>Rationale:</strong> {subQ.rationale || currentQuestion.rationale || 'No rationale available.'}
-            </p>
-            {subQ.rationaleImageUrl && (
-              <div className="mt-2">
-                <img
-                  src={firstMediaUrl(subQ.rationaleImageUrl)}
-                  data-raw-src={subQ.rationaleImageUrl}
-                  data-fallback-index="0"
-                  onError={handleImageFallback}
-                  alt="Rationale visual"
-                  style={{ maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #dbeafe' }}
-                />
-              </div>
-            )}
-            <div style={{ marginTop: '12px', fontSize: '0.85rem', color: '#6b7280' }}>
-              <i className="fas fa-hourglass-half me-1"></i> Moving to next question...
-            </div>
-          </div>
-        )}
-
         {/* Error message */}
         {error && (
           <div className="alert alert-danger" style={{ margin: '0 16px 16px' }}>{error}</div>
@@ -1633,20 +1590,20 @@ const CatSession = () => {
           >
             <i className={`fas fa-flag${isMarked ? '' : ' me-1'}`}></i> {isMarked ? 'Marked' : 'Mark'}
           </button>
-          <button className="btn btn-secondary" onClick={() => setShowCalculator(true)} disabled={showRationale || loading}>
+          <button className="btn btn-secondary" onClick={() => setShowCalculator(true)} disabled={loading}>
             <i className="fas fa-calculator me-1"></i> Calculator
           </button>
           {caseIndex > 0 && (
-            <button className="btn btn-secondary" onClick={handleCasePrev} disabled={showRationale || loading}>
+            <button className="btn btn-secondary" onClick={handleCasePrev} disabled={loading}>
               <i className="fas fa-arrow-left me-1"></i> Prev Sub-Q
             </button>
           )}
           {caseIndex < currentQuestion.questions.length - 1 ? (
-            <button className="btn btn-primary" onClick={handleCaseNext} disabled={showRationale || loading}>
+            <button className="btn btn-primary" onClick={handleCaseNext} disabled={loading}>
               Next Sub-Q <i className="fas fa-arrow-right ms-1"></i>
             </button>
           ) : (
-            <button className="btn btn-success" onClick={submitAnswer} disabled={showRationale || loading || !hasValidAnswer()}>
+            <button className="btn btn-success" onClick={submitAnswer} disabled={loading || !hasValidAnswer()}>
               <i className="fas fa-check me-1"></i> Submit Answer
             </button>
           )}
@@ -1693,7 +1650,7 @@ const CatSession = () => {
         gap: '12px',
       }}>
         <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-          Question {questionNumber}/75 (min)
+          Question {questionNumber}/85 (min)
         </span>
         <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{ width: `${progressPercent}%`, height: '100%', background: '#34d399', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
@@ -1705,10 +1662,10 @@ const CatSession = () => {
 
       {/* Toolbar */}
       <div className="exam-inline-toolbar">
-        <button type="button" className="exam-toolbar-btn" onClick={() => setShowCalculator(true)} disabled={showRationale || loading}>
+        <button type="button" className="exam-toolbar-btn" onClick={() => setShowCalculator(true)} disabled={loading}>
           <i className="fas fa-calculator"></i> Calculator
         </button>
-        <button type="button" className="exam-toolbar-btn" onClick={toggleMarkReview} disabled={showRationale || loading}
+        <button type="button" className="exam-toolbar-btn" onClick={toggleMarkReview} disabled={loading}
           style={isMarked ? { color: '#fbbf24' } : {}}>
           <i className="fas fa-flag"></i> {isMarked ? 'Marked' : 'Mark for Review'}
         </button>
@@ -1738,43 +1695,6 @@ const CatSession = () => {
         {renderQuestionContent(currentQuestion, false)}
       </div>
 
-      {/* Rationale overlay */}
-      {showRationale && (
-        <div style={{
-          margin: '0',
-          padding: '20px',
-          background: isCorrect ? '#ecfdf5' : '#fef2f2',
-          border: `1px solid ${isCorrect ? '#10b981' : '#ef4444'}`,
-          borderTop: 'none'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <i className={`fas ${isCorrect ? 'fa-check-circle' : 'fa-times-circle'}`}
-              style={{ color: isCorrect ? '#10b981' : '#ef4444', fontSize: '1.2rem' }}></i>
-            <strong style={{ color: isCorrect ? '#059669' : '#dc2626', fontSize: '1.05rem' }}>
-              {isCorrect ? 'Correct!' : 'Incorrect'}
-            </strong>
-          </div>
-          <p style={{ margin: 0, color: '#374151', lineHeight: 1.6 }}>
-            <strong>Rationale:</strong> {currentQuestion.rationale || 'No rationale available.'}
-          </p>
-          {currentQuestion.rationaleImageUrl && (
-            <div className="mt-2">
-              <img
-                src={firstMediaUrl(currentQuestion.rationaleImageUrl)}
-                data-raw-src={currentQuestion.rationaleImageUrl}
-                data-fallback-index="0"
-                onError={handleImageFallback}
-                alt="Rationale visual"
-                style={{ maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #dbeafe' }}
-              />
-            </div>
-          )}
-          <div style={{ marginTop: '12px', fontSize: '0.85rem', color: '#6b7280' }}>
-            <i className="fas fa-hourglass-half me-1"></i> Moving to next question...
-          </div>
-        </div>
-      )}
-
       {/* Error message */}
       {error && (
         <div className="alert alert-danger" style={{ margin: '0', borderRadius: 0 }}>{error}</div>
@@ -1788,7 +1708,7 @@ const CatSession = () => {
         <button
           className="btn btn-success"
           onClick={submitAnswer}
-          disabled={showRationale || loading || !hasValidAnswer()}
+          disabled={loading || !hasValidAnswer()}
         >
           {loading ? (
             <>
