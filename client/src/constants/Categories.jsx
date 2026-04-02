@@ -3,7 +3,6 @@ export const CATEGORIES = {
     "Acid Base Balance",
     "Audio/Visual",
     "Cardiovascular System",
-    "Critical Care",
     "Drug Administration",
     "Electrolyte Imbalance",
     "Endocrine",
@@ -16,14 +15,11 @@ export const CATEGORIES = {
     "Infection Control",
     "Infectious Disease",
     "Integumentary",
-    "Leadership & Management",
-    "Mental Health",
     "Multisystem",
     "Musculoskeletal",
     "Neurological",
     "Nutrition",
     "Oncology",
-    "Pharmacology",
     "Prioritization",
     "Prevention",
     "Reproductive Health",
@@ -34,9 +30,73 @@ export const CATEGORIES = {
   ],
 
   "Child Health": [
-    "Fundamentals",
-    "Maternal & Newborn Health",
-    "Pharmacology"
+    "Cardiovascular",
+    "Endocrine",
+    "Gastrointestinal",
+    "Growth & Development",
+    "Hematological",
+    "Immunology",
+    "Infectious Disease",
+    "Integumentary",
+    "Musculoskeletal",
+    "Neurological",
+    "Respiratory",
+    "Genitourinary"
+  ],
+
+  "Critical Care": [
+    "Cardiovascular Emergencies",
+    "Neurological Emergencies",
+    "Respiratory Emergencies",
+    "Shock",
+    "Multi-Organ Dysfunction",
+    "Trauma",
+    "Post-Operative Care"
+  ],
+
+  "Fundamentals": [
+    "Basic Care & Comfort",
+    "Communication",
+    "Development Throughout the Life Span",
+    "Ethical/Legal",
+    "Fluid, Electrolyte, Acid-Base Balance",
+    "Medication Administration",
+    "Safety/Infection Control",
+    "Skills/Procedures"
+  ],
+
+  "Leadership & Management": [
+    "Assignment/Delegation",
+    "Management Concepts",
+    "Prioritization",
+    "Ethical/Legal",
+    "Leadership & Management"
+  ],
+
+  "Maternal & Newborn Health": [
+    "Antepartum",
+    "Labor/Delivery",
+    "Postpartum",
+    "Newborn",
+    "Reproductive"
+  ],
+
+  "Mental Health": [
+    "Mental Health Concepts",
+    "Communication"
+  ],
+
+  "Pharmacology": [
+    "Cardiovascular Medications",
+    "Endocrine Medications",
+    "Gastrointestinal Medications",
+    "Neurological Medications",
+    "Respiratory Medications",
+    "Pain Management",
+    "Antibiotics",
+    "Psychiatric Medications",
+    "Vitamins & Supplements",
+    "Drug Administration"
   ]
 };
 
