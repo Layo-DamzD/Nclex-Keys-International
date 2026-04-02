@@ -1,106 +1,42 @@
 export const CATEGORIES = {
   "Adult Health": [
-    "Cardiovascular",
-    "Emergency Care",
+    "Acid Base Balance",
+    "Audio/Visual",
+    "Cardiovascular System",
+    "Critical Care",
+    "Drug Administration",
+    "Electrolyte Imbalance",
     "Endocrine",
-    "Gastrointestinal/Nutrition",
-    "Hematological/Oncological",
-    "Immune",
+    "Gastrointestinal",
+    "Genitourinary",
+    "Growth and Development",
+    "Hematological",
+    "Immunization",
+    "Immunology",
+    "Infection Control",
     "Infectious Disease",
     "Integumentary",
+    "Leadership & Management",
+    "Mental Health",
+    "Multisystem",
     "Musculoskeletal",
-    "Neurologic",
+    "Neurological",
+    "Nutrition",
+    "Oncology",
+    "Pharmacology",
+    "Prioritization",
+    "Prevention",
+    "Reproductive Health",
     "Respiratory",
-    "Urinary/Renal",
-    "Visual/Auditory"
+    "Safety",
+    "Skills and Procedures",
+    "Substance Abuse"
   ],
 
   "Child Health": [
-    "Cardiovascular",
-    "Endocrine",
-    "Gastrointestinal/Nutrition",
-    "Growth & Development",
-    "Hematological/Oncological",
-    "Immune",
-    "Infectious Disease",
-    "Integumentary",
-    "Musculoskeletal",
-    "Neurologic",
-    "Respiratory",
-    "Urinary/Renal",
-    "Visual/Auditory"
-  ],
-
-  "Fundamentals": [
-    "Basic Care & Comfort",
-    "Communication",
-    "Development Throughout the Life Span",
-    "Ethical/Legal",
-    "Fluid, Electrolyte, Acid-Base Balance",
-    "Medication Administration",
-    "Safety/Infection Control",
-    "Skills/Procedures"
-  ],
-
-  "Leadership & Management": [
-    "Assignment/Delegation",
-    "Management Concepts",
-    "Prioritization",
-    "Ethical/Legal",
-    "Leadership & Management"
-  ],
-
-  "Maternal & Newborn Health": [
-    "Antepartum",
-    "Labor/Delivery",
-    "Postpartum",
-    "Newborn",
-    "Reproductive"
-  ],
-
-  "Mental Health": [
-    "Mental Health Concepts",
-    "Communication"
-  ],
-
-  "Pharmacology": [
-    "Agents to Treat Gout",
-    "Analgesics",
-    "Antepartum",
-    "Assignment/Delegation",
-    "Basic Care & Comfort",
-    "Cardiovascular",
-    "Communication",
-    "Development Throughout the Life Span",
-    "Emergency Care",
-    "Endocrine",
-    "Ethical/Legal",
-    "Fluid, Electrolyte, Acid-Base Balance",
-    "Gastrointestinal/Nutrition",
-    "Growth & Development",
-    "Health Promotion",
-    "Hematological/Oncological",
-    "Immune",
-    "Infectious Disease",
-    "Integumentary",
-    "Labor/Delivery",
-    "Leadership & Management",
-    "Management Concepts",
-    "Medication Administration",
-    "Mental Health Concepts",
-    "Musculoskeletal",
-    "Neurologic",
-    "Newborn",
-    "Postpartum",
-    "Prioritization",
-    "Psychiatric Medications",
-    "Reproductive",
-    "Respiratory",
-    "Safety/Infection Control",
-    "Skills/Procedures",
-    "Urinary/Renal",
-    "Visual/Auditory",
-    "Vitamins & Supplements"
+    "Fundamentals",
+    "Maternal & Newborn Health",
+    "Pharmacology"
   ]
 };
 
