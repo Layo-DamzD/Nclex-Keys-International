@@ -2243,19 +2243,6 @@ const TestSession = () => {
         <button className="btn btn-secondary" onClick={handlePrev} disabled={shouldDisablePrev()}>
           Previous
         </button>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => setMarkedQuestions(prev => ({ ...prev, [currentQ._id]: !prev[currentQ._id] }))}
-          disabled={isPaused}
-          style={{
-            background: markedQuestions[currentQ._id] ? '#f59e0b' : '#6b7280',
-            borderColor: markedQuestions[currentQ._id] ? '#f59e0b' : '#6b7280',
-            color: '#fff', fontWeight: 600
-          }}
-        >
-          <i className={`fas fa-flag${markedQuestions[currentQ._id] ? '' : ' '}`}></i> {markedQuestions[currentQ._id] ? 'Marked' : 'Mark'}
-        </button>
         <button className="btn btn-primary" onClick={openQuestionNavigator} disabled={isPaused}>
           Navigator
         </button>
