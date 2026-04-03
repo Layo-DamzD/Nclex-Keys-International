@@ -1607,7 +1607,7 @@ const CatSession = () => {
             </button>
           ) : (
             <button className="btn btn-success" onClick={submitAnswer} disabled={loading || !hasValidAnswer()}>
-              <i className="fas fa-check me-1"></i> Submit Answer
+              <i className="fas fa-arrow-right me-1"></i> Next
             </button>
           )}
         </div>
@@ -1719,7 +1719,7 @@ const CatSession = () => {
             </>
           ) : (
             <>
-              <i className="fas fa-check me-1"></i> Submit Answer
+              <i className="fas fa-arrow-right me-1"></i> Next
             </>
           )}
         </button>

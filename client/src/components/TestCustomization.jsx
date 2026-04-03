@@ -26,6 +26,16 @@ const TestCustomization = () => {
       .trim();
   };
 
+  // Fuzzy key matcher — handles old DB names matching new CATEGORIES.jsx names
+  // e.g., "cardiovascular" matches "cardiovascular system", "gastrointestinal nutrition" matches "gastrointestinal"
+  const fuzzyMatchKey = (haystackKeys, needle) => {
+    if (!needle || haystackKeys.includes(needle)) return needle;
+    for (const key of haystackKeys) {
+      if (key.startsWith(needle) || needle.startsWith(key)) return key;
+    }
+    return null;
+  };
+
   const [selectedSubcategoryPairs, setSelectedSubcategoryPairs] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [questionCount, setQuestionCount] = useState(75);
@@ -124,14 +134,32 @@ const TestCustomization = () => {
   const isSubcategorySelected = (category, subcategory) =>
     selectedSubcategoryPairs.includes(getPairKey(category, subcategory));
 
-  const getSubcategoryCount = (category, subcategory) =>
-    subcategoryCounts?.[normalizeKey(category)]?.[normalizeKey(subcategory)] || 0;
+  const getSubcategoryCount = (category, subcategory) => {
+    const catKeys = Object.keys(subcategoryCounts || {});
+    const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
+    if (!matchedCat) return 0;
+    const subKeys = Object.keys(subcategoryCounts[matchedCat] || {});
+    const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
+    return subcategoryCounts?.[matchedCat]?.[matchedSub] || 0;
+  };
 
-  const getUsedSubcategoryCount = (category, subcategory) =>
-    usedSubcategoryCounts?.[normalizeKey(category)]?.[normalizeKey(subcategory)] || 0;
+  const getUsedSubcategoryCount = (category, subcategory) => {
+    const catKeys = Object.keys(usedSubcategoryCounts || {});
+    const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
+    if (!matchedCat) return 0;
+    const subKeys = Object.keys(usedSubcategoryCounts[matchedCat] || {});
+    const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
+    return usedSubcategoryCounts?.[matchedCat]?.[matchedSub] || 0;
+  };
 
-  const getOmittedSubcategoryCount = (category, subcategory) =>
-    omittedSubcategoryCounts?.[normalizeKey(category)]?.[normalizeKey(subcategory)] || 0;
+  const getOmittedSubcategoryCount = (category, subcategory) => {
+    const catKeys = Object.keys(omittedSubcategoryCounts || {});
+    const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
+    if (!matchedCat) return 0;
+    const subKeys = Object.keys(omittedSubcategoryCounts[matchedCat] || {});
+    const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
+    return omittedSubcategoryCounts?.[matchedCat]?.[matchedSub] || 0;
+  };
 
   const normalizeNestedCounts = (rawNestedCounts = {}) =>
     Object.entries(rawNestedCounts).reduce((acc, [category, subMap]) => {
