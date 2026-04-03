@@ -4,21 +4,26 @@ import axios from 'axios';
 const StudyMaterials = () => {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const [filter, setFilter] = useState('all');
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const [confirmDownload, setConfirmDownload] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
 
   useEffect(() => {
     const fetchMaterials = async () => {
       try {
+        setFetchError('');
         const token = localStorage.getItem('token');
         const response = await axios.get('/api/student/study-materials', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setMaterials(response.data);
+        setMaterials(response.data || []);
       } catch (error) {
+        const msg = error.response?.data?.message || error.message || 'Failed to load study materials.';
+        setFetchError(msg);
         console.error('Error fetching study materials:', error);
       } finally {
         setLoading(false);
@@ -66,6 +71,7 @@ const StudyMaterials = () => {
     }
 
     setDownloading(true);
+    setDownloadError('');
     try {
       const fileUrl = selectedMaterial.fileUrl;
       let fullUrl = fileUrl;
@@ -73,6 +79,7 @@ const StudyMaterials = () => {
       // For Cloudinary URLs, fetch and download as blob
       if (fileUrl.includes('cloudinary.com') || fileUrl.includes('res.cloudinary.com')) {
         const response = await fetch(fileUrl);
+        if (!response.ok) throw new Error(`Download failed (HTTP ${response.status})`);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -98,7 +105,11 @@ const StudyMaterials = () => {
       }
 
       // Fetch and download as blob for direct download
-      const response = await fetch(fullUrl);
+      const token = localStorage.getItem('token');
+      const response = await fetch(fullUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error(`Download failed (HTTP ${response.status})`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -112,7 +123,7 @@ const StudyMaterials = () => {
       closeDownloadModal();
     } catch (error) {
       console.error('Failed to download material:', error);
-      window.alert('Could not download this material right now. Please try again.');
+      setDownloadError(error.message || 'Could not download this material right now. Please try again.');
     } finally {
       setDownloading(false);
     }
@@ -123,6 +134,17 @@ const StudyMaterials = () => {
   return (
     <div className="study-materials">
       <h3 className="mb-4">Study Materials</h3>
+      
+      {/* Fetch error banner */}
+      {fetchError && (
+        <div className="alert alert-danger mb-3" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <i className="fas fa-exclamation-circle"></i>
+          <span>{fetchError}</span>
+          <button className="btn btn-sm btn-outline-danger ms-auto" onClick={() => window.location.reload()}>
+            <i className="fas fa-redo me-1"></i>Retry
+          </button>
+        </div>
+      )}
       
       <div className="filter-buttons mb-4">
         {categories.map(cat => (
@@ -193,6 +215,12 @@ const StudyMaterials = () => {
                   <i className="fas fa-exclamation-triangle me-2"></i>
                   <strong>Warning:</strong> This file will be downloaded directly to your device. Make sure you have enough storage space.
                 </div>
+                {downloadError && (
+                  <div className="alert alert-danger mb-3">
+                    <i className="fas fa-times-circle me-2"></i>
+                    {downloadError}
+                  </div>
+                )}
                 <div className="form-check">
                   <input
                     type="checkbox"
