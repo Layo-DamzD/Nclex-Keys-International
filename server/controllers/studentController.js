@@ -163,7 +163,8 @@ const submitTest = async (req, res) => {
         const totalMarks = Math.max(correctArr.length, 1);
         const correctPicked = userArr.filter(c => correctArr.includes(c)).length;
         const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
-        const earnedMarks = Math.max(correctPicked - wrongPicked, 0);
+        // Negative scoring: wrong picks deduct points (can go below 0)
+        const earnedMarks = correctPicked - wrongPicked;
         let isCorrect = false;
         if (earnedMarks >= totalMarks) isCorrect = true;
         else if (earnedMarks > 0) isCorrect = 'partial';
@@ -290,6 +291,8 @@ const submitTest = async (req, res) => {
       date: new Date(),
       score: Number(earnedScore.toFixed(2)),
       totalQuestions,
+      totalPoints: Math.round(possibleScore),
+      earnedPoints: Number(earnedScore.toFixed(2)),
       timeTaken,
       percentage: computedPercentage,
       passed: typeof passed === 'boolean' ? passed : computedPercentage >= 70,
@@ -1028,42 +1031,76 @@ const resolveCATToLetter = (val, options) => {
   return upper.length === 1 && /[A-Z]/.test(upper) ? upper : null;
 };
 
-const isCATAnswerCorrect = (question, answer) => {
-  if (!question) return false;
+const evaluateCATAnswer = (question, answer) => {
+  if (!question) return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
   const expected = question.correctAnswer;
   const opts = question.options || [];
 
-  if (Array.isArray(expected) || Array.isArray(answer)) {
+  // ── SATA: partial credit + negative scoring ──
+  // 1 correct option = 1 point. Wrong picks deduct 1 point each.
+  if (question.type === 'sata') {
     const expectedArr = Array.isArray(expected) ? expected : [expected];
     const answerArr = Array.isArray(answer) ? answer : [answer];
 
-    // SATA answers should be order-insensitive
-    if (question.type === 'sata') {
-      const a = expectedArr.map(v => resolveCATToLetter(v, opts) || normalizeCATValue(v)).filter(Boolean).sort();
-      const b = answerArr.map(v => resolveCATToLetter(v, opts) || normalizeCATValue(v)).filter(Boolean).sort();
-      return JSON.stringify(a) === JSON.stringify(b);
+    const correctSet = new Set(
+      expectedArr
+        .map(v => resolveCATToLetter(v, opts) || normalizeCATValue(v))
+        .filter(Boolean)
+        .map(v => String(v).toUpperCase())
+    );
+    const answerSet = new Set(
+      answerArr
+        .map(v => resolveCATToLetter(v, opts) || normalizeCATValue(v))
+        .filter(Boolean)
+        .map(v => String(v).toUpperCase())
+    );
+
+    const totalMarks = Math.max(correctSet.size, 1);
+    let correctPicked = 0;
+    let wrongPicked = 0;
+    for (const a of answerSet) {
+      if (correctSet.has(a)) correctPicked++;
+      else wrongPicked++;
     }
-
-    const a = expectedArr.map(normalizeCATValue);
-    const b = answerArr.map(normalizeCATValue);
-    return JSON.stringify(a) === JSON.stringify(b);
+    // earnedMarks can go negative (negative scoring for wrong picks)
+    const earnedMarks = correctPicked - wrongPicked;
+    let isCorrect = false;
+    if (earnedMarks >= totalMarks) isCorrect = true;
+    else if (earnedMarks > 0) isCorrect = 'partial';
+    return { isCorrect, earnedMarks, totalMarks };
   }
 
+  // ── Array answers (non-SATA) ──
+  if (Array.isArray(expected) || Array.isArray(answer)) {
+    const expectedArr = Array.isArray(expected) ? expected : [expected];
+    const answerArr = Array.isArray(answer) ? answer : [answer];
+    const a = expectedArr.map(normalizeCATValue).sort();
+    const b = answerArr.map(normalizeCATValue).sort();
+    const match = JSON.stringify(a) === JSON.stringify(b);
+    return { isCorrect: match, earnedMarks: match ? 1 : 0, totalMarks: 1 };
+  }
+
+  // ── Object answers (cloze, bowtie, etc.) ──
   if (typeof expected === 'object' || typeof answer === 'object') {
-    return JSON.stringify(expected) === JSON.stringify(answer);
+    const match = JSON.stringify(expected) === JSON.stringify(answer);
+    return { isCorrect: match, earnedMarks: match ? 1 : 0, totalMarks: 1 };
   }
 
-  // For MCQ: try letter match, then text match
+  // ── MCQ / fill-blank / highlight / hotspot: 1 answer = 1 point ──
   const normExpected = normalizeCATValue(expected);
   const normAnswer = normalizeCATValue(answer);
-  if (normExpected === normAnswer) return true;
+  let match = normExpected === normAnswer;
+  if (!match) {
+    const letterA = resolveCATToLetter(expected, opts);
+    const letterB = resolveCATToLetter(answer, opts);
+    if (letterA && letterB) match = letterA === letterB;
+  }
+  return { isCorrect: match, earnedMarks: match ? 1 : 0, totalMarks: 1 };
+};
 
-  // Text match fallback
-  const letterA = resolveCATToLetter(expected, opts);
-  const letterB = resolveCATToLetter(answer, opts);
-  if (letterA && letterB) return letterA === letterB;
-
-  return false;
+// Backward-compatible alias (returns boolean for CAT engine IRT)
+const isCATAnswerCorrect = (question, answer) => {
+  return evaluateCATAnswer(question, answer).isCorrect === true;
 };
 
 // @desc    Start a CAT session
@@ -1104,11 +1141,13 @@ const startCATSession = async (req, res) => {
       startTime: new Date(),
       administered: [],
       responses: [],
+      earnedMarks: [],
+      totalMarks: [],
       theta: 0,
       se: Infinity,
       engine: {
-        minItems: 75,
-        maxItems: 265,
+        minItems: 85,
+        maxItems: 150,
         targetSE: 0.3,
         passingStandard: 0.0
       }
@@ -1152,10 +1191,16 @@ const submitCATAnswer = async (req, res) => {
         return res.status(404).json({ message: 'Question not found' });
       }
 
-      // Record response (score by correctness, not by truthiness of submitted value)
-      const isCorrect = isCATAnswerCorrect(question, answer);
+      // Record response with marks-based scoring
+      const evaluation = evaluateCATAnswer(question, answer);
       session.administered.push(questionId);
-      session.responses.push(isCorrect ? 1 : 0);
+      // For CAT engine (IRT ability estimation), use binary response
+      session.responses.push(evaluation.isCorrect === true ? 1 : 0);
+      // For points-based scoring (display/results)
+      if (!session.earnedMarks) session.earnedMarks = [];
+      if (!session.totalMarks) session.totalMarks = [];
+      session.earnedMarks.push(evaluation.earnedMarks);
+      session.totalMarks.push(evaluation.totalMarks);
     
     // Recreate engine with session parameters
     const engine = new CATEngine({
@@ -1198,15 +1243,20 @@ const submitCATAnswer = async (req, res) => {
       
       // Save test result
       const testName = session.testType === 'assessment' ? 'Assessment' : 'CAT Adaptive Test';
+      const totalEarned = (session.earnedMarks || []).reduce((s, m) => s + m, 0);
+      const totalPossible = (session.totalMarks || []).reduce((s, m) => s + m, 0);
+      const percentage = totalPossible > 0 ? Math.round((totalEarned / totalPossible) * 100) : 0;
+
       const testResult = new TestResult({
         student: studentId,
         testName,
         date: new Date(),
-        score: session.responses.filter(r => r === 1).length,
+        score: totalEarned,
         totalQuestions: session.administered.length,
+        totalPoints: totalPossible,
+        earnedPoints: totalEarned,
         timeTaken: (new Date() - session.startTime) / 60000,
-        percentage: Math.round((session.responses.filter(r => r === 1).length / 
-                               session.administered.length) * 100),
+        percentage,
         passed,
         theta: session.theta,
         se: session.se,
@@ -1214,6 +1264,8 @@ const submitCATAnswer = async (req, res) => {
           questionId: item._id,
           userAnswer: session.responses[i] ? 'correct' : 'incorrect',
           isCorrect: session.responses[i] === 1,
+          earnedMarks: (session.earnedMarks || [])[i] ?? (session.responses[i] ? 1 : 0),
+          totalMarks: (session.totalMarks || [])[i] ?? 1,
           correctAnswer: item.correctAnswer,
           questionText: item.questionText,
           options: item.options,

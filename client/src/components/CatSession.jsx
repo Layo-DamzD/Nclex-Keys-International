@@ -721,8 +721,13 @@ const CatSession = () => {
   // ========================
   if (status === 'completed' && result) {
     const passed = result.passed;
-    const percentage = result.percentage || Math.round((result.score / result.totalQuestions) * 100);
+    const earnedPoints = result.earnedPoints ?? result.score ?? 0;
+    const totalPoints = result.totalPoints ?? result.totalQuestions ?? 1;
+    const percentage = result.percentage || (totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0);
     const isAssessment = testType === 'assessment';
+    const correctCount = (result.answers || []).filter(a => a.isCorrect === true).length;
+    const incorrectCount = (result.answers || []).filter(a => a.isCorrect !== true).length;
+    const partialCount = (result.answers || []).filter(a => a.isCorrect === 'partial').length;
 
     return (
       <div className="cat-session-container" style={{
@@ -779,19 +784,33 @@ const CatSession = () => {
               : 'CAT Adaptive Test Complete'}
           </p>
 
+          {/* Points summary */
+          <div style={{ padding: '14px 18px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <i className="fas fa-star" style={{ color: '#f59e0b', fontSize: '0.9rem' }}></i>
+            <span style={{ fontWeight: 700, color: '#16a34a', fontSize: '1.1rem' }}>{earnedPoints}</span>
+            <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>/</span>
+            <span style={{ fontWeight: 600, color: '#6b7280', fontSize: '1.1rem' }}>{totalPoints}</span>
+            <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>points</span>
+            {partialCount > 0 && (
+              <span style={{ marginLeft: '12px', padding: '2px 10px', background: '#fef3c7', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600, color: '#92400e' }}>
+                {partialCount} partial
+              </span>
+            )}
+          </div>
+
           {/* Stats grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: isAssessment ? 'repeat(2, 1fr)' : 'repeat(2, 1fr)', gap: '12px', marginBottom: '28px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '28px' }}>
             <div style={{ padding: '16px', background: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
               <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#16a34a' }}>
-                {result.score}/{result.totalQuestions}
+                {earnedPoints}<span style={{ fontSize: '1rem', fontWeight: 500, color: '#94a3b8' }}>/{totalPoints}</span>
               </div>
-              <div style={{ color: '#16a34a', marginTop: '4px', fontSize: '0.8rem', fontWeight: 500 }}>Correct</div>
+              <div style={{ color: '#16a34a', marginTop: '4px', fontSize: '0.8rem', fontWeight: 500 }}>Points Earned</div>
             </div>
             <div style={{ padding: '16px', background: '#fef2f2', borderRadius: '12px', border: '1px solid #fecaca' }}>
               <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#dc2626' }}>
-                {result.totalQuestions - result.score}
+                {Math.max(0, totalPoints - earnedPoints)}
               </div>
-              <div style={{ color: '#dc2626', marginTop: '4px', fontSize: '0.8rem', fontWeight: 500 }}>Incorrect</div>
+              <div style={{ color: '#dc2626', marginTop: '4px', fontSize: '0.8rem', fontWeight: 500 }}>Points Lost</div>
             </div>
             {!isAssessment && (
               <>

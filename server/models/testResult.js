@@ -39,9 +39,13 @@ const testResultSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   score: Number,
   totalQuestions: Number,
+  totalPoints: Number,      // Total possible points across all questions
+  earnedPoints: Number,     // Points actually earned by student
   timeTaken: Number,
   percentage: Number,
   passed: Boolean,
+  theta: Number,            // CAT ability estimate
+  se: Number,               // CAT standard error
   answers: [answerSchema],
   proctoring: mongoose.Schema.Types.Mixed,
 });
