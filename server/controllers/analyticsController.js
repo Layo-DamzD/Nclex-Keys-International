@@ -353,11 +353,185 @@ const getCategoryStats = async (req, res) => {
   }
 };
 
+// @desc    Get detailed client needs statistics for admin
+// @route   GET /api/admin/analytics/client-needs-stats
+// @access  Private (admin only)
+const getClientNeedsStats = async (req, res) => {
+  try {
+    const questions = await Question.find(
+      {
+        $or: [
+          { clientNeed: { $exists: true, $ne: null, $ne: '' } },
+          { clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' } }
+        ]
+      },
+      '_id clientNeed clientNeedSubcategory'
+    ).lean();
+
+    const testResults = await TestResult.find().populate('answers.questionId');
+
+    // Canonical 16 NCLEX Client Needs categories
+    const CLIENT_NEEDS_LIST = [
+      'Analyze Cues', 'Basic Care and Comfort', 'Clinical Judgment',
+      'Coordinated Care', 'Evaluate Outcomes', 'Health Promotion and Maintenance',
+      'Management of Care', 'Pharmacological and Parenteral Therapies',
+      'Physiological Adaptation', 'Prioritization of Care', 'Prioritize Hypotheses',
+      'Psychosocial Integrity', 'Recognize Cues', 'Reduction of Risk Potential',
+      'Safety and Infection Control', 'Take Actions'
+    ];
+
+    const normalizeCN = (str) => {
+      if (!str) return '';
+      return String(str).trim().toLowerCase()
+        .replace(/['\u2019\u2018]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    // Build normalized lookup for canonical names
+    const cnLookup = {};
+    CLIENT_NEEDS_LIST.forEach(cn => {
+      cnLookup[normalizeCN(cn)] = cn;
+    });
+
+    // Fuzzy match a raw DB client need name to canonical
+    const matchClientNeed = (raw) => {
+      if (!raw) return null;
+      const norm = normalizeCN(raw);
+      if (!norm) return null;
+      // Exact normalized match
+      if (cnLookup[norm]) return cnLookup[norm];
+      // Starts-with match
+      for (const [normCn, canonical] of Object.entries(cnLookup)) {
+        if (normCn.startsWith(norm) || norm.startsWith(normCn)) return canonical;
+      }
+      // Word overlap (at least 2 words match)
+      const rawWords = norm.split(' ');
+      for (const [normCn, canonical] of Object.entries(cnLookup)) {
+        const cnWords = normCn.split(' ');
+        const overlap = rawWords.filter(w => w.length > 2 && cnWords.some(cw => cw === w || cw.startsWith(w) || w.startsWith(cw))).length;
+        if (overlap >= 2) return canonical;
+      }
+      return null;
+    };
+
+    // Initialize stats for all 16 categories
+    const cnStats = {};
+    CLIENT_NEEDS_LIST.forEach(cn => {
+      cnStats[cn] = {
+        totalQuestions: 0,
+        totalUsage: 0,
+        correctAttempts: 0,
+        subcategories: {}
+      };
+    });
+
+    // Build question ID → matched client need map
+    const questionClientNeedMap = new Map();
+    questions.forEach(q => {
+      const qId = String(q._id);
+      const matched = new Set();
+
+      // Collect all raw client need values from this question
+      const rawValues = [];
+      if (q.clientNeed) rawValues.push(String(q.clientNeed).trim());
+      if (q.clientNeedSubcategory) rawValues.push(String(q.clientNeedSubcategory).trim());
+
+      for (const raw of rawValues) {
+        const canonical = matchClientNeed(raw);
+        if (canonical) matched.add(canonical);
+      }
+
+      // Store all matched canonical client needs for this question
+      questionClientNeedMap.set(qId, [...matched]);
+
+      for (const cn of matched) {
+        if (cnStats[cn]) {
+          cnStats[cn].totalQuestions += 1;
+          // Track subcategory (the raw clientNeedSubcategory)
+          const rawSub = q.clientNeedSubcategory ? String(q.clientNeedSubcategory).trim() : '';
+          if (rawSub) {
+            if (!cnStats[cn].subcategories[rawSub]) {
+              cnStats[cn].subcategories[rawSub] = { count: 0, usage: 0, correct: 0 };
+            }
+            cnStats[cn].subcategories[rawSub].count += 1;
+          }
+        }
+      }
+    });
+
+    // Aggregate usage from test results
+    testResults.forEach(result => {
+      if (result.answers) {
+        result.answers.forEach(answer => {
+          if (answer.questionId) {
+            const qId = String(answer.questionId._id || answer.questionId);
+            const matchedCNs = questionClientNeedMap.get(qId);
+            if (matchedCNs) {
+              for (const cn of matchedCNs) {
+                if (cnStats[cn]) {
+                  cnStats[cn].totalUsage += 1;
+                  if (answer.isCorrect) {
+                    cnStats[cn].correctAttempts += 1;
+                  }
+                  // Sub usage
+                  const q = answer.questionId;
+                  const rawSub = q.clientNeedSubcategory ? String(q.clientNeedSubcategory).trim() : '';
+                  if (rawSub && cnStats[cn].subcategories[rawSub]) {
+                    cnStats[cn].subcategories[rawSub].usage += 1;
+                    if (answer.isCorrect) {
+                      cnStats[cn].subcategories[rawSub].correct += 1;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    });
+
+    // Format response — include ALL 16 categories
+    const result = {};
+    CLIENT_NEEDS_LIST
+      .sort((a, b) => a.localeCompare(b))
+      .forEach(cn => {
+        const stats = cnStats[cn];
+        const subcategories = Object.entries(stats.subcategories)
+          .map(([name, subStats]) => ({
+            name,
+            count: subStats.count,
+            usage: subStats.usage,
+            successRate: subStats.usage > 0
+              ? Math.round((subStats.correct / subStats.usage) * 100)
+              : 0
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        result[cn] = {
+          totalQuestions: stats.totalQuestions,
+          totalUsage: stats.totalUsage,
+          successRate: stats.totalUsage > 0
+            ? Math.round((stats.correctAttempts / stats.totalUsage) * 100)
+            : 0,
+          subcategoryCount: subcategories.length,
+          subcategories
+        };
+      });
+
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getUsageByType,
   getSuccessByCategory,
   getDifficultyDistribution,
   getDailyTrend,
   getMostUsedQuestions,
-  getCategoryStats
+  getCategoryStats,
+  getClientNeedsStats
 };

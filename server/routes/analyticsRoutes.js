@@ -7,7 +7,8 @@ const {
   getDifficultyDistribution,
   getDailyTrend,
   getMostUsedQuestions,
-  getCategoryStats
+  getCategoryStats,
+  getClientNeedsStats
 } = require('../controllers/analyticsController');
 
 router.get('/usage-by-type', protect, adminOnly, getUsageByType);
@@ -16,5 +17,6 @@ router.get('/difficulty-distribution', protect, adminOnly, getDifficultyDistribu
 router.get('/daily-trend', protect, adminOnly, getDailyTrend);
 router.get('/most-used', protect, adminOnly, getMostUsedQuestions);
 router.get('/category-stats', protect, adminOnly, getCategoryStats);
+router.get('/client-needs-stats', protect, adminOnly, getClientNeedsStats);
 
 module.exports = router;
