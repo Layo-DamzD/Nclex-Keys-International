@@ -1,7 +1,7 @@
 const TestResult = require('../models/testResult');
 const Question = require('../models/Question');
 const User = require('../models/user');
-const { matchCategory, matchSubcategory, CATEGORIES, getCategoriesWithExtras } = require('../constants/categories');
+const { matchCategory, matchSubcategory, CATEGORIES, getCategoriesWithExtras, NCLEX_CLIENT_NEEDS_CATEGORIES, matchClientNeedCategory, normalizeClientNeedKey } = require('../constants/categories');
 
 // @desc    Get question usage by type
 // @route   GET /api/admin/analytics/usage-by-type
@@ -370,54 +370,11 @@ const getClientNeedsStats = async (req, res) => {
 
     const testResults = await TestResult.find().populate('answers.questionId');
 
-    // Canonical 16 NCLEX Client Needs categories
-    const CLIENT_NEEDS_LIST = [
-      'Analyze Cues', 'Basic Care and Comfort', 'Clinical Judgment',
-      'Coordinated Care', 'Evaluate Outcomes', 'Health Promotion and Maintenance',
-      'Management of Care', 'Pharmacological and Parenteral Therapies',
-      'Physiological Adaptation', 'Prioritization of Care', 'Prioritize Hypotheses',
-      'Psychosocial Integrity', 'Recognize Cues', 'Reduction of Risk Potential',
-      'Safety and Infection Control', 'Take Actions'
-    ];
-
-    const normalizeCN = (str) => {
-      if (!str) return '';
-      return String(str).trim().toLowerCase()
-        .replace(/['\u2019\u2018]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
-
-    // Build normalized lookup for canonical names
-    const cnLookup = {};
-    CLIENT_NEEDS_LIST.forEach(cn => {
-      cnLookup[normalizeCN(cn)] = cn;
-    });
-
-    // Fuzzy match a raw DB client need name to canonical
-    const matchClientNeed = (raw) => {
-      if (!raw) return null;
-      const norm = normalizeCN(raw);
-      if (!norm) return null;
-      // Exact normalized match
-      if (cnLookup[norm]) return cnLookup[norm];
-      // Starts-with match
-      for (const [normCn, canonical] of Object.entries(cnLookup)) {
-        if (normCn.startsWith(norm) || norm.startsWith(normCn)) return canonical;
-      }
-      // Word overlap (at least 2 words match)
-      const rawWords = norm.split(' ');
-      for (const [normCn, canonical] of Object.entries(cnLookup)) {
-        const cnWords = normCn.split(' ');
-        const overlap = rawWords.filter(w => w.length > 2 && cnWords.some(cw => cw === w || cw.startsWith(w) || w.startsWith(cw))).length;
-        if (overlap >= 2) return canonical;
-      }
-      return null;
-    };
-
+    // Use shared constants and matching from categories.js
+    // (same matching logic used by student endpoints, ensures consistency)
     // Initialize stats for all 16 categories
     const cnStats = {};
-    CLIENT_NEEDS_LIST.forEach(cn => {
+    NCLEX_CLIENT_NEEDS_CATEGORIES.forEach(cn => {
       cnStats[cn] = {
         totalQuestions: 0,
         totalUsage: 0,
@@ -438,7 +395,7 @@ const getClientNeedsStats = async (req, res) => {
       if (q.clientNeedSubcategory) rawValues.push(String(q.clientNeedSubcategory).trim());
 
       for (const raw of rawValues) {
-        const canonical = matchClientNeed(raw);
+        const canonical = matchClientNeedCategory(raw);
         if (canonical) matched.add(canonical);
       }
 
@@ -493,7 +450,7 @@ const getClientNeedsStats = async (req, res) => {
 
     // Format response — include ALL 16 categories
     const result = {};
-    CLIENT_NEEDS_LIST
+    NCLEX_CLIENT_NEEDS_CATEGORIES
       .sort((a, b) => a.localeCompare(b))
       .forEach(cn => {
         const stats = cnStats[cn];

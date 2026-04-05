@@ -343,6 +343,107 @@ function matchSubcategory(canonicalCategory, dbSubcategory) {
   return null;
 }
 
+// ── NCLEX Client Needs categories (same as client/src/constants/ClientNeeds.jsx) ──
+const NCLEX_CLIENT_NEEDS_CATEGORIES = [
+  'Analyze Cues',
+  'Basic Care and Comfort',
+  'Clinical Judgment',
+  'Coordinated Care',
+  'Evaluate Outcomes',
+  'Health Promotion and Maintenance',
+  'Management of Care',
+  'Pharmacological and Parenteral Therapies',
+  'Physiological Adaptation',
+  'Prioritization of Care',
+  'Prioritize Hypotheses',
+  'Psychosocial Integrity',
+  'Recognize Cues',
+  'Reduction of Risk Potential',
+  'Safety and Infection Control',
+  'Take Actions'
+];
+
+/**
+ * Normalise a client-need name exactly the same way the frontend does
+ * (see client/src/components/TestCustomization.jsx  →  normalizeKey).
+ * Steps: lowercase → strip smart quotes → replace 'and' with '&' → collapse →
+ *        strip /& → collapse spaces.
+ */
+const normalizeClientNeedKey = (value) => {
+  const base = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/['\u2019\u2018]/g, '')
+    .replace(/\band\b/g, '&')
+    .replace(/\s*\/\s*/g, '/')
+    .replace(/\s*&\s*/g, '&')
+    .replace(/[(),.-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return base
+    .replace(/[/&]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+// Build a lookup: normalizedKey → canonical name for every predefined CN category
+const clientNeedLookup = {};
+NCLEX_CLIENT_NEEDS_CATEGORIES.forEach(cn => {
+  clientNeedLookup[normalizeClientNeedKey(cn)] = cn;
+});
+
+/**
+ * Match a raw DB clientNeed / clientNeedSubcategory value to one of the
+ * 16 predefined NCLEX Client Needs categories.
+ * Returns the canonical category name or null.
+ */
+function matchClientNeedCategory(rawValue) {
+  if (!rawValue) return null;
+  const raw = String(rawValue).trim();
+  if (!raw) return null;
+
+  // 1. Exact normalised match (same normalisation as frontend)
+  const norm = normalizeClientNeedKey(raw);
+  if (clientNeedLookup[norm]) return clientNeedLookup[norm];
+
+  // 2. Starts-with match
+  for (const [normCn, canonical] of Object.entries(clientNeedLookup)) {
+    if (normCn.startsWith(norm) || norm.startsWith(normCn)) return canonical;
+  }
+
+  // 3. Word-overlap match (≥2 significant words)
+  const rawWords = norm.split(' ').filter(w => w.length > 2);
+  for (const [normCn, canonical] of Object.entries(clientNeedLookup)) {
+    const cnWords = normCn.split(' ');
+    const overlap = rawWords.filter(w => cnWords.some(cw => cw === w || cw.startsWith(w) || w.startsWith(cw))).length;
+    if (overlap >= 2) return canonical;
+  }
+
+  return null;
+}
+
+/**
+ * Check whether a question qualifies as a "client need" question —
+ * i.e. at least one of its clientNeed / clientNeedSubcategory values
+ * maps to one of the 16 predefined NCLEX Client Needs categories.
+ * Returns the set of matched canonical names (may be empty).
+ */
+function getClientNeedMatches(question) {
+  const matched = new Set();
+  const rawValues = [];
+  if (question.clientNeed && String(question.clientNeed).trim()) {
+    rawValues.push(String(question.clientNeed).trim());
+  }
+  if (question.clientNeedSubcategory && String(question.clientNeedSubcategory).trim()) {
+    rawValues.push(String(question.clientNeedSubcategory).trim());
+  }
+  for (const rv of rawValues) {
+    const m = matchClientNeedCategory(rv);
+    if (m) matched.add(m);
+  }
+  return matched;
+}
+
 /**
  * Get the canonical categories with their subcategories,
  * plus any extra subcategories found in DB data that aren't in the canonical list.
@@ -368,8 +469,12 @@ module.exports = {
   CATEGORIES,
   CATEGORY_ALIASES,
   SUBCATEGORY_ALIASES,
+  NCLEX_CLIENT_NEEDS_CATEGORIES,
   matchCategory,
   matchSubcategory,
+  matchClientNeedCategory,
+  getClientNeedMatches,
+  normalizeClientNeedKey,
   getCategoriesWithExtras,
   normalize
 };

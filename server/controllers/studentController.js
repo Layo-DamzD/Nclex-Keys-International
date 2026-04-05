@@ -7,7 +7,7 @@ const StudyMaterial = require('../models/StudyMaterial');
 const Feedback = require('../models/Feedback');
 const ExamSupportMessage = require('../models/ExamSupportMessage');
 const { sendExamSupportUsageEmail } = require('../services/emailService');
-const { matchCategory, matchSubcategory, CATEGORIES, getCategoriesWithExtras } = require('../constants/categories');
+const { matchCategory, matchSubcategory, CATEGORIES, getCategoriesWithExtras, getClientNeedMatches, matchClientNeedCategory, normalizeClientNeedKey } = require('../constants/categories');
 
 const MAX_FCM_TOKENS_PER_STUDENT = 8;
 
@@ -1728,23 +1728,35 @@ const getClientNeedsCounts = async (req, res) => {
       'clientNeed clientNeedSubcategory isNextGen'
     ).lean();
 
-    // Build counts keyed by normalized category name (union of both fields per question)
+    // Build counts keyed by normalised canonical client-need name.
+    // Use matchClientNeedCategory to map each raw DB value to one of the
+    // 16 predefined categories, then normalise with normalizeClientNeedKey
+    // (identical to the frontend's normalizeKey) so the key matches exactly
+    // what the frontend looks up.
     const countsByClientNeed = {};
     const ngnCountsByClientNeed = {};
 
     for (const q of questions) {
-      const categories = new Set();
+      // Collect ALL matched canonical categories for this question
+      const matchedCNs = new Set();
+      const rawValues = [];
       if (q.clientNeed && String(q.clientNeed).trim()) {
-        categories.add(String(q.clientNeed).trim().toLowerCase().replace(/['\u2019\u2018]/g, '').replace(/\s+/g, ' ').trim());
+        rawValues.push(String(q.clientNeed).trim());
       }
       if (q.clientNeedSubcategory && String(q.clientNeedSubcategory).trim()) {
-        categories.add(String(q.clientNeedSubcategory).trim().toLowerCase().replace(/['\u2019\u2018]/g, '').replace(/\s+/g, ' ').trim());
+        rawValues.push(String(q.clientNeedSubcategory).trim());
+      }
+      for (const rv of rawValues) {
+        const canonical = matchClientNeedCategory(rv);
+        if (canonical) matchedCNs.add(canonical);
       }
 
-      for (const cat of categories) {
-        countsByClientNeed[cat] = (countsByClientNeed[cat] || 0) + 1;
+      // Count under each matched canonical category (normalised key)
+      for (const cn of matchedCNs) {
+        const key = normalizeClientNeedKey(cn);
+        countsByClientNeed[key] = (countsByClientNeed[key] || 0) + 1;
         if (q.isNextGen) {
-          ngnCountsByClientNeed[cat] = (ngnCountsByClientNeed[cat] || 0) + 1;
+          ngnCountsByClientNeed[key] = (ngnCountsByClientNeed[key] || 0) + 1;
         }
       }
     }
@@ -1808,8 +1820,6 @@ const getQuestionStatusCounts = async (req, res) => {
 
     for (const q of allQuestions) {
       const qId = String(q._id);
-      const hasClientNeed = (q.clientNeed && String(q.clientNeed).trim()) ||
-                            (q.clientNeedSubcategory && String(q.clientNeedSubcategory).trim());
       const canonicalCat = matchCategory(q.category);
       const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
       const isCanonicalSubject = canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub);
@@ -1818,7 +1828,11 @@ const getQuestionStatusCounts = async (req, res) => {
         subjectQuestionIds.push(qId);
         if (q.isNextGen) subjectNgnIds.push(qId);
       }
-      if (hasClientNeed) {
+
+      // Only count as "client need" if at least one clientNeed/clientNeedSubcategory
+      // value maps to one of the 16 predefined NCLEX Client Needs categories.
+      const cnMatches = getClientNeedMatches(q);
+      if (cnMatches.size > 0) {
         clientNeedQuestionIds.push(qId);
         if (q.isNextGen) clientNeedNgnIds.push(qId);
       }
