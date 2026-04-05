@@ -101,7 +101,9 @@ const getAdminStats = async (req, res) => {
       }
     }
 
-    const uncategorized = totalQuestions - new Set([...subjectIds, ...clientNeedIds]).size;
+    const unionIds = new Set([...subjectIds, ...clientNeedIds]);
+    const uncategorized = totalQuestions - unionIds.size;
+    const overlap = subjectIds.size + clientNeedIds.size - unionIds.size;
 
     const totalStudents = await User.countDocuments({ role: 'student' });
 
@@ -115,6 +117,7 @@ const getAdminStats = async (req, res) => {
       totalQuestions,
       subjectQuestions: subjectIds.size,
       clientNeedQuestions: clientNeedIds.size,
+      overlap,
       uncategorized,
       totalStudents,
       totalUsage,

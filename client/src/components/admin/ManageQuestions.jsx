@@ -25,6 +25,15 @@ const ManageQuestions = ({ onSectionChange }) => {
   const categories = ['__uncategorized__', '', ...Object.keys(CATEGORIES)];
   const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
 
+  // Sync filters with URL search params (e.g. when clicking "Uncategorized" from AdminStats)
+  useEffect(() => {
+    const uncategorizedParam = searchParams.get('uncategorized') === 'true';
+    if (uncategorizedParam && !filters.uncategorized) {
+      setFilters((prev) => ({ ...prev, category: '', type: '', uncategorized: true }));
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     fetchQuestions();
   }, [filters, pagination.page, pagination.perPage]);
@@ -335,6 +344,39 @@ const ManageQuestions = ({ onSectionChange }) => {
           </button>
         </div>
       </div>
+
+      {filters.uncategorized && (
+        <div
+          style={{
+            background: '#fef3c7',
+            border: '1px solid #f59e0b',
+            borderRadius: '8px',
+            padding: '10px 16px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}
+        >
+          <span style={{ color: '#92400e', fontWeight: 500 }}>
+            <i className="fas fa-exclamation-triangle" style={{ marginRight: '6px', color: '#f59e0b' }}></i>
+            Showing only uncategorized questions ({pagination.total} found)
+          </span>
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => {
+              setFilters({ category: '', type: '', uncategorized: false });
+              setSearchParams({});
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            type="button"
+          >
+            Clear Filter
+          </button>
+        </div>
+      )}
 
       {fetchError && <div className="alert alert-danger">{fetchError}</div>}
 
