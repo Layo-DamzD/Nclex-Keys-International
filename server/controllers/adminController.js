@@ -90,20 +90,21 @@ const getAdminStats = async (req, res) => {
     const clientNeedIds = new Set();
     for (const q of allQuestions) {
       const qId = String(q._id);
+      // Check client needs FIRST — it takes priority
+      const cnMatches = getClientNeedMatches(q);
+      if (cnMatches.size > 0) {
+        clientNeedIds.add(qId);
+        continue; // Don't also count under subjects
+      }
       const canonicalCat = matchCategory(q.category);
       const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
       if (canonicalCat && canonicalSub && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub)) {
         subjectIds.add(qId);
       }
-      const cnMatches = getClientNeedMatches(q);
-      if (cnMatches.size > 0) {
-        clientNeedIds.add(qId);
-      }
     }
 
     const unionIds = new Set([...subjectIds, ...clientNeedIds]);
     const uncategorized = totalQuestions - unionIds.size;
-    const overlap = subjectIds.size + clientNeedIds.size - unionIds.size;
 
     const totalStudents = await User.countDocuments({ role: 'student' });
 
@@ -117,7 +118,6 @@ const getAdminStats = async (req, res) => {
       totalQuestions,
       subjectQuestions: subjectIds.size,
       clientNeedQuestions: clientNeedIds.size,
-      overlap,
       uncategorized,
       totalStudents,
       totalUsage,

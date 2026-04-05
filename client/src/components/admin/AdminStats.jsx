@@ -43,11 +43,6 @@ const AdminStats = ({ onSectionChange }) => {
         <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <span><i className="fas fa-book-medical" style={{ marginRight: '4px', color: '#6366f1' }}></i>{stats.subjectQuestions || 0} Subjects</span>
           <span><i className="fas fa-clipboard-list" style={{ marginRight: '4px', color: '#0891b2' }}></i>{stats.clientNeedQuestions || 0} Client Needs</span>
-          {(stats.overlap || 0) > 0 && (
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>
-              ({stats.overlap} overlap)
-            </span>
-          )}
           {(stats.uncategorized || 0) > 0 && (
             <span
               onClick={() => {
