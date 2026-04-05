@@ -77,43 +77,36 @@ const isStudentSubscriptionExpired = (student) => {
 // @access  Private (admin only)
 const getAdminStats = async (req, res) => {
   try {
-    // Fetch ALL questions and count using the exact same logic as CategoryStats
-    // and ClientNeedsStats so the dashboard total always matches what admin sees
-    // in the category breakdown pages.
+    // Total = every question in the DB. Automatically picks up new questions.
+    const totalQuestions = await Question.countDocuments();
+
+    // Count how many are categorized as subjects or client needs
     const allQuestions = await Question.find(
       {},
       '_id category subcategory clientNeed clientNeedSubcategory'
     ).lean();
 
-    // Subjects: questions matching canonical category + subcategory
     const subjectIds = new Set();
+    const clientNeedIds = new Set();
     for (const q of allQuestions) {
+      const qId = String(q._id);
       const canonicalCat = matchCategory(q.category);
       const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
       if (canonicalCat && canonicalSub && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub)) {
-        subjectIds.add(String(q._id));
+        subjectIds.add(qId);
       }
-    }
-
-    // Client Needs: questions matching any of the 16 predefined NCLEX categories
-    const clientNeedIds = new Set();
-    for (const q of allQuestions) {
       const cnMatches = getClientNeedMatches(q);
       if (cnMatches.size > 0) {
-        clientNeedIds.add(String(q._id));
+        clientNeedIds.add(qId);
       }
     }
 
-    // Total = union of subjects + client needs (no double-count)
-    const totalQuestions = new Set([...subjectIds, ...clientNeedIds]).size;
+    const uncategorized = totalQuestions - new Set([...subjectIds, ...clientNeedIds]).size;
 
     const totalStudents = await User.countDocuments({ role: 'student' });
 
-    // Calculate total usage (sum of all test attempts)
     const testResults = await TestResult.find();
     const totalUsage = testResults.reduce((sum, t) => sum + t.totalQuestions, 0);
-
-    // Calculate average success rate
     const totalCorrect = testResults.reduce((sum, t) => sum + t.score, 0);
     const totalAnswered = testResults.reduce((sum, t) => sum + t.totalQuestions, 0);
     const successRate = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
@@ -122,6 +115,7 @@ const getAdminStats = async (req, res) => {
       totalQuestions,
       subjectQuestions: subjectIds.size,
       clientNeedQuestions: clientNeedIds.size,
+      uncategorized,
       totalStudents,
       totalUsage,
       successRate

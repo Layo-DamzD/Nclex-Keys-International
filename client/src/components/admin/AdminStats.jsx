@@ -40,9 +40,12 @@ const AdminStats = () => {
       <div className={`stat-card border-top-primary`} style={{ textAlign: 'center' }}>
         <h3>Total Questions</h3>
         <div className="stat-number">{stats.totalQuestions}</div>
-        <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'center', gap: '16px' }}>
+        <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <span><i className="fas fa-book-medical" style={{ marginRight: '4px', color: '#6366f1' }}></i>{stats.subjectQuestions || 0} Subjects</span>
-          <span><i className="fas fa-clipboard-list" style={{ marginRight: '4px', color: '#6366f1' }}></i>{stats.clientNeedQuestions || 0} Client Needs</span>
+          <span><i className="fas fa-clipboard-list" style={{ marginRight: '4px', color: '#0891b2' }}></i>{stats.clientNeedQuestions || 0} Client Needs</span>
+          {(stats.uncategorized || 0) > 0 && (
+            <span><i className="fas fa-exclamation-triangle" style={{ marginRight: '4px', color: '#f59e0b' }}></i>{stats.uncategorized} Uncategorized</span>
+          )}
         </div>
       </div>
       {statCards.map((stat, idx) => (
