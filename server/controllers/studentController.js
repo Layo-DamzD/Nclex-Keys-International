@@ -589,26 +589,7 @@ const getDashboardStats = async (req, res) => {
     const studentId = req.user.id;
     const user = await User.findById(studentId).select('seenQuestions');
     const testResults = await TestResult.find({ student: studentId }).select('percentage');
-
-    // Count only questions that match canonical categories or predefined client needs
-    const allQuestions = await Question.find(
-      {},
-      '_id category subcategory clientNeed clientNeedSubcategory'
-    ).lean();
-    let subjectCount = 0;
-    let clientNeedCount = 0;
-    const seen = new Set();
-    for (const q of allQuestions) {
-      const canonicalCat = matchCategory(q.category);
-      const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
-      const isSubject = canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub);
-      const cnMatches = getClientNeedMatches(q);
-      const isClientNeed = cnMatches.size > 0;
-      if (isSubject) subjectCount++;
-      if (isClientNeed) clientNeedCount++;
-      if (isSubject || isClientNeed) seen.add(String(q._id));
-    }
-    const totalQuestionBank = seen.size;
+    const totalQuestionBank = await Question.countDocuments();
 
     const totalTests = testResults.length;
     const avgScore = totalTests
@@ -619,7 +600,7 @@ const getDashboardStats = async (req, res) => {
       : 0;
     const attemptedQuestions = Array.isArray(user?.seenQuestions) ? user.seenQuestions.length : 0;
 
-    res.json({ totalTests, avgScore, bestScore, totalQuestionBank, subjectCount, clientNeedCount, attemptedQuestions });
+    res.json({ totalTests, avgScore, bestScore, totalQuestionBank, attemptedQuestions });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

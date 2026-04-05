@@ -7,8 +7,6 @@ const StatsCards = () => {
     avgScore: 0,
     bestScore: 0,
     totalQuestionBank: 0,
-    subjectCount: 0,
-    clientNeedCount: 0,
     attemptedQuestions: 0
   });
   const [loading, setLoading] = useState(true);
@@ -51,9 +49,6 @@ const StatsCards = () => {
       icon: 'fa-layer-group',
       value: stats.totalQuestionBank,
       label: 'Question Bank',
-      sublabel: stats.subjectCount && stats.clientNeedCount
-        ? `${stats.subjectCount} subjects · ${stats.clientNeedCount} client needs`
-        : '',
       iconClass: 'icon-teal',
       gradientColors: ['#14b8a6', '#0d9488'] // teal
     },
@@ -109,11 +104,6 @@ const StatsCards = () => {
             <p className="text-muted mb-0" style={{ fontWeight: 500, fontSize: '0.9rem' }}>
               {stat.label}
             </p>
-            {stat.sublabel && (
-              <p className="text-muted mb-0" style={{ fontWeight: 400, fontSize: '0.75rem', marginTop: '2px', color: '#94a3b8' }}>
-                {stat.sublabel}
-              </p>
-            )}
           </div>
         </div>
       ))}

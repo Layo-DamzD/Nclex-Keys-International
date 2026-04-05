@@ -4,8 +4,6 @@ import axios from 'axios';
 const AdminStats = () => {
   const [stats, setStats] = useState({
     totalQuestions: 0,
-    subjectCount: 0,
-    clientNeedCount: 0,
     totalStudents: 0,
     totalUsage: 0,
     successRate: 0
@@ -30,6 +28,7 @@ const AdminStats = () => {
   }, []);
 
   const statCards = [
+    { title: 'Total Questions', value: stats.totalQuestions, color: 'primary' },
     { title: 'Total Students', value: stats.totalStudents, color: 'success' },
     { title: 'Total Usage', value: stats.totalUsage, color: 'warning' },
     { title: 'Success Rate', value: `${stats.successRate}%`, color: 'danger' }
@@ -39,13 +38,6 @@ const AdminStats = () => {
 
   return (
     <div className="stats-grid">
-      <div className={`stat-card border-top-primary`}>
-        <h3>Total Questions</h3>
-        <div className="stat-number">{stats.totalQuestions}</div>
-        <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
-          {stats.subjectCount} subjects · {stats.clientNeedCount} client needs
-        </div>
-      </div>
       {statCards.map((stat, idx) => (
         <div key={idx} className={`stat-card border-top-${stat.color}`}>
           <h3>{stat.title}</h3>
