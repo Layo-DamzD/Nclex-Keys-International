@@ -77,7 +77,27 @@ const isStudentSubscriptionExpired = (student) => {
 // @access  Private (admin only)
 const getAdminStats = async (req, res) => {
   try {
-    const totalQuestions = await Question.countDocuments();
+    // Use same canonical matching as student endpoints
+    const allQuestions = await Question.find(
+      {},
+      '_id category subcategory clientNeed clientNeedSubcategory'
+    ).lean();
+    const subjectIds = new Set();
+    const clientNeedIds = new Set();
+    for (const q of allQuestions) {
+      const qId = String(q._id);
+      const canonicalCat = matchCategory(q.category);
+      const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
+      if (canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub)) {
+        subjectIds.add(qId);
+      }
+      const cnMatches = getClientNeedMatches(q);
+      if (cnMatches.size > 0) {
+        clientNeedIds.add(qId);
+      }
+    }
+    const totalQuestions = new Set([...subjectIds, ...clientNeedIds]).size;
+
     const totalStudents = await User.countDocuments({ role: 'student' });
 
     // Calculate total usage (sum of all test attempts)

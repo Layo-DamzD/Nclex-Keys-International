@@ -581,6 +581,40 @@ const formatTimeAgo = (date) => {
   return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
 };
 
+/**
+ * Shared helper: count questions by type (subjects vs client needs).
+ * Used by both getDashboardStats and getQuestionStatusCounts so numbers
+ * are ALWAYS consistent across the app.
+ */
+const countQuestionBank = async () => {
+  const allQuestions = await Question.find(
+    {},
+    '_id category subcategory clientNeed clientNeedSubcategory'
+  ).lean();
+
+  const subjectIds = new Set();
+  const clientNeedIds = new Set();
+
+  for (const q of allQuestions) {
+    const qId = String(q._id);
+    const canonicalCat = matchCategory(q.category);
+    const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
+    if (canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub)) {
+      subjectIds.add(qId);
+    }
+    const cnMatches = getClientNeedMatches(q);
+    if (cnMatches.size > 0) {
+      clientNeedIds.add(qId);
+    }
+  }
+
+  return {
+    subjectCount: subjectIds.size,
+    clientNeedCount: clientNeedIds.size,
+    total: new Set([...subjectIds, ...clientNeedIds]).size
+  };
+};
+
 // @desc    Get student dashboard stats
 // @route   GET /api/student/dashboard/stats
 // @access  Private
@@ -589,7 +623,8 @@ const getDashboardStats = async (req, res) => {
     const studentId = req.user.id;
     const user = await User.findById(studentId).select('seenQuestions');
     const testResults = await TestResult.find({ student: studentId }).select('percentage');
-    const totalQuestionBank = await Question.countDocuments();
+    const qbCounts = await countQuestionBank();
+    const totalQuestionBank = qbCounts.total;
 
     const totalTests = testResults.length;
     const avgScore = totalTests
