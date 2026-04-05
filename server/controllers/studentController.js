@@ -340,19 +340,27 @@ const getSubcategoryCounts = async (req, res) => {
     const customUsedIds = user?.customTestUsedQuestions || [];
     const customOmittedIds = user?.customTestOmittedQuestions || [];
 
-    const buildCountsFromRows = (rows) => rows.reduce((acc, row) => {
-      const category = row?._id?.category;
-      const subcategory = row?._id?.subcategory;
-      if (!category || !subcategory) return acc;
+    const buildCountsFromRows = (rows) => {
+      const acc = {
+        countsByCategorySubcategory: {},
+        countsBySubcategory: {},
+        countsByCategory: {}
+      };
+      rows.forEach((row) => {
+        const category = row?._id?.category;
+        const subcategory = row?._id?.subcategory;
+        if (!category || !subcategory) return;
 
-      if (!acc.countsByCategorySubcategory[category]) {
-        acc.countsByCategorySubcategory[category] = {};
-      }
-
-      acc.countsByCategorySubcategory[category][subcategory] = row.count;
-      acc.countsBySubcategory[subcategory] = (acc.countsBySubcategory[subcategory] || 0) + row.count;
+        if (!acc.countsByCategorySubcategory[category]) {
+          acc.countsByCategorySubcategory[category] = {};
+        }
+        acc.countsByCategorySubcategory[category][subcategory] = row.count;
+        acc.countsBySubcategory[subcategory] = (acc.countsBySubcategory[subcategory] || 0) + row.count;
+        // Category-level totals
+        acc.countsByCategory[category] = (acc.countsByCategory[category] || 0) + row.count;
+      });
       return acc;
-    }, { countsByCategorySubcategory: {}, countsBySubcategory: {} });
+    };
 
     const groupStage = {
       $group: {
@@ -383,7 +391,11 @@ const getSubcategoryCounts = async (req, res) => {
       usedCountsByCategorySubcategory: usedCounts.countsByCategorySubcategory,
       usedCountsBySubcategory: usedCounts.countsBySubcategory,
       omittedCountsByCategorySubcategory: omittedCounts.countsByCategorySubcategory,
-      omittedCountsBySubcategory: omittedCounts.countsBySubcategory
+      omittedCountsBySubcategory: omittedCounts.countsBySubcategory,
+      // Dynamic category-level totals from actual DB data
+      countsByCategory: totalCounts.countsByCategory,
+      usedCountsByCategory: usedCounts.countsByCategory,
+      omittedCountsByCategory: omittedCounts.countsByCategory
     });
   } catch (error) {
     console.error(error);

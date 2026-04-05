@@ -46,6 +46,8 @@ const TestCustomization = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
+  // categoryMap is populated dynamically from DB data in fetchCounts()
+  // CATEGORIES is only used as initial placeholder before data loads
   const [categoryMap, setCategoryMap] = useState(CATEGORIES);
   const [usedSubcategoryCounts, setUsedSubcategoryCounts] = useState({});
   const [omittedSubcategoryCounts, setOmittedSubcategoryCounts] = useState({});
@@ -135,30 +137,37 @@ const TestCustomization = () => {
     selectedSubcategoryPairs.includes(getPairKey(category, subcategory));
 
   const getSubcategoryCount = (category, subcategory) => {
-    const catKeys = Object.keys(subcategoryCounts || {});
+    const counts = subcategoryCounts || {};
+    // Try exact match first (dynamic categories from DB), then fallback to normalized match
+    if (counts[category]?.[subcategory] !== undefined) return counts[category][subcategory];
+    const catKeys = Object.keys(counts);
     const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
     if (!matchedCat) return 0;
-    const subKeys = Object.keys(subcategoryCounts[matchedCat] || {});
+    const subKeys = Object.keys(counts[matchedCat] || {});
     const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
-    return subcategoryCounts?.[matchedCat]?.[matchedSub] || 0;
+    return counts?.[matchedCat]?.[matchedSub] || 0;
   };
 
   const getUsedSubcategoryCount = (category, subcategory) => {
-    const catKeys = Object.keys(usedSubcategoryCounts || {});
+    const counts = usedSubcategoryCounts || {};
+    if (counts[category]?.[subcategory] !== undefined) return counts[category][subcategory];
+    const catKeys = Object.keys(counts);
     const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
     if (!matchedCat) return 0;
-    const subKeys = Object.keys(usedSubcategoryCounts[matchedCat] || {});
+    const subKeys = Object.keys(counts[matchedCat] || {});
     const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
-    return usedSubcategoryCounts?.[matchedCat]?.[matchedSub] || 0;
+    return counts?.[matchedCat]?.[matchedSub] || 0;
   };
 
   const getOmittedSubcategoryCount = (category, subcategory) => {
-    const catKeys = Object.keys(omittedSubcategoryCounts || {});
+    const counts = omittedSubcategoryCounts || {};
+    if (counts[category]?.[subcategory] !== undefined) return counts[category][subcategory];
+    const catKeys = Object.keys(counts);
     const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
     if (!matchedCat) return 0;
-    const subKeys = Object.keys(omittedSubcategoryCounts[matchedCat] || {});
+    const subKeys = Object.keys(counts[matchedCat] || {});
     const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
-    return omittedSubcategoryCounts?.[matchedCat]?.[matchedSub] || 0;
+    return counts?.[matchedCat]?.[matchedSub] || 0;
   };
 
   const normalizeNestedCounts = (rawNestedCounts = {}) =>
@@ -189,9 +198,26 @@ const TestCustomization = () => {
         const omittedRawNestedCounts = response.data?.omittedCountsByCategorySubcategory || {};
 
         setSubcategoryCounts(normalizeNestedCounts(totalRawNestedCounts));
-        setCategoryMap(CATEGORIES);
         setUsedSubcategoryCounts(normalizeNestedCounts(usedRawNestedCounts));
         setOmittedSubcategoryCounts(normalizeNestedCounts(omittedRawNestedCounts));
+
+        // Build dynamic categoryMap from actual database data
+        // This ensures the student side shows the same categories as the admin side
+        const rawCategoryMap = {};
+        Object.entries(totalRawNestedCounts).forEach(([category, subcats]) => {
+          if (!rawCategoryMap[category]) rawCategoryMap[category] = [];
+          Object.keys(subcats).forEach(sub => {
+            if (!rawCategoryMap[category].includes(sub)) {
+              rawCategoryMap[category].push(sub);
+            }
+          });
+        });
+        // Sort categories and subcategories alphabetically
+        const sortedMap = {};
+        Object.keys(rawCategoryMap).sort().forEach(cat => {
+          sortedMap[cat] = rawCategoryMap[cat].sort();
+        });
+        setCategoryMap(sortedMap);
 
         // Fetch client needs counts
         try {
