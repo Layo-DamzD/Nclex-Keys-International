@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const AdminStats = () => {
+const AdminStats = ({ onSectionChange }) => {
   const [stats, setStats] = useState({
     totalQuestions: 0,
     totalStudents: 0,
@@ -44,7 +44,22 @@ const AdminStats = () => {
           <span><i className="fas fa-book-medical" style={{ marginRight: '4px', color: '#6366f1' }}></i>{stats.subjectQuestions || 0} Subjects</span>
           <span><i className="fas fa-clipboard-list" style={{ marginRight: '4px', color: '#0891b2' }}></i>{stats.clientNeedQuestions || 0} Client Needs</span>
           {(stats.uncategorized || 0) > 0 && (
-            <span><i className="fas fa-exclamation-triangle" style={{ marginRight: '4px', color: '#f59e0b' }}></i>{stats.uncategorized} Uncategorized</span>
+            <span
+              onClick={() => {
+                if (onSectionChange) {
+                  onSectionChange('questions');
+                  // URL param is picked up by ManageQuestions via useSearchParams
+                  setTimeout(() => {
+                    window.history.pushState({}, '', '/admin/dashboard?section=questions&uncategorized=true');
+                    window.dispatchEvent(new Event('popstate'));
+                  }, 100);
+                }
+              }}
+              style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '2px' }}
+              title="Click to view uncategorized questions"
+            >
+              <i className="fas fa-exclamation-triangle" style={{ marginRight: '4px', color: '#f59e0b' }}></i>{stats.uncategorized} Uncategorized
+            </span>
           )}
         </div>
       </div>

@@ -1,23 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
 
 const ManageQuestions = ({ onSectionChange }) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = JSON.parse(sessionStorage.getItem('adminUser') || '{}');
   const isSuperAdmin = String(user?.role || '').trim().toLowerCase() === 'superadmin';
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
-  const [filters, setFilters] = useState({ category: '', type: '' });
+  const [filters, setFilters] = useState({
+    category: '',
+    type: '',
+    uncategorized: searchParams.get('uncategorized') === 'true'
+  });
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, perPage: '25' });
   const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
   const [previewQuestion, setPreviewQuestion] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(-1);
 
-  const categories = ['', ...Object.keys(CATEGORIES)];
+  const categories = ['__uncategorized__', '', ...Object.keys(CATEGORIES)];
   const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
 
   useEffect(() => {
@@ -33,8 +38,9 @@ const ManageQuestions = ({ onSectionChange }) => {
       const params = new URLSearchParams({
         page: String(pagination.page),
         limit: pagination.perPage,
-        ...(filters.category && { category: filters.category }),
-        ...(filters.type && { type: filters.type }),
+        ...(filters.uncategorized && { uncategorized: 'true' }),
+        ...(!filters.uncategorized && filters.category && { category: filters.category }),
+        ...(!filters.uncategorized && filters.type && { type: filters.type }),
       });
 
       const response = await axios.get(`/api/admin/questions?${params.toString()}`, {
@@ -59,7 +65,17 @@ const ManageQuestions = ({ onSectionChange }) => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
+    if (name === 'category') {
+      if (value === '__uncategorized__') {
+        setFilters({ category: '', type: '', uncategorized: true });
+        setSearchParams({ uncategorized: 'true' });
+      } else {
+        setFilters((prev) => ({ ...prev, category: value, uncategorized: false }));
+        setSearchParams({});
+      }
+    } else {
+      setFilters((prev) => ({ ...prev, [name]: value }));
+    }
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
@@ -283,14 +299,14 @@ const ManageQuestions = ({ onSectionChange }) => {
         <div className="manage-questions-filter-row" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
           <select
             name="category"
-            value={filters.category}
+            value={filters.uncategorized ? '__uncategorized__' : filters.category}
             onChange={handleFilterChange}
             className="form-control manage-questions-filter-control"
             style={{ width: 'min(220px, 100%)' }}
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>
-                {cat || 'All Categories'}
+                {cat === '__uncategorized__' ? '⚠️ Uncategorized' : (cat || 'All Categories')}
               </option>
             ))}
           </select>

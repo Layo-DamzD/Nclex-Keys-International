@@ -309,7 +309,7 @@ const AdminDashboard = () => {
 
         {activeSection === 'dashboard' && (
           <div className="section active">
-            <AdminStats />
+            <AdminStats onSectionChange={handleSectionChange} />
             <QuickActions
               onSectionChange={handleSectionChange}
               userRole={userRole}
