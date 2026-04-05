@@ -60,7 +60,7 @@ const TestCustomization = () => {
     correct: false
   });
 
-  // Question status counts
+  // Question status counts — tab-specific
   const [statusCounts, setStatusCounts] = useState({
     unused: 0,
     unusedNgn: 0,
@@ -74,6 +74,8 @@ const TestCustomization = () => {
     correctNgn: 0,
     total: 0
   });
+  const [subjectStatusCounts, setSubjectStatusCounts] = useState(null);
+  const [clientNeedStatusCounts, setClientNeedStatusCounts] = useState(null);
 
   const navigate = useNavigate();
 
@@ -194,6 +196,19 @@ const TestCustomization = () => {
             correctNgn: statusResponse.data?.correctNgn || 0,
             total: statusResponse.data?.total || 0
           });
+          // Store tab-specific status counts
+          if (statusResponse.data?.subjects) {
+            setSubjectStatusCounts({
+              ...statusResponse.data.subjects,
+              total: statusResponse.data.subjects.total || 0
+            });
+          }
+          if (statusResponse.data?.clientNeeds) {
+            setClientNeedStatusCounts({
+              ...statusResponse.data.clientNeeds,
+              total: statusResponse.data.clientNeeds.total || 0
+            });
+          }
         } catch (statusErr) {
           console.error('Failed to load question status counts', statusErr);
         }
@@ -267,16 +282,15 @@ const TestCustomization = () => {
 
   const selectedStats = useMemo(() => {
     // When no subcategories are explicitly selected, OR when ALL are selected,
-    // use the total Q-bank count from statusCounts (which counts ALL questions
-    // regardless of category matching). This fixes the bug where some DB questions
-    // have different category/subcategory values than the CATEGORIES constant,
-    // causing undercounting when "Select All" is clicked.
+    // use the total Q-bank count from subjectStatusCounts (which counts only
+    // questions in canonical subject categories). This fixes the bug where
+    // undercounting happens when "Select All" is clicked.
     const allSelected = selectedSubcategoryPairs.length === 0 ||
       selectedSubcategoryPairs.length === allPossiblePairs.length;
 
     if (allSelected) {
       return {
-        available: statusCounts.total || 0,
+        available: subjectStatusCounts?.total || statusCounts.total || 0,
         used: 0,
         omitted: 0,
       };
@@ -341,8 +355,11 @@ const TestCustomization = () => {
   };
 
   // Get current stats based on selected tab
-  // Total questions in the question bank
-  const totalQuestionBank = statusCounts.total || 0;
+  // Total questions in the question bank — switch based on active tab
+  const activeStatusCounts = categoryTab === 'subjects'
+    ? (subjectStatusCounts || statusCounts)
+    : (clientNeedStatusCounts || statusCounts);
+  const totalQuestionBank = activeStatusCounts.total || 0;
   const currentAvailable = categoryTab === 'clientNeeds' ? selectedClientNeedsTotal : selectedStats.available;
   const maxAllowed = Math.min(questionRangeMax, currentAvailable);
 
@@ -675,7 +692,7 @@ const TestCustomization = () => {
             <div style={{ height: '4px', background: '#f1f5f9' }}>
               <div style={{
                 height: '100%',
-                width: `${Math.min(100, totalQuestionBank > 0 ? ((statusCounts.correct + statusCounts.incorrect + statusCounts.omitted) / totalQuestionBank) * 100 : 0)}%`,
+                width: `${Math.min(100, totalQuestionBank > 0 ? ((activeStatusCounts.correct + activeStatusCounts.incorrect + activeStatusCounts.omitted) / totalQuestionBank) * 100 : 0)}%`,
                 background: 'linear-gradient(90deg, #22c55e 0%, #3b82f6 100%)',
                 borderRadius: '0 2px 2px 0',
                 transition: 'width 0.4s ease'
@@ -753,7 +770,7 @@ const TestCustomization = () => {
                   background: statusFilters.unused ? '#3b82f6' : '#cbd5e1',
                   transition: 'all 0.2s'
                 }}></div>
-                <span style={{ fontWeight: 700, color: statusFilters.unused ? '#1e40af' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.unused}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.unused ? '#1e40af' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.unused}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.unused ? '#3b82f6' : '#cbd5e1', fontSize: '0.75rem' }}>Unused</span>
                 {statusFilters.unused && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#3b82f6' }}></i>}
               </button>
@@ -778,7 +795,7 @@ const TestCustomization = () => {
                   background: statusFilters.correct ? '#22c55e' : '#cbd5e1',
                   transition: 'all 0.2s'
                 }}></div>
-                <span style={{ fontWeight: 700, color: statusFilters.correct ? '#166534' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.correct}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.correct ? '#166534' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.correct}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.correct ? '#22c55e' : '#cbd5e1', fontSize: '0.75rem' }}>Correct</span>
                 {statusFilters.correct && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#22c55e' }}></i>}
               </button>
@@ -803,7 +820,7 @@ const TestCustomization = () => {
                   background: statusFilters.incorrect ? '#ef4444' : '#cbd5e1',
                   transition: 'all 0.2s'
                 }}></div>
-                <span style={{ fontWeight: 700, color: statusFilters.incorrect ? '#991b1b' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.incorrect}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.incorrect ? '#991b1b' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.incorrect}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.incorrect ? '#ef4444' : '#cbd5e1', fontSize: '0.75rem' }}>Incorrect</span>
                 {statusFilters.incorrect && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#ef4444' }}></i>}
               </button>
@@ -824,7 +841,7 @@ const TestCustomization = () => {
                 }}
               >
                 <i className="fas fa-bookmark" style={{ fontSize: '0.65rem', color: statusFilters.marked ? '#f59e0b' : '#cbd5e1' }}></i>
-                <span style={{ fontWeight: 700, color: statusFilters.marked ? '#92400e' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.marked}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.marked ? '#92400e' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.marked}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.marked ? '#f59e0b' : '#cbd5e1', fontSize: '0.75rem' }}>Marked</span>
                 {statusFilters.marked && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#f59e0b' }}></i>}
               </button>
@@ -845,7 +862,7 @@ const TestCustomization = () => {
                 }}
               >
                 <i className="fas fa-minus-circle" style={{ fontSize: '0.65rem', color: statusFilters.omitted ? '#64748b' : '#cbd5e1' }}></i>
-                <span style={{ fontWeight: 700, color: statusFilters.omitted ? '#475569' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.omitted}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.omitted ? '#475569' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.omitted}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.omitted ? '#64748b' : '#cbd5e1', fontSize: '0.75rem' }}>Omitted</span>
                 {statusFilters.omitted && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#64748b' }}></i>}
               </button>

@@ -1767,9 +1767,11 @@ const getQuestionStatusCounts = async (req, res) => {
     const studentId = req.user.id;
     const user = await User.findById(studentId);
 
-    // Get all questions to calculate counts
-    const allQuestions = await Question.find({}, '_id');
-    const allQuestionIds = allQuestions.map(q => String(q._id));
+    // Get all questions with fields needed to determine which "tab" they belong to
+    const allQuestions = await Question.find(
+      {},
+      '_id category subcategory clientNeed clientNeedSubcategory isNextGen'
+    ).lean();
 
     // Get status sets from user document
     const seenSet = new Set((user.seenQuestions || []).map(id => String(id)));
@@ -1777,37 +1779,81 @@ const getQuestionStatusCounts = async (req, res) => {
     const markedSet = new Set((user.markedQuestions || []).map(id => String(id)));
     const omittedSet = new Set((user.customTestOmittedQuestions || []).map(id => String(id)));
 
-    // Partition ALL questions into MUTUALLY EXCLUSIVE categories using priority:
-    // Each question gets exactly ONE status. Priority order: Marked > Omitted > Incorrect > Correct > Unused
-    // This ensures: unused + correct + incorrect + marked + omitted === total (always)
-    let counts = { unused: 0, correct: 0, incorrect: 0, marked: 0, omitted: 0 };
+    // Helper: compute status counts for a given list of question IDs
+    const computeCounts = (questionIds) => {
+      const counts = { unused: 0, correct: 0, incorrect: 0, marked: 0, omitted: 0 };
+      let ngnCounts = { unused: 0, correct: 0, incorrect: 0, marked: 0, omitted: 0 };
 
-    for (const qId of allQuestionIds) {
-      if (markedSet.has(qId)) {
-        counts.marked++;
-      } else if (omittedSet.has(qId)) {
-        counts.omitted++;
-      } else if (incorrectSet.has(qId)) {
-        counts.incorrect++;
-      } else if (seenSet.has(qId)) {
-        counts.correct++;
-      } else {
-        counts.unused++;
+      for (const qId of questionIds) {
+        if (markedSet.has(qId)) {
+          counts.marked++;
+        } else if (omittedSet.has(qId)) {
+          counts.omitted++;
+        } else if (incorrectSet.has(qId)) {
+          counts.incorrect++;
+        } else if (seenSet.has(qId)) {
+          counts.correct++;
+        } else {
+          counts.unused++;
+        }
+      }
+      return counts;
+    };
+
+    // Partition questions into subjects (canonical categories) vs client needs
+    const subjectQuestionIds = [];
+    const clientNeedQuestionIds = [];
+    const subjectNgnIds = [];
+    const clientNeedNgnIds = [];
+
+    for (const q of allQuestions) {
+      const qId = String(q._id);
+      const hasClientNeed = (q.clientNeed && String(q.clientNeed).trim()) ||
+                            (q.clientNeedSubcategory && String(q.clientNeedSubcategory).trim());
+      const canonicalCat = matchCategory(q.category);
+      const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
+      const isCanonicalSubject = canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub);
+
+      if (isCanonicalSubject) {
+        subjectQuestionIds.push(qId);
+        if (q.isNextGen) subjectNgnIds.push(qId);
+      }
+      if (hasClientNeed) {
+        clientNeedQuestionIds.push(qId);
+        if (q.isNextGen) clientNeedNgnIds.push(qId);
       }
     }
 
+    // Some questions may belong to both (have both canonical category AND clientNeed).
+    // That's fine — they show up in both tabs.
+
+    const subjectCounts = computeCounts(subjectQuestionIds);
+    const clientNeedCounts = computeCounts(clientNeedQuestionIds);
+    const allCounts = computeCounts(allQuestions.map(q => String(q._id)));
+
     res.json({
-      unused: counts.unused,
+      // Overall (kept for backward compat)
+      unused: allCounts.unused,
       unusedNgn: 0,
-      incorrect: counts.incorrect,
+      incorrect: allCounts.incorrect,
       incorrectNgn: 0,
-      marked: counts.marked,
+      marked: allCounts.marked,
       markedNgn: 0,
-      omitted: counts.omitted,
+      omitted: allCounts.omitted,
       omittedNgn: 0,
-      correct: counts.correct,
+      correct: allCounts.correct,
       correctNgn: 0,
-      total: allQuestions.length
+      total: allQuestions.length,
+      // Tab-specific: subjects
+      subjects: {
+        ...subjectCounts,
+        total: subjectQuestionIds.length
+      },
+      // Tab-specific: client needs
+      clientNeeds: {
+        ...clientNeedCounts,
+        total: clientNeedQuestionIds.length
+      }
     });
   } catch (error) {
     console.error('Error fetching question status counts:', error);
