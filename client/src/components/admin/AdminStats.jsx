@@ -28,7 +28,6 @@ const AdminStats = () => {
   }, []);
 
   const statCards = [
-    { title: 'Total Questions', value: stats.totalQuestions, color: 'primary' },
     { title: 'Total Students', value: stats.totalStudents, color: 'success' },
     { title: 'Total Usage', value: stats.totalUsage, color: 'warning' },
     { title: 'Success Rate', value: `${stats.successRate}%`, color: 'danger' }
@@ -38,6 +37,14 @@ const AdminStats = () => {
 
   return (
     <div className="stats-grid">
+      <div className={`stat-card border-top-primary`} style={{ textAlign: 'center' }}>
+        <h3>Total Questions</h3>
+        <div className="stat-number">{stats.totalQuestions}</div>
+        <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'center', gap: '16px' }}>
+          <span><i className="fas fa-book-medical" style={{ marginRight: '4px', color: '#6366f1' }}></i>{stats.subjectQuestions || 0} Subjects</span>
+          <span><i className="fas fa-clipboard-list" style={{ marginRight: '4px', color: '#6366f1' }}></i>{stats.clientNeedQuestions || 0} Client Needs</span>
+        </div>
+      </div>
       {statCards.map((stat, idx) => (
         <div key={idx} className={`stat-card border-top-${stat.color}`}>
           <h3>{stat.title}</h3>
