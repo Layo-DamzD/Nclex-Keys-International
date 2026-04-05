@@ -17,13 +17,23 @@ const StudyMaterials = () => {
       try {
         setFetchError('');
         const token = localStorage.getItem('token');
+        if (!token) {
+          setFetchError('');
+          setLoading(false);
+          return;
+        }
         const response = await axios.get('/api/student/study-materials', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setMaterials(response.data || []);
       } catch (error) {
-        const msg = error.response?.data?.message || error.message || 'Failed to load study materials.';
-        setFetchError(msg);
+        // Don't show auth errors as material errors — user may need to re-login
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          setFetchError('');
+        } else {
+          const msg = error.response?.data?.message || error.message || 'Failed to load study materials.';
+          setFetchError(msg);
+        }
         console.error('Error fetching study materials:', error);
       } finally {
         setLoading(false);

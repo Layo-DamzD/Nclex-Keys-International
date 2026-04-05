@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { protect, authOnly } = require('../middleware/authMiddleware');
 const {
   getDashboardStats,
   getRecentTests,
@@ -55,7 +55,7 @@ router.get('/test-history', protect, getTestHistory);
 router.post('/submit-test', protect, submitTest);
 router.get('/test-result/:id', protect, getTestResult);
 router.get('/test/:id', protect, getPreparedTest);
-router.get('/study-materials', protect, getStudyMaterials);
+router.get('/study-materials', authOnly, getStudyMaterials);
 router.get('/performance', protect, getPerformanceData);
 router.get('/performance-detailed', protect, getPerformanceDataDetailed);
 router.get('/profile', protect, getProfile);

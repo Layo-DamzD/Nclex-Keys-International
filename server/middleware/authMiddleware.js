@@ -44,6 +44,31 @@ const protect = async (req, res, next) => {
   return res.status(401).json({ message: 'Not authorized, no token' });
 };
 
+// Authentication-only middleware — validates token but does NOT check subscription status.
+// Use for endpoints that should be accessible to all authenticated users regardless of subscription.
+const authOnly = async (req, res, next) => {
+  let token;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+
+      if (!req.user) {
+        return res.status(401).json({ message: 'Not authorized' });
+      }
+
+      next();
+      return;
+    } catch (error) {
+      return res.status(401).json({ message: 'Not authorized, token failed' });
+    }
+  }
+
+  return res.status(401).json({ message: 'Not authorized, no token' });
+};
+
 const adminOnly = (req, res, next) => {
   if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
     next();
@@ -60,4 +85,4 @@ const superAdminOnly = (req, res, next) => {
   }
 };
 
-module.exports = { protect, adminOnly, superAdminOnly };
+module.exports = { protect, authOnly, adminOnly, superAdminOnly };

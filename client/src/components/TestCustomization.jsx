@@ -278,18 +278,33 @@ const TestCustomization = () => {
   }, [clientNeedsCounts]);
 
   const selectedClientNeedsTotal = useMemo(() => {
-    if (selectedClientNeeds.length === 0) {
+    // When no client needs selected OR all are selected, use full total
+    // to avoid fuzzy-match undercounting (same fix as subjects tab)
+    const allSelected = selectedClientNeeds.length === 0 ||
+      selectedClientNeeds.length === NCLEX_CLIENT_NEEDS_CATEGORIES.length;
+    if (allSelected) {
       return clientNeedsTotal;
     }
     return selectedClientNeeds.reduce((sum, cn) => sum + getClientNeedCount(cn), 0);
   }, [selectedClientNeeds, clientNeedsCounts, clientNeedsTotal]);
 
+  // Compute total number of selectable subcategory pairs (for "all selected" check)
+  const allPossiblePairs = useMemo(() => {
+    return Object.entries(categoryMap).flatMap(([category, subcategories]) =>
+      subcategories.map(sub => getPairKey(category, sub))
+    );
+  }, [categoryMap]);
+
   const selectedStats = useMemo(() => {
-    // When no subcategories are explicitly selected, show the total Q-bank count
-    // from statusCounts (which counts ALL questions regardless of category matching)
-    // This fixes the bug where some DB questions have different category/subcategory
-    // values than the CATEGORIES constant, causing undercounting.
-    if (selectedSubcategoryPairs.length === 0) {
+    // When no subcategories are explicitly selected, OR when ALL are selected,
+    // use the total Q-bank count from statusCounts (which counts ALL questions
+    // regardless of category matching). This fixes the bug where some DB questions
+    // have different category/subcategory values than the CATEGORIES constant,
+    // causing undercounting when "Select All" is clicked.
+    const allSelected = selectedSubcategoryPairs.length === 0 ||
+      selectedSubcategoryPairs.length === allPossiblePairs.length;
+
+    if (allSelected) {
       return {
         available: statusCounts.total || 0,
         used: 0,
@@ -309,7 +324,7 @@ const TestCustomization = () => {
         omitted: totals.omitted + omitted,
       };
     }, { available: 0, used: 0, omitted: 0 });
-  }, [selectedSubcategoryPairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts]);
+  }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts]);
 
   const questionRangeMin = 5;
   const questionRangeMax = 150;

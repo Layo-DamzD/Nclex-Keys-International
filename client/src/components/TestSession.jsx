@@ -1084,7 +1084,8 @@ const TestSession = () => {
     const totalMarks = Math.max(correct.length, 1);
     const correctPicked = user.filter((choice) => correct.includes(choice)).length;
     const wrongPicked = user.filter((choice) => !correct.includes(choice)).length;
-    const earnedMarks = Math.max(correctPicked - wrongPicked, 0);
+    // Negative scoring: wrong picks deduct points (can go below 0) — matches server behavior
+    const earnedMarks = correctPicked - wrongPicked;
 
     let isCorrect = false;
     if (earnedMarks >= totalMarks) {
