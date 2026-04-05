@@ -46,13 +46,6 @@ const StatsCards = () => {
 
   const statsData = [
     {
-      icon: 'fa-layer-group',
-      value: stats.totalQuestionBank,
-      label: 'Question Bank',
-      iconClass: 'icon-teal',
-      gradientColors: ['#14b8a6', '#0d9488'] // teal
-    },
-    {
       icon: 'fa-check-circle',
       value: stats.totalTests,
       label: 'Total Tests Taken',
