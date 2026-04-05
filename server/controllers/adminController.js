@@ -1,6 +1,7 @@
 const Question = require('../models/Question');
 const TestResult = require('../models/testResult');
 const User = require('../models/user');
+const { matchCategory, matchSubcategory, CATEGORIES, getClientNeedMatches } = require('../constants/categories');
 const Test = require('../models/Test');
 const StudyMaterial = require('../models/StudyMaterial');
 const SystemLog = require('../models/SystemLog');
@@ -76,13 +77,32 @@ const isStudentSubscriptionExpired = (student) => {
 // @access  Private (admin only)
 const getAdminStats = async (req, res) => {
   try {
-    const totalQuestions = await Question.countDocuments();
+    // Count only questions that match canonical categories or predefined client needs
+    const allQuestions = await Question.find(
+      {},
+      '_id category subcategory clientNeed clientNeedSubcategory'
+    ).lean();
+    let subjectCount = 0;
+    let clientNeedCount = 0;
+    const seen = new Set();
+    for (const q of allQuestions) {
+      const canonicalCat = matchCategory(q.category);
+      const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
+      const isSubject = canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub);
+      const cnMatches = getClientNeedMatches(q);
+      const isClientNeed = cnMatches.size > 0;
+      if (isSubject) subjectCount++;
+      if (isClientNeed) clientNeedCount++;
+      if (isSubject || isClientNeed) seen.add(String(q._id));
+    }
+    const totalQuestions = seen.size;
+
     const totalStudents = await User.countDocuments({ role: 'student' });
-    
+
     // Calculate total usage (sum of all test attempts)
     const testResults = await TestResult.find();
     const totalUsage = testResults.reduce((sum, t) => sum + t.totalQuestions, 0);
-    
+
     // Calculate average success rate
     const totalCorrect = testResults.reduce((sum, t) => sum + t.score, 0);
     const totalAnswered = testResults.reduce((sum, t) => sum + t.totalQuestions, 0);
@@ -90,6 +110,8 @@ const getAdminStats = async (req, res) => {
 
     res.json({
       totalQuestions,
+      subjectCount,
+      clientNeedCount,
       totalStudents,
       totalUsage,
       successRate
