@@ -1,11 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { CATEGORIES } from '../../constants/Categories';
 
 const CategoryStats = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [categoryData, setCategoryData] = useState({});
+
+  // Compute totals from category data
+  const totals = useMemo(() => {
+    let totalQuestions = 0;
+    let totalUsage = 0;
+    let totalCorrect = 0;
+    Object.values(categoryData).forEach(stats => {
+      totalQuestions += stats.totalQuestions || 0;
+      totalUsage += stats.totalUsage || 0;
+      totalCorrect += Math.round((stats.successRate || 0) * (stats.totalUsage || 0) / 100);
+    });
+    return {
+      totalQuestions,
+      totalUsage,
+      overallSuccessRate: totalUsage > 0 ? Math.round((totalCorrect / totalUsage) * 100) : 0,
+      categoryCount: Object.keys(categoryData).length
+    };
+  }, [categoryData]);
 
   useEffect(() => {
     fetchCategoryStats();
@@ -34,6 +51,35 @@ const CategoryStats = () => {
       <div className="header">
         <h1>Category Statistics</h1>
         <p style={{ color: '#64748b' }}>Detailed breakdown by category and subcategory</p>
+      </div>
+
+      {/* Summary bar */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '20px',
+        marginBottom: '30px',
+        padding: '20px',
+        background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#6366f1' }}>{totals.totalQuestions}</div>
+          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Total Questions</div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#0891b2' }}>{totals.categoryCount}</div>
+          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Categories</div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#92400e' }}>{totals.totalUsage}</div>
+          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Total Uses</div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#065f46' }}>{totals.overallSuccessRate}%</div>
+          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Overall Success Rate</div>
+        </div>
       </div>
 
       {Object.entries(categoryData).map(([category, stats]) => (

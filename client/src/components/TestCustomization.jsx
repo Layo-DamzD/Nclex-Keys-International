@@ -46,6 +46,10 @@ const TestCustomization = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
+  // Raw (non-normalized) subcategory counts — used for Subjects tab direct lookup
+  const [rawSubcategoryCounts, setRawSubcategoryCounts] = useState({});
+  const [rawUsedSubcategoryCounts, setRawUsedSubcategoryCounts] = useState({});
+  const [rawOmittedSubcategoryCounts, setRawOmittedSubcategoryCounts] = useState({});
   // categoryMap is populated dynamically from DB data in fetchCounts()
   // CATEGORIES is only used as initial placeholder before data loads
   const [categoryMap, setCategoryMap] = useState(CATEGORIES);
@@ -137,8 +141,11 @@ const TestCustomization = () => {
     selectedSubcategoryPairs.includes(getPairKey(category, subcategory));
 
   const getSubcategoryCount = (category, subcategory) => {
+    // Primary: use raw counts (exact match since categoryMap and rawCounts share same DB keys)
+    const rawCounts = rawSubcategoryCounts || {};
+    if (rawCounts[category]?.[subcategory] !== undefined) return rawCounts[category][subcategory];
+    // Fallback: try normalized/fuzzy match for legacy compatibility
     const counts = subcategoryCounts || {};
-    // Try exact match first (dynamic categories from DB), then fallback to normalized match
     if (counts[category]?.[subcategory] !== undefined) return counts[category][subcategory];
     const catKeys = Object.keys(counts);
     const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
@@ -149,6 +156,10 @@ const TestCustomization = () => {
   };
 
   const getUsedSubcategoryCount = (category, subcategory) => {
+    // Primary: raw exact match
+    const rawCounts = rawUsedSubcategoryCounts || {};
+    if (rawCounts[category]?.[subcategory] !== undefined) return rawCounts[category][subcategory];
+    // Fallback: normalized/fuzzy
     const counts = usedSubcategoryCounts || {};
     if (counts[category]?.[subcategory] !== undefined) return counts[category][subcategory];
     const catKeys = Object.keys(counts);
@@ -160,6 +171,10 @@ const TestCustomization = () => {
   };
 
   const getOmittedSubcategoryCount = (category, subcategory) => {
+    // Primary: raw exact match
+    const rawCounts = rawOmittedSubcategoryCounts || {};
+    if (rawCounts[category]?.[subcategory] !== undefined) return rawCounts[category][subcategory];
+    // Fallback: normalized/fuzzy
     const counts = omittedSubcategoryCounts || {};
     if (counts[category]?.[subcategory] !== undefined) return counts[category][subcategory];
     const catKeys = Object.keys(counts);
@@ -197,6 +212,11 @@ const TestCustomization = () => {
         const usedRawNestedCounts = response.data?.usedCountsByCategorySubcategory || {};
         const omittedRawNestedCounts = response.data?.omittedCountsByCategorySubcategory || {};
 
+        // Store RAW counts for exact-match lookup (Subjects tab)
+        setRawSubcategoryCounts(totalRawNestedCounts);
+        setRawUsedSubcategoryCounts(usedRawNestedCounts);
+        setRawOmittedSubcategoryCounts(omittedRawNestedCounts);
+        // Also store normalized counts for fuzzy-match fallback / Client Needs
         setSubcategoryCounts(normalizeNestedCounts(totalRawNestedCounts));
         setUsedSubcategoryCounts(normalizeNestedCounts(usedRawNestedCounts));
         setOmittedSubcategoryCounts(normalizeNestedCounts(omittedRawNestedCounts));
@@ -269,7 +289,7 @@ const TestCustomization = () => {
         subcats.reduce((sum, sub) => sum + getSubcategoryCount(category, sub), 0)
       ])
     );
-  }, [subcategoryCounts, categoryMap]);
+  }, [subcategoryCounts, rawSubcategoryCounts, categoryMap]);
 
   const usedCategoryTotals = useMemo(() => {
     return Object.fromEntries(
@@ -278,7 +298,7 @@ const TestCustomization = () => {
         subcats.reduce((sum, sub) => sum + getUsedSubcategoryCount(category, sub), 0)
       ])
     );
-  }, [usedSubcategoryCounts, categoryMap]);
+  }, [usedSubcategoryCounts, rawUsedSubcategoryCounts, categoryMap]);
 
   const categoryColumns = useMemo(() => {
     const cols = [[], []];
@@ -350,7 +370,7 @@ const TestCustomization = () => {
         omitted: totals.omitted + omitted,
       };
     }, { available: 0, used: 0, omitted: 0 });
-  }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts]);
+  }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, rawSubcategoryCounts, rawUsedSubcategoryCounts, rawOmittedSubcategoryCounts, categoryMap, statusCounts]);
 
   const questionRangeMin = 5;
   const questionRangeMax = 150;

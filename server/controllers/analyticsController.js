@@ -245,36 +245,29 @@ const getCategoryStats = async (req, res) => {
     
     const categoryStats = {};
 
-    // Initialize with all categories from CATEGORIES constant
-    const categoryList = [
-      'Adult Health', 'Pharmacology', 'Maternal & Newborn Health',
-      'Child Health', 'Mental Health', 'Fundamentals', 'Management of Care',
-      'Case Studies'
-    ];
-
-    categoryList.forEach(cat => {
-      categoryStats[cat] = {
-        totalQuestions: 0,
-        totalUsage: 0,
-        correctAttempts: 0,
-        subcategories: {}
-      };
-    });
-
-    // Count questions per category/subcategory
+    // Dynamically build categories from actual DB data
+    // This ensures admin and student views always show the same categories
     questions.forEach(q => {
-      if (categoryStats[q.category]) {
-        categoryStats[q.category].totalQuestions += 1;
-        
-        if (!categoryStats[q.category].subcategories[q.subcategory]) {
-          categoryStats[q.category].subcategories[q.subcategory] = {
-            count: 0,
-            usage: 0,
-            correct: 0
-          };
-        }
-        categoryStats[q.category].subcategories[q.subcategory].count += 1;
+      const cat = q.category || 'Uncategorized';
+      if (!categoryStats[cat]) {
+        categoryStats[cat] = {
+          totalQuestions: 0,
+          totalUsage: 0,
+          correctAttempts: 0,
+          subcategories: {}
+        };
       }
+      categoryStats[cat].totalQuestions += 1;
+      
+      const sub = q.subcategory || 'Uncategorized';
+      if (!categoryStats[cat].subcategories[sub]) {
+        categoryStats[cat].subcategories[sub] = {
+          count: 0,
+          usage: 0,
+          correct: 0
+        };
+      }
+      categoryStats[cat].subcategories[sub].count += 1;
     });
 
     // Aggregate usage data from test results
@@ -283,16 +276,18 @@ const getCategoryStats = async (req, res) => {
         result.answers.forEach(answer => {
           if (answer.questionId) {
             const q = answer.questionId;
-            if (q && categoryStats[q.category]) {
-              categoryStats[q.category].totalUsage += 1;
+            const cat = q?.category || 'Uncategorized';
+            if (categoryStats[cat]) {
+              categoryStats[cat].totalUsage += 1;
               if (answer.isCorrect) {
-                categoryStats[q.category].correctAttempts += 1;
+                categoryStats[cat].correctAttempts += 1;
               }
 
-              if (categoryStats[q.category].subcategories[q.subcategory]) {
-                categoryStats[q.category].subcategories[q.subcategory].usage += 1;
+              const sub = q?.subcategory || 'Uncategorized';
+              if (categoryStats[cat].subcategories[sub]) {
+                categoryStats[cat].subcategories[sub].usage += 1;
                 if (answer.isCorrect) {
-                  categoryStats[q.category].subcategories[q.subcategory].correct += 1;
+                  categoryStats[cat].subcategories[sub].correct += 1;
                 }
               }
             }
@@ -301,33 +296,35 @@ const getCategoryStats = async (req, res) => {
       }
     });
 
-    // Format response
+    // Format response — only include categories with questions
     const result = {};
-    Object.entries(categoryStats).forEach(([category, stats]) => {
-      if (stats.totalQuestions > 0) {
-        const subcategories = Object.entries(stats.subcategories)
-          .filter(([_, subStats]) => subStats.count > 0)
-          .map(([name, subStats]) => ({
-            name,
-            count: subStats.count,
-            usage: subStats.usage,
-            successRate: subStats.usage > 0 
-              ? Math.round((subStats.correct / subStats.usage) * 100) 
-              : 0
-          }))
-          .sort((a, b) => b.count - a.count);
+    Object.entries(categoryStats)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .forEach(([category, stats]) => {
+        if (stats.totalQuestions > 0) {
+          const subcategories = Object.entries(stats.subcategories)
+            .filter(([_, subStats]) => subStats.count > 0)
+            .map(([name, subStats]) => ({
+              name,
+              count: subStats.count,
+              usage: subStats.usage,
+              successRate: subStats.usage > 0 
+                ? Math.round((subStats.correct / subStats.usage) * 100) 
+                : 0
+            }))
+            .sort((a, b) => b.count - a.count);
 
-        result[category] = {
-          totalQuestions: stats.totalQuestions,
-          totalUsage: stats.totalUsage,
-          successRate: stats.totalUsage > 0 
-            ? Math.round((stats.correctAttempts / stats.totalUsage) * 100) 
-            : 0,
-          subcategoryCount: subcategories.length,
-          subcategories
-        };
-      }
-    });
+          result[category] = {
+            totalQuestions: stats.totalQuestions,
+            totalUsage: stats.totalUsage,
+            successRate: stats.totalUsage > 0 
+              ? Math.round((stats.correctAttempts / stats.totalUsage) * 100) 
+              : 0,
+            subcategoryCount: subcategories.length,
+            subcategories
+          };
+        }
+      });
 
     res.json(result);
   } catch (error) {
