@@ -159,12 +159,9 @@ const TestCustomization = () => {
         setUsedSubcategoryCounts(usedRawNestedCounts);
         setOmittedSubcategoryCounts(omittedRawNestedCounts);
 
-        // Use canonical categories from API (CATEGORIES + extras from DB)
-        // If API provides categoriesWithExtras, use it; otherwise fall back to CATEGORIES constant
-        if (response.data?.categoriesWithExtras && Object.keys(response.data.categoriesWithExtras).length > 0) {
-          setCategoryMap(response.data.categoriesWithExtras);
-        }
-        // categoryMap already initialized to CATEGORIES constant above
+        // Backend now returns only canonical categories (no extras).
+        // We keep using the hardcoded CATEGORIES constant from Categories.jsx
+        // which is the single source of truth.
 
         // Fetch client needs counts
         try {

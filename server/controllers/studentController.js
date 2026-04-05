@@ -7,7 +7,7 @@ const StudyMaterial = require('../models/StudyMaterial');
 const Feedback = require('../models/Feedback');
 const ExamSupportMessage = require('../models/ExamSupportMessage');
 const { sendExamSupportUsageEmail } = require('../services/emailService');
-const { matchCategory, matchSubcategory, getCategoriesWithExtras } = require('../constants/categories');
+const { matchCategory, matchSubcategory, CATEGORIES, getCategoriesWithExtras } = require('../constants/categories');
 
 const MAX_FCM_TOKENS_PER_STUDENT = 8;
 
@@ -351,6 +351,7 @@ const getSubcategoryCounts = async (req, res) => {
       : [];
 
     // Build counts using canonical category/subcategory mapping
+    // ONLY count questions that match canonical categories AND canonical subcategories
     const buildCounts = (questions) => {
       const acc = {
         countsByCategorySubcategory: {},
@@ -360,6 +361,11 @@ const getSubcategoryCounts = async (req, res) => {
       questions.forEach((q) => {
         const canonicalCat = matchCategory(q.category);
         const canonicalSub = matchSubcategory(canonicalCat, q.subcategory);
+
+        // Skip if category is not in canonical list
+        if (!CATEGORIES[canonicalCat]) return;
+        // Skip if subcategory is not in canonical list for this category
+        if (!CATEGORIES[canonicalCat].includes(canonicalSub)) return;
 
         acc.countsByCategorySubcategory[canonicalCat] = acc.countsByCategorySubcategory[canonicalCat] || {};
         acc.countsByCategorySubcategory[canonicalCat][canonicalSub] =
@@ -378,12 +384,11 @@ const getSubcategoryCounts = async (req, res) => {
     const usedCounts = buildCounts(usedQuestions);
     const omittedCounts = buildCounts(omittedQuestions);
 
-    // Build the category structure (canonical + extras from DB)
-    const extraSubs = {};
-    Object.entries(totalCounts.countsByCategorySubcategory).forEach(([cat, subs]) => {
-      extraSubs[cat] = Object.keys(subs);
+    // Send canonical CATEGORIES structure (no extras) so frontend uses the same list
+    const canonicalCategories = {};
+    Object.entries(CATEGORIES).forEach(([cat, subs]) => {
+      canonicalCategories[cat] = [...subs];
     });
-    const categoriesWithExtras = getCategoriesWithExtras(extraSubs);
 
     res.json({
       countsByCategorySubcategory: totalCounts.countsByCategorySubcategory,
@@ -398,7 +403,7 @@ const getSubcategoryCounts = async (req, res) => {
       usedCountsByCategory: usedCounts.countsByCategory,
       omittedCountsByCategory: omittedCounts.countsByCategory,
       // Send canonical categories structure so frontend uses the same list
-      categoriesWithExtras
+      categoriesWithExtras: canonicalCategories
     });
   } catch (error) {
     console.error(error);

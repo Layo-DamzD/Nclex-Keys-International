@@ -257,19 +257,17 @@ const getCategoryStats = async (req, res) => {
     });
 
     // Count questions per category/subcategory using canonical mapping
+    // ONLY count questions that match a canonical category — skip everything else
     questions.forEach(q => {
       const cat = matchCategory(q.category);
+
+      // Skip questions whose category doesn't match any canonical category
+      if (!categoryStats[cat]) return;
+
       const sub = matchSubcategory(cat, q.subcategory);
 
-      if (!categoryStats[cat]) {
-        // Category from DB that's not in our canonical list — add it dynamically
-        categoryStats[cat] = {
-          totalQuestions: 0,
-          totalUsage: 0,
-          correctAttempts: 0,
-          subcategories: {}
-        };
-      }
+      // Skip subcategories that don't match any canonical subcategory for this category
+      if (!CATEGORIES[cat]?.includes(sub)) return;
 
       categoryStats[cat].totalQuestions += 1;
 
@@ -290,6 +288,7 @@ const getCategoryStats = async (req, res) => {
           if (answer.questionId) {
             const q = answer.questionId;
             const cat = matchCategory(q.category);
+            // Only count if category is canonical
             if (categoryStats[cat]) {
               categoryStats[cat].totalUsage += 1;
               if (answer.isCorrect) {
@@ -297,7 +296,15 @@ const getCategoryStats = async (req, res) => {
               }
 
               const sub = matchSubcategory(cat, q.subcategory);
-              if (categoryStats[cat].subcategories[sub]) {
+              // Only count subcategory usage if it's a canonical subcategory
+              if (CATEGORIES[cat]?.includes(sub)) {
+                if (!categoryStats[cat].subcategories[sub]) {
+                  categoryStats[cat].subcategories[sub] = {
+                    count: 0,
+                    usage: 0,
+                    correct: 0
+                  };
+                }
                 categoryStats[cat].subcategories[sub].usage += 1;
                 if (answer.isCorrect) {
                   categoryStats[cat].subcategories[sub].correct += 1;
@@ -309,34 +316,34 @@ const getCategoryStats = async (req, res) => {
       }
     });
 
-    // Format response — only include categories with questions
+    // Format response — include ALL canonical categories (even those with 0 questions)
     const result = {};
     Object.entries(categoryStats)
       .sort(([a], [b]) => a.localeCompare(b))
       .forEach(([category, stats]) => {
-        if (stats.totalQuestions > 0) {
-          const subcategories = Object.entries(stats.subcategories)
-            .filter(([_, subStats]) => subStats.count > 0)
-            .map(([name, subStats]) => ({
-              name,
-              count: subStats.count,
-              usage: subStats.usage,
-              successRate: subStats.usage > 0
-                ? Math.round((subStats.correct / subStats.usage) * 100)
-                : 0
-            }))
-            .sort((a, b) => b.count - a.count);
-
-          result[category] = {
-            totalQuestions: stats.totalQuestions,
-            totalUsage: stats.totalUsage,
-            successRate: stats.totalUsage > 0
-              ? Math.round((stats.correctAttempts / stats.totalUsage) * 100)
-              : 0,
-            subcategoryCount: subcategories.length,
-            subcategories
+        // Show all canonical subcategories for this category (even those with 0 count)
+        const allSubs = CATEGORIES[category] || [];
+        const subcategories = allSubs.map(subName => {
+          const subStats = stats.subcategories[subName] || { count: 0, usage: 0, correct: 0 };
+          return {
+            name: subName,
+            count: subStats.count,
+            usage: subStats.usage,
+            successRate: subStats.usage > 0
+              ? Math.round((subStats.correct / subStats.usage) * 100)
+              : 0
           };
-        }
+        }).sort((a, b) => b.count - a.count);
+
+        result[category] = {
+          totalQuestions: stats.totalQuestions,
+          totalUsage: stats.totalUsage,
+          successRate: stats.totalUsage > 0
+            ? Math.round((stats.correctAttempts / stats.totalUsage) * 100)
+            : 0,
+          subcategoryCount: allSubs.length,
+          subcategories
+        };
       });
 
     res.json(result);

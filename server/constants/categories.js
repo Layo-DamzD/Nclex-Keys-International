@@ -252,7 +252,7 @@ Object.entries(CATEGORIES).forEach(([cat, subs]) => {
  * Returns the canonical category name, or the original if no match found.
  */
 function matchCategory(dbCategory) {
-  if (!dbCategory) return 'Uncategorized';
+  if (!dbCategory) return null;
   const raw = String(dbCategory).trim();
 
   // 1. Exact match (case-insensitive)
@@ -293,8 +293,8 @@ function matchCategory(dbCategory) {
     if (matchCount >= 2) return canonical;
   }
 
-  // No match — return original (will show as its own category)
-  return raw;
+  // No match — return null (callers should skip this question)
+  return null;
 }
 
 /**
@@ -303,10 +303,10 @@ function matchCategory(dbCategory) {
  * Returns the canonical subcategory name, or the original if no match found.
  */
 function matchSubcategory(canonicalCategory, dbSubcategory) {
-  if (!dbSubcategory) return 'Uncategorized';
+  if (!dbSubcategory) return null;
   const raw = String(dbSubcategory).trim();
   const subs = CATEGORIES[canonicalCategory];
-  if (!subs) return raw; // Category not in our list, return sub as-is
+  if (!subs) return null; // Category not in canonical list, skip
 
   // 1. Exact match (case-insensitive)
   const lowerRaw = raw.toLowerCase();
@@ -339,8 +339,8 @@ function matchSubcategory(canonicalCategory, dbSubcategory) {
     if (matchCount >= 2) return sub;
   }
 
-  // No match — return original (will show as its own subcategory under this category)
-  return raw;
+  // No match — return null (callers should skip this subcategory)
+  return null;
 }
 
 /**
