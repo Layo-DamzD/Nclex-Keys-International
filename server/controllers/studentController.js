@@ -7,6 +7,7 @@ const StudyMaterial = require('../models/StudyMaterial');
 const Feedback = require('../models/Feedback');
 const ExamSupportMessage = require('../models/ExamSupportMessage');
 const { sendExamSupportUsageEmail } = require('../services/emailService');
+const { matchCategory, matchSubcategory, getCategoriesWithExtras } = require('../constants/categories');
 
 const MAX_FCM_TOKENS_PER_STUDENT = 8;
 
@@ -340,48 +341,49 @@ const getSubcategoryCounts = async (req, res) => {
     const customUsedIds = user?.customTestUsedQuestions || [];
     const customOmittedIds = user?.customTestOmittedQuestions || [];
 
-    const buildCountsFromRows = (rows) => {
+    // Fetch all questions and remap to canonical categories/subcategories
+    const allQuestions = await Question.find({}, '_id category subcategory').lean();
+    const usedQuestions = customUsedIds.length > 0
+      ? await Question.find({ _id: { $in: customUsedIds } }, '_id category subcategory').lean()
+      : [];
+    const omittedQuestions = customOmittedIds.length > 0
+      ? await Question.find({ _id: { $in: customOmittedIds } }, '_id category subcategory').lean()
+      : [];
+
+    // Build counts using canonical category/subcategory mapping
+    const buildCounts = (questions) => {
       const acc = {
         countsByCategorySubcategory: {},
         countsBySubcategory: {},
         countsByCategory: {}
       };
-      rows.forEach((row) => {
-        const category = row?._id?.category;
-        const subcategory = row?._id?.subcategory;
-        if (!category || !subcategory) return;
+      questions.forEach((q) => {
+        const canonicalCat = matchCategory(q.category);
+        const canonicalSub = matchSubcategory(canonicalCat, q.subcategory);
 
-        if (!acc.countsByCategorySubcategory[category]) {
-          acc.countsByCategorySubcategory[category] = {};
-        }
-        acc.countsByCategorySubcategory[category][subcategory] = row.count;
-        acc.countsBySubcategory[subcategory] = (acc.countsBySubcategory[subcategory] || 0) + row.count;
-        // Category-level totals
-        acc.countsByCategory[category] = (acc.countsByCategory[category] || 0) + row.count;
+        acc.countsByCategorySubcategory[canonicalCat] = acc.countsByCategorySubcategory[canonicalCat] || {};
+        acc.countsByCategorySubcategory[canonicalCat][canonicalSub] =
+          (acc.countsByCategorySubcategory[canonicalCat][canonicalSub] || 0) + 1;
+
+        acc.countsBySubcategory[canonicalSub] =
+          (acc.countsBySubcategory[canonicalSub] || 0) + 1;
+
+        acc.countsByCategory[canonicalCat] =
+          (acc.countsByCategory[canonicalCat] || 0) + 1;
       });
       return acc;
     };
 
-    const groupStage = {
-      $group: {
-        _id: {
-          category: '$category',
-          subcategory: '$subcategory'
-        },
-        count: { $sum: 1 }
-      }
-    };
+    const totalCounts = buildCounts(allQuestions);
+    const usedCounts = buildCounts(usedQuestions);
+    const omittedCounts = buildCounts(omittedQuestions);
 
-    const totalRows = await Question.aggregate([groupStage]);
-    const totalCounts = buildCountsFromRows(totalRows);
-    const usedRows = customUsedIds.length > 0
-      ? await Question.aggregate([{ $match: { _id: { $in: customUsedIds } } }, groupStage])
-      : [];
-    const omittedRows = customOmittedIds.length > 0
-      ? await Question.aggregate([{ $match: { _id: { $in: customOmittedIds } } }, groupStage])
-      : [];
-    const usedCounts = buildCountsFromRows(usedRows);
-    const omittedCounts = buildCountsFromRows(omittedRows);
+    // Build the category structure (canonical + extras from DB)
+    const extraSubs = {};
+    Object.entries(totalCounts.countsByCategorySubcategory).forEach(([cat, subs]) => {
+      extraSubs[cat] = Object.keys(subs);
+    });
+    const categoriesWithExtras = getCategoriesWithExtras(extraSubs);
 
     res.json({
       countsByCategorySubcategory: totalCounts.countsByCategorySubcategory,
@@ -392,10 +394,11 @@ const getSubcategoryCounts = async (req, res) => {
       usedCountsBySubcategory: usedCounts.countsBySubcategory,
       omittedCountsByCategorySubcategory: omittedCounts.countsByCategorySubcategory,
       omittedCountsBySubcategory: omittedCounts.countsBySubcategory,
-      // Dynamic category-level totals from actual DB data
       countsByCategory: totalCounts.countsByCategory,
       usedCountsByCategory: usedCounts.countsByCategory,
-      omittedCountsByCategory: omittedCounts.countsByCategory
+      omittedCountsByCategory: omittedCounts.countsByCategory,
+      // Send canonical categories structure so frontend uses the same list
+      categoriesWithExtras
     });
   } catch (error) {
     console.error(error);

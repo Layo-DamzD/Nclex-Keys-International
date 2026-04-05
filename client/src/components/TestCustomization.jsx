@@ -26,16 +26,6 @@ const TestCustomization = () => {
       .trim();
   };
 
-  // Fuzzy key matcher — handles old DB names matching new CATEGORIES.jsx names
-  // e.g., "cardiovascular" matches "cardiovascular system", "gastrointestinal nutrition" matches "gastrointestinal"
-  const fuzzyMatchKey = (haystackKeys, needle) => {
-    if (!needle || haystackKeys.includes(needle)) return needle;
-    for (const key of haystackKeys) {
-      if (key.startsWith(needle) || needle.startsWith(key)) return key;
-    }
-    return null;
-  };
-
   const [selectedSubcategoryPairs, setSelectedSubcategoryPairs] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [questionCount, setQuestionCount] = useState(75);
@@ -45,16 +35,12 @@ const TestCustomization = () => {
   const [testType, setTestType] = useState('practice'); // 'practice', 'cat', 'assessment'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Counts from API — already canonical (backend remaps DB names)
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
-  // Raw (non-normalized) subcategory counts — used for Subjects tab direct lookup
-  const [rawSubcategoryCounts, setRawSubcategoryCounts] = useState({});
-  const [rawUsedSubcategoryCounts, setRawUsedSubcategoryCounts] = useState({});
-  const [rawOmittedSubcategoryCounts, setRawOmittedSubcategoryCounts] = useState({});
-  // categoryMap is populated dynamically from DB data in fetchCounts()
-  // CATEGORIES is only used as initial placeholder before data loads
-  const [categoryMap, setCategoryMap] = useState(CATEGORIES);
   const [usedSubcategoryCounts, setUsedSubcategoryCounts] = useState({});
   const [omittedSubcategoryCounts, setOmittedSubcategoryCounts] = useState({});
+  // categoryMap: uses CATEGORIES constant + any extras from DB (via API categoriesWithExtras)
+  const [categoryMap, setCategoryMap] = useState(CATEGORIES);
   const [countLoadError, setCountLoadError] = useState('');
   
   // Category tab: 'subjects' or 'clientNeeds'
@@ -140,64 +126,19 @@ const TestCustomization = () => {
   const isSubcategorySelected = (category, subcategory) =>
     selectedSubcategoryPairs.includes(getPairKey(category, subcategory));
 
+  // Simple exact-match lookup — backend returns canonical category/subcategory names
+  // that match our CATEGORIES constant, so no fuzzy matching needed
   const getSubcategoryCount = (category, subcategory) => {
-    // Primary: use raw counts (exact match since categoryMap and rawCounts share same DB keys)
-    const rawCounts = rawSubcategoryCounts || {};
-    if (rawCounts[category]?.[subcategory] !== undefined) return rawCounts[category][subcategory];
-    // Fallback: try normalized/fuzzy match for legacy compatibility
-    const counts = subcategoryCounts || {};
-    if (counts[category]?.[subcategory] !== undefined) return counts[category][subcategory];
-    const catKeys = Object.keys(counts);
-    const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
-    if (!matchedCat) return 0;
-    const subKeys = Object.keys(counts[matchedCat] || {});
-    const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
-    return counts?.[matchedCat]?.[matchedSub] || 0;
+    return subcategoryCounts?.[category]?.[subcategory] || 0;
   };
 
   const getUsedSubcategoryCount = (category, subcategory) => {
-    // Primary: raw exact match
-    const rawCounts = rawUsedSubcategoryCounts || {};
-    if (rawCounts[category]?.[subcategory] !== undefined) return rawCounts[category][subcategory];
-    // Fallback: normalized/fuzzy
-    const counts = usedSubcategoryCounts || {};
-    if (counts[category]?.[subcategory] !== undefined) return counts[category][subcategory];
-    const catKeys = Object.keys(counts);
-    const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
-    if (!matchedCat) return 0;
-    const subKeys = Object.keys(counts[matchedCat] || {});
-    const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
-    return counts?.[matchedCat]?.[matchedSub] || 0;
+    return usedSubcategoryCounts?.[category]?.[subcategory] || 0;
   };
 
   const getOmittedSubcategoryCount = (category, subcategory) => {
-    // Primary: raw exact match
-    const rawCounts = rawOmittedSubcategoryCounts || {};
-    if (rawCounts[category]?.[subcategory] !== undefined) return rawCounts[category][subcategory];
-    // Fallback: normalized/fuzzy
-    const counts = omittedSubcategoryCounts || {};
-    if (counts[category]?.[subcategory] !== undefined) return counts[category][subcategory];
-    const catKeys = Object.keys(counts);
-    const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
-    if (!matchedCat) return 0;
-    const subKeys = Object.keys(counts[matchedCat] || {});
-    const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
-    return counts?.[matchedCat]?.[matchedSub] || 0;
+    return omittedSubcategoryCounts?.[category]?.[subcategory] || 0;
   };
-
-  const normalizeNestedCounts = (rawNestedCounts = {}) =>
-    Object.entries(rawNestedCounts).reduce((acc, [category, subMap]) => {
-      const normalizedCategory = normalizeKey(category);
-      if (!acc[normalizedCategory]) {
-        acc[normalizedCategory] = {};
-      }
-      Object.entries(subMap || {}).forEach(([subcategory, count]) => {
-        const normalizedSubcategory = normalizeKey(subcategory);
-        acc[normalizedCategory][normalizedSubcategory] =
-          (acc[normalizedCategory][normalizedSubcategory] || 0) + (Number(count) || 0);
-      });
-      return acc;
-    }, {});
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -212,32 +153,18 @@ const TestCustomization = () => {
         const usedRawNestedCounts = response.data?.usedCountsByCategorySubcategory || {};
         const omittedRawNestedCounts = response.data?.omittedCountsByCategorySubcategory || {};
 
-        // Store RAW counts for exact-match lookup (Subjects tab)
-        setRawSubcategoryCounts(totalRawNestedCounts);
-        setRawUsedSubcategoryCounts(usedRawNestedCounts);
-        setRawOmittedSubcategoryCounts(omittedRawNestedCounts);
-        // Also store normalized counts for fuzzy-match fallback / Client Needs
-        setSubcategoryCounts(normalizeNestedCounts(totalRawNestedCounts));
-        setUsedSubcategoryCounts(normalizeNestedCounts(usedRawNestedCounts));
-        setOmittedSubcategoryCounts(normalizeNestedCounts(omittedRawNestedCounts));
+        // Backend already returns canonical category/subcategory names.
+        // Use them directly — no normalization needed.
+        setSubcategoryCounts(totalRawNestedCounts);
+        setUsedSubcategoryCounts(usedRawNestedCounts);
+        setOmittedSubcategoryCounts(omittedRawNestedCounts);
 
-        // Build dynamic categoryMap from actual database data
-        // This ensures the student side shows the same categories as the admin side
-        const rawCategoryMap = {};
-        Object.entries(totalRawNestedCounts).forEach(([category, subcats]) => {
-          if (!rawCategoryMap[category]) rawCategoryMap[category] = [];
-          Object.keys(subcats).forEach(sub => {
-            if (!rawCategoryMap[category].includes(sub)) {
-              rawCategoryMap[category].push(sub);
-            }
-          });
-        });
-        // Sort categories and subcategories alphabetically
-        const sortedMap = {};
-        Object.keys(rawCategoryMap).sort().forEach(cat => {
-          sortedMap[cat] = rawCategoryMap[cat].sort();
-        });
-        setCategoryMap(sortedMap);
+        // Use canonical categories from API (CATEGORIES + extras from DB)
+        // If API provides categoriesWithExtras, use it; otherwise fall back to CATEGORIES constant
+        if (response.data?.categoriesWithExtras && Object.keys(response.data.categoriesWithExtras).length > 0) {
+          setCategoryMap(response.data.categoriesWithExtras);
+        }
+        // categoryMap already initialized to CATEGORIES constant above
 
         // Fetch client needs counts
         try {
@@ -289,7 +216,7 @@ const TestCustomization = () => {
         subcats.reduce((sum, sub) => sum + getSubcategoryCount(category, sub), 0)
       ])
     );
-  }, [subcategoryCounts, rawSubcategoryCounts, categoryMap]);
+  }, [subcategoryCounts, categoryMap]);
 
   const usedCategoryTotals = useMemo(() => {
     return Object.fromEntries(
@@ -298,7 +225,7 @@ const TestCustomization = () => {
         subcats.reduce((sum, sub) => sum + getUsedSubcategoryCount(category, sub), 0)
       ])
     );
-  }, [usedSubcategoryCounts, rawUsedSubcategoryCounts, categoryMap]);
+  }, [usedSubcategoryCounts, categoryMap]);
 
   const categoryColumns = useMemo(() => {
     const cols = [[], []];
@@ -370,7 +297,7 @@ const TestCustomization = () => {
         omitted: totals.omitted + omitted,
       };
     }, { available: 0, used: 0, omitted: 0 });
-  }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, rawSubcategoryCounts, rawUsedSubcategoryCounts, rawOmittedSubcategoryCounts, categoryMap, statusCounts]);
+  }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts]);
 
   const questionRangeMin = 5;
   const questionRangeMax = 150;

@@ -1,6 +1,7 @@
 const TestResult = require('../models/testResult');
 const Question = require('../models/Question');
 const User = require('../models/user');
+const { matchCategory, matchSubcategory, CATEGORIES, getCategoriesWithExtras } = require('../constants/categories');
 
 // @desc    Get question usage by type
 // @route   GET /api/admin/analytics/usage-by-type
@@ -240,16 +241,28 @@ const getMostUsedQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getCategoryStats = async (req, res) => {
   try {
-    const questions = await Question.find();
+    const questions = await Question.find().lean();
     const testResults = await TestResult.find().populate('answers.questionId');
-    
+
     const categoryStats = {};
 
-    // Dynamically build categories from actual DB data
-    // This ensures admin and student views always show the same categories
+    // Initialize with canonical CATEGORIES (same as student view)
+    Object.keys(CATEGORIES).forEach(cat => {
+      categoryStats[cat] = {
+        totalQuestions: 0,
+        totalUsage: 0,
+        correctAttempts: 0,
+        subcategories: {}
+      };
+    });
+
+    // Count questions per category/subcategory using canonical mapping
     questions.forEach(q => {
-      const cat = q.category || 'Uncategorized';
+      const cat = matchCategory(q.category);
+      const sub = matchSubcategory(cat, q.subcategory);
+
       if (!categoryStats[cat]) {
+        // Category from DB that's not in our canonical list — add it dynamically
         categoryStats[cat] = {
           totalQuestions: 0,
           totalUsage: 0,
@@ -257,9 +270,9 @@ const getCategoryStats = async (req, res) => {
           subcategories: {}
         };
       }
+
       categoryStats[cat].totalQuestions += 1;
-      
-      const sub = q.subcategory || 'Uncategorized';
+
       if (!categoryStats[cat].subcategories[sub]) {
         categoryStats[cat].subcategories[sub] = {
           count: 0,
@@ -270,20 +283,20 @@ const getCategoryStats = async (req, res) => {
       categoryStats[cat].subcategories[sub].count += 1;
     });
 
-    // Aggregate usage data from test results
+    // Aggregate usage data from test results using canonical mapping
     testResults.forEach(result => {
       if (result.answers) {
         result.answers.forEach(answer => {
           if (answer.questionId) {
             const q = answer.questionId;
-            const cat = q?.category || 'Uncategorized';
+            const cat = matchCategory(q.category);
             if (categoryStats[cat]) {
               categoryStats[cat].totalUsage += 1;
               if (answer.isCorrect) {
                 categoryStats[cat].correctAttempts += 1;
               }
 
-              const sub = q?.subcategory || 'Uncategorized';
+              const sub = matchSubcategory(cat, q.subcategory);
               if (categoryStats[cat].subcategories[sub]) {
                 categoryStats[cat].subcategories[sub].usage += 1;
                 if (answer.isCorrect) {
@@ -308,8 +321,8 @@ const getCategoryStats = async (req, res) => {
               name,
               count: subStats.count,
               usage: subStats.usage,
-              successRate: subStats.usage > 0 
-                ? Math.round((subStats.correct / subStats.usage) * 100) 
+              successRate: subStats.usage > 0
+                ? Math.round((subStats.correct / subStats.usage) * 100)
                 : 0
             }))
             .sort((a, b) => b.count - a.count);
@@ -317,8 +330,8 @@ const getCategoryStats = async (req, res) => {
           result[category] = {
             totalQuestions: stats.totalQuestions,
             totalUsage: stats.totalUsage,
-            successRate: stats.totalUsage > 0 
-              ? Math.round((stats.correctAttempts / stats.totalUsage) * 100) 
+            successRate: stats.totalUsage > 0
+              ? Math.round((stats.correctAttempts / stats.totalUsage) * 100)
               : 0,
             subcategoryCount: subcategories.length,
             subcategories
