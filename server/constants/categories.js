@@ -9,6 +9,43 @@
 
 // ── Canonical categories (same as client/src/constants/Categories.jsx) ──
 const CATEGORIES = {
+  "Adult Health": [
+    "Acid\u2013Base Balance",
+    "Blood Disorders & Transfusion Reactions",
+    "Burns",
+    "Cardiovascular",
+    "Chronic Illness",
+    "Diagnostic Tests & Procedures",
+    "Emergency Conditions (Adult)",
+    "Endocrine",
+    "Eye Disorders",
+    "Fluid & Electrolytes",
+    "Gastrointestinal",
+    "Hepatic & Biliary",
+    "Hematology",
+    "Immune Disorders",
+    "Infectious Diseases",
+    "Integumentary",
+    "Mobility & Immobility Complications",
+    "Musculoskeletal",
+    "Neurological",
+    "Nutrition in Adult Health",
+    "Oncology",
+    "Organ Transplant",
+    "Pain Management",
+    "Palliative Care",
+    "Perioperative / Surgical Care",
+    "Postoperative Care",
+    "Preoperative Care",
+    "Rehabilitation",
+    "Renal & Urinary",
+    "Reproductive",
+    "Respiratory",
+    "Sepsis",
+    "Shock",
+    "Sleep Disorders"
+  ],
+
   "Critical Care": [
     "ABG Interpretation",
     "Acid\u2013Base Disorders",
@@ -33,6 +70,83 @@ const CATEGORIES = {
     "Temperature Management",
     "Trauma & Emergency Care",
     "Withdrawal of Care / End-of-Life ICU"
+  ],
+
+  "Dosage Calculations": [
+    "Basic Dosage Calculations",
+    "Body Surface Area (BSA) Calculations",
+    "Concentration Calculations",
+    "Critical Care Drip Calculations",
+    "Dimensional Analysis Calculations",
+    "Dosage by Age Calculations",
+    "Drop Factor Calculations",
+    "Formula Method Calculations",
+    "Heparin Dose Calculations",
+    "Insulin Dose Calculations",
+    "Intake & Output Calculations",
+    "IV Drip Rate Calculations",
+    "IV Flow Rate Calculations",
+    "IV Infusion Time Calculations",
+    "Liquid Medication Calculations",
+    "Medication Reconstitution",
+    "Parenteral Nutrition Calculations",
+    "Pediatric Dosage Calculations",
+    "Percentage Solution Calculations",
+    "Ratio & Proportion Calculations",
+    "Safe Dose Range Calculations",
+    "Tablet / Capsule Calculations",
+    "Titration Calculations",
+    "Unit Conversions",
+    "Weight-Based Dosing"
+  ],
+
+  "EKG/Cardiac Monitoring": [
+    "ACLS Rhythms",
+    "Atrial Fibrillation",
+    "Atrial Flutter",
+    "Asystole",
+    "Artifact Recognition",
+    "Axis Deviation",
+    "Cardioversion",
+    "Cardiac Resynchronization Therapy",
+    "Continuous Cardiac Monitoring",
+    "Defibrillation",
+    "ECG Basics",
+    "ECG Interpretation",
+    "ECG Intervals",
+    "First-Degree AV Block",
+    "Heart Rate Calculation",
+    "Hypercalcemia ECG Changes",
+    "Hyperkalemia ECG Changes",
+    "Hypocalcemia ECG Changes",
+    "Hypokalemia ECG Changes",
+    "Idioventricular Rhythm",
+    "Implantable Cardioverter Defibrillator",
+    "Lethal Rhythms",
+    "Myocardial Infarction",
+    "Myocardial Injury",
+    "Myocardial Ischemia",
+    "Pacemaker Malfunction",
+    "Pacemaker Rhythms",
+    "Permanent Pacemaker",
+    "Premature Atrial Contractions",
+    "Premature Ventricular Contractions",
+    "Pulseless Electrical Activity",
+    "Second-Degree AV Block Type I",
+    "Second-Degree AV Block Type II",
+    "Shockable vs Non-Shockable Rhythms",
+    "Sinus Bradycardia",
+    "Sinus Rhythm",
+    "Sinus Tachycardia",
+    "ST Depression",
+    "ST Elevation",
+    "Supraventricular Tachycardia",
+    "T Wave Changes",
+    "Telemetry Monitoring",
+    "Temporary Pacing",
+    "Third-Degree AV Block",
+    "Ventricular Fibrillation",
+    "Ventricular Tachycardia"
   ],
 
   "Emergency Nursing": [
@@ -111,6 +225,245 @@ const CATEGORIES = {
     "Wound Care"
   ],
 
+  "Health Promotion & Maintenance": [
+    "Aging Process",
+    "Alcohol & Substance Use Prevention",
+    "Chronic Disease Prevention",
+    "Community Health Promotion",
+    "Developmental Milestones",
+    "Environmental Health",
+    "Exercise & Physical Activity",
+    "Family Planning & Contraception",
+    "Follow-Up Care & Compliance",
+    "Genetic Screening & Counseling",
+    "Geriatric Health Promotion",
+    "Growth & Development",
+    "Health Education Programs",
+    "Health Screening",
+    "Immunizations",
+    "Infection Prevention",
+    "Injury Prevention",
+    "Lifestyle Modification",
+    "Men\u2019s Health Screening",
+    "Newborn Care Education",
+    "Nutrition & Diet Education",
+    "Occupational Health",
+    "Patient Education",
+    "Physical Assessment Across Lifespan",
+    "Postpartum Education",
+    "Prenatal Care",
+    "Prenatal Education",
+    "Preventive Care",
+    "Risk Factor Reduction",
+    "Safety Education",
+    "Self-Examination Teaching",
+    "Sexual Health Education",
+    "Sleep Hygiene",
+    "Smoking Cessation",
+    "Stress Management",
+    "Weight Management",
+    "Women\u2019s Health Screening"
+  ],
+
+  "Lab Values & Diagnostics": [
+    "ABG Analysis",
+    "Allergy Testing",
+    "Amniocentesis",
+    "Blood Glucose Tests",
+    "Bone Marrow Biopsy",
+    "Bronchoscopy",
+    "Cardiac Catheterization",
+    "Cardiac Diagnostics",
+    "Cardiac Enzymes",
+    "Coagulation Studies",
+    "Colonoscopy",
+    "CSF Analysis",
+    "CT Scan",
+    "Diagnostic Imaging",
+    "Drug Levels / Therapeutic Drug Monitoring",
+    "ECG",
+    "Echocardiogram",
+    "EEG",
+    "EMG",
+    "Electrolyte Labs",
+    "Endocrine Labs",
+    "Endoscopy",
+    "Fetal Diagnostic Tests",
+    "GI Diagnostic Tests",
+    "Glucose Tolerance Test",
+    "Hearing Tests",
+    "Hematology Labs",
+    "ICP Monitoring",
+    "Infection & Culture Tests",
+    "Lipid Profile",
+    "Liver Function Tests",
+    "Lumbar Puncture",
+    "MRI",
+    "Neurological Diagnostic Tests",
+    "Nuclear Medicine Tests",
+    "Paracentesis",
+    "Postoperative Monitoring Tests",
+    "Preoperative Diagnostic Tests",
+    "Pregnancy Tests",
+    "Pulmonary Function Tests",
+    "Renal Diagnostic Tests",
+    "Renal Function Tests",
+    "Sleep Studies",
+    "Specimen Collection & Handling",
+    "Sputum Tests",
+    "Stress Test",
+    "Stool Tests",
+    "Thoracentesis",
+    "Tumor Markers",
+    "Ultrasound",
+    "Urinalysis",
+    "Vision Tests",
+    "X-Ray"
+  ],
+
+  "Leadership & Management": [
+    "Advance Directives",
+    "Advocacy",
+    "Assignment",
+    "Budgeting & Finance Basics",
+    "Case Management",
+    "Chain of Command",
+    "Change Management",
+    "Communication in Management",
+    "Conflict Resolution",
+    "Delegation",
+    "Delegation to LPN",
+    "Delegation to UAP",
+    "Disaster Management",
+    "Documentation & Legal Responsibility",
+    "Ethical Dilemmas",
+    "Ethical Principles (Autonomy, Beneficence, Justice, etc.)",
+    "Evaluation & Performance Appraisal",
+    "Informed Consent",
+    "Incident Reports",
+    "Leadership Styles",
+    "Legal Issues in Nursing",
+    "Management Principles",
+    "Patient Safety",
+    "Performance Improvement",
+    "Policy & Procedures",
+    "Prioritization",
+    "Professional Accountability",
+    "Quality Improvement",
+    "Resource Management",
+    "Risk Management",
+    "Scope of Practice",
+    "Staffing & Scheduling",
+    "Supervision",
+    "Teamwork & Collaboration",
+    "Time Management",
+    "Triage (Management Role)",
+    "Utilization Review",
+    "Workplace Violence & Safety"
+  ],
+
+  "Maternal & Newborn Health": [
+    "Fetal Monitoring",
+    "High-Risk Pregnancy",
+    "Intrapartum Complications",
+    "Labor & Delivery",
+    "Medications in Obstetrics",
+    "Newborn Assessment",
+    "Newborn Care",
+    "Newborn Complications",
+    "Obstetric Emergencies",
+    "Obstetric Procedures",
+    "Pain Management in Labor",
+    "Patient Education (Pregnancy / Postpartum / Newborn)",
+    "Postpartum Care",
+    "Postpartum Complications",
+    "Prenatal Assessment",
+    "Prenatal Care",
+    "Prenatal Labs & Diagnostics",
+    "Pregnancy Complications",
+    "Pregnancy Discomforts",
+    "Stages of Labor"
+  ],
+
+  "Mental Health": [
+    "Abuse & Neglect",
+    "ADHD",
+    "Anger Management",
+    "Anxiety Disorders",
+    "Antidepressants",
+    "Antipsychotics",
+    "Anxiolytics",
+    "Autism Spectrum Disorder",
+    "Behavioral Therapy",
+    "Bipolar Disorder",
+    "Cognitive Disorders",
+    "Community Mental Health",
+    "Conduct & Oppositional Disorders",
+    "Coping & Defense Mechanisms",
+    "Crisis Intervention",
+    "Cultural Considerations in Mental Health",
+    "Delirium",
+    "Dementia / Alzheimer\u2019s",
+    "Depression",
+    "Developmental Disorders",
+    "Dissociative Disorders",
+    "Eating Disorders",
+    "Electroconvulsive Therapy (ECT)",
+    "Family Therapy",
+    "Group Therapy",
+    "Grief & Loss",
+    "Legal & Ethical Issues in Psychiatry",
+    "Mental Health Assessment",
+    "Mood Stabilizers",
+    "Obsessive\u2013Compulsive Disorder",
+    "Patient Rights",
+    "Personality Disorders",
+    "Psychiatric Emergencies",
+    "Psychopharmacology",
+    "Restraints & Seclusion",
+    "Schizophrenia & Psychotic Disorders",
+    "Sedatives & Hypnotics",
+    "Sexual Disorders / Gender Issues",
+    "Sleep Disorders",
+    "Somatic Symptom Disorders",
+    "Stress Management",
+    "Substance Use & Addiction",
+    "Suicide & Self-Harm",
+    "Therapeutic Communication",
+    "Trauma & Stress Disorders (PTSD)"
+  ],
+
+  "NGN Case Studies": [
+    "Adult Health Case Study",
+    "Analyze Cues",
+    "Bowtie Questions",
+    "Chart / Exhibit Questions",
+    "Cloze Dropdown",
+    "Critical Care Case Study",
+    "Delegation Case Study",
+    "Drag & Drop",
+    "Emergency Case Study",
+    "Evaluate Outcomes",
+    "Extended Multiple Response",
+    "Generate Solutions",
+    "Highlight Questions",
+    "Lab Interpretation Case Study",
+    "Maternal Case Study",
+    "Matrix Questions",
+    "Medication Case Study",
+    "Mental Health Case Study",
+    "Multiple Response Grouping",
+    "NGN Question Types",
+    "Pediatric Case Study",
+    "Prioritization Case Study",
+    "Prioritize Hypotheses",
+    "Recognize Cues",
+    "SATA Case Study",
+    "Stand-Alone NGN",
+    "Take Action",
+    "Trend Questions"
+  ],
+
   "Pediatrics": [
     "Chronic Illness in Children",
     "Congenital Disorders",
@@ -141,6 +494,7 @@ const CATEGORIES = {
 
   "Pharmacology": [
     "Anti-Inflammatory Drugs",
+    "Antibiotics",
     "Anticoagulants",
     "Antidepressants",
     "Antidotes",
@@ -151,7 +505,6 @@ const CATEGORIES = {
     "Antiseizure Drugs",
     "Antituberculosis Drugs",
     "Antivirals",
-    "Antibiotics",
     "Cardiovascular Drugs",
     "Drug Toxicity",
     "Emergency Drugs",
@@ -159,8 +512,8 @@ const CATEGORIES = {
     "Endocrine Drugs",
     "Gastrointestinal Drugs",
     "Hematologic Drugs",
-    "Immunosuppressants",
     "Immunizations / Vaccines",
+    "Immunosuppressants",
     "IV Therapy & Parenteral Medications",
     "Medication Administration & Safety",
     "Medication Calculations",
@@ -178,74 +531,102 @@ const CATEGORIES = {
 };
 
 // ── Category alias map ──────────────────────────────────────────
-// Maps DB category names that differ from the canonical CATEGORIES keys.
-// Add entries here whenever the admin uploads questions with non-standard
-// category names.
 const CATEGORY_ALIASES = {
-  // Old category name mappings
-  "Adult Health": "Fundamentals",
-  "Child Health": "Pediatrics",
-  "Mental Health": "Pharmacology",
-  "Maternal & Newborn Health": "Fundamentals",
-  "Maternal Newborn Health": "Fundamentals",
-  "Leadership & Management": "Fundamentals",
-  "Management of Care": "Fundamentals",
-
   // Shorthand / abbreviation mappings
+  "Adult": "Adult Health",
+  "Med-Surg": "Adult Health",
+  "MedSurg": "Adult Health",
+  "Medical Surgical": "Adult Health",
+  "Medical-Surgical": "Adult Health",
+  "Maternal": "Maternal & Newborn Health",
+  "Maternal Newborn Health": "Maternal & Newborn Health",
+  "Maternal Newborn": "Maternal & Newborn Health",
+  "Maternal/Newborn": "Maternal & Newborn Health",
+  "Newborn": "Maternal & Newborn Health",
+  "OB": "Maternal & Newborn Health",
+  "OB/Maternal": "Maternal & Newborn Health",
+  "Mental": "Mental Health",
+  "Leadership": "Leadership & Management",
+  "Management of Care": "Leadership & Management",
+  "Case Studies": "NGN Case Studies",
+  "NGN": "NGN Case Studies",
   "Emergency": "Emergency Nursing",
   "Critical": "Critical Care",
   "Fundamental": "Fundamentals",
   "Pediatric": "Pediatrics",
   "Pharm": "Pharmacology",
   "Pharma": "Pharmacology",
-  "Mental": "Pharmacology",
-  "OB": "Fundamentals",
-  "Maternal": "Fundamentals",
-  "Newborn": "Pediatrics",
-  "OB/Maternal": "Fundamentals",
-  "Leadership": "Fundamentals",
-  "Case Studies": "Fundamentals",
-  "Adult": "Fundamentals",
+  "Dosage": "Dosage Calculations",
+  "EKG": "EKG/Cardiac Monitoring",
+  "ECG Interpretation": "EKG/Cardiac Monitoring",
+  "Lab": "Lab Values & Diagnostics",
+  "Lab Values": "Lab Values & Diagnostics",
+  "Health Promotion": "Health Promotion & Maintenance",
+  "Health Promotion and Maintenance": "Health Promotion & Maintenance",
+  "Child Health": "Pediatrics",
   "Child": "Pediatrics"
 };
 
 // ── Subcategory alias map ───────────────────────────────────────
-// Maps DB subcategory names to canonical names within their category.
-// These are checked after the category is matched.
 const SUBCATEGORY_ALIASES = {
-  // Fundamentals subcategory aliases
+  // Adult Health aliases
+  "Cardiovascular System": "Cardiovascular",
+  "CV": "Cardiovascular",
+  "Acid-Base Balance": "Acid\u2013Base Balance",
+  "Acid Base Balance": "Acid\u2013Base Balance",
+  "Fluids & Electrolytes": "Fluid & Electrolytes",
+  "Fluid and Electrolytes": "Fluid & Electrolytes",
+  "GI": "Gastrointestinal",
+  "GU": "Renal & Urinary",
+  "Reproductive Health": "Reproductive",
+  "Skills and Procedures": "Diagnostic Tests & Procedures",
+
+  // Fundamentals aliases
   "Basic Care and Comfort": "Basic Care & Comfort",
   "Basic Care": "Basic Care & Comfort",
   "Comfort": "Basic Care & Comfort",
   "Drug Administration": "Medication Administration",
-  "Fluid and Electrolyte Imbalance": "Electrolyte Emergencies",
-  "Fluids and Electrolytes": "Electrolyte Emergencies",
-  "Fluid and Electrolytes": "Electrolyte Emergencies",
   "Infection Prevention": "Infection Control",
   "Infection Prevention and Control": "Infection Control",
   "Safety": "Safety & Fall Prevention",
-  "Skills and Procedures": "Perioperative Care",
 
-  // Pediatrics subcategory aliases
+  // Pediatrics aliases
   "Growth and Development": "Growth & Development",
   "Growth": "Growth & Development",
   "Development": "Developmental Milestones",
-  "Fluids & Electrolytes": "Pediatric Fluid & Electrolytes",
   "Immunization": "Immunizations",
-  "Drug Administration": "Pediatric Medication Administration",
 
-  // Pharmacology subcategory aliases
+  // Pharmacology aliases
   "Psychiatric Medications": "Psychiatric Drugs",
   "Psych Meds": "Psychiatric Drugs",
-  "Herbal Remedies": "Medication Administration & Safety",
 
-  // Critical Care subcategory aliases
-  "Prioritization": "Shock States",
+  // Mental Health aliases
+  "Defence Mechanism": "Coping & Defense Mechanisms",
+  "Defense Mechanism": "Coping & Defense Mechanisms",
+  "Therapeutic Comm": "Therapeutic Communication",
+  "Psychotic Disorders": "Schizophrenia & Psychotic Disorders",
+  "Mood Disorders": "Bipolar Disorder",
+  "Anxiety Disorders": "Anxiety Disorders",
 
-  // Emergency Nursing subcategory aliases
+  // Maternal aliases
+  "Antepartum": "Prenatal Care",
+  "Intrapartum": "Labor & Delivery",
+  "Postpartum": "Postpartum Care",
+  "Labor and Delivery": "Labor & Delivery",
+  "L&D": "Labor & Delivery",
+
+  // Leadership aliases
+  "Delegation & Assignment": "Delegation",
+  "Assignments": "Assignment",
+
+  // Emergency Nursing aliases
   "Heat Stroke": "Heat stroke",
   "Snake Bites": "Snake bites",
-  "Insect Bites": "Insect bites"
+  "Insect Bites": "Insect bites",
+
+  // EKG aliases
+  "ECG Basics": "ECG Basics",
+  "12-Lead": "ECG Basics"
 };
 
 // ── Helper: normalize a string for fuzzy comparison ─────────────
@@ -260,14 +641,11 @@ const normalize = (str) => {
 };
 
 // ── Build fast lookup maps ──────────────────────────────────────
-// canonicalCategoryLower → canonical category name
 const categoryLookup = {};
 Object.keys(CATEGORIES).forEach(cat => {
   categoryLookup[normalize(cat)] = cat;
 });
 
-// For each category, build a lookup of its subcategories
-// (canonicalCategoryLower, subcategoryLower) → canonical subcategory name
 const subcategoryLookup = {};
 Object.entries(CATEGORIES).forEach(([cat, subs]) => {
   const catNorm = normalize(cat);
@@ -317,7 +695,6 @@ function matchCategory(dbCategory) {
     if (matchCount >= 2) return canonical;
   }
 
-  // No match — return null
   return null;
 }
 
@@ -343,13 +720,13 @@ function matchSubcategory(canonicalCategory, dbSubcategory) {
     if (alias.toLowerCase() === lowerRaw && subs.includes(canonical)) return canonical;
   }
 
-  // 3. Normalized match within this category
+  // 3. Normalized match
   const catNorm = normalize(canonicalCategory);
   const subNorm = normalize(raw);
   const key = `${catNorm}|||${subNorm}`;
   if (subcategoryLookup[key]) return subcategoryLookup[key];
 
-  // 4. Starts-with fuzzy match within this category
+  // 4. Starts-with fuzzy match
   for (const sub of subs) {
     const normSub = normalize(sub);
     if (normSub.startsWith(subNorm) || subNorm.startsWith(normSub)) return sub;
@@ -363,11 +740,10 @@ function matchSubcategory(canonicalCategory, dbSubcategory) {
     if (matchCount >= 2) return sub;
   }
 
-  // No match — return null
   return null;
 }
 
-// ── NCLEX Client Needs categories (same as client/src/constants/ClientNeeds.jsx) ──
+// ── NCLEX Client Needs categories ──
 const NCLEX_CLIENT_NEEDS_CATEGORIES = [
   'Analyze Cues',
   'Basic Care and Comfort',
@@ -388,8 +764,7 @@ const NCLEX_CLIENT_NEEDS_CATEGORIES = [
 ];
 
 /**
- * Normalise a client-need name exactly the same way the frontend does
- * (see client/src/components/TestCustomization.jsx  →  normalizeKey).
+ * Normalise a client-need name exactly the same way the frontend does.
  */
 const normalizeClientNeedKey = (value) => {
   const base = String(value || '')
@@ -408,32 +783,23 @@ const normalizeClientNeedKey = (value) => {
     .trim();
 };
 
-// Build a lookup: normalizedKey → canonical name for every predefined CN category
 const clientNeedLookup = {};
 NCLEX_CLIENT_NEEDS_CATEGORIES.forEach(cn => {
   clientNeedLookup[normalizeClientNeedKey(cn)] = cn;
 });
 
-/**
- * Match a raw DB clientNeed / clientNeedSubcategory value to one of the
- * 16 predefined NCLEX Client Needs categories.
- * Returns the canonical category name or null.
- */
 function matchClientNeedCategory(rawValue) {
   if (!rawValue) return null;
   const raw = String(rawValue).trim();
   if (!raw) return null;
 
-  // 1. Exact normalised match
   const norm = normalizeClientNeedKey(raw);
   if (clientNeedLookup[norm]) return clientNeedLookup[norm];
 
-  // 2. Starts-with match
   for (const [normCn, canonical] of Object.entries(clientNeedLookup)) {
     if (normCn.startsWith(norm) || norm.startsWith(normCn)) return canonical;
   }
 
-  // 3. Word-overlap match (≥2 significant words)
   const rawWords = norm.split(' ').filter(w => w.length > 2);
   for (const [normCn, canonical] of Object.entries(clientNeedLookup)) {
     const cnWords = normCn.split(' ');
@@ -444,10 +810,6 @@ function matchClientNeedCategory(rawValue) {
   return null;
 }
 
-/**
- * Check whether a question qualifies as a "client need" question.
- * Returns the set of matched canonical names (may be empty).
- */
 function getClientNeedMatches(question) {
   const matched = new Set();
   const rawValues = [];
@@ -464,10 +826,6 @@ function getClientNeedMatches(question) {
   return matched;
 }
 
-/**
- * Get the canonical categories with their subcategories,
- * plus any extra subcategories found in DB data that aren't in the canonical list.
- */
 function getCategoriesWithExtras(dbExtraSubs = {}) {
   const result = {};
   Object.entries(CATEGORIES).forEach(([cat, subs]) => {
