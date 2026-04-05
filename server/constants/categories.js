@@ -3,144 +3,177 @@
  * This is the SINGLE source of truth for both admin and student views.
  * Any DB question whose category/subcategory doesn't match will be
  * mapped here via the alias maps below.
+ *
+ * Categories and subcategories are arranged alphabetically.
  */
 
 // ── Canonical categories (same as client/src/constants/Categories.jsx) ──
 const CATEGORIES = {
-  "Adult Health": [
-    "Acid Base Balance",
-    "Audio/Visual",
-    "Cardiovascular System",
-    "Electrolyte Imbalance",
-    "Endocrine",
-    "Gastrointestinal",
-    "Genitourinary",
-    "Hematological",
-    "Immunology",
-    "Musculoskeletal",
-    "Neurological",
-    "Oncology",
-    "Prioritization",
-    "Reproductive Health",
-    "Respiratory",
-    "Skills and Procedures",
-    "Substance Abuse"
-  ],
-
-  "Child Health": [
-    "Acid Base Balance",
-    "Audio/Visual",
-    "Cardiovascular System",
-    "Drug Administration",
-    "Endocrine",
-    "Fluid and Electrolyte Imbalance",
-    "Gastrointestinal",
-    "Genitourinary",
-    "Growth and Development",
-    "Hematological",
-    "Immunization",
-    "Immunology",
-    "Infection Control",
-    "Infectious Disease",
-    "Integumentary",
-    "Multisystem",
-    "Musculoskeletal",
-    "Neurological",
-    "Nutrition",
-    "Oncology",
-    "Prioritization",
-    "Respiratory",
-    "Safety",
-    "Skills and Procedures"
-  ],
-
   "Critical Care": [
-    "Critical Care",
-    "Prioritization"
+    "ABG Interpretation",
+    "Acid\u2013Base Disorders",
+    "Airway Management",
+    "Cardiac ICU",
+    "Electrolyte Emergencies",
+    "Hemodynamic Monitoring",
+    "ICU Medications",
+    "ICU Monitoring & Equipment",
+    "Lines & Tubes",
+    "Massive Transfusion",
+    "Mechanical Ventilation",
+    "Multi-Organ Failure",
+    "Neurological ICU",
+    "Nutrition in Critical Care (Enteral/TPN ICU)",
+    "Renal ICU",
+    "Respiratory Failure / ARDS",
+    "Resuscitation / Code Blue",
+    "Sedation & Paralytics",
+    "Sepsis & Septic Shock",
+    "Shock States",
+    "Temperature Management",
+    "Trauma & Emergency Care",
+    "Withdrawal of Care / End-of-Life ICU"
+  ],
+
+  "Emergency Nursing": [
+    "Airway Emergencies",
+    "Anaphylaxis",
+    "Bleeding / Hemorrhage",
+    "Burns Emergency",
+    "Cardiac Emergencies",
+    "Cardioversion",
+    "Chest tube",
+    "Defibrillation",
+    "Disaster Nursing",
+    "Drowning",
+    "Emergency Procedures",
+    "Environmental Emergencies",
+    "Head Injury / Spinal Injury",
+    "Heat stroke",
+    "Hypothermia",
+    "Insect bites",
+    "Intubation",
+    "Mass Casualty Incidents",
+    "Myocardial Infarction Emergency",
+    "Obstetric Emergencies",
+    "Overdose",
+    "Pediatric Emergencies",
+    "Poisoning",
+    "Primary Survey (ABCDE)",
+    "Rapid Response / Code Blue",
+    "Respiratory Emergencies",
+    "Seizures / Status Epilepticus",
+    "Shock Emergency",
+    "Snake bites",
+    "Stroke Emergency",
+    "Trauma",
+    "Triage"
   ],
 
   "Fundamentals": [
-    "Basic Care and Comfort",
-    "Drug Administration",
-    "Ethical/Legal",
-    "Fluid and Electrolyte Imbalance",
-    "Infection Control",
-    "Infection Prevention",
-    "Nutrition",
-    "Prioritization",
-    "Safety",
-    "Skills and Procedures"
-  ],
-
-  "Leadership & Management": [
+    "Admission, Transfer & Discharge",
+    "Assistive Devices",
+    "Basic Care & Comfort",
+    "Blood Transfusion",
+    "Communication & Therapeutic Communication",
+    "Cultural Considerations",
     "Delegation",
-    "Management of Care",
-    "Prioritization"
+    "Documentation",
+    "Elimination",
+    "End-of-Life Care",
+    "Enteral Feeding",
+    "Ethical Issues",
+    "Foley Catheter Care",
+    "Hygiene",
+    "Infection Control",
+    "Intraoperative Care",
+    "IV Therapy",
+    "Isolation Precautions",
+    "Legal Issues",
+    "Medication Administration",
+    "Mobility & Positioning",
+    "Nutrition",
+    "Ostomy Care",
+    "Oxygen Therapy",
+    "Pain Management",
+    "Palliative Care Basics",
+    "Parenteral Nutrition (TPN)",
+    "Patient Education",
+    "Perioperative Care",
+    "Postoperative Care",
+    "Preoperative Care",
+    "Prioritization",
+    "Restraints",
+    "Safety & Fall Prevention",
+    "Specimen Collection",
+    "Sterile Technique",
+    "Vital Signs",
+    "Wound Care"
   ],
 
-  "Maternal & Newborn Health": [
-    "Antepartum",
-    "Intrapartum",
-    "Maternal Newborn",
-    "Postpartum",
-    "Prioritization",
-    "Reproductive Health"
-  ],
-
-  "Mental Health": [
-    "Anxiety Disorders",
-    "Cognitive Disorders",
-    "Coping Mechanisms",
-    "Defence Mechanism",
-    "Eating Disorder",
-    "Ethical/Legal",
-    "Grief",
-    "Mood Disorders",
-    "Neurodevelopmental Disorder",
-    "Personality Disorder",
-    "Prioritization",
-    "Psychiatric Medications",
-    "Psychotic Disorders",
-    "Skills and Procedures",
-    "Sleep Disorders",
-    "Substance Abuse",
-    "Therapeutic Communication"
+  "Pediatrics": [
+    "Chronic Illness in Children",
+    "Congenital Disorders",
+    "Developmental Milestones",
+    "Family-Centered Care",
+    "Growth & Development",
+    "Immunizations",
+    "Pediatric Abuse & Neglect",
+    "Pediatric Assessment",
+    "Pediatric Cardiac",
+    "Pediatric Emergencies",
+    "Pediatric Endocrine",
+    "Pediatric Fluid & Electrolytes",
+    "Pediatric Gastrointestinal",
+    "Pediatric Hematology",
+    "Pediatric Infectious Diseases",
+    "Pediatric Medication Administration",
+    "Pediatric Neurological",
+    "Pediatric Nutrition",
+    "Pediatric Oncology",
+    "Pediatric Pain Management",
+    "Pediatric Procedures & Postoperative Care",
+    "Pediatric Renal & Urinary",
+    "Pediatric Respiratory",
+    "Pediatric Safety & Injury Prevention",
+    "Pediatric Vital Signs"
   ],
 
   "Pharmacology": [
-    "Anxiety Disorders",
-    "Audio/Visual",
-    "Cardiovascular System",
-    "Cognitive Disorders",
-    "Coping Mechanisms",
-    "Defence Mechanism",
-    "Drug Administration",
-    "Eating Disorder",
-    "Endocrine",
-    "Ethical/Legal",
-    "Gastrointestinal",
-    "Genitourinary",
-    "Grief",
-    "Hematological",
-    "Herbal Remedies",
-    "Immunology",
-    "Multisystem",
-    "Mood Disorders",
-    "Musculoskeletal",
-    "Neurodevelopmental Disorder",
-    "Neurological",
-    "Nutrition",
-    "Personality Disorder",
-    "Prioritization",
-    "Psychiatric Medications",
-    "Psychotic Disorders",
-    "Respiratory",
-    "Safety",
-    "Skills and Procedures",
-    "Sleep Disorders",
-    "Substance Abuse",
-    "Therapeutic Communication",
-    "Visual"
+    "Anti-Inflammatory Drugs",
+    "Anticoagulants",
+    "Antidepressants",
+    "Antidotes",
+    "Antifungals",
+    "Antiplatelets",
+    "Antiparasitic Drugs",
+    "Antipsychotics",
+    "Antiseizure Drugs",
+    "Antituberculosis Drugs",
+    "Antivirals",
+    "Antibiotics",
+    "Cardiovascular Drugs",
+    "Drug Toxicity",
+    "Emergency Drugs",
+    "Electrolyte Replacement Medications",
+    "Endocrine Drugs",
+    "Gastrointestinal Drugs",
+    "Hematologic Drugs",
+    "Immunosuppressants",
+    "Immunizations / Vaccines",
+    "IV Therapy & Parenteral Medications",
+    "Medication Administration & Safety",
+    "Medication Calculations",
+    "Mood Stabilizers",
+    "Neurological Drugs",
+    "Obstetric & Gynecologic Drugs",
+    "Oncology Drugs (Chemotherapy)",
+    "Pain Medications (Analgesics)",
+    "Pediatric Drugs",
+    "Psychiatric Drugs",
+    "Respiratory Drugs",
+    "Sedatives & Hypnotics",
+    "Thrombolytics"
   ]
 };
 
@@ -149,73 +182,70 @@ const CATEGORIES = {
 // Add entries here whenever the admin uploads questions with non-standard
 // category names.
 const CATEGORY_ALIASES = {
-  "Management of Care": "Leadership & Management",
-  "Case Studies": "Adult Health",
-  "Adult": "Adult Health",
-  "Child": "Child Health",
-  "Mental": "Mental Health",
+  // Old category name mappings
+  "Adult Health": "Fundamentals",
+  "Child Health": "Pediatrics",
+  "Mental Health": "Pharmacology",
+  "Maternal & Newborn Health": "Fundamentals",
+  "Maternal Newborn Health": "Fundamentals",
+  "Leadership & Management": "Fundamentals",
+  "Management of Care": "Fundamentals",
+
+  // Shorthand / abbreviation mappings
+  "Emergency": "Emergency Nursing",
+  "Critical": "Critical Care",
+  "Fundamental": "Fundamentals",
+  "Pediatric": "Pediatrics",
   "Pharm": "Pharmacology",
   "Pharma": "Pharmacology",
-  "Maternal": "Maternal & Newborn Health",
-  "Newborn": "Maternal & Newborn Health",
-  "OB": "Maternal & Newborn Health",
-  "OB/Maternal": "Maternal & Newborn Health",
-  "Leadership": "Leadership & Management",
-  "Fundamental": "Fundamentals",
-  "Critical": "Critical Care",
+  "Mental": "Pharmacology",
+  "OB": "Fundamentals",
+  "Maternal": "Fundamentals",
+  "Newborn": "Pediatrics",
+  "OB/Maternal": "Fundamentals",
+  "Leadership": "Fundamentals",
+  "Case Studies": "Fundamentals",
+  "Adult": "Fundamentals",
+  "Child": "Pediatrics"
 };
 
 // ── Subcategory alias map ───────────────────────────────────────
 // Maps DB subcategory names to canonical names within their category.
 // These are checked after the category is matched.
 const SUBCATEGORY_ALIASES = {
-  // Adult Health subcategory aliases
-  "Cardiovascular": "Cardiovascular System",
-  "Cardiovascular system": "Cardiovascular System",
-  "CV": "Cardiovascular System",
-  "Acid-Base Balance": "Acid Base Balance",
-  "Acid base": "Acid Base Balance",
-  "ABG": "Acid Base Balance",
-  "GI": "Gastrointestinal",
-  "GU": "Genitourinary",
-  "Audio Visual": "Audio/Visual",
-  "Audiovisual": "Audio/Visual",
-  "Visual": "Audio/Visual",
-  "Central line": "Skills and Procedures",
-  "Postoperative care": "Skills and Procedures",
-  "Postoperative complications": "Skills and Procedures",
-  "Post-Op": "Skills and Procedures",
-
   // Fundamentals subcategory aliases
-  "Basic Care": "Basic Care and Comfort",
-  "Comfort": "Basic Care and Comfort",
-  "Fluid and Electrolytes": "Fluid and Electrolyte Imbalance",
-  "Fluids and Electrolytes": "Fluid and Electrolyte Imbalance",
-  "F&E": "Fluid and Electrolyte Imbalance",
+  "Basic Care and Comfort": "Basic Care & Comfort",
+  "Basic Care": "Basic Care & Comfort",
+  "Comfort": "Basic Care & Comfort",
+  "Drug Administration": "Medication Administration",
+  "Fluid and Electrolyte Imbalance": "Electrolyte Emergencies",
+  "Fluids and Electrolytes": "Electrolyte Emergencies",
+  "Fluid and Electrolytes": "Electrolyte Emergencies",
+  "Infection Prevention": "Infection Control",
   "Infection Prevention and Control": "Infection Control",
-  "Infection Control/Prevention": "Infection Control",
+  "Safety": "Safety & Fall Prevention",
+  "Skills and Procedures": "Perioperative Care",
 
-  // Leadership & Management subcategory aliases
-  "Delegation & Assignment": "Delegation",
-  "Assignments": "Delegation",
+  // Pediatrics subcategory aliases
+  "Growth and Development": "Growth & Development",
+  "Growth": "Growth & Development",
+  "Development": "Developmental Milestones",
+  "Fluids & Electrolytes": "Pediatric Fluid & Electrolytes",
+  "Immunization": "Immunizations",
+  "Drug Administration": "Pediatric Medication Administration",
 
-  // Maternal subcategory aliases
-  "Antepartum/Intrapartum": "Antepartum",
-  "Labor and Delivery": "Intrapartum",
-  "L&D": "Intrapartum",
-  "Post-partum": "Postpartum",
+  // Pharmacology subcategory aliases
+  "Psychiatric Medications": "Psychiatric Drugs",
+  "Psych Meds": "Psychiatric Drugs",
+  "Herbal Remedies": "Medication Administration & Safety",
 
-  // Mental Health subcategory aliases
-  "Defense Mechanism": "Defence Mechanism",
-  "Defense mechanism": "Defence Mechanism",
-  "Therapeutic Comm": "Therapeutic Communication",
-  "Psych Meds": "Psychiatric Medications",
+  // Critical Care subcategory aliases
+  "Prioritization": "Shock States",
 
-  // Child Health subcategory aliases
-  "Growth & Development": "Growth and Development",
-  "Growth": "Growth and Development",
-  "Development": "Growth and Development",
-  "Fluids & Electrolytes": "Fluid and Electrolyte Imbalance",
+  // Emergency Nursing subcategory aliases
+  "Heat Stroke": "Heat stroke",
+  "Snake Bites": "Snake bites",
+  "Insect Bites": "Insect bites"
 };
 
 // ── Helper: normalize a string for fuzzy comparison ─────────────
@@ -224,7 +254,7 @@ const normalize = (str) => {
   return String(str).trim().toLowerCase()
     .replace(/[''\u2019\u2018]/g, '')
     .replace(/&/g, 'and')
-    .replace(/[\/(),.\-]/g, ' ')
+    .replace(/[/(),.\-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 };
@@ -249,7 +279,7 @@ Object.entries(CATEGORIES).forEach(([cat, subs]) => {
 
 /**
  * Match a raw DB category name to its canonical category.
- * Returns the canonical category name, or the original if no match found.
+ * Returns the canonical category name, or null if no match found.
  */
 function matchCategory(dbCategory) {
   if (!dbCategory) return null;
@@ -257,12 +287,6 @@ function matchCategory(dbCategory) {
 
   // 1. Exact match (case-insensitive)
   const lowerRaw = raw.toLowerCase();
-  for (const [canonical, lookup] of Object.entries(categoryLookup)) {
-    if (lookup === lowerRaw) {
-      // Find the original canonical key (preserving original case)
-      return Object.keys(categoryLookup).find(k => categoryLookup[k] === lookup) || raw;
-    }
-  }
   for (const canonical of Object.keys(CATEGORIES)) {
     if (canonical.toLowerCase() === lowerRaw) return canonical;
   }
@@ -278,10 +302,10 @@ function matchCategory(dbCategory) {
     return Object.keys(CATEGORIES).find(cat => normalize(cat) === normRaw) || raw;
   }
 
-  // 4. Starts-with match (e.g., "Management of Care" starts matching "management of care")
-  for (const [normCat, canonical] of Object.entries(categoryLookup)) {
+  // 4. Starts-with match
+  for (const [normCat] of Object.entries(categoryLookup)) {
     if (normCat.startsWith(normRaw) || normRaw.startsWith(normCat)) {
-      return canonical;
+      return Object.keys(CATEGORIES).find(cat => normalize(cat) === normCat) || raw;
     }
   }
 
@@ -293,20 +317,20 @@ function matchCategory(dbCategory) {
     if (matchCount >= 2) return canonical;
   }
 
-  // No match — return null (callers should skip this question)
+  // No match — return null
   return null;
 }
 
 /**
  * Match a raw DB subcategory name to its canonical subcategory
  * within a given canonical category.
- * Returns the canonical subcategory name, or the original if no match found.
+ * Returns the canonical subcategory name, or null if no match found.
  */
 function matchSubcategory(canonicalCategory, dbSubcategory) {
   if (!dbSubcategory) return null;
   const raw = String(dbSubcategory).trim();
   const subs = CATEGORIES[canonicalCategory];
-  if (!subs) return null; // Category not in canonical list, skip
+  if (!subs) return null;
 
   // 1. Exact match (case-insensitive)
   const lowerRaw = raw.toLowerCase();
@@ -339,7 +363,7 @@ function matchSubcategory(canonicalCategory, dbSubcategory) {
     if (matchCount >= 2) return sub;
   }
 
-  // No match — return null (callers should skip this subcategory)
+  // No match — return null
   return null;
 }
 
@@ -366,8 +390,6 @@ const NCLEX_CLIENT_NEEDS_CATEGORIES = [
 /**
  * Normalise a client-need name exactly the same way the frontend does
  * (see client/src/components/TestCustomization.jsx  →  normalizeKey).
- * Steps: lowercase → strip smart quotes → replace 'and' with '&' → collapse →
- *        strip /& → collapse spaces.
  */
 const normalizeClientNeedKey = (value) => {
   const base = String(value || '')
@@ -402,7 +424,7 @@ function matchClientNeedCategory(rawValue) {
   const raw = String(rawValue).trim();
   if (!raw) return null;
 
-  // 1. Exact normalised match (same normalisation as frontend)
+  // 1. Exact normalised match
   const norm = normalizeClientNeedKey(raw);
   if (clientNeedLookup[norm]) return clientNeedLookup[norm];
 
@@ -423,9 +445,7 @@ function matchClientNeedCategory(rawValue) {
 }
 
 /**
- * Check whether a question qualifies as a "client need" question —
- * i.e. at least one of its clientNeed / clientNeedSubcategory values
- * maps to one of the 16 predefined NCLEX Client Needs categories.
+ * Check whether a question qualifies as a "client need" question.
  * Returns the set of matched canonical names (may be empty).
  */
 function getClientNeedMatches(question) {
@@ -447,13 +467,11 @@ function getClientNeedMatches(question) {
 /**
  * Get the canonical categories with their subcategories,
  * plus any extra subcategories found in DB data that aren't in the canonical list.
- * Returns { [canonicalCategory]: [...subs] }
  */
 function getCategoriesWithExtras(dbExtraSubs = {}) {
   const result = {};
   Object.entries(CATEGORIES).forEach(([cat, subs]) => {
     result[cat] = [...subs];
-    // Add any extra DB subcategories that were mapped to this category
     if (dbExtraSubs[cat]) {
       dbExtraSubs[cat].forEach(extra => {
         if (!result[cat].includes(extra)) {
