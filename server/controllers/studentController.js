@@ -1707,38 +1707,39 @@ const getPerformanceDataDetailed = async (req, res) => {
 // @access  Private
 const getClientNeedsCounts = async (req, res) => {
   try {
-    // Aggregate counts by clientNeedSubcategory (the 8 main categories)
-    const rows = await Question.aggregate([
+    // Aggregate counts by BOTH clientNeed and clientNeedSubcategory fields.
+    // This mirrors how generateTest queries (it matches either field),
+    // ensuring the displayed counts match the questions actually available.
+    const questions = await Question.find(
       {
-        $match: {
-          clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' }
-        }
+        $or: [
+          { clientNeed: { $exists: true, $ne: null, $ne: '' } },
+          { clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' } }
+        ]
       },
-      {
-        $group: {
-          _id: '$clientNeedSubcategory',
-          count: { $sum: 1 },
-          ngnCount: {
-            $sum: { $cond: [{ $eq: ['$isNextGen', true] }, 1, 0] }
-          }
-        }
-      }
-    ]);
+      'clientNeed clientNeedSubcategory isNextGen'
+    ).lean();
 
-    // Build counts object keyed by normalized subcategory name
+    // Build counts keyed by normalized category name (union of both fields per question)
     const countsByClientNeed = {};
     const ngnCountsByClientNeed = {};
 
-    rows.forEach(row => {
-      const subcategory = row._id || 'Uncategorized';
-      const normalizedKey = String(subcategory).trim().toLowerCase()
-        .replace(/[’']/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-      
-      countsByClientNeed[normalizedKey] = row.count || 0;
-      ngnCountsByClientNeed[normalizedKey] = row.ngnCount || 0;
-    });
+    for (const q of questions) {
+      const categories = new Set();
+      if (q.clientNeed && String(q.clientNeed).trim()) {
+        categories.add(String(q.clientNeed).trim().toLowerCase().replace(/['\u2019\u2018]/g, '').replace(/\s+/g, ' ').trim());
+      }
+      if (q.clientNeedSubcategory && String(q.clientNeedSubcategory).trim()) {
+        categories.add(String(q.clientNeedSubcategory).trim().toLowerCase().replace(/['\u2019\u2018]/g, '').replace(/\s+/g, ' ').trim());
+      }
+
+      for (const cat of categories) {
+        countsByClientNeed[cat] = (countsByClientNeed[cat] || 0) + 1;
+        if (q.isNextGen) {
+          ngnCountsByClientNeed[cat] = (ngnCountsByClientNeed[cat] || 0) + 1;
+        }
+      }
+    }
 
     res.json({
       countsByClientNeed,
