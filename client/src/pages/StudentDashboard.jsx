@@ -20,7 +20,6 @@ import Profile from '../components/Profile';
 import StudentFeedbackModal from '../components/StudentFeedbackModal';
 import ExamCountdownCelebration from '../components/ExamCountdownCelebration';
 import StudentNotificationPopup from '../components/StudentNotificationPopup';
-import AntiScreenshot from '../components/AntiScreenshot';
 
 const MOBILE_BREAKPOINT = 992;
 
@@ -321,7 +320,6 @@ const StudentDashboard = () => {
 
   return (
     <div className="student-dashboard-shell" style={{ display: 'flex', minHeight: '100vh' }}>
-      <AntiScreenshot />
       {isMobileViewport && !sidebarCollapsed && (
         <button
           type="button"
