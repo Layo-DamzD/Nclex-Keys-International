@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 
 /**
- * AntiScreenshot — deterrent layer for the student dashboard.
+ * AntiScreenshot — hardened deterrent layer for the student dashboard.
  *
  * Nothing on the client is 100 % bulletproof, but this raises the bar
  * significantly by:
@@ -13,6 +13,8 @@ import { useEffect, useCallback, useState, useRef } from 'react';
  *     (switching apps, pressing Home, opening notification shade, etc.)
  *  5. Preventing drag-and-drop of images / content out of the page
  *  6. Injecting CSS that disables text-selection and print media
+ *  7. Periodic visibility poll — catches edge cases where events don't fire
+ *  8. Re-arm logic — protection stays active after every dismiss
  *
  * The overlay must be clicked to dismiss, so the student can't just
  * switch away and back silently.
@@ -20,6 +22,14 @@ import { useEffect, useCallback, useState, useRef } from 'react';
 const AntiScreenshot = () => {
   const [overlayVisible, setOverlayVisible] = useState(false);
   const dismissCountRef = useRef(0);
+  const dismissTimeRef = useRef(0);           // timestamp of last dismiss
+  const blurTimeoutRef = useRef(null);         // handle for the blur setTimeout
+  const isDismissingRef = useRef(false);       // flag to suppress blur during dismiss
+  const pollIntervalRef = useRef(null);        // handle for the visibility poll
+  const violationCountRef = useRef(0);         // track how many times overlay was shown
+
+  // Grace period after dismiss (ms) — ignore blur/focus during this window
+  const GRACE_PERIOD = 400;
 
   // -------------------------------------------------------
   // Core protection handlers
@@ -107,15 +117,31 @@ const AntiScreenshot = () => {
     return false;
   }, []);
 
-  // Show overlay when window/tab loses focus
+  // Show overlay when window/tab loses focus — with grace period check
   const handleBlur = useCallback(() => {
-    // Small delay to avoid false triggers (e.g. clicking overlay itself)
-    setTimeout(() => {
+    // Clear any existing timeout
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
+
+    blurTimeoutRef.current = setTimeout(() => {
+      // Don't show overlay if we're in the grace period after a dismiss
+      const now = Date.now();
+      if (isDismissingRef.current || (now - dismissTimeRef.current) < GRACE_PERIOD) {
+        isDismissingRef.current = false;
+        return;
+      }
       setOverlayVisible(true);
-    }, 100);
+    }, 150);
   }, []);
 
   const handleFocus = useCallback(() => {
+    // Only show overlay on focus-return if we were NOT just dismissing
+    const now = Date.now();
+    if (isDismissingRef.current || (now - dismissTimeRef.current) < GRACE_PERIOD) {
+      isDismissingRef.current = false;
+      return;
+    }
     // When the user returns to the tab, ensure the overlay is showing
     // so they have to actively dismiss it
     setOverlayVisible(true);
@@ -131,8 +157,22 @@ const AntiScreenshot = () => {
   }, []);
 
   const handleDismiss = useCallback(() => {
+    // Set flag so blur/focus handlers don't immediately re-show overlay
+    isDismissingRef.current = true;
+    dismissTimeRef.current = Date.now();
     dismissCountRef.current += 1;
     setOverlayVisible(false);
+
+    // Clear any pending blur timeout that would re-trigger the overlay
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+
+    // Reset the dismissing flag after the grace period
+    setTimeout(() => {
+      isDismissingRef.current = false;
+    }, GRACE_PERIOD);
   }, []);
 
   // -------------------------------------------------------
@@ -156,6 +196,8 @@ const AntiScreenshot = () => {
     // Visibility change (tab switching)
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
+        // Always show overlay when page becomes hidden
+        violationCountRef.current += 1;
         setOverlayVisible(true);
       }
     };
@@ -163,6 +205,30 @@ const AntiScreenshot = () => {
 
     // Drag
     document.addEventListener('dragstart', handleDragStart, true);
+
+    // Mouse leave (desktop) — catches when mouse leaves browser window
+    const handleMouseLeave = (e) => {
+      if (!e.relatedTarget && e.toElement === null) {
+        // Mouse left the window entirely (not just to another element)
+        if (!isDismissingRef.current && (Date.now() - dismissTimeRef.current) >= GRACE_PERIOD) {
+          setOverlayVisible(true);
+        }
+      }
+    };
+    document.addEventListener('mouseleave', handleMouseLeave);
+
+    // Periodic visibility poll — catches edge cases where events don't fire
+    // (e.g. some mobile screenshot tools don't trigger visibilitychange on 2nd attempt)
+    let lastKnownVisible = !document.hidden;
+    pollIntervalRef.current = setInterval(() => {
+      const currentlyVisible = !document.hidden;
+      if (!currentlyVisible && lastKnownVisible) {
+        // Page just became hidden
+        violationCountRef.current += 1;
+        setOverlayVisible(true);
+      }
+      lastKnownVisible = currentlyVisible;
+    }, 300);
 
     // Inject print-blocking CSS
     const styleId = 'anti-screenshot-print-css';
@@ -208,6 +274,9 @@ const AntiScreenshot = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
       document.removeEventListener('dragstart', handleDragStart, true);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
       const el = document.getElementById(styleId);
       if (el) el.remove();
     };

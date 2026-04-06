@@ -46,6 +46,17 @@ const StudyMaterials = () => {
     fetchMaterials();
   }, []);
 
+  // Helper: extract file extension from URL
+  const getExtFromUrl = (url) => {
+    try {
+      const pathname = new URL(url, window.location.origin).pathname;
+      const match = pathname.match(/\.(\w{2,5})$/);
+      return match ? match[1].toLowerCase() : null;
+    } catch {
+      return null;
+    }
+  };
+
   const categories = ['all', ...new Set(materials.map(m => m.category))];
   const filtered = filter === 'all' 
     ? materials 
@@ -96,13 +107,23 @@ const StudyMaterials = () => {
         if (!response.ok) throw new Error(`Download failed (HTTP ${response.status})`);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
+        const ext = selectedMaterial.fileType || getExtFromUrl(fileUrl) || 'pdf';
+        const fileName = `${selectedMaterial.title || 'study-material'}.${ext}`;
         const link = document.createElement('a');
         link.href = url;
-        link.download = selectedMaterial.title || 'study-material';
+        link.download = fileName;
+        link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        // Delay cleanup so the browser has time to start the download
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 5000);
+        // Fallback for mobile: if download didn't trigger, open in new tab
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+        }, 10000);
         closeDownloadModal();
         return;
       }
@@ -126,14 +147,29 @@ const StudyMaterials = () => {
       if (!response.ok) throw new Error(`Download failed (HTTP ${response.status})`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
+      const ext = selectedMaterial.fileType || getExtFromUrl(fullUrl) || 'pdf';
+      const fileName = `${selectedMaterial.title || 'study-material'}.${ext}`;
       const link = document.createElement('a');
       link.href = url;
-      link.download = selectedMaterial.title || 'study-material';
+      link.download = fileName;
+      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
+      // Delay cleanup so the browser has time to start the download
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 5000);
+      // Fallback: if link.click didn't work (common on mobile), try opening in new tab
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile && blob.size > 0) {
+        // On mobile, programmatic click often fails — open as fallback
+        setTimeout(() => {
+          const mobileUrl = window.URL.createObjectURL(blob);
+          window.open(mobileUrl, '_blank');
+          setTimeout(() => window.URL.revokeObjectURL(mobileUrl), 10000);
+        }, 500);
+      }
       closeDownloadModal();
     } catch (error) {
       console.error('Failed to download material:', error);
