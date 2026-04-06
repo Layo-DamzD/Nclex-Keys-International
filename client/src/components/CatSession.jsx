@@ -784,7 +784,7 @@ const CatSession = () => {
               : 'CAT Adaptive Test Complete'}
           </p>
 
-          {/* Points summary */
+          {/* Points summary */}
           <div style={{ padding: '14px 18px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <i className="fas fa-star" style={{ color: '#f59e0b', fontSize: '0.9rem' }}></i>
             <span style={{ fontWeight: 700, color: '#16a34a', fontSize: '1.1rem' }}>{earnedPoints}</span>

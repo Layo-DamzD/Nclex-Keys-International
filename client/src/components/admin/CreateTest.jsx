@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
-import { NCLEX_CLIENT_NEEDS_CATEGORIES, CLIENT_NEEDS } from '../../constants/ClientNeeds';
+import { NCLEX_CLIENT_NEEDS_CATEGORIES } from '../../constants/ClientNeeds';
 
 const CreateTest = () => {
   const navigate = useNavigate();
@@ -335,7 +335,7 @@ const CreateTest = () => {
                   onChange={(e) => setFilters({ ...filters, clientNeed: e.target.value })}
                 >
                   <option value="">All Client Needs</option>
-                  {Object.keys(CLIENT_NEEDS).map(cn => (
+                  {NCLEX_CLIENT_NEEDS_CATEGORIES.map(cn => (
                     <option key={cn} value={cn}>{cn}</option>
                   ))}
                 </select>
