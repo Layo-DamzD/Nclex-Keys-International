@@ -26,16 +26,6 @@ const TestCustomization = () => {
       .trim();
   };
 
-  // Fuzzy key matcher — handles old DB names matching new CATEGORIES.jsx names
-  // e.g., "cardiovascular" matches "cardiovascular system", "gastrointestinal nutrition" matches "gastrointestinal"
-  const fuzzyMatchKey = (haystackKeys, needle) => {
-    if (!needle || haystackKeys.includes(needle)) return needle;
-    for (const key of haystackKeys) {
-      if (key.startsWith(needle) || needle.startsWith(key)) return key;
-    }
-    return null;
-  };
-
   const [selectedSubcategoryPairs, setSelectedSubcategoryPairs] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [questionCount, setQuestionCount] = useState(75);
@@ -45,10 +35,12 @@ const TestCustomization = () => {
   const [testType, setTestType] = useState('practice'); // 'practice', 'cat', 'assessment'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Counts from API — already canonical (backend remaps DB names)
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
-  const [categoryMap, setCategoryMap] = useState(CATEGORIES);
   const [usedSubcategoryCounts, setUsedSubcategoryCounts] = useState({});
   const [omittedSubcategoryCounts, setOmittedSubcategoryCounts] = useState({});
+  // categoryMap: uses CATEGORIES constant + any extras from DB (via API categoriesWithExtras)
+  const [categoryMap, setCategoryMap] = useState(CATEGORIES);
   const [countLoadError, setCountLoadError] = useState('');
   
   // Category tab: 'subjects' or 'clientNeeds'
@@ -68,7 +60,7 @@ const TestCustomization = () => {
     correct: false
   });
 
-  // Question status counts
+  // Question status counts — tab-specific
   const [statusCounts, setStatusCounts] = useState({
     unused: 0,
     unusedNgn: 0,
@@ -82,6 +74,8 @@ const TestCustomization = () => {
     correctNgn: 0,
     total: 0
   });
+  const [subjectStatusCounts, setSubjectStatusCounts] = useState(null);
+  const [clientNeedStatusCounts, setClientNeedStatusCounts] = useState(null);
 
   const navigate = useNavigate();
 
@@ -134,46 +128,19 @@ const TestCustomization = () => {
   const isSubcategorySelected = (category, subcategory) =>
     selectedSubcategoryPairs.includes(getPairKey(category, subcategory));
 
+  // Simple exact-match lookup — backend returns canonical category/subcategory names
+  // that match our CATEGORIES constant, so no fuzzy matching needed
   const getSubcategoryCount = (category, subcategory) => {
-    const catKeys = Object.keys(subcategoryCounts || {});
-    const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
-    if (!matchedCat) return 0;
-    const subKeys = Object.keys(subcategoryCounts[matchedCat] || {});
-    const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
-    return subcategoryCounts?.[matchedCat]?.[matchedSub] || 0;
+    return subcategoryCounts?.[category]?.[subcategory] || 0;
   };
 
   const getUsedSubcategoryCount = (category, subcategory) => {
-    const catKeys = Object.keys(usedSubcategoryCounts || {});
-    const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
-    if (!matchedCat) return 0;
-    const subKeys = Object.keys(usedSubcategoryCounts[matchedCat] || {});
-    const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
-    return usedSubcategoryCounts?.[matchedCat]?.[matchedSub] || 0;
+    return usedSubcategoryCounts?.[category]?.[subcategory] || 0;
   };
 
   const getOmittedSubcategoryCount = (category, subcategory) => {
-    const catKeys = Object.keys(omittedSubcategoryCounts || {});
-    const matchedCat = fuzzyMatchKey(catKeys, normalizeKey(category));
-    if (!matchedCat) return 0;
-    const subKeys = Object.keys(omittedSubcategoryCounts[matchedCat] || {});
-    const matchedSub = fuzzyMatchKey(subKeys, normalizeKey(subcategory));
-    return omittedSubcategoryCounts?.[matchedCat]?.[matchedSub] || 0;
+    return omittedSubcategoryCounts?.[category]?.[subcategory] || 0;
   };
-
-  const normalizeNestedCounts = (rawNestedCounts = {}) =>
-    Object.entries(rawNestedCounts).reduce((acc, [category, subMap]) => {
-      const normalizedCategory = normalizeKey(category);
-      if (!acc[normalizedCategory]) {
-        acc[normalizedCategory] = {};
-      }
-      Object.entries(subMap || {}).forEach(([subcategory, count]) => {
-        const normalizedSubcategory = normalizeKey(subcategory);
-        acc[normalizedCategory][normalizedSubcategory] =
-          (acc[normalizedCategory][normalizedSubcategory] || 0) + (Number(count) || 0);
-      });
-      return acc;
-    }, {});
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -188,10 +155,15 @@ const TestCustomization = () => {
         const usedRawNestedCounts = response.data?.usedCountsByCategorySubcategory || {};
         const omittedRawNestedCounts = response.data?.omittedCountsByCategorySubcategory || {};
 
-        setSubcategoryCounts(normalizeNestedCounts(totalRawNestedCounts));
-        setCategoryMap(CATEGORIES);
-        setUsedSubcategoryCounts(normalizeNestedCounts(usedRawNestedCounts));
-        setOmittedSubcategoryCounts(normalizeNestedCounts(omittedRawNestedCounts));
+        // Backend already returns canonical category/subcategory names.
+        // Use them directly — no normalization needed.
+        setSubcategoryCounts(totalRawNestedCounts);
+        setUsedSubcategoryCounts(usedRawNestedCounts);
+        setOmittedSubcategoryCounts(omittedRawNestedCounts);
+
+        // Backend now returns only canonical categories (no extras).
+        // We keep using the hardcoded CATEGORIES constant from Categories.jsx
+        // which is the single source of truth.
 
         // Fetch client needs counts
         try {
@@ -224,6 +196,19 @@ const TestCustomization = () => {
             correctNgn: statusResponse.data?.correctNgn || 0,
             total: statusResponse.data?.total || 0
           });
+          // Store tab-specific status counts
+          if (statusResponse.data?.subjects) {
+            setSubjectStatusCounts({
+              ...statusResponse.data.subjects,
+              total: statusResponse.data.subjects.total || 0
+            });
+          }
+          if (statusResponse.data?.clientNeeds) {
+            setClientNeedStatusCounts({
+              ...statusResponse.data.clientNeeds,
+              total: statusResponse.data.clientNeeds.total || 0
+            });
+          }
         } catch (statusErr) {
           console.error('Failed to load question status counts', statusErr);
         }
@@ -278,7 +263,11 @@ const TestCustomization = () => {
   }, [clientNeedsCounts]);
 
   const selectedClientNeedsTotal = useMemo(() => {
-    if (selectedClientNeeds.length === 0) {
+    // When no client needs selected OR all are selected, use full total
+    // to avoid fuzzy-match undercounting (same fix as subjects tab)
+    const allSelected = selectedClientNeeds.length === 0 ||
+      selectedClientNeeds.length === NCLEX_CLIENT_NEEDS_CATEGORIES.length;
+    if (allSelected) {
       return clientNeedsTotal;
     }
     return selectedClientNeeds.reduce((sum, cn) => sum + getClientNeedCount(cn), 0);
@@ -293,16 +282,15 @@ const TestCustomization = () => {
 
   const selectedStats = useMemo(() => {
     // When no subcategories are explicitly selected, OR when ALL are selected,
-    // use the total Q-bank count from statusCounts (which counts ALL questions
-    // regardless of category matching). This fixes the bug where some DB questions
-    // have different category/subcategory values than the CATEGORIES constant,
-    // causing undercounting when "Select All" is clicked.
+    // use the total Q-bank count from subjectStatusCounts (which counts only
+    // questions in canonical subject categories). This fixes the bug where
+    // undercounting happens when "Select All" is clicked.
     const allSelected = selectedSubcategoryPairs.length === 0 ||
       selectedSubcategoryPairs.length === allPossiblePairs.length;
 
     if (allSelected) {
       return {
-        available: statusCounts.total || 0,
+        available: subjectStatusCounts?.total || statusCounts.total || 0,
         used: 0,
         omitted: 0,
       };
@@ -367,8 +355,11 @@ const TestCustomization = () => {
   };
 
   // Get current stats based on selected tab
-  // Total questions in the question bank
-  const totalQuestionBank = statusCounts.total || 0;
+  // Total questions in the question bank — switch based on active tab
+  const activeStatusCounts = categoryTab === 'subjects'
+    ? (subjectStatusCounts || statusCounts)
+    : (clientNeedStatusCounts || statusCounts);
+  const totalQuestionBank = activeStatusCounts.total || 0;
   const currentAvailable = categoryTab === 'clientNeeds' ? selectedClientNeedsTotal : selectedStats.available;
   const maxAllowed = Math.min(questionRangeMax, currentAvailable);
 
@@ -701,7 +692,7 @@ const TestCustomization = () => {
             <div style={{ height: '4px', background: '#f1f5f9' }}>
               <div style={{
                 height: '100%',
-                width: `${Math.min(100, totalQuestionBank > 0 ? ((statusCounts.correct + statusCounts.incorrect + statusCounts.omitted) / totalQuestionBank) * 100 : 0)}%`,
+                width: `${Math.min(100, totalQuestionBank > 0 ? ((activeStatusCounts.correct + activeStatusCounts.incorrect + activeStatusCounts.omitted) / totalQuestionBank) * 100 : 0)}%`,
                 background: 'linear-gradient(90deg, #22c55e 0%, #3b82f6 100%)',
                 borderRadius: '0 2px 2px 0',
                 transition: 'width 0.4s ease'
@@ -779,7 +770,7 @@ const TestCustomization = () => {
                   background: statusFilters.unused ? '#3b82f6' : '#cbd5e1',
                   transition: 'all 0.2s'
                 }}></div>
-                <span style={{ fontWeight: 700, color: statusFilters.unused ? '#1e40af' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.unused}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.unused ? '#1e40af' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.unused}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.unused ? '#3b82f6' : '#cbd5e1', fontSize: '0.75rem' }}>Unused</span>
                 {statusFilters.unused && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#3b82f6' }}></i>}
               </button>
@@ -804,7 +795,7 @@ const TestCustomization = () => {
                   background: statusFilters.correct ? '#22c55e' : '#cbd5e1',
                   transition: 'all 0.2s'
                 }}></div>
-                <span style={{ fontWeight: 700, color: statusFilters.correct ? '#166534' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.correct}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.correct ? '#166534' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.correct}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.correct ? '#22c55e' : '#cbd5e1', fontSize: '0.75rem' }}>Correct</span>
                 {statusFilters.correct && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#22c55e' }}></i>}
               </button>
@@ -829,7 +820,7 @@ const TestCustomization = () => {
                   background: statusFilters.incorrect ? '#ef4444' : '#cbd5e1',
                   transition: 'all 0.2s'
                 }}></div>
-                <span style={{ fontWeight: 700, color: statusFilters.incorrect ? '#991b1b' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.incorrect}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.incorrect ? '#991b1b' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.incorrect}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.incorrect ? '#ef4444' : '#cbd5e1', fontSize: '0.75rem' }}>Incorrect</span>
                 {statusFilters.incorrect && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#ef4444' }}></i>}
               </button>
@@ -850,7 +841,7 @@ const TestCustomization = () => {
                 }}
               >
                 <i className="fas fa-bookmark" style={{ fontSize: '0.65rem', color: statusFilters.marked ? '#f59e0b' : '#cbd5e1' }}></i>
-                <span style={{ fontWeight: 700, color: statusFilters.marked ? '#92400e' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.marked}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.marked ? '#92400e' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.marked}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.marked ? '#f59e0b' : '#cbd5e1', fontSize: '0.75rem' }}>Marked</span>
                 {statusFilters.marked && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#f59e0b' }}></i>}
               </button>
@@ -871,7 +862,7 @@ const TestCustomization = () => {
                 }}
               >
                 <i className="fas fa-minus-circle" style={{ fontSize: '0.65rem', color: statusFilters.omitted ? '#64748b' : '#cbd5e1' }}></i>
-                <span style={{ fontWeight: 700, color: statusFilters.omitted ? '#475569' : '#94a3b8', fontSize: '0.85rem' }}>{statusCounts.omitted}</span>
+                <span style={{ fontWeight: 700, color: statusFilters.omitted ? '#475569' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.omitted}</span>
                 <span style={{ fontWeight: 500, color: statusFilters.omitted ? '#64748b' : '#cbd5e1', fontSize: '0.75rem' }}>Omitted</span>
                 {statusFilters.omitted && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#64748b' }}></i>}
               </button>

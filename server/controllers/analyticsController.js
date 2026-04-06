@@ -1,6 +1,7 @@
 const TestResult = require('../models/testResult');
 const Question = require('../models/Question');
 const User = require('../models/user');
+const { matchCategory, matchSubcategory, CATEGORIES, getCategoriesWithExtras, NCLEX_CLIENT_NEEDS_CATEGORIES, matchClientNeedCategory, normalizeClientNeedKey } = require('../constants/categories');
 
 // @desc    Get question usage by type
 // @route   GET /api/admin/analytics/usage-by-type
@@ -240,19 +241,13 @@ const getMostUsedQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getCategoryStats = async (req, res) => {
   try {
-    const questions = await Question.find();
+    const questions = await Question.find().lean();
     const testResults = await TestResult.find().populate('answers.questionId');
-    
+
     const categoryStats = {};
 
-    // Initialize with all categories from CATEGORIES constant
-    const categoryList = [
-      'Adult Health', 'Pharmacology', 'Maternal & Newborn Health',
-      'Child Health', 'Mental Health', 'Fundamentals', 'Management of Care',
-      'Case Studies'
-    ];
-
-    categoryList.forEach(cat => {
+    // Initialize with canonical CATEGORIES (same as student view)
+    Object.keys(CATEGORIES).forEach(cat => {
       categoryStats[cat] = {
         totalQuestions: 0,
         totalUsage: 0,
@@ -261,38 +256,58 @@ const getCategoryStats = async (req, res) => {
       };
     });
 
-    // Count questions per category/subcategory
+    // Count questions per category/subcategory using canonical mapping
+    // ONLY count questions that match a canonical category — skip everything else
     questions.forEach(q => {
-      if (categoryStats[q.category]) {
-        categoryStats[q.category].totalQuestions += 1;
-        
-        if (!categoryStats[q.category].subcategories[q.subcategory]) {
-          categoryStats[q.category].subcategories[q.subcategory] = {
-            count: 0,
-            usage: 0,
-            correct: 0
-          };
-        }
-        categoryStats[q.category].subcategories[q.subcategory].count += 1;
+      const cat = matchCategory(q.category);
+
+      // Skip questions whose category doesn't match any canonical category
+      if (!categoryStats[cat]) return;
+
+      const sub = matchSubcategory(cat, q.subcategory);
+
+      // Skip subcategories that don't match any canonical subcategory for this category
+      if (!CATEGORIES[cat]?.includes(sub)) return;
+
+      categoryStats[cat].totalQuestions += 1;
+
+      if (!categoryStats[cat].subcategories[sub]) {
+        categoryStats[cat].subcategories[sub] = {
+          count: 0,
+          usage: 0,
+          correct: 0
+        };
       }
+      categoryStats[cat].subcategories[sub].count += 1;
     });
 
-    // Aggregate usage data from test results
+    // Aggregate usage data from test results using canonical mapping
     testResults.forEach(result => {
       if (result.answers) {
         result.answers.forEach(answer => {
           if (answer.questionId) {
             const q = answer.questionId;
-            if (q && categoryStats[q.category]) {
-              categoryStats[q.category].totalUsage += 1;
+            const cat = matchCategory(q.category);
+            // Only count if category is canonical
+            if (categoryStats[cat]) {
+              categoryStats[cat].totalUsage += 1;
               if (answer.isCorrect) {
-                categoryStats[q.category].correctAttempts += 1;
+                categoryStats[cat].correctAttempts += 1;
               }
 
-              if (categoryStats[q.category].subcategories[q.subcategory]) {
-                categoryStats[q.category].subcategories[q.subcategory].usage += 1;
+              const sub = matchSubcategory(cat, q.subcategory);
+              // Only count subcategory usage if it's a canonical subcategory
+              if (CATEGORIES[cat]?.includes(sub)) {
+                if (!categoryStats[cat].subcategories[sub]) {
+                  categoryStats[cat].subcategories[sub] = {
+                    count: 0,
+                    usage: 0,
+                    correct: 0
+                  };
+                }
+                categoryStats[cat].subcategories[sub].usage += 1;
                 if (answer.isCorrect) {
-                  categoryStats[q.category].subcategories[q.subcategory].correct += 1;
+                  categoryStats[cat].subcategories[sub].correct += 1;
                 }
               }
             }
@@ -301,33 +316,165 @@ const getCategoryStats = async (req, res) => {
       }
     });
 
-    // Format response
+    // Format response — include ALL canonical categories (even those with 0 questions)
     const result = {};
-    Object.entries(categoryStats).forEach(([category, stats]) => {
-      if (stats.totalQuestions > 0) {
-        const subcategories = Object.entries(stats.subcategories)
-          .filter(([_, subStats]) => subStats.count > 0)
-          .map(([name, subStats]) => ({
-            name,
+    Object.entries(categoryStats)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .forEach(([category, stats]) => {
+        // Show all canonical subcategories for this category (even those with 0 count)
+        const allSubs = CATEGORIES[category] || [];
+        const subcategories = allSubs.map(subName => {
+          const subStats = stats.subcategories[subName] || { count: 0, usage: 0, correct: 0 };
+          return {
+            name: subName,
             count: subStats.count,
             usage: subStats.usage,
-            successRate: subStats.usage > 0 
-              ? Math.round((subStats.correct / subStats.usage) * 100) 
+            successRate: subStats.usage > 0
+              ? Math.round((subStats.correct / subStats.usage) * 100)
               : 0
-          }))
-          .sort((a, b) => b.count - a.count);
+          };
+        }).sort((a, b) => b.count - a.count);
 
         result[category] = {
           totalQuestions: stats.totalQuestions,
           totalUsage: stats.totalUsage,
-          successRate: stats.totalUsage > 0 
-            ? Math.round((stats.correctAttempts / stats.totalUsage) * 100) 
+          successRate: stats.totalUsage > 0
+            ? Math.round((stats.correctAttempts / stats.totalUsage) * 100)
+            : 0,
+          subcategoryCount: allSubs.length,
+          subcategories
+        };
+      });
+
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get detailed client needs statistics for admin
+// @route   GET /api/admin/analytics/client-needs-stats
+// @access  Private (admin only)
+const getClientNeedsStats = async (req, res) => {
+  try {
+    const questions = await Question.find(
+      {
+        $or: [
+          { clientNeed: { $exists: true, $ne: null, $ne: '' } },
+          { clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' } }
+        ]
+      },
+      '_id clientNeed clientNeedSubcategory'
+    ).lean();
+
+    const testResults = await TestResult.find().populate('answers.questionId');
+
+    // Use shared constants and matching from categories.js
+    // (same matching logic used by student endpoints, ensures consistency)
+    // Initialize stats for all 16 categories
+    const cnStats = {};
+    NCLEX_CLIENT_NEEDS_CATEGORIES.forEach(cn => {
+      cnStats[cn] = {
+        totalQuestions: 0,
+        totalUsage: 0,
+        correctAttempts: 0,
+        subcategories: {}
+      };
+    });
+
+    // Build question ID → matched client need map
+    const questionClientNeedMap = new Map();
+    questions.forEach(q => {
+      const qId = String(q._id);
+      const matched = new Set();
+
+      // Collect all raw client need values from this question
+      const rawValues = [];
+      if (q.clientNeed) rawValues.push(String(q.clientNeed).trim());
+      if (q.clientNeedSubcategory) rawValues.push(String(q.clientNeedSubcategory).trim());
+
+      for (const raw of rawValues) {
+        const canonical = matchClientNeedCategory(raw);
+        if (canonical) matched.add(canonical);
+      }
+
+      // Store all matched canonical client needs for this question
+      questionClientNeedMap.set(qId, [...matched]);
+
+      for (const cn of matched) {
+        if (cnStats[cn]) {
+          cnStats[cn].totalQuestions += 1;
+          // Track subcategory (the raw clientNeedSubcategory)
+          const rawSub = q.clientNeedSubcategory ? String(q.clientNeedSubcategory).trim() : '';
+          if (rawSub) {
+            if (!cnStats[cn].subcategories[rawSub]) {
+              cnStats[cn].subcategories[rawSub] = { count: 0, usage: 0, correct: 0 };
+            }
+            cnStats[cn].subcategories[rawSub].count += 1;
+          }
+        }
+      }
+    });
+
+    // Aggregate usage from test results
+    testResults.forEach(result => {
+      if (result.answers) {
+        result.answers.forEach(answer => {
+          if (answer.questionId) {
+            const qId = String(answer.questionId._id || answer.questionId);
+            const matchedCNs = questionClientNeedMap.get(qId);
+            if (matchedCNs) {
+              for (const cn of matchedCNs) {
+                if (cnStats[cn]) {
+                  cnStats[cn].totalUsage += 1;
+                  if (answer.isCorrect) {
+                    cnStats[cn].correctAttempts += 1;
+                  }
+                  // Sub usage
+                  const q = answer.questionId;
+                  const rawSub = q.clientNeedSubcategory ? String(q.clientNeedSubcategory).trim() : '';
+                  if (rawSub && cnStats[cn].subcategories[rawSub]) {
+                    cnStats[cn].subcategories[rawSub].usage += 1;
+                    if (answer.isCorrect) {
+                      cnStats[cn].subcategories[rawSub].correct += 1;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    });
+
+    // Format response — include ALL 16 categories
+    const result = {};
+    NCLEX_CLIENT_NEEDS_CATEGORIES
+      .sort((a, b) => a.localeCompare(b))
+      .forEach(cn => {
+        const stats = cnStats[cn];
+        const subcategories = Object.entries(stats.subcategories)
+          .map(([name, subStats]) => ({
+            name,
+            count: subStats.count,
+            usage: subStats.usage,
+            successRate: subStats.usage > 0
+              ? Math.round((subStats.correct / subStats.usage) * 100)
+              : 0
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        result[cn] = {
+          totalQuestions: stats.totalQuestions,
+          totalUsage: stats.totalUsage,
+          successRate: stats.totalUsage > 0
+            ? Math.round((stats.correctAttempts / stats.totalUsage) * 100)
             : 0,
           subcategoryCount: subcategories.length,
           subcategories
         };
-      }
-    });
+      });
 
     res.json(result);
   } catch (error) {
@@ -342,5 +489,6 @@ module.exports = {
   getDifficultyDistribution,
   getDailyTrend,
   getMostUsedQuestions,
-  getCategoryStats
+  getCategoryStats,
+  getClientNeedsStats
 };

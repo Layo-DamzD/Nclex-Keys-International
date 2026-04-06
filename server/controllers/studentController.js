@@ -7,6 +7,7 @@ const StudyMaterial = require('../models/StudyMaterial');
 const Feedback = require('../models/Feedback');
 const ExamSupportMessage = require('../models/ExamSupportMessage');
 const { sendExamSupportUsageEmail } = require('../services/emailService');
+const { matchCategory, matchSubcategory, CATEGORIES, getCategoriesWithExtras, getClientNeedMatches, matchClientNeedCategory, normalizeClientNeedKey } = require('../constants/categories');
 
 const MAX_FCM_TOKENS_PER_STUDENT = 8;
 
@@ -340,40 +341,54 @@ const getSubcategoryCounts = async (req, res) => {
     const customUsedIds = user?.customTestUsedQuestions || [];
     const customOmittedIds = user?.customTestOmittedQuestions || [];
 
-    const buildCountsFromRows = (rows) => rows.reduce((acc, row) => {
-      const category = row?._id?.category;
-      const subcategory = row?._id?.subcategory;
-      if (!category || !subcategory) return acc;
+    // Fetch all questions and remap to canonical categories/subcategories
+    const allQuestions = await Question.find({}, '_id category subcategory').lean();
+    const usedQuestions = customUsedIds.length > 0
+      ? await Question.find({ _id: { $in: customUsedIds } }, '_id category subcategory').lean()
+      : [];
+    const omittedQuestions = customOmittedIds.length > 0
+      ? await Question.find({ _id: { $in: customOmittedIds } }, '_id category subcategory').lean()
+      : [];
 
-      if (!acc.countsByCategorySubcategory[category]) {
-        acc.countsByCategorySubcategory[category] = {};
-      }
+    // Build counts using canonical category/subcategory mapping
+    // ONLY count questions that match canonical categories AND canonical subcategories
+    const buildCounts = (questions) => {
+      const acc = {
+        countsByCategorySubcategory: {},
+        countsBySubcategory: {},
+        countsByCategory: {}
+      };
+      questions.forEach((q) => {
+        const canonicalCat = matchCategory(q.category);
+        const canonicalSub = matchSubcategory(canonicalCat, q.subcategory);
 
-      acc.countsByCategorySubcategory[category][subcategory] = row.count;
-      acc.countsBySubcategory[subcategory] = (acc.countsBySubcategory[subcategory] || 0) + row.count;
+        // Skip if category is not in canonical list
+        if (!CATEGORIES[canonicalCat]) return;
+        // Skip if subcategory is not in canonical list for this category
+        if (!CATEGORIES[canonicalCat].includes(canonicalSub)) return;
+
+        acc.countsByCategorySubcategory[canonicalCat] = acc.countsByCategorySubcategory[canonicalCat] || {};
+        acc.countsByCategorySubcategory[canonicalCat][canonicalSub] =
+          (acc.countsByCategorySubcategory[canonicalCat][canonicalSub] || 0) + 1;
+
+        acc.countsBySubcategory[canonicalSub] =
+          (acc.countsBySubcategory[canonicalSub] || 0) + 1;
+
+        acc.countsByCategory[canonicalCat] =
+          (acc.countsByCategory[canonicalCat] || 0) + 1;
+      });
       return acc;
-    }, { countsByCategorySubcategory: {}, countsBySubcategory: {} });
-
-    const groupStage = {
-      $group: {
-        _id: {
-          category: '$category',
-          subcategory: '$subcategory'
-        },
-        count: { $sum: 1 }
-      }
     };
 
-    const totalRows = await Question.aggregate([groupStage]);
-    const totalCounts = buildCountsFromRows(totalRows);
-    const usedRows = customUsedIds.length > 0
-      ? await Question.aggregate([{ $match: { _id: { $in: customUsedIds } } }, groupStage])
-      : [];
-    const omittedRows = customOmittedIds.length > 0
-      ? await Question.aggregate([{ $match: { _id: { $in: customOmittedIds } } }, groupStage])
-      : [];
-    const usedCounts = buildCountsFromRows(usedRows);
-    const omittedCounts = buildCountsFromRows(omittedRows);
+    const totalCounts = buildCounts(allQuestions);
+    const usedCounts = buildCounts(usedQuestions);
+    const omittedCounts = buildCounts(omittedQuestions);
+
+    // Send canonical CATEGORIES structure (no extras) so frontend uses the same list
+    const canonicalCategories = {};
+    Object.entries(CATEGORIES).forEach(([cat, subs]) => {
+      canonicalCategories[cat] = [...subs];
+    });
 
     res.json({
       countsByCategorySubcategory: totalCounts.countsByCategorySubcategory,
@@ -383,7 +398,12 @@ const getSubcategoryCounts = async (req, res) => {
       usedCountsByCategorySubcategory: usedCounts.countsByCategorySubcategory,
       usedCountsBySubcategory: usedCounts.countsBySubcategory,
       omittedCountsByCategorySubcategory: omittedCounts.countsByCategorySubcategory,
-      omittedCountsBySubcategory: omittedCounts.countsBySubcategory
+      omittedCountsBySubcategory: omittedCounts.countsBySubcategory,
+      countsByCategory: totalCounts.countsByCategory,
+      usedCountsByCategory: usedCounts.countsByCategory,
+      omittedCountsByCategory: omittedCounts.countsByCategory,
+      // Send canonical categories structure so frontend uses the same list
+      categoriesWithExtras: canonicalCategories
     });
   } catch (error) {
     console.error(error);
@@ -559,6 +579,40 @@ const formatTimeAgo = (date) => {
   if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
   return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+};
+
+/**
+ * Shared helper: count questions by type (subjects vs client needs).
+ * Used by both getDashboardStats and getQuestionStatusCounts so numbers
+ * are ALWAYS consistent across the app.
+ */
+const countQuestionBank = async () => {
+  const allQuestions = await Question.find(
+    {},
+    '_id category subcategory clientNeed clientNeedSubcategory'
+  ).lean();
+
+  const subjectIds = new Set();
+  const clientNeedIds = new Set();
+
+  for (const q of allQuestions) {
+    const qId = String(q._id);
+    const canonicalCat = matchCategory(q.category);
+    const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
+    if (canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub)) {
+      subjectIds.add(qId);
+    }
+    const cnMatches = getClientNeedMatches(q);
+    if (cnMatches.size > 0) {
+      clientNeedIds.add(qId);
+    }
+  }
+
+  return {
+    subjectCount: subjectIds.size,
+    clientNeedCount: clientNeedIds.size,
+    total: new Set([...subjectIds, ...clientNeedIds]).size
+  };
 };
 
 // @desc    Get student dashboard stats
@@ -1695,38 +1749,51 @@ const getPerformanceDataDetailed = async (req, res) => {
 // @access  Private
 const getClientNeedsCounts = async (req, res) => {
   try {
-    // Aggregate counts by clientNeedSubcategory (the 8 main categories)
-    const rows = await Question.aggregate([
+    // Aggregate counts by BOTH clientNeed and clientNeedSubcategory fields.
+    // This mirrors how generateTest queries (it matches either field),
+    // ensuring the displayed counts match the questions actually available.
+    const questions = await Question.find(
       {
-        $match: {
-          clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' }
-        }
+        $or: [
+          { clientNeed: { $exists: true, $ne: null, $ne: '' } },
+          { clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' } }
+        ]
       },
-      {
-        $group: {
-          _id: '$clientNeedSubcategory',
-          count: { $sum: 1 },
-          ngnCount: {
-            $sum: { $cond: [{ $eq: ['$isNextGen', true] }, 1, 0] }
-          }
-        }
-      }
-    ]);
+      'clientNeed clientNeedSubcategory isNextGen'
+    ).lean();
 
-    // Build counts object keyed by normalized subcategory name
+    // Build counts keyed by normalised canonical client-need name.
+    // Use matchClientNeedCategory to map each raw DB value to one of the
+    // 16 predefined categories, then normalise with normalizeClientNeedKey
+    // (identical to the frontend's normalizeKey) so the key matches exactly
+    // what the frontend looks up.
     const countsByClientNeed = {};
     const ngnCountsByClientNeed = {};
 
-    rows.forEach(row => {
-      const subcategory = row._id || 'Uncategorized';
-      const normalizedKey = String(subcategory).trim().toLowerCase()
-        .replace(/[’']/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-      
-      countsByClientNeed[normalizedKey] = row.count || 0;
-      ngnCountsByClientNeed[normalizedKey] = row.ngnCount || 0;
-    });
+    for (const q of questions) {
+      // Collect ALL matched canonical categories for this question
+      const matchedCNs = new Set();
+      const rawValues = [];
+      if (q.clientNeed && String(q.clientNeed).trim()) {
+        rawValues.push(String(q.clientNeed).trim());
+      }
+      if (q.clientNeedSubcategory && String(q.clientNeedSubcategory).trim()) {
+        rawValues.push(String(q.clientNeedSubcategory).trim());
+      }
+      for (const rv of rawValues) {
+        const canonical = matchClientNeedCategory(rv);
+        if (canonical) matchedCNs.add(canonical);
+      }
+
+      // Count under each matched canonical category (normalised key)
+      for (const cn of matchedCNs) {
+        const key = normalizeClientNeedKey(cn);
+        countsByClientNeed[key] = (countsByClientNeed[key] || 0) + 1;
+        if (q.isNextGen) {
+          ngnCountsByClientNeed[key] = (ngnCountsByClientNeed[key] || 0) + 1;
+        }
+      }
+    }
 
     res.json({
       countsByClientNeed,
@@ -1746,9 +1813,11 @@ const getQuestionStatusCounts = async (req, res) => {
     const studentId = req.user.id;
     const user = await User.findById(studentId);
 
-    // Get all questions to calculate counts
-    const allQuestions = await Question.find({}, '_id');
-    const allQuestionIds = allQuestions.map(q => String(q._id));
+    // Get all questions with fields needed to determine which "tab" they belong to
+    const allQuestions = await Question.find(
+      {},
+      '_id category subcategory clientNeed clientNeedSubcategory isNextGen'
+    ).lean();
 
     // Get status sets from user document
     const seenSet = new Set((user.seenQuestions || []).map(id => String(id)));
@@ -1756,37 +1825,83 @@ const getQuestionStatusCounts = async (req, res) => {
     const markedSet = new Set((user.markedQuestions || []).map(id => String(id)));
     const omittedSet = new Set((user.customTestOmittedQuestions || []).map(id => String(id)));
 
-    // Partition ALL questions into MUTUALLY EXCLUSIVE categories using priority:
-    // Each question gets exactly ONE status. Priority order: Marked > Omitted > Incorrect > Correct > Unused
-    // This ensures: unused + correct + incorrect + marked + omitted === total (always)
-    let counts = { unused: 0, correct: 0, incorrect: 0, marked: 0, omitted: 0 };
+    // Helper: compute status counts for a given list of question IDs
+    const computeCounts = (questionIds) => {
+      const counts = { unused: 0, correct: 0, incorrect: 0, marked: 0, omitted: 0 };
+      let ngnCounts = { unused: 0, correct: 0, incorrect: 0, marked: 0, omitted: 0 };
 
-    for (const qId of allQuestionIds) {
-      if (markedSet.has(qId)) {
-        counts.marked++;
-      } else if (omittedSet.has(qId)) {
-        counts.omitted++;
-      } else if (incorrectSet.has(qId)) {
-        counts.incorrect++;
-      } else if (seenSet.has(qId)) {
-        counts.correct++;
-      } else {
-        counts.unused++;
+      for (const qId of questionIds) {
+        if (markedSet.has(qId)) {
+          counts.marked++;
+        } else if (omittedSet.has(qId)) {
+          counts.omitted++;
+        } else if (incorrectSet.has(qId)) {
+          counts.incorrect++;
+        } else if (seenSet.has(qId)) {
+          counts.correct++;
+        } else {
+          counts.unused++;
+        }
+      }
+      return counts;
+    };
+
+    // Partition questions into subjects (canonical categories) vs client needs
+    const subjectQuestionIds = [];
+    const clientNeedQuestionIds = [];
+    const subjectNgnIds = [];
+    const clientNeedNgnIds = [];
+
+    for (const q of allQuestions) {
+      const qId = String(q._id);
+      const canonicalCat = matchCategory(q.category);
+      const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
+      const isCanonicalSubject = canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub);
+
+      if (isCanonicalSubject) {
+        subjectQuestionIds.push(qId);
+        if (q.isNextGen) subjectNgnIds.push(qId);
+      }
+
+      // Only count as "client need" if at least one clientNeed/clientNeedSubcategory
+      // value maps to one of the 16 predefined NCLEX Client Needs categories.
+      const cnMatches = getClientNeedMatches(q);
+      if (cnMatches.size > 0) {
+        clientNeedQuestionIds.push(qId);
+        if (q.isNextGen) clientNeedNgnIds.push(qId);
       }
     }
 
+    // Some questions may belong to both (have both canonical category AND clientNeed).
+    // That's fine — they show up in both tabs.
+
+    const subjectCounts = computeCounts(subjectQuestionIds);
+    const clientNeedCounts = computeCounts(clientNeedQuestionIds);
+    const allCounts = computeCounts(allQuestions.map(q => String(q._id)));
+
     res.json({
-      unused: counts.unused,
+      // Overall (kept for backward compat)
+      unused: allCounts.unused,
       unusedNgn: 0,
-      incorrect: counts.incorrect,
+      incorrect: allCounts.incorrect,
       incorrectNgn: 0,
-      marked: counts.marked,
+      marked: allCounts.marked,
       markedNgn: 0,
-      omitted: counts.omitted,
+      omitted: allCounts.omitted,
       omittedNgn: 0,
-      correct: counts.correct,
+      correct: allCounts.correct,
       correctNgn: 0,
-      total: allQuestions.length
+      total: allQuestions.length,
+      // Tab-specific: subjects
+      subjects: {
+        ...subjectCounts,
+        total: subjectQuestionIds.length
+      },
+      // Tab-specific: client needs
+      clientNeeds: {
+        ...clientNeedCounts,
+        total: clientNeedQuestionIds.length
+      }
     });
   } catch (error) {
     console.error('Error fetching question status counts:', error);

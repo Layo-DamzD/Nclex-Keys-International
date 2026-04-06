@@ -1,6 +1,7 @@
 const Question = require('../models/Question');
 const TestResult = require('../models/testResult');
 const User = require('../models/user');
+const { matchCategory, matchSubcategory, CATEGORIES, getClientNeedMatches } = require('../constants/categories');
 const Test = require('../models/Test');
 const StudyMaterial = require('../models/StudyMaterial');
 const SystemLog = require('../models/SystemLog');
@@ -76,20 +77,48 @@ const isStudentSubscriptionExpired = (student) => {
 // @access  Private (admin only)
 const getAdminStats = async (req, res) => {
   try {
+    // Total = every question in the DB. Automatically picks up new questions.
     const totalQuestions = await Question.countDocuments();
+
+    // Count how many are categorized as subjects or client needs
+    const allQuestions = await Question.find(
+      {},
+      '_id category subcategory clientNeed clientNeedSubcategory'
+    ).lean();
+
+    const subjectIds = new Set();
+    const clientNeedIds = new Set();
+    for (const q of allQuestions) {
+      const qId = String(q._id);
+      // Check client needs FIRST — it takes priority
+      const cnMatches = getClientNeedMatches(q);
+      if (cnMatches.size > 0) {
+        clientNeedIds.add(qId);
+        continue; // Don't also count under subjects
+      }
+      const canonicalCat = matchCategory(q.category);
+      const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
+      if (canonicalCat && canonicalSub && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub)) {
+        subjectIds.add(qId);
+      }
+    }
+
+    const unionIds = new Set([...subjectIds, ...clientNeedIds]);
+    const uncategorized = totalQuestions - unionIds.size;
+
     const totalStudents = await User.countDocuments({ role: 'student' });
-    
-    // Calculate total usage (sum of all test attempts)
+
     const testResults = await TestResult.find();
     const totalUsage = testResults.reduce((sum, t) => sum + t.totalQuestions, 0);
-    
-    // Calculate average success rate
     const totalCorrect = testResults.reduce((sum, t) => sum + t.score, 0);
     const totalAnswered = testResults.reduce((sum, t) => sum + t.totalQuestions, 0);
     const successRate = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
 
     res.json({
       totalQuestions,
+      subjectQuestions: subjectIds.size,
+      clientNeedQuestions: clientNeedIds.size,
+      uncategorized,
       totalStudents,
       totalUsage,
       successRate
@@ -154,19 +183,48 @@ const exportQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getQuestions = async (req, res) => {
   try {
-    const { category, subcategory, type, difficulty, clientNeed } = req.query;
+    const { category, subcategory, type, difficulty, clientNeed, uncategorized } = req.query;
     const rawPage = Number(req.query.page || 1);
     const rawLimit = String(req.query.limit || '10').trim().toLowerCase();
     const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
     const includeAll = rawLimit === 'all';
     const parsedLimit = Number(rawLimit);
     const limit = includeAll ? 0 : (Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10);
-    const filter = {};
+    let filter = {};
     if (category) filter.category = category;
     if (subcategory) filter.subcategory = subcategory;
     if (type) filter.type = type;
     if (difficulty) filter.difficulty = String(difficulty).toLowerCase();
     if (clientNeed) filter.clientNeed = clientNeed;
+
+    // Handle uncategorized filter: return questions not matching any
+    // canonical subject category or predefined client need category
+    if (uncategorized === 'true') {
+      const allQuestions = await Question.find(
+        {},
+        '_id category subcategory clientNeed clientNeedSubcategory questionText type difficulty timesUsed correctAttempts incorrectAttempts caseStudyId'
+      ).sort({ createdAt: -1 }).lean();
+
+      const matchedIds = new Set();
+      for (const q of allQuestions) {
+        const canonicalCat = matchCategory(q.category);
+        const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
+        const isSubject = canonicalCat && canonicalSub && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub);
+        const isClientNeed = getClientNeedMatches(q).size > 0;
+        if (isSubject || isClientNeed) matchedIds.add(String(q._id));
+      }
+
+      const filtered = allQuestions.filter(q => !matchedIds.has(String(q._id)));
+      const total = filtered.length;
+      const paged = includeAll ? filtered : filtered.slice((page - 1) * limit, page * limit);
+
+      return res.json({
+        questions: paged,
+        totalPages: includeAll ? 1 : Math.max(1, Math.ceil(total / limit)),
+        currentPage: page,
+        total
+      });
+    }
 
     const total = await Question.countDocuments(filter);
     let query = Question.find(filter)

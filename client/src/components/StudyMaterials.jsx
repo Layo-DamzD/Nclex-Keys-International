@@ -17,13 +17,27 @@ const StudyMaterials = () => {
       try {
         setFetchError('');
         const token = localStorage.getItem('token');
+        if (!token) {
+          // No token found — user may have just signed up and token isn't stored yet.
+          // Try fetching without auth header (backend uses authOnly, which returns 401 without token).
+          // Show a helpful message instead of silently showing nothing.
+          setFetchError('Please log in to view study materials.');
+          setLoading(false);
+          return;
+        }
         const response = await axios.get('/api/student/study-materials', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setMaterials(response.data || []);
       } catch (error) {
-        const msg = error.response?.data?.message || error.message || 'Failed to load study materials.';
-        setFetchError(msg);
+        if (error.response?.status === 401) {
+          setFetchError('Your session has expired. Please log in again to view study materials.');
+        } else if (error.response?.status === 403) {
+          setFetchError('You do not have permission to view study materials. Please contact support.');
+        } else {
+          const msg = error.response?.data?.message || error.message || 'Failed to load study materials.';
+          setFetchError(msg);
+        }
         console.error('Error fetching study materials:', error);
       } finally {
         setLoading(false);
