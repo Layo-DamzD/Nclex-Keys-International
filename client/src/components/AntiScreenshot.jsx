@@ -1,35 +1,31 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 
 /**
- * AntiScreenshot — hardened deterrent layer for the student dashboard.
+ * AntiScreenshot — blur-based deterrent layer for the student dashboard.
  *
- * Nothing on the client is 100 % bulletproof, but this raises the bar
- * significantly by:
+ * Instead of a blocking overlay, this blurs the entire page when the user
+ * switches tabs, presses PrintScreen, or loses focus. They tap to unblur.
+ * The blur makes screenshots unreadable without being intrusive.
  *
- *  1. Blocking PrintScreen, Win+Shift+S, Cmd+Shift+4, Ctrl+Shift+I (DevTools)
- *  2. Disabling right-click context menu
- *  3. Clearing the clipboard on copy/cut
- *  4. Showing a full-screen warning overlay whenever the window loses focus
- *     (switching apps, pressing Home, opening notification shade, etc.)
- *  5. Preventing drag-and-drop of images / content out of the page
- *  6. Injecting CSS that disables text-selection and print media
- *  7. Periodic visibility poll — catches edge cases where events don't fire
- *  8. Re-arm logic — protection stays active after every dismiss
- *
- * The overlay must be clicked to dismiss, so the student can't just
- * switch away and back silently.
+ *  1. Blocks PrintScreen, Win+Shift+S, Cmd+Shift+4, Ctrl+Shift+I (DevTools)
+ *  2. Disables right-click context menu
+ *  3. Clears the clipboard on copy/cut
+ *  4. Blurs the entire page on focus loss / tab switch / keyboard shortcuts
+ *  5. Shows a small "Tap to continue" pill — tap to unblur
+ *  6. Prevents drag-and-drop of content out of the page
+ *  7. Injects CSS that disables text-selection and print media
+ *  8. Periodic visibility poll — catches edge cases where events don't fire
+ *  9. Re-arm logic — protection stays active after every dismiss
  */
 const AntiScreenshot = () => {
-  const [overlayVisible, setOverlayVisible] = useState(false);
-  const dismissCountRef = useRef(0);
-  const dismissTimeRef = useRef(0);           // timestamp of last dismiss
-  const blurTimeoutRef = useRef(null);         // handle for the blur setTimeout
-  const isDismissingRef = useRef(false);       // flag to suppress blur during dismiss
-  const pollIntervalRef = useRef(null);        // handle for the visibility poll
-  const violationCountRef = useRef(0);         // track how many times overlay was shown
+  const [isBlurred, setIsBlurred] = useState(false);
+  const dismissTimeRef = useRef(0);
+  const blurTimeoutRef = useRef(null);
+  const isDismissingRef = useRef(false);
+  const pollIntervalRef = useRef(null);
 
   // Grace period after dismiss (ms) — ignore blur/focus during this window
-  const GRACE_PERIOD = 400;
+  const GRACE_PERIOD = 500;
 
   // -------------------------------------------------------
   // Core protection handlers
@@ -39,18 +35,16 @@ const AntiScreenshot = () => {
     if (e.key === 'PrintScreen') {
       e.preventDefault();
       e.stopPropagation();
-      // Overwrite clipboard so nothing useful is captured
       navigator.clipboard?.writeText('').catch(() => {});
-      setOverlayVisible(true);
+      setIsBlurred(true);
       return false;
     }
 
     // Win + Shift + S  (snipping tool)
-    // Win + PrintScreen (Xbox game bar capture)
     if (e.key === 's' && e.shiftKey && e.metaKey) {
       e.preventDefault();
       e.stopPropagation();
-      setOverlayVisible(true);
+      setIsBlurred(true);
       return false;
     }
 
@@ -58,7 +52,7 @@ const AntiScreenshot = () => {
     if ((e.key === '3' || e.key === '4' || e.key === '5') && e.shiftKey && e.metaKey) {
       e.preventDefault();
       e.stopPropagation();
-      setOverlayVisible(true);
+      setIsBlurred(true);
       return false;
     }
 
@@ -117,38 +111,29 @@ const AntiScreenshot = () => {
     return false;
   }, []);
 
-  // Show overlay when window/tab loses focus — with grace period check
+  // Blur the page when window/tab loses focus — with grace period check
   const handleBlur = useCallback(() => {
-    // Clear any existing timeout
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-    }
-
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
     blurTimeoutRef.current = setTimeout(() => {
-      // Don't show overlay if we're in the grace period after a dismiss
       const now = Date.now();
       if (isDismissingRef.current || (now - dismissTimeRef.current) < GRACE_PERIOD) {
         isDismissingRef.current = false;
         return;
       }
-      setOverlayVisible(true);
+      setIsBlurred(true);
     }, 150);
   }, []);
 
   const handleFocus = useCallback(() => {
-    // Only show overlay on focus-return if we were NOT just dismissing
     const now = Date.now();
     if (isDismissingRef.current || (now - dismissTimeRef.current) < GRACE_PERIOD) {
       isDismissingRef.current = false;
       return;
     }
-    // When the user returns to the tab, ensure the overlay is showing
-    // so they have to actively dismiss it
-    setOverlayVisible(true);
+    setIsBlurred(true);
   }, []);
 
   const handleDragStart = useCallback((e) => {
-    // Only block if dragging page content (not normal sidebar interactions)
     const target = e.target;
     if (target && target.closest && !target.closest('.student-sidebar-overlay')) {
       e.preventDefault();
@@ -157,85 +142,89 @@ const AntiScreenshot = () => {
   }, []);
 
   const handleDismiss = useCallback(() => {
-    // Set flag so blur/focus handlers don't immediately re-show overlay
     isDismissingRef.current = true;
     dismissTimeRef.current = Date.now();
-    dismissCountRef.current += 1;
-    setOverlayVisible(false);
-
-    // Clear any pending blur timeout that would re-trigger the overlay
+    setIsBlurred(false);
     if (blurTimeoutRef.current) {
       clearTimeout(blurTimeoutRef.current);
       blurTimeoutRef.current = null;
     }
-
-    // Reset the dismissing flag after the grace period
     setTimeout(() => {
       isDismissingRef.current = false;
     }, GRACE_PERIOD);
   }, []);
 
   // -------------------------------------------------------
+  // Apply / remove body blur via CSS
+  // -------------------------------------------------------
+  useEffect(() => {
+    const body = document.body;
+    if (isBlurred) {
+      body.classList.add('nclex-ss-blur');
+    } else {
+      body.classList.remove('nclex-ss-blur');
+    }
+  }, [isBlurred]);
+
+  // -------------------------------------------------------
   // Attach / detach event listeners
   // -------------------------------------------------------
   useEffect(() => {
-    // Keyboard shortcuts
     document.addEventListener('keydown', blockKeyDown, true);
-
-    // Right-click
     document.addEventListener('contextmenu', handleContextMenu, true);
-
-    // Copy / Cut
     document.addEventListener('copy', handleCopy, true);
     document.addEventListener('cut', handleCut, true);
-
-    // Window focus / blur
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
 
-    // Visibility change (tab switching)
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        // Always show overlay when page becomes hidden
-        violationCountRef.current += 1;
-        setOverlayVisible(true);
+        setIsBlurred(true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // Drag
     document.addEventListener('dragstart', handleDragStart, true);
 
-    // Mouse leave (desktop) — catches when mouse leaves browser window
+    // Mouse leave (desktop)
     const handleMouseLeave = (e) => {
       if (!e.relatedTarget && e.toElement === null) {
-        // Mouse left the window entirely (not just to another element)
         if (!isDismissingRef.current && (Date.now() - dismissTimeRef.current) >= GRACE_PERIOD) {
-          setOverlayVisible(true);
+          setIsBlurred(true);
         }
       }
     };
     document.addEventListener('mouseleave', handleMouseLeave);
 
-    // Periodic visibility poll — catches edge cases where events don't fire
-    // (e.g. some mobile screenshot tools don't trigger visibilitychange on 2nd attempt)
+    // Periodic visibility poll — catches mobile screenshots that don't fire events
     let lastKnownVisible = !document.hidden;
     pollIntervalRef.current = setInterval(() => {
       const currentlyVisible = !document.hidden;
       if (!currentlyVisible && lastKnownVisible) {
-        // Page just became hidden
-        violationCountRef.current += 1;
-        setOverlayVisible(true);
+        setIsBlurred(true);
       }
       lastKnownVisible = currentlyVisible;
     }, 300);
 
-    // Inject print-blocking CSS
+    // Inject CSS: blur class + print blocking + user-select
     const styleId = 'anti-screenshot-print-css';
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style');
       style.id = styleId;
       style.textContent = `
+        /* Blur the entire page */
+        .nclex-ss-blur,
+        .nclex-ss-blur * {
+          filter: blur(22px) !important;
+          -webkit-filter: blur(22px) !important;
+          transition: filter 0.15s ease !important;
+        }
+        /* Don't blur the tap-to-continue pill */
+        .nclex-ss-blur .nclex-ss-unblur-pill,
+        .nclex-ss-blur .nclex-ss-unblur-pill * {
+          filter: none !important;
+          -webkit-filter: none !important;
+        }
         @media print {
           body * { display: none !important; }
           body::after {
@@ -252,7 +241,6 @@ const AntiScreenshot = () => {
           -ms-user-select: none;
           user-select: none;
         }
-        /* Allow text selection in input fields */
         .student-dashboard-shell input,
         .student-dashboard-shell textarea,
         .student-dashboard-shell select {
@@ -277,105 +265,50 @@ const AntiScreenshot = () => {
       document.removeEventListener('mouseleave', handleMouseLeave);
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+      body.classList.remove('nclex-ss-blur');
       const el = document.getElementById(styleId);
       if (el) el.remove();
     };
   }, [blockKeyDown, handleContextMenu, handleCopy, handleCut, handleBlur, handleFocus, handleDragStart]);
 
   // -------------------------------------------------------
-  // Render
+  // Render — just a small floating pill
   // -------------------------------------------------------
-  if (!overlayVisible) return null;
+  if (!isBlurred) return null;
 
   return (
     <div
+      className="nclex-ss-unblur-pill"
       onClick={handleDismiss}
       onKeyDown={(e) => { if (e.key === 'Escape') handleDismiss(); }}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Security overlay"
+      role="button"
       tabIndex={0}
+      aria-label="Tap to continue"
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
         zIndex: 99999,
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
+        padding: '16px 40px',
+        borderRadius: 12,
+        background: 'rgba(15, 23, 42, 0.9)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+        color: '#93c5fd',
+        fontSize: 15,
+        fontWeight: 600,
         cursor: 'pointer',
-        animation: 'antiSsFadeIn 0.15s ease-out',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        border: '1px solid rgba(59, 130, 246, 0.3)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        userSelect: 'none',
       }}
     >
-      <style>{`
-        @keyframes antiSsFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
-
-      {/* Shield icon */}
-      <div style={{
-        width: 80,
-        height: 80,
-        borderRadius: '50%',
-        background: 'rgba(239, 68, 68, 0.15)',
-        border: '2px solid rgba(239, 68, 68, 0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 24,
-      }}>
-        <i className="fas fa-shield-halved" style={{ fontSize: 36, color: '#ef4444' }}></i>
-      </div>
-
-      <h2 style={{
-        color: '#f1f5f9',
-        fontSize: 24,
-        fontWeight: 700,
-        marginBottom: 12,
-        textAlign: 'center',
-        padding: '0 20px',
-      }}>
-        Security Notice
-      </h2>
-
-      <p style={{
-        color: '#94a3b8',
-        fontSize: 16,
-        marginBottom: 8,
-        textAlign: 'center',
-        maxWidth: 400,
-        lineHeight: 1.6,
-        padding: '0 20px',
-      }}>
-        Screenshots, screen recording, and printing are <strong style={{ color: '#f87171' }}>not permitted</strong> on this platform.
-      </p>
-
-      <p style={{
-        color: '#64748b',
-        fontSize: 13,
-        marginBottom: 32,
-        textAlign: 'center',
-      }}>
-        Unauthorized sharing of exam content violates our terms of service.
-      </p>
-
-      <div style={{
-        padding: '12px 32px',
-        borderRadius: 8,
-        background: 'rgba(59, 130, 246, 0.15)',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        color: '#93c5fd',
-        fontSize: 14,
-        fontWeight: 600,
-      }}>
-        Tap anywhere to return to your dashboard
-      </div>
+      <i className="fas fa-lock" style={{ fontSize: 14, color: '#60a5fa' }}></i>
+      Tap to continue
     </div>
   );
 };
