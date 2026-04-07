@@ -158,10 +158,8 @@ class CATEngine {
     // Maximum items reached
     if (administeredCount >= this.maxItems) return true;
     
-    // Standard error threshold [citation:3]
-    if (se < this.targetSE) return true;
-    
-    // Confidence interval around passing standard [citation:7]
+    // Confidence interval around passing standard — primary stopping rule
+    // This is the real NCLEX rule: stop when 95% CI doesn't cross the passing standard
     const z = 1.96; // 95% confidence
     const ciLow = theta - z * se;
     const ciHigh = theta + z * se;

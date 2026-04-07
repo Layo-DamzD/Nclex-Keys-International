@@ -343,14 +343,17 @@ const TestCustomization = () => {
     }, { available: 0, used: 0, omitted: 0 });
   }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts]);
 
-  const questionRangeMin = 5;
+  // Practice test and case study: min 75. CAT/Assessment: handled server-side (min 85).
+  const questionRangeMin = testType === 'caseStudy' ? 1 : 75;
   const questionRangeMax = 150;
 
   useEffect(() => {
-    if (questionCount > questionRangeMax || questionCount < questionRangeMin) {
-      setQuestionCount(Math.min(questionRangeMax, Math.max(questionRangeMin, questionCount)));
+    if (testType !== 'caseStudy') {
+      if (questionCount > questionRangeMax || questionCount < questionRangeMin) {
+        setQuestionCount(Math.min(questionRangeMax, Math.max(questionRangeMin, questionCount)));
+      }
     }
-  }, [questionCount, questionRangeMax, questionRangeMin]);
+  }, [questionCount, questionRangeMax, questionRangeMin, testType]);
 
   const toggleCategory = (category) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
