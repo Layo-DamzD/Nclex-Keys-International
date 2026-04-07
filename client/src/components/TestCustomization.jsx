@@ -7,6 +7,9 @@ import { NCLEX_CLIENT_NEEDS_CATEGORIES } from '../constants/ClientNeeds';
 // Use the imported constant
 const CLIENT_NEEDS_CATEGORIES = NCLEX_CLIENT_NEEDS_CATEGORIES;
 
+// Case Study subcategories extracted from NGN Case Studies category
+const CASE_STUDY_SUBCATEGORIES = CATEGORIES['NGN Case Studies'] || [];
+
 const TestCustomization = () => {
   const normalizeKey = (value) => {
     const base = String(value || '')
@@ -32,7 +35,8 @@ const TestCustomization = () => {
   const [questionCountInput, setQuestionCountInput] = useState('75'); // For allowing empty input display
   const [timed, setTimed] = useState(true);
   const [tutorMode, setTutorMode] = useState(false);
-  const [testType, setTestType] = useState('practice'); // 'practice', 'cat', 'assessment'
+  const [testType, setTestType] = useState('practice'); // 'practice', 'cat', 'assessment', 'caseStudy'
+  const [selectedCaseStudies, setSelectedCaseStudies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   // Counts from API — already canonical (backend remaps DB names)
@@ -43,7 +47,7 @@ const TestCustomization = () => {
   const [categoryMap, setCategoryMap] = useState(CATEGORIES);
   const [countLoadError, setCountLoadError] = useState('');
   
-  // Category tab: 'subjects' or 'clientNeeds'
+  // Category tab: 'subjects' or 'clientNeeds' or 'caseStudies'
   const [categoryTab, setCategoryTab] = useState('clientNeeds');
   
   // Client Needs selections
@@ -121,6 +125,35 @@ const TestCustomization = () => {
       setSelectedClientNeeds([...NCLEX_CLIENT_NEEDS_CATEGORIES]);
     }
   };
+
+  // Case Study helpers
+  const handleCaseStudyToggle = (subcat) => {
+    setSelectedCaseStudies(prev =>
+      prev.includes(subcat)
+        ? prev.filter(s => s !== subcat)
+        : [...prev, subcat]
+    );
+  };
+
+  const handleSelectAllCaseStudies = () => {
+    if (selectedCaseStudies.length === CASE_STUDY_SUBCATEGORIES.length) {
+      setSelectedCaseStudies([]);
+    } else {
+      setSelectedCaseStudies([...CASE_STUDY_SUBCATEGORIES]);
+    }
+  };
+
+  const getCaseStudyCount = (subcat) => {
+    return subcategoryCounts?.['NGN Case Studies']?.[subcat] || 0;
+  };
+
+  const selectedCaseStudiesTotal = useMemo(() => {
+    if (selectedCaseStudies.length === 0 || selectedCaseStudies.length === CASE_STUDY_SUBCATEGORIES.length) {
+      // Use total for NGN Case Studies category
+      return Object.values(subcategoryCounts?.['NGN Case Studies'] || {}).reduce((sum, c) => sum + c, 0);
+    }
+    return selectedCaseStudies.reduce((sum, sub) => sum + getCaseStudyCount(sub), 0);
+  }, [selectedCaseStudies, subcategoryCounts]);
 
   // Subject category helpers
   const getPairKey = (category, subcategory) => `${category}:::${subcategory}`;
@@ -360,7 +393,11 @@ const TestCustomization = () => {
     ? (subjectStatusCounts || statusCounts)
     : (clientNeedStatusCounts || statusCounts);
   const totalQuestionBank = activeStatusCounts.total || 0;
-  const currentAvailable = categoryTab === 'clientNeeds' ? selectedClientNeedsTotal : selectedStats.available;
+  const currentAvailable = categoryTab === 'clientNeeds' 
+    ? selectedClientNeedsTotal 
+    : categoryTab === 'caseStudies'
+      ? selectedCaseStudiesTotal
+      : selectedStats.available;
   const maxAllowed = Math.min(questionRangeMax, currentAvailable);
 
   const handleSubmit = async (e) => {
@@ -387,6 +424,7 @@ const TestCustomization = () => {
 
     // Assessment always uses CAT (handled above). For practice, let user choose timed/tutor.
     const isAssessment = testType === 'assessment';
+    const isCaseStudy = testType === 'caseStudy';
     const isPractice = testType === 'practice';
     const effectiveTutorMode = isAssessment ? true : tutorMode;
     const effectiveTimed = isAssessment ? true : timed;
@@ -398,6 +436,15 @@ const TestCustomization = () => {
       }
       if (questionCount > currentAvailable) {
         setError(`Only ${currentAvailable} questions match your current selection.`);
+        return;
+      }
+    } else if (categoryTab === 'caseStudies') {
+      if (selectedCaseStudiesTotal === 0) {
+        setError('No case study questions are available.');
+        return;
+      }
+      if (questionCount > selectedCaseStudiesTotal) {
+        setError(`Only ${selectedCaseStudiesTotal} case study questions match your selection.`);
         return;
       }
     } else {
@@ -448,6 +495,27 @@ const TestCustomization = () => {
         if (isAssessment) {
           navData.settings = { ...navData.settings, testName: 'Assessment' };
         }
+        navigate('/test-session', { state: navData });
+      } else if (categoryTab === 'caseStudies') {
+        // Submit with case study subcategories
+        const caseStudySelections = selectedCaseStudies.length > 0
+          ? selectedCaseStudies.map(sub => ({ category: 'NGN Case Studies', subcategory: sub }))
+          : CASE_STUDY_SUBCATEGORIES.map(sub => ({ category: 'NGN Case Studies', subcategory: sub }));
+
+        const response = await axios.post('/api/student/generate-test', {
+          selections: caseStudySelections,
+          subcategories: caseStudySelections.map(item => item.subcategory),
+          filterMode: 'caseStudies',
+          questionCount,
+          timed: effectiveTimed,
+          tutorMode: effectiveTutorMode,
+          statusFilters,
+          testType: 'caseStudy',
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const navData = { ...response.data, testType: 'caseStudy' };
+        navData.settings = { ...navData.settings, testName: 'Case Study' };
         navigate('/test-session', { state: navData });
       } else {
         // Standard mode - submit with categories
@@ -510,7 +578,7 @@ const TestCustomization = () => {
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={() => setTestType('practice')}
+            onClick={() => { setTestType('practice'); }}
             style={{
               flex: 1,
               minWidth: '120px',
@@ -548,7 +616,7 @@ const TestCustomization = () => {
           </button>
           <button
             type="button"
-            onClick={() => setTestType('assessment')}
+            onClick={() => { setTestType('assessment'); }}
             style={{
               flex: 1,
               minWidth: '120px',
@@ -564,6 +632,25 @@ const TestCustomization = () => {
           >
             <i className="fas fa-clipboard-check me-2"></i>
             Assessment
+          </button>
+          <button
+            type="button"
+            onClick={() => { setTestType('caseStudy'); setCategoryTab('caseStudies'); }}
+            style={{
+              flex: 1,
+              minWidth: '120px',
+              padding: '12px 16px',
+              border: testType === 'caseStudy' ? '2px solid #f59e0b' : '1px solid #d1d5db',
+              borderRadius: '8px',
+              background: testType === 'caseStudy' ? '#fffbeb' : '#fff',
+              color: testType === 'caseStudy' ? '#d97706' : '#374151',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <i className="fas fa-book-open me-2"></i>
+            Case Study
           </button>
         </div>
         {testType === 'assessment' && (
@@ -582,6 +669,12 @@ const TestCustomization = () => {
           <div style={{ marginTop: '12px', padding: '10px', background: '#f0f9ff', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
             <i className="fas fa-info-circle me-2" style={{ color: '#0ea5e9' }}></i>
             Practice Test mode provides a relaxed learning environment with immediate feedback after each question.
+          </div>
+        )}
+        {testType === 'caseStudy' && (
+          <div style={{ marginTop: '12px', padding: '10px', background: '#fffbeb', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
+            <i className="fas fa-info-circle me-2" style={{ color: '#d97706' }}></i>
+            Case Study mode tests your clinical reasoning with NGN-style scenario-based questions. Select specific case study categories from the Case Studies tab below.
           </div>
         )}
       </div>
@@ -676,6 +769,57 @@ const TestCustomization = () => {
             <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
               CAT (Computerized Adaptive Testing) automatically selects questions based on your ability level. The test ends when the algorithm determines a pass/fail result with 95% confidence. No need to select categories or question count.
             </p>
+          </div>
+        )}
+
+        {/* Case Study Settings */}
+        {testType === 'caseStudy' && (
+          <div className="test-mode-section" style={{
+            marginBottom: '20px',
+            padding: '16px',
+            background: '#fffbeb',
+            borderRadius: '8px',
+            border: '1px solid #f59e0b'
+          }}>
+            <label style={{ fontWeight: 600, color: '#b45309', marginBottom: '8px', display: 'block' }}>
+              <i className="fas fa-book-open me-2"></i>
+              Case Study Settings
+            </label>
+            <p style={{ margin: '0 0 12px', color: '#6b7280', fontSize: '0.9rem' }}>
+              Choose how you want to practice case studies — with or without a timer, and with or without immediate feedback.
+            </p>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                onClick={() => handleTimedToggle(!timed)}>
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="caseStudyTimed"
+                  checked={timed}
+                  onChange={() => handleTimedToggle(!timed)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#f59e0b' }}
+                />
+                <label className="form-check-label" htmlFor="caseStudyTimed"
+                  style={{ fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                  <i className="fas fa-clock me-1"></i> Timed
+                </label>
+              </div>
+              <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                onClick={() => handleTutorToggle(!tutorMode)}>
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="caseStudyTutor"
+                  checked={tutorMode}
+                  onChange={() => handleTutorToggle(!tutorMode)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#f59e0b' }}
+                />
+                <label className="form-check-label" htmlFor="caseStudyTutor"
+                  style={{ fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                  <i className="fas fa-eye me-1"></i> Tutor Mode (immediate feedback)
+                </label>
+              </div>
+            </div>
           </div>
         )}
 
@@ -918,9 +1062,27 @@ const TestCustomization = () => {
             >
               Client Needs
             </button>
+            <button
+              type="button"
+              onClick={() => { setCategoryTab('caseStudies'); setTestType('caseStudy'); }}
+              style={{
+                flex: 1,
+                padding: '12px 20px',
+                border: 'none',
+                background: categoryTab === 'caseStudies' ? '#fff' : 'transparent',
+                borderBottom: categoryTab === 'caseStudies' ? '3px solid #d97706' : '3px solid transparent',
+                fontWeight: categoryTab === 'caseStudies' ? 600 : 500,
+                color: categoryTab === 'caseStudies' ? '#d97706' : '#6b7280',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Case Studies
+            </button>
           </div>
 
           {/* Select All */}
+          {categoryTab !== 'caseStudies' && (
           <div style={{
             padding: '12px 16px',
             borderBottom: '1px solid #e2e8f0',
@@ -959,6 +1121,41 @@ const TestCustomization = () => {
               </label>
             </div>
           </div>
+          )}
+          {categoryTab === 'caseStudies' && (
+          <div style={{
+            padding: '12px 16px',
+            borderBottom: '1px solid #e2e8f0',
+            background: '#fff'
+          }}>
+            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                role="checkbox"
+                aria-checked={selectedCaseStudies.length === CASE_STUDY_SUBCATEGORIES.length}
+                onClick={handleSelectAllCaseStudies}
+                onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleSelectAllCaseStudies(); } }}
+                tabIndex={0}
+                style={{
+                  width: '22px', height: '22px', borderRadius: '6px',
+                  border: '2px solid #fcd34d',
+                  background: selectedCaseStudies.length === CASE_STUDY_SUBCATEGORIES.length ? '#d97706' : '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0
+                }}
+              >
+                {selectedCaseStudies.length === CASE_STUDY_SUBCATEGORIES.length && (
+                  <i className="fas fa-check" style={{ fontSize: '0.7rem', color: '#fff' }}></i>
+                )}
+              </div>
+              <label
+                onClick={handleSelectAllCaseStudies}
+                style={{ fontWeight: 600, cursor: 'pointer', color: '#374151', fontSize: '0.95rem' }}
+              >
+                Select All Case Studies
+              </label>
+            </div>
+          </div>
+          )}
 
           {/* Categories Content */}
           <div style={{ padding: '16px', background: '#fff', maxHeight: '300px', overflowY: 'auto' }}>
@@ -1120,6 +1317,75 @@ const TestCustomization = () => {
                 ))}
               </div>
             )}
+            {/* Case Studies Tab */}
+            {categoryTab === 'caseStudies' && (
+              <div className="case-studies-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {(() => {
+                  const cols = [[], []];
+                  CASE_STUDY_SUBCATEGORIES.forEach((sub, idx) => cols[idx % 2].push(sub));
+                  return cols.map((column, colIndex) => (
+                    <div key={colIndex} className="case-study-column">
+                      {column.map((subcat) => {
+                        const count = getCaseStudyCount(subcat);
+                        const isSelected = selectedCaseStudies.includes(subcat);
+                        return (
+                          <div key={subcat} className="form-check" style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '10px 12px',
+                            background: isSelected ? '#fffbeb' : '#f8fafc',
+                            borderRadius: '6px',
+                            marginBottom: '8px',
+                            border: isSelected ? '1px solid #fcd34d' : '1px solid #e2e8f0',
+                            transition: 'all 0.2s'
+                          }}>
+                            <div
+                              role="checkbox"
+                              aria-checked={isSelected}
+                              onClick={() => handleCaseStudyToggle(subcat)}
+                              onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleCaseStudyToggle(subcat); } }}
+                              tabIndex={0}
+                              style={{
+                                width: '22px', height: '22px', borderRadius: '6px',
+                                border: isSelected ? '2px solid #d97706' : '2px solid #fcd34d',
+                                background: isSelected ? '#d97706' : '#fff',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0
+                              }}
+                            >
+                              {isSelected && <i className="fas fa-check" style={{ fontSize: '0.7rem', color: '#fff' }}></i>}
+                            </div>
+                            <label
+                              onClick={() => handleCaseStudyToggle(subcat)}
+                              style={{
+                                flex: 1,
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                                color: '#374151',
+                                fontSize: '0.9rem'
+                              }}
+                            >
+                              {subcat}
+                            </label>
+                            <span style={{
+                              background: '#d97706',
+                              color: '#fff',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600
+                            }}>
+                              {count}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
           </div>
         </div>
         )}
@@ -1204,7 +1470,7 @@ const TestCustomization = () => {
         >
           {loading 
             ? (testType === 'cat' ? 'Starting CAT...' : 'Generating...') 
-            : (testType === 'cat' ? 'START CAT EXAM' : testType === 'practice' ? 'START PRACTICE TEST' : 'START ASSESSMENT')}
+            : (testType === 'cat' ? 'START CAT EXAM' : testType === 'practice' ? 'START PRACTICE TEST' : testType === 'caseStudy' ? 'START CASE STUDY' : 'START ASSESSMENT')}
         </button>
       </form>
     </div>
