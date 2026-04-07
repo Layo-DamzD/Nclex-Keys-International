@@ -1182,7 +1182,7 @@ const startCATSession = async (req, res) => {
       passingStandard: 0.0, // θ_cut
       minItems: 85,
       maxItems: 150,
-      targetSE: 0.3
+      targetSE: 0.08
     });
     
     // Get first item (start with medium difficulty)
@@ -1202,7 +1202,7 @@ const startCATSession = async (req, res) => {
       engine: {
         minItems: 85,
         maxItems: 150,
-        targetSE: 0.3,
+        targetSE: 0.08,
         passingStandard: 0.0
       }
     };

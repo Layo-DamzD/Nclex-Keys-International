@@ -31,8 +31,8 @@ const TestCustomization = () => {
 
   const [selectedSubcategoryPairs, setSelectedSubcategoryPairs] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
-  const [questionCount, setQuestionCount] = useState(75);
-  const [questionCountInput, setQuestionCountInput] = useState('75'); // For allowing empty input display
+  const [questionCount, setQuestionCount] = useState(85);
+  const [questionCountInput, setQuestionCountInput] = useState('85'); // For allowing empty input display
   const [timed, setTimed] = useState(true);
   const [tutorMode, setTutorMode] = useState(false);
   const [testType, setTestType] = useState('practice'); // 'practice', 'cat', 'assessment', 'caseStudy'
@@ -343,8 +343,8 @@ const TestCustomization = () => {
     }, { available: 0, used: 0, omitted: 0 });
   }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts]);
 
-  // Practice test and case study: min 75. CAT/Assessment: handled server-side (min 85).
-  const questionRangeMin = testType === 'caseStudy' ? 1 : 75;
+  // Practice test and case study: min 85. CAT/Assessment: handled server-side (min 85).
+  const questionRangeMin = testType === 'caseStudy' ? 1 : 85;
   const questionRangeMax = 150;
 
   useEffect(() => {

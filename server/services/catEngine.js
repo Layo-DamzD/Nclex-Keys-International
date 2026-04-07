@@ -8,9 +8,9 @@ class CATEngine {
   constructor(options = {}) {
     this.passingStandard = options.passingStandard || 0.0; // θ_cut
     this.confidenceLevel = options.confidenceLevel || 0.95; // 95% CI
-    this.minItems = options.minItems || 75;
-    this.maxItems = options.maxItems || 265;
-    this.targetSE = options.targetSE || 0.3; // Standard error threshold [citation:3]
+    this.minItems = options.minItems || 85;
+    this.maxItems = options.maxItems || 150;
+    this.targetSE = options.targetSE || 0.08; // Tighter SE for more accurate pass/fail
     this.initialTheta = options.initialTheta || 0.0;
     this.estimationMethod = options.estimationMethod || 'EAP'; // MLE, EAP, or hybrid [citation:9]
   }
