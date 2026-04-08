@@ -219,6 +219,24 @@ const AssessmentGauge = ({ percentage }) => {
   );
 };
 
+// Normalize a value to a single letter (A-Z) for CAT evaluation
+const normalizeCATLetter = (answer) => {
+  if (answer === null || answer === undefined) return '';
+  const str = String(answer).trim().toUpperCase();
+  if (/^[A-Z]$/.test(str)) return str;
+  const numMatch = str.match(/^(\d+)$/);
+  if (numMatch) {
+    const num = parseInt(numMatch[1], 10);
+    if (num >= 1 && num <= 26) return String.fromCharCode(64 + num);
+  }
+  const optionMatch = str.match(/OPTION\s*(\d+)/i);
+  if (optionMatch) {
+    const num = parseInt(optionMatch[1], 10);
+    if (num >= 1 && num <= 26) return String.fromCharCode(64 + num);
+  }
+  return str;
+};
+
 // --- Main CatSession Component ---
 const CatSession = () => {
   const location = useLocation();
@@ -429,6 +447,7 @@ const CatSession = () => {
 
         const response = await axios.post('/api/student/cat/answer', {
           questionId: currentQuestion._id,
+          subQuestionId: subQ._id,
           answer: caseAnswers[subQ._id] || ''
         }, {
           headers: { Authorization: `Bearer ${token}` }
@@ -459,9 +478,25 @@ const CatSession = () => {
 
     if (question.type === 'sata') {
       const userAns = subQ ? (caseAnswers[subQ._id] || []) : selectedOptions;
-      const normalizedUser = (Array.isArray(userAns) ? userAns : [userAns]).map(v => String(v).toUpperCase()).sort();
-      const normalizedCorrect = (Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer]).map(v => String(v).toUpperCase()).sort();
-      wasCorrect = JSON.stringify(normalizedUser) === JSON.stringify(normalizedCorrect);
+      // Parse correct answer (array or string)
+      const correctArr = Array.isArray(correctAnswer)
+        ? correctAnswer.map(v => normalizeCATLetter(v)).filter(Boolean)
+        : String(correctAnswer || '').includes(',')
+          ? String(correctAnswer).split(',').map(v => normalizeCATLetter(v.trim())).filter(Boolean)
+          : /^[A-Za-z]+$/.test(String(correctAnswer || ''))
+            ? String(correctAnswer).toUpperCase().split('').filter(c => /[A-Z]/.test(c))
+            : [normalizeCATLetter(correctAnswer)].filter(Boolean);
+      // Parse user answer
+      const userArr = (Array.isArray(userAns) ? userAns : [userAns]).map(v => normalizeCATLetter(v)).filter(Boolean);
+      const correctSet = new Set(correctArr.map(c => c.toUpperCase()));
+      const userSet = new Set(userArr.map(c => c.toUpperCase()));
+      const totalMarks = Math.max(correctSet.size, 1);
+      const correctPicked = [...userSet].filter(c => correctSet.has(c)).length;
+      const wrongPicked = [...userSet].filter(c => !correctSet.has(c)).length;
+      const earnedMarks = correctPicked - wrongPicked;
+      if (earnedMarks >= totalMarks) wasCorrect = true;
+      else if (earnedMarks > 0) wasCorrect = 'partial';
+      else wasCorrect = false;
     } else if (question.type === 'fill-blank') {
       const userAns = subQ ? (caseAnswers[subQ._id] || '') : fillBlankAnswer;
       const acceptable = String(correctAnswer).split(';').map(a => a.trim().toLowerCase());
@@ -499,9 +534,11 @@ const CatSession = () => {
       const correctOptions = String(correctAnswer).split('|').map(a => a.trim().toLowerCase());
       wasCorrect = correctOptions.includes(String(userAns).trim().toLowerCase());
     } else {
-      // MCQ
+      // MCQ — use letter normalization like the server
       const userAns = subQ ? (caseAnswers[subQ._id] || '') : answer;
-      wasCorrect = String(userAns).toUpperCase() === String(correctAnswer).toUpperCase();
+      const normalizedUser = normalizeCATLetter(userAns);
+      const normalizedCorrect = normalizeCATLetter(correctAnswer);
+      wasCorrect = normalizedUser !== '' && normalizedUser === normalizedCorrect;
     }
 
     setIsCorrect(wasCorrect);

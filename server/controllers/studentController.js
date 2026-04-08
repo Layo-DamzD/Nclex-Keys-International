@@ -1270,7 +1270,7 @@ const startCATSession = async (req, res) => {
 const submitCATAnswer = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const { questionId, answer } = req.body;
+    const { questionId, answer, subQuestionId } = req.body;
     
     // Get session
     const session = catSessions.get(studentId);
@@ -1285,8 +1285,18 @@ const submitCATAnswer = async (req, res) => {
         return res.status(404).json({ message: 'Question not found' });
       }
 
+      // For case-study sub-questions: evaluate against the SUB-question, not the parent
+      let effectiveQuestion = question;
+      let effectiveAnswer = answer;
+      if (question.type === 'case-study' && subQuestionId && Array.isArray(question.questions)) {
+        const subQ = question.questions.find(sq => String(sq._id) === String(subQuestionId));
+        if (subQ) {
+          effectiveQuestion = subQ;
+        }
+      }
+
       // Record response with marks-based scoring
-      const evaluation = evaluateCATAnswer(question, answer);
+      const evaluation = evaluateCATAnswer(effectiveQuestion, effectiveAnswer);
       session.administered.push(questionId);
       // For CAT engine (IRT ability estimation), use binary response
       session.responses.push(evaluation.isCorrect === true ? 1 : 0);
@@ -1295,6 +1305,18 @@ const submitCATAnswer = async (req, res) => {
       if (!session.totalMarks) session.totalMarks = [];
       session.earnedMarks.push(evaluation.earnedMarks);
       session.totalMarks.push(evaluation.totalMarks);
+      // Store full answer details for review display (not just binary)
+      if (!session.answerDetails) session.answerDetails = [];
+      session.answerDetails.push({
+        questionId,
+        subQuestionId: subQuestionId || null,
+        userAnswer: effectiveAnswer,
+        earnedMarks: evaluation.earnedMarks,
+        totalMarks: evaluation.totalMarks,
+        isCorrect: evaluation.isCorrect,
+        questionType: effectiveQuestion.type,
+        scenario: question.type === 'case-study' ? question.scenario : undefined
+      });
     
     // Recreate engine with session parameters
     const engine = new CATEngine({
@@ -1341,12 +1363,52 @@ const submitCATAnswer = async (req, res) => {
       const totalPossible = (session.totalMarks || []).reduce((s, m) => s + m, 0);
       const percentage = totalPossible > 0 ? Math.round((totalEarned / totalPossible) * 100) : 0;
 
+      // Build answers array with full details (handles both regular and case-study sub-questions)
+      const answerDetails = session.answerDetails || [];
+      const answers = await Promise.all(answerDetails.map(async (detail) => {
+        let questionData;
+        if (detail.subQuestionId && detail.questionId) {
+          // Case-study sub-question: fetch from parent
+          const parent = administeredDocs.find(d => String(d._id) === String(detail.questionId));
+          if (parent && Array.isArray(parent.questions)) {
+            questionData = parent.questions.find(sq => String(sq._id) === String(detail.subQuestionId));
+          }
+        } else {
+          // Regular question
+          questionData = administeredDocs.find(d => String(d._id) === String(detail.questionId));
+        }
+
+        return {
+          questionId: detail.subQuestionId || detail.questionId,
+          userAnswer: detail.userAnswer,
+          isCorrect: detail.isCorrect,
+          earnedMarks: detail.earnedMarks,
+          totalMarks: detail.totalMarks,
+          correctAnswer: questionData?.correctAnswer,
+          questionText: questionData?.questionText,
+          options: questionData?.options,
+          type: questionData?.type || detail.questionType,
+          rationale: questionData?.rationale,
+          scenario: detail.scenario,
+          matrixRows: questionData?.matrixRows,
+          matrixColumns: questionData?.matrixColumns,
+          hotspotImageUrl: questionData?.hotspotImageUrl,
+          hotspotTargets: questionData?.hotspotTargets,
+          clozeTemplate: questionData?.clozeTemplate,
+          clozeBlanks: questionData?.clozeBlanks,
+          category: questionData?.category,
+          subcategory: questionData?.subcategory,
+        };
+      }));
+
+      const totalQuestionsCount = answers.length;
+
       const testResult = new TestResult({
         student: studentId,
         testName,
         date: new Date(),
         score: totalEarned,
-        totalQuestions: session.administered.length,
+        totalQuestions: totalQuestionsCount,
         totalPoints: totalPossible,
         earnedPoints: totalEarned,
         timeTaken: (new Date() - session.startTime) / 60000,
@@ -1354,18 +1416,7 @@ const submitCATAnswer = async (req, res) => {
         passed,
         theta: session.theta,
         se: session.se,
-        answers: administeredItems.map((item, i) => ({
-          questionId: item._id,
-          userAnswer: session.responses[i] ? 'correct' : 'incorrect',
-          isCorrect: session.responses[i] === 1,
-          earnedMarks: (session.earnedMarks || [])[i] ?? (session.responses[i] ? 1 : 0),
-          totalMarks: (session.totalMarks || [])[i] ?? 1,
-          correctAnswer: item.correctAnswer,
-          questionText: item.questionText,
-          options: item.options,
-          type: item.type,
-          rationale: item.rationale
-        }))
+        answers
       });
       
       await testResult.save();

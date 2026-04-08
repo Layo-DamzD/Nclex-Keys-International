@@ -1114,6 +1114,7 @@ const TestSession = () => {
         q.questions.forEach(subQ => {
           const userAnswer = caseAnswers[subQ._id];
           let isCorrect = false;
+          let sataScoreMeta = { earnedMarks: 0, totalMarks: 1 };
           if (subQ.type === 'multiple-choice') {
             // Normalize both answers to letter format (handles "2" vs "B" differences)
             const normalizedUser = normalizeToLetter(userAnswer);
@@ -1122,6 +1123,7 @@ const TestSession = () => {
           } else if (subQ.type === 'sata') {
             const sata = evaluateSataAnswer(userAnswer, subQ.correctAnswer);
             isCorrect = sata.isCorrect;
+            sataScoreMeta = sata;
           } else if (subQ.type === 'fill-blank') {
             isCorrect = isFillBlankCorrect(userAnswer, subQ.correctAnswer);
           } else if (subQ.type === 'highlight') {
@@ -1137,9 +1139,9 @@ const TestSession = () => {
           } else if (subQ.type === 'cloze-dropdown') {
             isCorrect = isClozeDropdownCorrect(userAnswer, subQ.correctAnswer);
           }
-          const sataScoreMeta = subQ.type === 'sata'
-            ? evaluateSataAnswer(userAnswer, subQ.correctAnswer)
-            : { earnedMarks: isCorrect === true ? 1 : 0, totalMarks: 1 };
+          if (subQ.type !== 'sata') {
+            sataScoreMeta = { earnedMarks: isCorrect === true ? 1 : 0, totalMarks: 1 };
+          }
 
           allResults.push({
             questionId: subQ._id,
@@ -1171,6 +1173,7 @@ const TestSession = () => {
       } else {
         const userAnswer = answers[q._id];
         let isCorrect = false;
+        let sataScoreMeta = { earnedMarks: 0, totalMarks: 1 };
         if (q.type === 'multiple-choice') {
           // Normalize both answers to letter format (handles "2" vs "B" differences)
           const normalizedUser = normalizeToLetter(userAnswer);
@@ -1179,6 +1182,7 @@ const TestSession = () => {
         } else if (q.type === 'sata') {
           const sata = evaluateSataAnswer(userAnswer, q.correctAnswer);
           isCorrect = sata.isCorrect;
+          sataScoreMeta = sata;
         } else if (q.type === 'fill-blank') {
           isCorrect = isFillBlankCorrect(userAnswer, q.correctAnswer);
         } else if (q.type === 'highlight') {
@@ -1194,9 +1198,9 @@ const TestSession = () => {
         } else if (q.type === 'cloze-dropdown') {
           isCorrect = isClozeDropdownCorrect(userAnswer, q.correctAnswer);
         }
-        const sataScoreMeta = q.type === 'sata'
-          ? evaluateSataAnswer(userAnswer, q.correctAnswer)
-          : { earnedMarks: isCorrect === true ? 1 : 0, totalMarks: 1 };
+        if (q.type !== 'sata') {
+          sataScoreMeta = { earnedMarks: isCorrect === true ? 1 : 0, totalMarks: 1 };
+        }
 
         allResults.push({
           questionId: q._id,
