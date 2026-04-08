@@ -64,9 +64,42 @@ const submitTest = async (req, res) => {
     }
 
     // Fetch question docs for server-side evaluation
-    const questionDocs = await Question.find({ _id: { $in: questionIds } })
-      .select('_id type category subcategory questionText questionImageUrl options correctAnswer rationale rationaleImageUrl matrixRows matrixColumns hotspotImageUrl hotspotTargets clozeTemplate clozeBlanks');
+    // Include case-study questions with their sub-questions so we can evaluate sub-Q answers
+    let questionDocs = await Question.find({ _id: { $in: questionIds } })
+      .select('_id type category subcategory questionText questionImageUrl options correctAnswer rationale rationaleImageUrl matrixRows matrixColumns hotspotImageUrl hotspotTargets clozeTemplate clozeBlanks scenario sections caseStudyType questions');
+
+    // For case-study sub-questions, we also need to fetch the parent case-study documents.
+    // Sub-question IDs won't match top-level _id, so we find parents whose questions array contains matching sub-IDs.
+    const foundIds = new Set(questionDocs.map(q => String(q._id)));
+    const missingIds = questionIds.filter(id => !foundIds.has(String(id)));
+    if (missingIds.length > 0) {
+      // Find all case-study documents that contain these sub-question IDs
+      const parentCaseStudies = await Question.find({
+        type: 'case-study',
+        'questions._id': { $in: missingIds }
+      }).select('_id type category subcategory questions scenario sections caseStudyType');
+      // Add parents not already loaded (they won't duplicate since sub-Q IDs differ from parent _id)
+      for (const parent of parentCaseStudies) {
+        if (!foundIds.has(String(parent._id))) {
+          questionDocs.push(parent);
+        }
+      }
+    }
+
     const questionMap = new Map(questionDocs.map((q) => [String(q._id), q]));
+
+    // Also build a map of case-study sub-question IDs -> sub-question docs
+    // so that sub-questions from case studies can be evaluated server-side
+    const subQuestionMap = new Map();
+    for (const doc of questionDocs) {
+      if (doc.type === 'case-study' && Array.isArray(doc.questions)) {
+        for (const subQ of doc.questions) {
+          if (subQ._id) {
+            subQuestionMap.set(String(subQ._id), subQ);
+          }
+        }
+      }
+    }
 
     // Server-side answer normalization helper (mirrors client-side normalizeToLetter)
     const serverNormalizeToLetter = (answer) => {
@@ -222,7 +255,9 @@ const submitTest = async (req, res) => {
     };
 
     const enrichedAnswers = results.map((result) => {
-      const q = questionMap.get(String(result.questionId));
+      const qidStr = String(result.questionId);
+      // Check top-level questions first, then case-study sub-questions
+      const q = questionMap.get(qidStr) || subQuestionMap.get(qidStr);
       // Re-evaluate answer server-side using the correctAnswer from the database
       const evaluation = serverEvaluateAnswer(result, q);
       return {
@@ -446,6 +481,11 @@ const generateTest = async (req, res) => {
       } else {
         return res.status(400).json({ message: 'Select at least one subcategory' });
       }
+    }
+
+    // For case study mode, only fetch case-study type questions
+    if (req.body.testType === 'caseStudy') {
+      query.type = 'case-study';
     }
 
     // Filter by question type (Traditional vs Next Gen)
