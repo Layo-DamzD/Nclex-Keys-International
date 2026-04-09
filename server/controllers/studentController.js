@@ -894,6 +894,40 @@ const getStudyMaterials = async (req, res) => {
   }
 };
 
+// @desc    Proxy download for study material files (avoids CORS issues with Cloudinary)
+// @route   GET /api/student/download-material
+// @access  Private
+const downloadMaterial = async (req, res) => {
+  try {
+    const { url, title, fileType } = req.query;
+    if (!url) {
+      return res.status(400).json({ message: 'No file URL provided' });
+    }
+
+    // Fetch the file from the source (Cloudinary, local, etc.)
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(response.status).json({ message: `Failed to fetch file (HTTP ${response.status})` });
+    }
+
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const buffer = await response.arrayBuffer();
+
+    const ext = fileType || 'pdf';
+    const fileName = `${(title || 'study-material').replace(/[^a-zA-Z0-9-_ ]/g, '_')}.${ext}`;
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', buffer.byteLength);
+    res.setHeader('Cache-Control', 'no-cache');
+
+    return res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('Download proxy error:', error);
+    res.status(500).json({ message: 'Failed to download material' });
+  }
+};
+
 // @desc    Get student performance data (trends and weak areas)
 // @route   GET /api/student/performance
 // @access  Private
@@ -2036,6 +2070,7 @@ module.exports = {
   getTestResult,
   getPreparedTest,
   getStudyMaterials,
+  downloadMaterial,
   getPerformanceData,
   getPerformanceDataDetailed,
   getProfile,

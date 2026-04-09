@@ -99,77 +99,53 @@ const StudyMaterials = () => {
     setDownloadError('');
     try {
       const fileUrl = selectedMaterial.fileUrl;
-      let fullUrl = fileUrl;
-      
-      // For Cloudinary URLs, fetch and download as blob
-      if (fileUrl.includes('cloudinary.com') || fileUrl.includes('res.cloudinary.com')) {
-        const response = await fetch(fileUrl);
-        if (!response.ok) throw new Error(`Download failed (HTTP ${response.status})`);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const ext = selectedMaterial.fileType || getExtFromUrl(fileUrl) || 'pdf';
-        const fileName = `${selectedMaterial.title || 'study-material'}.${ext}`;
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        // Delay cleanup so the browser has time to start the download
-        setTimeout(() => {
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        }, 5000);
-        // Fallback for mobile: if download didn't trigger, open in new tab
-        setTimeout(() => {
-          window.URL.revokeObjectURL(url);
-        }, 10000);
-        closeDownloadModal();
-        return;
-      }
-
-      // For local files, construct the proper URL
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nclex-keys-international.onrender.com';
-      
-      if (!fileUrl.startsWith('http') && !fileUrl.startsWith('//')) {
-        let cleanPath = fileUrl.replace(/^\/+/, '');
-        if (!cleanPath.startsWith('api/')) {
-          cleanPath = `api/${cleanPath}`;
-        }
-        fullUrl = `${apiBaseUrl}/${cleanPath}`;
-      }
-
-      // Fetch and download as blob for direct download
       const token = localStorage.getItem('token');
-      const response = await fetch(fullUrl, {
+
+      // Use server-side proxy download to avoid CORS issues with Cloudinary
+      // This works for all storage backends (Cloudinary, local, etc.)
+      const params = new URLSearchParams({
+        url: fileUrl,
+        title: selectedMaterial.title || 'study-material',
+        fileType: selectedMaterial.fileType || 'pdf',
+      });
+      
+      const response = await fetch(`/api/student/download-material?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
-      if (!response.ok) throw new Error(`Download failed (HTTP ${response.status})`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Download failed (HTTP ${response.status})`);
+      }
+
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const ext = selectedMaterial.fileType || getExtFromUrl(fullUrl) || 'pdf';
+      const ext = selectedMaterial.fileType || 'pdf';
       const fileName = `${selectedMaterial.title || 'study-material'}.${ext}`;
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = fileName;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
-      // Delay cleanup so the browser has time to start the download
+
+      // Cleanup
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
       }, 5000);
-      // Fallback: if link.click didn't work (common on mobile), try opening in new tab
+
+      // Mobile fallback
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (isMobile && blob.size > 0) {
-        // On mobile, programmatic click often fails — open as fallback
         setTimeout(() => {
           const mobileUrl = window.URL.createObjectURL(blob);
           window.open(mobileUrl, '_blank');
           setTimeout(() => window.URL.revokeObjectURL(mobileUrl), 10000);
         }, 500);
       }
+
       closeDownloadModal();
     } catch (error) {
       console.error('Failed to download material:', error);

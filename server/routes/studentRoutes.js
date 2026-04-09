@@ -18,6 +18,7 @@ const {
   getTestResult,
   getPreparedTest,
   getStudyMaterials,
+  downloadMaterial,
   getPerformanceData,
   getPerformanceDataDetailed,
   getProfile,
@@ -56,6 +57,7 @@ router.post('/submit-test', protect, submitTest);
 router.get('/test-result/:id', protect, getTestResult);
 router.get('/test/:id', protect, getPreparedTest);
 router.get('/study-materials', authOnly, getStudyMaterials);
+router.get('/download-material', authOnly, downloadMaterial);
 router.get('/performance', protect, getPerformanceData);
 router.get('/performance-detailed', protect, getPerformanceDataDetailed);
 router.get('/profile', protect, getProfile);
