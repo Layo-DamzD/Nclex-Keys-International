@@ -18,11 +18,25 @@ const Navbar = () => {
   </div>
 </Link>
 
-        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <button className="navbar-toggler d-none d-lg-inline-flex" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span className="navbar-toggler-icon"></span>
         </button>
 
-        <div className="collapse navbar-collapse" id="navbarNav">
+        {/* Mobile action bar - always visible below navbar on small screens (3-column grid) */}
+        <div className="nki-mobile-action-bar d-lg-none">
+          <Link className="btn nki-mobile-action-btn nki-mobile-action-brainiac" to="/brainiac">
+            <i className="fas fa-brain me-1"></i>Brainiac
+          </Link>
+          <Link className="btn nki-mobile-action-btn nki-mobile-action-test" to="/test-your-knowledge">
+            <i className="fas fa-clipboard-check me-1"></i>Public Test
+          </Link>
+          <Link className="btn nki-mobile-action-btn nki-mobile-action-login" to="/login">
+            <i className="fas fa-sign-in-alt me-1"></i>Login
+          </Link>
+        </div>
+
+        {/* Desktop navbar - collapsible, only on lg+ */}
+        <div className="collapse navbar-collapse d-lg-flex" id="navbarNav">
           <ul className="navbar-nav ms-auto align-items-center nki-navbar-actions">
             {/* Brainiac button - purple outline, on right edge */}
             <li className="nav-item">

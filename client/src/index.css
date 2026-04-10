@@ -11168,6 +11168,88 @@ html[data-app-theme='dark'] .pwa-install-inline-btn--admin-header {
   }
 }
 
+/* ─── Mobile Action Bar (always visible below navbar on small screens) ─── */
+.nki-mobile-action-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 8px 0 4px;
+  width: 100%;
+}
+
+.nki-mobile-action-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 7px 4px !important;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nki-mobile-action-btn i {
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.nki-mobile-action-brainiac {
+  background: #f3e8ff;
+  color: #7c3aed;
+  border: 1px solid #d8b4fe;
+}
+
+.nki-mobile-action-brainiac:hover,
+.nki-mobile-action-brainiac:active {
+  background: #7c3aed;
+  color: #fff;
+  border-color: #7c3aed;
+}
+
+.nki-mobile-action-test {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #6ee7b7;
+}
+
+.nki-mobile-action-test:hover,
+.nki-mobile-action-test:active {
+  background: #059669;
+  color: #fff;
+  border-color: #059669;
+}
+
+.nki-mobile-action-login {
+  background: #1d4ed8;
+  color: #fff;
+  border: 1px solid #1d4ed8;
+}
+
+.nki-mobile-action-login:hover,
+.nki-mobile-action-login:active {
+  background: #1e40af;
+  border-color: #1e40af;
+}
+
+@media (max-width: 359.98px) {
+  .nki-mobile-action-btn {
+    font-size: 0.65rem;
+    padding: 6px 2px !important;
+    gap: 3px;
+  }
+
+  .nki-mobile-action-btn i {
+    font-size: 0.7rem;
+  }
+}
+
 .brainiac-page {
   min-height: 100vh;
   min-height: 100dvh;
