@@ -99,6 +99,7 @@ const StudyMaterials = () => {
     setDownloadError('');
     try {
       const fileUrl = selectedMaterial.fileUrl;
+      const backupUrl = selectedMaterial.backupUrl || '';
       const token = localStorage.getItem('token');
 
       // Use server-side proxy download to avoid CORS issues with Cloudinary
@@ -108,6 +109,9 @@ const StudyMaterials = () => {
         title: selectedMaterial.title || 'study-material',
         fileType: selectedMaterial.fileType || 'pdf',
       });
+      if (backupUrl) {
+        params.set('backupUrl', backupUrl);
+      }
       
       const response = await fetch(`/api/student/download-material?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}

@@ -9,6 +9,7 @@ const studyMaterialSchema = new mongoose.Schema({
     default: 'Study Guide'
   },
   fileUrl: { type: String, required: true },
+  backupUrl: { type: String, default: '' },
   fileType: { type: String, enum: ['pdf', 'docx', 'pptx', 'mp4', 'other'], default: 'pdf' },
   icon: { type: String, default: 'fa-file-pdf' },
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

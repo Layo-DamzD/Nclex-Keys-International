@@ -886,7 +886,7 @@ const getStudyMaterials = async (req, res) => {
   try {
     const materials = await StudyMaterial.find({ isActive: true })
       .sort({ createdAt: -1 })
-      .select('title description category fileUrl fileType icon');
+      .select('title description category fileUrl backupUrl fileType icon');
     res.json(materials);
   } catch (error) {
     console.error(error);
@@ -899,7 +899,7 @@ const getStudyMaterials = async (req, res) => {
 // @access  Private
 const downloadMaterial = async (req, res) => {
   try {
-    const { url, title, fileType } = req.query;
+    const { url, title, fileType, backupUrl } = req.query;
     if (!url) {
       return res.status(400).json({ message: 'No file URL provided' });
     }
@@ -926,12 +926,29 @@ const downloadMaterial = async (req, res) => {
     }
 
     // Fetch the file from the source (Cloudinary, local, etc.)
-    const response = await fetch(absoluteUrl, {
+    let response = await fetch(absoluteUrl, {
       redirect: 'follow',
       headers: {
         'User-Agent': 'NclexKeys-DownloadProxy/1.0',
       },
     });
+
+    // If primary URL fails with 404, try the MongoDB backup URL
+    if (!response.ok && response.status === 404 && backupUrl) {
+      console.log('Download: primary URL returned 404, trying backup URL:', backupUrl);
+      try {
+        const backupAbsolute = new URL(backupUrl, `${req.protocol}://${req.get('host')}`);
+        response = await fetch(backupAbsolute.href, {
+          redirect: 'follow',
+          headers: { 'User-Agent': 'NclexKeys-DownloadProxy/1.0' },
+        });
+        if (response.ok) {
+          console.log('Download: backup URL succeeded:', backupAbsolute.href);
+        }
+      } catch (backupErr) {
+        console.error('Download: backup URL also failed:', backupErr.message);
+      }
+    }
 
     if (!response.ok) {
       console.error('Download: source returned', response.status, response.statusText, 'for', absoluteUrl);

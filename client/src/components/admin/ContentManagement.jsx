@@ -73,6 +73,7 @@ const ContentManagement = () => {
       setFormData(prev => ({
         ...prev,
         fileUrl: response.data.fileUrl,
+        backupUrl: response.data.backupUrl || '',
         fileType: response.data.fileType
       }));
     } catch {

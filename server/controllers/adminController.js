@@ -1512,7 +1512,7 @@ const getStudyMaterials = async (req, res) => {
 // @access  Private (admin only)
 const createStudyMaterial = async (req, res) => {
   try {
-    const { title, description, category, fileUrl, fileType } = req.body;
+    const { title, description, category, fileUrl, fileType, backupUrl } = req.body;
     const normalizedType = String(fileType || '').trim().toLowerCase();
     if (normalizedType && normalizedType !== 'pdf') {
       return res.status(400).json({ message: 'Only PDF materials are allowed' });
@@ -1523,6 +1523,7 @@ const createStudyMaterial = async (req, res) => {
       description,
       category,
       fileUrl,
+      backupUrl: backupUrl || '',
       fileType: 'pdf',
       uploadedBy: req.user.id
     });
@@ -1604,7 +1605,33 @@ const uploadFile = async (req, res) => {
     const category = req.body?.category || 'general';
     console.log(`📁 File type: ${fileType}, Category: ${category}`);
 
-    // Priority 1: Use Cloudinary if configured (persistent cloud storage)
+    // ─── Always save to MongoDB first (guaranteed persistent backup) ───
+    let mongoFileUrl = null;
+    let mongoImageId = null;
+    try {
+      const imageId = Image.generateImageId();
+      const base64Data = req.file.buffer.toString('base64');
+
+      const savedImage = await Image.create({
+        imageId,
+        filename: originalName,
+        mimeType: isPdf ? 'application/pdf' : (mimetype || `image/${extType}`),
+        data: base64Data,
+        size: req.file.size,
+        uploadedBy: req.user?._id || null,
+        category: isPdf ? (category || 'study-material') : category,
+        altText: req.body?.altText || '',
+      });
+
+      mongoFileUrl = `/api/images/${imageId}`;
+      mongoImageId = imageId;
+      console.log(`✅ ${fileType === 'pdf' ? 'PDF' : 'Image'} saved to MongoDB: ${mongoFileUrl} (${savedImage._id})`);
+    } catch (mongoError) {
+      console.error(`❌ MongoDB ${fileType} storage failed:`, mongoError.message);
+      console.error('   Stack:', mongoError.stack?.split('\n').slice(0, 3).join('\n'));
+    }
+
+    // ─── Also upload to Cloudinary (cloud CDN, faster delivery) ───
     if (cloudinaryConfigured) {
       try {
         const base = path.basename(originalName, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
@@ -1630,56 +1657,31 @@ const uploadFile = async (req, res) => {
 
         return res.json({
           fileUrl: uploadResult.secure_url,
+          backupUrl: mongoFileUrl,       // MongoDB backup URL in case Cloudinary link breaks
           fileName: originalName,
           fileType,
           storage: 'cloudinary',
+          mongoImageId,
         });
       } catch (cloudinaryError) {
-        console.error('Cloudinary upload failed, falling back to MongoDB:', cloudinaryError.message);
-        // Fall through to MongoDB storage
+        console.error('Cloudinary upload failed, using MongoDB URL:', cloudinaryError.message);
+        // Fall through — we still have MongoDB
       }
     }
 
-    // Priority 2: Store in MongoDB (persistent, survives server restarts)
-    // Supports both images AND PDFs to prevent data loss on ephemeral hosting (e.g., Render)
-    if (isImage || isPdf) {
-      console.log(`📦 Attempting MongoDB storage for ${fileType}...`);
-      try {
-        const imageId = Image.generateImageId();
-        const base64Data = req.file.buffer.toString('base64');
-
-        const savedImage = await Image.create({
-          imageId,
-          filename: originalName,
-          mimeType: isPdf ? 'application/pdf' : (mimetype || `image/${extType}`),
-          data: base64Data,
-          size: req.file.size,
-          uploadedBy: req.user?._id || null,
-          category: isPdf ? (category || 'study-material') : category,
-          altText: req.body?.altText || '',
-        });
-
-        // Return a URL that will be served by our API
-        const fileUrl = `/api/images/${imageId}`;
-
-        console.log(`✅ ${fileType === 'pdf' ? 'PDF' : 'Image'} stored in MongoDB: ${fileUrl} (${savedImage._id})`);
-
-        return res.json({
-          fileUrl,
-          fileName: originalName,
-          fileType,
-          storage: 'mongodb',
-          imageId,
-        });
-      } catch (mongoError) {
-        console.error(`❌ MongoDB ${fileType} storage failed:`, mongoError.message);
-        console.error('   Stack:', mongoError.stack?.split('\n').slice(0, 3).join('\n'));
-        // Fall through to local storage as last resort
-      }
+    // ─── Cloudinary failed or not configured — use MongoDB URL ───
+    if (mongoFileUrl) {
+      return res.json({
+        fileUrl: mongoFileUrl,
+        fileName: originalName,
+        fileType,
+        storage: 'mongodb',
+        imageId: mongoImageId,
+      });
     }
 
-    // Priority 3: Fallback to local storage (only used if MongoDB fails!)
-    console.log('⚠️ MongoDB storage unavailable, falling back to local disk...');
+    // ─── Last resort: local disk (both Cloudinary AND MongoDB failed) ───
+    console.log('⚠️ Both Cloudinary and MongoDB failed, falling back to local disk...');
     const uploadsDir = path.join(__dirname, '..', 'uploads');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
@@ -1691,16 +1693,16 @@ const uploadFile = async (req, res) => {
 
     fs.writeFileSync(filePath, req.file.buffer);
 
-    const fileUrl = `/api/uploads/${fileName}`;
+    const localFileUrl = `/api/uploads/${fileName}`;
 
-    console.log(`⚠️ File saved to local disk (fallback): ${fileUrl}`);
+    console.log(`⚠️ File saved to local disk (last resort): ${localFileUrl}`);
 
     res.json({
-      fileUrl,
+      fileUrl: localFileUrl,
       fileName: originalName,
       fileType,
       storage: 'local-fallback',
-      warning: 'MongoDB storage failed. File saved to local disk as fallback. Please check database connection.',
+      warning: 'Both Cloudinary and MongoDB storage failed. File saved to local disk as last resort.',
     });
   } catch (error) {
     console.error('Upload error:', error);
