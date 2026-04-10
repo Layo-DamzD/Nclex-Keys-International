@@ -918,6 +918,13 @@ const downloadMaterial = async (req, res) => {
 
     console.log('Download proxy:', absoluteUrl);
 
+    // Skip proxy for /api/images/* URLs — let the client fetch them directly
+    // These are served from MongoDB and don't need a proxy
+    if (absoluteUrl.includes('/api/images/')) {
+      console.log('Download: redirecting client to direct MongoDB URL:', absoluteUrl);
+      return res.json({ redirect: absoluteUrl });
+    }
+
     // Fetch the file from the source (Cloudinary, local, etc.)
     const response = await fetch(absoluteUrl, {
       redirect: 'follow',
@@ -928,7 +935,17 @@ const downloadMaterial = async (req, res) => {
 
     if (!response.ok) {
       console.error('Download: source returned', response.status, response.statusText, 'for', absoluteUrl);
-      return res.status(response.status).json({ message: `File not found or unavailable (HTTP ${response.status}). The source file may have been moved or deleted.` });
+      // Provide user-friendly error messages based on status code
+      if (response.status === 404) {
+        return res.status(404).json({ 
+          message: 'This file is no longer available. It may have been moved or deleted during a server update. Please contact support to get this material re-uploaded.',
+          code: 'FILE_NOT_FOUND'
+        });
+      }
+      return res.status(response.status).json({ 
+        message: `Could not download the file (HTTP ${response.status}). Please try again later.`,
+        code: 'FETCH_FAILED'
+      });
     }
 
     const contentType = response.headers.get('content-type') || 'application/octet-stream';

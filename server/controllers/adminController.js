@@ -1641,8 +1641,9 @@ const uploadFile = async (req, res) => {
     }
 
     // Priority 2: Store in MongoDB (persistent, survives server restarts)
-    if (isImage) {
-      console.log('📦 Attempting MongoDB storage for image...');
+    // Supports both images AND PDFs to prevent data loss on ephemeral hosting (e.g., Render)
+    if (isImage || isPdf) {
+      console.log(`📦 Attempting MongoDB storage for ${fileType}...`);
       try {
         const imageId = Image.generateImageId();
         const base64Data = req.file.buffer.toString('base64');
@@ -1650,18 +1651,18 @@ const uploadFile = async (req, res) => {
         const savedImage = await Image.create({
           imageId,
           filename: originalName,
-          mimeType: mimetype || `image/${extType}`,
+          mimeType: isPdf ? 'application/pdf' : (mimetype || `image/${extType}`),
           data: base64Data,
           size: req.file.size,
           uploadedBy: req.user?._id || null,
-          category,
+          category: isPdf ? (category || 'study-material') : category,
           altText: req.body?.altText || '',
         });
 
         // Return a URL that will be served by our API
         const fileUrl = `/api/images/${imageId}`;
 
-        console.log(`✅ Image stored in MongoDB: ${fileUrl} (${savedImage._id})`);
+        console.log(`✅ ${fileType === 'pdf' ? 'PDF' : 'Image'} stored in MongoDB: ${fileUrl} (${savedImage._id})`);
 
         return res.json({
           fileUrl,
@@ -1671,7 +1672,7 @@ const uploadFile = async (req, res) => {
           imageId,
         });
       } catch (mongoError) {
-        console.error('❌ MongoDB image storage failed:', mongoError.message);
+        console.error(`❌ MongoDB ${fileType} storage failed:`, mongoError.message);
         console.error('   Stack:', mongoError.stack?.split('\n').slice(0, 3).join('\n'));
         // Fall through to local storage as last resort
       }

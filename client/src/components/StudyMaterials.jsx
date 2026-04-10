@@ -112,12 +112,40 @@ const StudyMaterials = () => {
       const response = await fetch(`/api/student/download-material?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
-      if (!response.ok) {
+
+      // Handle server redirect response (for /api/images/* MongoDB-stored files)
+      if (response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await response.json().catch(() => null);
+          if (data?.redirect) {
+            // Server told us to fetch directly from MongoDB
+            console.log('Following server redirect to:', data.redirect);
+            const directResp = await fetch(data.redirect);
+            if (!directResp.ok) {
+              throw new Error('Failed to retrieve the file from storage. Please try again.');
+            }
+            const blob = await directResp.blob();
+            if (blob.size === 0) {
+              throw new Error('The downloaded file is empty. Please contact support.');
+            }
+            triggerDownload(blob, selectedMaterial);
+            closeDownloadModal();
+            return;
+          }
+          // Not a redirect response — fall through to blob handling below
+          // (need to re-read body since we consumed it with .json())
+          throw new Error('Unexpected server response. Please try again.');
+        }
+        // Non-JSON ok response — proceed to blob download
+      } else {
         const errorData = await response.json().catch(() => ({}));
+        const errorCode = errorData.code;
         const errorMsg = errorData.message || `Download failed (HTTP ${response.status})`;
-        
-        // If server proxy fails, try opening the URL directly as a fallback
-        if (fileUrl.startsWith('http')) {
+
+        // For 404 / FILE_NOT_FOUND: don't try fallback — the file is genuinely gone
+        // For network/5xx errors with external URLs: try direct open as last resort
+        if (errorCode !== 'FILE_NOT_FOUND' && fileUrl.startsWith('http')) {
           console.warn('Server proxy failed, falling back to direct URL open:', errorMsg);
           window.open(fileUrl, '_blank');
           closeDownloadModal();
@@ -129,7 +157,6 @@ const StudyMaterials = () => {
       // Verify we got a binary response (not an HTML error page)
       const contentType = response.headers.get('content-type') || '';
       if (contentType.includes('text/html')) {
-        // Server returned an HTML page (likely an error page from upstream)
         throw new Error('The file could not be retrieved. It may have been moved or deleted.');
       }
 
@@ -138,39 +165,10 @@ const StudyMaterials = () => {
         throw new Error('The downloaded file is empty. Please contact support.');
       }
 
-      const ext = selectedMaterial.fileType || 'pdf';
-      const fileName = `${selectedMaterial.title || 'study-material'}.${ext}`;
-      
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-
-      // Cleanup
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      }, 5000);
-
-      // Mobile fallback
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile && blob.size > 0) {
-        setTimeout(() => {
-          const mobileUrl = window.URL.createObjectURL(blob);
-          window.open(mobileUrl, '_blank');
-          setTimeout(() => window.URL.revokeObjectURL(mobileUrl), 10000);
-        }, 500);
-      }
-
+      triggerDownload(blob, selectedMaterial);
       closeDownloadModal();
     } catch (error) {
       console.error('Failed to download material:', error);
-      
-      // If the error mentions the URL is invalid, suggest contacting support
       let userMessage = error.message || 'Could not download this material right now. Please try again.';
       if (userMessage.includes('Invalid') || userMessage.includes('invalid')) {
         userMessage += ' The file link may be broken. Please contact support.';
@@ -179,6 +177,43 @@ const StudyMaterials = () => {
     } finally {
       setDownloading(false);
     }
+  };
+
+  // Helper: trigger file download with mobile fallback
+  const triggerDownload = (blob, material) => {
+    const ext = material.fileType || 'pdf';
+    const fileName = `${material.title || 'study-material'}.${ext}`;
+
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }, 5000);
+
+    // Mobile fallback: also open in new tab so the browser offers to save/open
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile && blob.size > 0) {
+      setTimeout(() => {
+        const mobileUrl = window.URL.createObjectURL(blob);
+        window.open(mobileUrl, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(mobileUrl), 10000);
+      }, 500);
+    }
+  };
+
+  // Helper: retry download (clear error and allow re-attempt)
+  const handleRetry = () => {
+    setDownloadError('');
+    setConfirmDownload(true);
   };
 
   if (loading) return <div className="text-center py-5">Loading materials...</div>;
@@ -269,8 +304,20 @@ const StudyMaterials = () => {
                 </div>
                 {downloadError && (
                   <div className="alert alert-danger mb-3">
-                    <i className="fas fa-times-circle me-2"></i>
-                    {downloadError}
+                    <div className="d-flex align-items-start">
+                      <i className="fas fa-times-circle me-2 mt-1"></i>
+                      <div className="flex-grow-1">
+                        {downloadError}
+                      </div>
+                      <button 
+                        className="btn btn-sm btn-outline-danger ms-2" 
+                        onClick={handleRetry}
+                        disabled={downloading}
+                        style={{ whiteSpace: 'nowrap' }}
+                      >
+                        <i className="fas fa-redo me-1"></i>Retry
+                      </button>
+                    </div>
                   </div>
                 )}
                 <div className="form-check">
