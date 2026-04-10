@@ -114,10 +114,30 @@ const StudyMaterials = () => {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Download failed (HTTP ${response.status})`);
+        const errorMsg = errorData.message || `Download failed (HTTP ${response.status})`;
+        
+        // If server proxy fails, try opening the URL directly as a fallback
+        if (fileUrl.startsWith('http')) {
+          console.warn('Server proxy failed, falling back to direct URL open:', errorMsg);
+          window.open(fileUrl, '_blank');
+          closeDownloadModal();
+          return;
+        }
+        throw new Error(errorMsg);
+      }
+
+      // Verify we got a binary response (not an HTML error page)
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) {
+        // Server returned an HTML page (likely an error page from upstream)
+        throw new Error('The file could not be retrieved. It may have been moved or deleted.');
       }
 
       const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error('The downloaded file is empty. Please contact support.');
+      }
+
       const ext = selectedMaterial.fileType || 'pdf';
       const fileName = `${selectedMaterial.title || 'study-material'}.${ext}`;
       
@@ -149,7 +169,13 @@ const StudyMaterials = () => {
       closeDownloadModal();
     } catch (error) {
       console.error('Failed to download material:', error);
-      setDownloadError(error.message || 'Could not download this material right now. Please try again.');
+      
+      // If the error mentions the URL is invalid, suggest contacting support
+      let userMessage = error.message || 'Could not download this material right now. Please try again.';
+      if (userMessage.includes('Invalid') || userMessage.includes('invalid')) {
+        userMessage += ' The file link may be broken. Please contact support.';
+      }
+      setDownloadError(userMessage);
     } finally {
       setDownloading(false);
     }

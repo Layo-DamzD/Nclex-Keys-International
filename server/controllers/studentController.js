@@ -904,16 +904,42 @@ const downloadMaterial = async (req, res) => {
       return res.status(400).json({ message: 'No file URL provided' });
     }
 
+    // Resolve relative URLs to absolute URLs using the server's own origin.
+    // Node.js fetch() requires absolute URLs; relative paths like /api/uploads/file.pdf
+    // will throw "Invalid URL" without this resolution.
+    let absoluteUrl;
+    try {
+      const parsed = new URL(url, `${req.protocol}://${req.get('host')}`);
+      absoluteUrl = parsed.href;
+    } catch (urlError) {
+      console.error('Download: invalid URL:', url, urlError.message);
+      return res.status(400).json({ message: 'Invalid file URL stored for this material. Please contact support.' });
+    }
+
+    console.log('Download proxy:', absoluteUrl);
+
     // Fetch the file from the source (Cloudinary, local, etc.)
-    const response = await fetch(url);
+    const response = await fetch(absoluteUrl, {
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'NclexKeys-DownloadProxy/1.0',
+      },
+    });
+
     if (!response.ok) {
-      return res.status(response.status).json({ message: `Failed to fetch file (HTTP ${response.status})` });
+      console.error('Download: source returned', response.status, response.statusText, 'for', absoluteUrl);
+      return res.status(response.status).json({ message: `File not found or unavailable (HTTP ${response.status}). The source file may have been moved or deleted.` });
     }
 
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
     const buffer = await response.arrayBuffer();
 
-    const ext = fileType || 'pdf';
+    if (buffer.byteLength === 0) {
+      console.error('Download: empty file received from', absoluteUrl);
+      return res.status(502).json({ message: 'The downloaded file is empty. Please contact support.' });
+    }
+
+    const ext = fileType || getExtFromUrl(absoluteUrl) || 'pdf';
     const fileName = `${(title || 'study-material').replace(/[^a-zA-Z0-9-_ ]/g, '_')}.${ext}`;
 
     res.setHeader('Content-Type', contentType);
@@ -923,8 +949,19 @@ const downloadMaterial = async (req, res) => {
 
     return res.send(Buffer.from(buffer));
   } catch (error) {
-    console.error('Download proxy error:', error);
-    res.status(500).json({ message: 'Failed to download material' });
+    console.error('Download proxy error:', error.message || error);
+    res.status(500).json({ message: 'Failed to download material. Please try again later.' });
+  }
+};
+
+// Helper: extract file extension from URL path
+const getExtFromUrl = (urlString) => {
+  try {
+    const pathname = new URL(urlString).pathname;
+    const match = pathname.match(/\.(\w{2,5})$/);
+    return match ? match[1].toLowerCase() : null;
+  } catch {
+    return null;
   }
 };
 
