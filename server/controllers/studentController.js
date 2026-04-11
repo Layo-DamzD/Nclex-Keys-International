@@ -148,15 +148,20 @@ const submitTest = async (req, res) => {
       return null;
     };
 
-    // Server-side answer evaluation (deterministic, does not trust client)
+    // Server-side answer evaluation
+    // Use client-provided correctAnswer/options as PRIMARY (what the student saw at test time),
+    // with DB values as FALLBACK (for data that client didn't send).
+    // This ensures consistency: evaluation matches what's displayed in review.
     const serverEvaluateAnswer = (result, q) => {
       const userAnswer = result.userAnswer;
-      const correctAnswer = q?.correctAnswer;
+      // Prefer client's stored correctAnswer (what student saw) over DB (may have been edited since)
+      const correctAnswer = result.correctAnswer || q?.correctAnswer;
       const type = result.type || q?.type;
+      // Prefer client's stored options (what student saw) over DB
+      const opts = result.options || q?.options || [];
 
       if (type === 'multiple-choice') {
         const normUser = serverNormalizeToLetter(userAnswer);
-        const opts = q?.options || [];
         // Try letter match first, then text match
         const normCorrect = serverNormalizeToLetter(correctAnswer);
         let resolvedCorrect = normCorrect;
@@ -168,7 +173,6 @@ const submitTest = async (req, res) => {
       }
 
       if (type === 'sata') {
-        const opts = q?.options || [];
         const parseToArray = (answer, useTextMatch) => {
           if (!answer) return [];
           if (Array.isArray(answer)) return answer.map(v => useTextMatch ? (serverResolveToLetter(v, opts) || serverNormalizeToLetter(v)) : serverNormalizeToLetter(v)).filter(Boolean);
@@ -225,8 +229,9 @@ const submitTest = async (req, res) => {
       }
 
       if (type === 'matrix') {
-        if (!userAnswer || !Array.isArray(userAnswer) || !Array.isArray(q?.matrixRows)) return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
-        const isCorrect = q.matrixRows.every((row, i) => userAnswer[i] === row.correctColumn);
+        const rows = result.matrixRows || q?.matrixRows;
+        if (!userAnswer || !Array.isArray(userAnswer) || !Array.isArray(rows)) return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
+        const isCorrect = rows.every((row, i) => userAnswer[i] === row.correctColumn);
         return { isCorrect, earnedMarks: isCorrect ? 1 : 0, totalMarks: 1 };
       }
 

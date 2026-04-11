@@ -589,9 +589,60 @@ const TestReviewExamView = ({
 
         <div className="question-container exam-runtime-question-panel exam-review-runtime-split">
           <div className="exam-review-runtime-question-column">
+            {/* Case Study Scenario Banner */}
+            {active.scenario && (
+              <div style={{
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                fontSize: '0.9em',
+                color: '#1e3a5f'
+              }}>
+                <strong style={{ color: '#1d4ed8' }}>📋 Case Scenario:</strong><br />
+                {active.scenario}
+              </div>
+            )}
+
             <p className="question-text">{active.questionText || 'No question text'}</p>
 
-            {Array.isArray(active.options) && active.options.length > 0 && (
+            {/* Bowtie-specific review display */}
+            {active.type === 'bowtie' && typeof active.correctAnswer === 'object' && active.correctAnswer !== null ? (
+              <div className="mt-3">
+                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px' }}>
+                  <h6 style={{ marginBottom: '12px', color: '#334155' }}>Bowtie Answer Review</h6>
+                  {['condition', 'actionLeft', 'actionRight', 'parameterLeft', 'parameterRight'].map(key => {
+                    const userVal = active.userAnswer?.[key] || '';
+                    const correctVal = active.correctAnswer[key] || '';
+                    const isMatch = String(userVal).trim() === String(correctVal).trim();
+                    const labels = {
+                      condition: '🏷️ Most Likely Condition',
+                      actionLeft: '⬅️ Priority Nursing Action 1',
+                      actionRight: '➡️ Priority Nursing Action 2',
+                      parameterLeft: '📊 Parameter to Monitor 1',
+                      parameterRight: '📊 Parameter to Monitor 2'
+                    };
+                    return (
+                      <div key={key} style={{
+                        marginBottom: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: isMatch ? '#dcfce7' : '#fee2e2',
+                        border: `1px solid ${isMatch ? '#22c55e' : '#ef4444'}`
+                      }}>
+                        <div style={{ fontSize: '0.8em', fontWeight: 600, color: '#64748b', marginBottom: '2px' }}>{labels[key]}</div>
+                        <div>
+                          <span style={{ fontWeight: 500 }}>Your answer:</span>{' '}
+                          <span style={{ color: isMatch ? '#166534' : '#dc2626' }}>{userVal || '(empty)'}</span>
+                          {!isMatch && <><br /><span style={{ fontWeight: 500 }}>Correct:</span> <span style={{ color: '#166534' }}>{correctVal}</span></>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : Array.isArray(active.options) && active.options.length > 0 ? (
               <div className="exam-review-runtime-option-list">
                 {active.options.map((opt, idx) => {
                   const letter = String.fromCharCode(65 + idx);
@@ -653,7 +704,7 @@ const TestReviewExamView = ({
                   );
                 })}
               </div>
-            )}
+            ) : null}
 
             {active.type === 'hotspot' && (
               <div className="mt-3">
