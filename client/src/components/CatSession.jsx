@@ -360,7 +360,10 @@ const CatSession = () => {
     setCaseDragSourceItems({});
     setCaseDragAnswerItems({});
     setActiveCaseTabByQuestion({});
-    setTimeLeft(120);
+    // Give case studies more time: 2 min per sub-question
+    const subCount = currentQuestion?.type === 'case-study' && Array.isArray(currentQuestion?.questions)
+      ? currentQuestion.questions.length : 1;
+    setTimeLeft(120 * subCount);
     setError('');
     setIsCorrect(null);
   }, [currentQuestion?._id]);
@@ -417,9 +420,13 @@ const CatSession = () => {
     if (!currentQuestion) return false;
 
     if (currentQuestion.type === 'case-study') {
-      const subQ = currentQuestion.questions[caseIndex];
-      if (!subQ) return false;
-      return caseAnswers[subQ._id] !== undefined && caseAnswers[subQ._id] !== null;
+      // ALL sub-questions must have answers before submitting
+      return currentQuestion.questions.every(
+        subQ => caseAnswers[subQ._id] !== undefined && caseAnswers[subQ._id] !== null
+          && String(caseAnswers[subQ._id]).trim() !== ''
+          && !(Array.isArray(caseAnswers[subQ._id]) && caseAnswers[subQ._id].length === 0)
+          && !(typeof caseAnswers[subQ._id] === 'object' && !Array.isArray(caseAnswers[subQ._id]) && Object.keys(caseAnswers[subQ._id]).length === 0)
+      );
     }
 
     const ans = getCurrentUserAnswer();
@@ -441,19 +448,41 @@ const CatSession = () => {
       const token = localStorage.getItem('token');
 
       if (currentQuestion.type === 'case-study') {
-        // Submit all sub-question answers for the case study
-        const subQ = currentQuestion.questions[caseIndex];
-        if (!subQ) return;
+        // Submit ALL sub-question answers for the case study at once
+        const subQuestionAnswers = currentQuestion.questions.map(subQ => ({
+          subQuestionId: subQ._id,
+          answer: caseAnswers[subQ._id] || ''
+        }));
 
         const response = await axios.post('/api/student/cat/answer', {
           questionId: currentQuestion._id,
-          subQuestionId: subQ._id,
-          answer: caseAnswers[subQ._id] || ''
+          subQuestionAnswers
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        handleCatResponse(response, subQ);
+        // Evaluate each sub-question client-side for display
+        let anyPartial = false;
+        let allCorrect = true;
+        for (const subQ of currentQuestion.questions) {
+          const subResult = handleCatResponseForSub(subQ);
+          if (subResult === 'partial') anyPartial = true;
+          else if (subResult !== true) allCorrect = false;
+        }
+        setIsCorrect(allCorrect ? true : (anyPartial ? 'partial' : false));
+
+        // Handle server response (next question or completed)
+        if (response.data.status === 'completed') {
+          if (response.data.result?._id) {
+            navigate(`/test-review/${response.data.result._id}`);
+          }
+          return;
+        } else {
+          setCurrentQuestion(response.data.question);
+          setQuestionNumber(response.data.questionNumber);
+          setTheta(response.data.theta);
+          setSe(response.data.se);
+        }
       } else {
         const userAnswer = getCurrentUserAnswer();
         const response = await axios.post('/api/student/cat/answer', {
@@ -468,6 +497,76 @@ const CatSession = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit answer');
       setLoading(false);
+    }
+  };
+
+  // Evaluate a single sub-question client-side (returns true/false/'partial')
+  const handleCatResponseForSub = (subQ) => {
+    const correctAnswer = subQ.correctAnswer;
+
+    if (subQ.type === 'sata') {
+      const userAns = caseAnswers[subQ._id] || [];
+      const correctArr = Array.isArray(correctAnswer)
+        ? correctAnswer.map(v => normalizeCATLetter(v)).filter(Boolean)
+        : String(correctAnswer || '').includes(',')
+          ? String(correctAnswer).split(',').map(v => normalizeCATLetter(v.trim())).filter(Boolean)
+          : /^[A-Za-z]+$/.test(String(correctAnswer || ''))
+            ? String(correctAnswer).toUpperCase().split('').filter(c => /[A-Z]/.test(c))
+            : [normalizeCATLetter(correctAnswer)].filter(Boolean);
+      const userArr = (Array.isArray(userAns) ? userAns : [userAns]).map(v => normalizeCATLetter(v)).filter(Boolean);
+      const correctSet = new Set(correctArr.map(c => c.toUpperCase()));
+      const userSet = new Set(userArr.map(c => c.toUpperCase()));
+      const totalMarks = Math.max(correctSet.size, 1);
+      const correctPicked = [...userSet].filter(c => correctSet.has(c)).length;
+      const wrongPicked = [...userSet].filter(c => !correctSet.has(c)).length;
+      const earnedMarks = correctPicked - wrongPicked;
+      if (earnedMarks >= totalMarks) return true;
+      if (earnedMarks > 0) return 'partial';
+      return false;
+    } else if (subQ.type === 'fill-blank') {
+      const userAns = caseAnswers[subQ._id] || '';
+      const acceptable = String(correctAnswer).split(';').map(a => a.trim().toLowerCase());
+      return acceptable.includes(String(userAns).trim().toLowerCase());
+    } else if (subQ.type === 'drag-drop') {
+      const key = `${currentQuestion._id}-${subQ._id}`;
+      const userAns = (caseDragAnswerItems[key] || []).map(item => item.text).join('|');
+      return userAns === String(correctAnswer);
+    } else if (subQ.type === 'matrix') {
+      const userAns = caseAnswers[subQ._id] || [];
+      const rows = subQ.matrixRows || [];
+      if (Array.isArray(userAns) && rows.length > 0) {
+        return rows.every((row, i) => userAns[i] === row.correctColumn);
+      }
+      return false;
+    } else if (subQ.type === 'hotspot') {
+      const userAns = caseAnswers[subQ._id] || '';
+      return String(userAns).trim() === String(correctAnswer).trim();
+    } else if (subQ.type === 'cloze-dropdown') {
+      const userAns = caseAnswers[subQ._id] || {};
+      if (typeof correctAnswer === 'object' && correctAnswer !== null) {
+        return Object.keys(correctAnswer).every(key =>
+          String(userAns?.[key] || '').trim() === String(correctAnswer[key] || '').trim()
+        );
+      }
+      return false;
+    } else if (subQ.type === 'bowtie') {
+      const userAns = caseAnswers[subQ._id] || {};
+      if (typeof correctAnswer === 'object' && typeof userAns === 'object') {
+        return ['condition', 'actionLeft', 'actionRight', 'parameterLeft', 'parameterRight'].every(
+          key => String(userAns?.[key] || '').trim() === String(correctAnswer?.[key] || '').trim()
+        );
+      }
+      return false;
+    } else if (subQ.type === 'highlight') {
+      const userAns = caseAnswers[subQ._id] || '';
+      const correctOptions = String(correctAnswer).split('|').map(a => a.trim().toLowerCase());
+      return correctOptions.includes(String(userAns).trim().toLowerCase());
+    } else {
+      // MCQ
+      const userAns = caseAnswers[subQ._id] || '';
+      const normalizedUser = normalizeCATLetter(userAns);
+      const normalizedCorrect = normalizeCATLetter(correctAnswer);
+      return normalizedUser !== '' && normalizedUser === normalizedCorrect;
     }
   };
 

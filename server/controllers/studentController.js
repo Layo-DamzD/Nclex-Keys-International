@@ -1238,8 +1238,19 @@ const evaluateCATAnswer = (question, answer) => {
   // ── SATA: partial credit + negative scoring ──
   // 1 correct option = 1 point. Wrong picks deduct 1 point each.
   if (question.type === 'sata') {
-    const expectedArr = Array.isArray(expected) ? expected : [expected];
-    const answerArr = Array.isArray(answer) ? answer : [answer];
+    // Parse comma-separated ("A,C,E") and concatenated ("ACE") formats
+    const parseToArray = (val) => {
+      if (Array.isArray(val)) return val;
+      const s = String(val ?? '').trim();
+      if (!s) return [];
+      if (s.includes(',')) return s.split(',').map(v => v.trim()).filter(Boolean);
+      if (/^[A-Za-z]+$/.test(s) && s.length <= 26) {
+        return s.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+      }
+      return [s];
+    };
+    const expectedArr = parseToArray(expected);
+    const answerArr = Array.isArray(answer) ? answer : parseToArray(answer);
 
     const correctSet = new Set(
       expectedArr
@@ -1375,7 +1386,7 @@ const startCATSession = async (req, res) => {
 const submitCATAnswer = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const { questionId, answer, subQuestionId } = req.body;
+    const { questionId, answer, subQuestionId, subQuestionAnswers } = req.body;
     
     // Get session
     const session = catSessions.get(studentId);
@@ -1393,15 +1404,71 @@ const submitCATAnswer = async (req, res) => {
       // For case-study sub-questions: evaluate against the SUB-question, not the parent
       let effectiveQuestion = question;
       let effectiveAnswer = answer;
-      if (question.type === 'case-study' && subQuestionId && Array.isArray(question.questions)) {
-        const subQ = question.questions.find(sq => String(sq._id) === String(subQuestionId));
-        if (subQ) {
-          effectiveQuestion = subQ;
+      let batchEvaluations = []; // For case studies: evaluate ALL sub-questions
+
+      if (question.type === 'case-study' && Array.isArray(question.questions)) {
+        if (Array.isArray(subQuestionAnswers) && subQuestionAnswers.length > 0) {
+          // Batch mode: evaluate ALL sub-questions at once
+          for (const subAnswer of subQuestionAnswers) {
+            const subQ = question.questions.find(sq => String(sq._id) === String(subAnswer.subQuestionId));
+            if (subQ) {
+              const eval = evaluateCATAnswer(subQ, subAnswer.answer);
+              batchEvaluations.push({
+                ...eval,
+                subQuestionId: subAnswer.subQuestionId,
+                userAnswer: subAnswer.answer,
+                questionType: subQ.type
+              });
+            }
+          }
+        } else if (subQuestionId) {
+          // Legacy single sub-question mode (fallback)
+          const subQ = question.questions.find(sq => String(sq._id) === String(subQuestionId));
+          if (subQ) {
+            effectiveQuestion = subQ;
+          }
         }
       }
 
       // Record response with marks-based scoring
-      const evaluation = evaluateCATAnswer(effectiveQuestion, effectiveAnswer);
+      let evaluation;
+      if (batchEvaluations.length > 0) {
+        // Case study batch: aggregate results for IRT
+        const allCorrect = batchEvaluations.every(e => e.isCorrect === true);
+        const totalEarned = batchEvaluations.reduce((s, e) => s + e.earnedMarks, 0);
+        const totalPossible = batchEvaluations.reduce((s, e) => s + e.totalMarks, 0);
+        evaluation = {
+          isCorrect: allCorrect ? true : (totalEarned > 0 ? 'partial' : false),
+          earnedMarks: totalEarned,
+          totalMarks: totalPossible
+        };
+        // Store each sub-question's details separately
+        for (const sub of batchEvaluations) {
+          session.answerDetails.push({
+            questionId,
+            subQuestionId: sub.subQuestionId,
+            userAnswer: sub.userAnswer,
+            earnedMarks: sub.earnedMarks,
+            totalMarks: sub.totalMarks,
+            isCorrect: sub.isCorrect,
+            questionType: sub.questionType,
+            scenario: question.scenario
+          });
+        }
+      } else {
+        evaluation = evaluateCATAnswer(effectiveQuestion, effectiveAnswer);
+        if (!session.answerDetails) session.answerDetails = [];
+        session.answerDetails.push({
+          questionId,
+          subQuestionId: subQuestionId || null,
+          userAnswer: effectiveAnswer,
+          earnedMarks: evaluation.earnedMarks,
+          totalMarks: evaluation.totalMarks,
+          isCorrect: evaluation.isCorrect,
+          questionType: effectiveQuestion.type,
+          scenario: question.type === 'case-study' ? question.scenario : undefined
+        });
+      }
       session.administered.push(questionId);
       // For CAT engine (IRT ability estimation), use binary response
       session.responses.push(evaluation.isCorrect === true ? 1 : 0);
@@ -1410,18 +1477,6 @@ const submitCATAnswer = async (req, res) => {
       if (!session.totalMarks) session.totalMarks = [];
       session.earnedMarks.push(evaluation.earnedMarks);
       session.totalMarks.push(evaluation.totalMarks);
-      // Store full answer details for review display (not just binary)
-      if (!session.answerDetails) session.answerDetails = [];
-      session.answerDetails.push({
-        questionId,
-        subQuestionId: subQuestionId || null,
-        userAnswer: effectiveAnswer,
-        earnedMarks: evaluation.earnedMarks,
-        totalMarks: evaluation.totalMarks,
-        isCorrect: evaluation.isCorrect,
-        questionType: effectiveQuestion.type,
-        scenario: question.type === 'case-study' ? question.scenario : undefined
-      });
     
     // Recreate engine with session parameters
     const engine = new CATEngine({
