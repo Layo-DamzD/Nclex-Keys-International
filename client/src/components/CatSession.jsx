@@ -249,6 +249,7 @@ const CatSession = () => {
   const [questionNumber, setQuestionNumber] = useState(initialData.questionNumber || 1);
   const [theta, setTheta] = useState(initialData.theta || 0);
   const [se, setSe] = useState(initialData.se || null);
+  const [confidence, setConfidence] = useState(null);
   const [status, setStatus] = useState('continue');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -482,6 +483,7 @@ const CatSession = () => {
           setQuestionNumber(response.data.questionNumber);
           setTheta(response.data.theta);
           setSe(response.data.se);
+          if (response.data.confidence) setConfidence(response.data.confidence);
         }
       } else {
         const userAnswer = getCurrentUserAnswer();
@@ -516,12 +518,12 @@ const CatSession = () => {
       const userArr = (Array.isArray(userAns) ? userAns : [userAns]).map(v => normalizeCATLetter(v)).filter(Boolean);
       const correctSet = new Set(correctArr.map(c => c.toUpperCase()));
       const userSet = new Set(userArr.map(c => c.toUpperCase()));
-      const totalMarks = Math.max(correctSet.size, 1);
       const correctPicked = [...userSet].filter(c => correctSet.has(c)).length;
       const wrongPicked = [...userSet].filter(c => !correctSet.has(c)).length;
-      const earnedMarks = correctPicked - wrongPicked;
-      if (earnedMarks >= totalMarks) return true;
-      if (earnedMarks > 0) return 'partial';
+      // 1 point per question: all correct=1, partial=0.5, any wrong=0
+      if (wrongPicked > 0) return false;
+      if (correctPicked === correctSet.size && correctSet.size > 0) return true;
+      if (correctPicked > 0) return 'partial';
       return false;
     } else if (subQ.type === 'fill-blank') {
       const userAns = caseAnswers[subQ._id] || '';
@@ -589,12 +591,12 @@ const CatSession = () => {
       const userArr = (Array.isArray(userAns) ? userAns : [userAns]).map(v => normalizeCATLetter(v)).filter(Boolean);
       const correctSet = new Set(correctArr.map(c => c.toUpperCase()));
       const userSet = new Set(userArr.map(c => c.toUpperCase()));
-      const totalMarks = Math.max(correctSet.size, 1);
       const correctPicked = [...userSet].filter(c => correctSet.has(c)).length;
       const wrongPicked = [...userSet].filter(c => !correctSet.has(c)).length;
-      const earnedMarks = correctPicked - wrongPicked;
-      if (earnedMarks >= totalMarks) wasCorrect = true;
-      else if (earnedMarks > 0) wasCorrect = 'partial';
+      // 1 point per question: all correct=true, partial=0.5, any wrong=false
+      if (wrongPicked > 0) wasCorrect = false;
+      else if (correctPicked === correctSet.size && correctSet.size > 0) wasCorrect = true;
+      else if (correctPicked > 0) wasCorrect = 'partial';
       else wasCorrect = false;
     } else if (question.type === 'fill-blank') {
       const userAns = subQ ? (caseAnswers[subQ._id] || '') : fillBlankAnswer;
@@ -654,6 +656,7 @@ const CatSession = () => {
       setQuestionNumber(response.data.questionNumber);
       setTheta(response.data.theta);
       setSe(response.data.se);
+      if (response.data.confidence) setConfidence(response.data.confidence);
     }
 
     setLoading(false);
@@ -864,6 +867,7 @@ const CatSession = () => {
     const correctCount = (result.answers || []).filter(a => a.isCorrect === true).length;
     const incorrectCount = (result.answers || []).filter(a => a.isCorrect !== true).length;
     const partialCount = (result.answers || []).filter(a => a.isCorrect === 'partial').length;
+    const confidenceResult = result.confidence || null;
 
     return (
       <div className="cat-session-container" style={{
@@ -976,7 +980,7 @@ const CatSession = () => {
 
           {/* Theta/SE for assessment in a secondary row */}
           {isAssessment && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '28px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '28px' }}>
               <div style={{ padding: '16px', background: '#f5f3ff', borderRadius: '12px', border: '1px solid #e9d5ff' }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#7c3aed' }}>
                   {formatTheta(result.theta)}
@@ -989,6 +993,26 @@ const CatSession = () => {
                 </div>
                 <div style={{ color: '#6b7280', marginTop: '4px', fontSize: '0.8rem', fontWeight: 500 }}>Std. Error</div>
               </div>
+              <div style={{
+                padding: '16px',
+                background: confidenceResult?.percentage >= 80 ? '#f0fdf4' : confidenceResult?.percentage >= 60 ? '#fffbeb' : '#fef2f2',
+                borderRadius: '12px',
+                border: confidenceResult?.percentage >= 80 ? '1px solid #bbf7d0' : confidenceResult?.percentage >= 60 ? '1px solid #fde68a' : '1px solid #fecaca'
+              }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: confidenceResult?.percentage >= 80 ? '#16a34a' : confidenceResult?.percentage >= 60 ? '#d97706' : '#dc2626' }}>
+                  {confidenceResult?.level || 'N/A'}
+                </div>
+                <div style={{ color: '#6b7280', marginTop: '4px', fontSize: '0.8rem', fontWeight: 500 }}>Confidence Level</div>
+              </div>
+            </div>
+          )}
+
+          {/* Confidence for non-assessment CAT */}
+          {!isAssessment && confidenceResult?.level && (
+            <div style={{ padding: '14px 18px', background: confidenceResult?.percentage >= 80 ? '#f0fdf4' : confidenceResult?.percentage >= 60 ? '#fffbeb' : '#fef2f2', borderRadius: '10px', border: confidenceResult?.percentage >= 80 ? '1px solid #bbf7d0' : confidenceResult?.percentage >= 60 ? '1px solid #fde68a' : '1px solid #fecaca', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <i className="fas fa-shield-halved" style={{ fontSize: '0.9rem', color: confidenceResult?.percentage >= 80 ? '#16a34a' : confidenceResult?.percentage >= 60 ? '#d97706' : '#dc2626' }}></i>
+              <span style={{ fontWeight: 700, color: confidenceResult?.percentage >= 80 ? '#16a34a' : confidenceResult?.percentage >= 60 ? '#d97706' : '#dc2626', fontSize: '1.1rem' }}>{confidenceResult.level}</span>
+              <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>Confidence Level</span>
             </div>
           )}
 
@@ -1639,11 +1663,21 @@ const CatSession = () => {
           gap: '12px',
         }}>
           <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-            Question {questionNumber}/85 (min)
+            Question {questionNumber}{testType === 'assessment' ? '' : '/85 (min)'}
           </span>
           <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
             <div style={{ width: `${progressPercent}%`, height: '100%', background: '#34d399', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
           </div>
+          {confidence && confidence.level && confidence.level !== 'Calculating...' && (
+            <span style={{
+              color: confidence.percentage >= 80 ? '#34d399' : confidence.percentage >= 60 ? '#fbbf24' : '#f87171',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}>
+              Confidence: {confidence.level}
+            </span>
+          )}
           <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
             &theta;={formatTheta(theta)} SE={formatTheta(se)}
           </span>
@@ -1808,11 +1842,21 @@ const CatSession = () => {
         gap: '12px',
       }}>
         <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-          Question {questionNumber}/85 (min)
+          Question {questionNumber}{testType === 'assessment' ? '' : '/85 (min)'}
         </span>
         <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{ width: `${progressPercent}%`, height: '100%', background: '#34d399', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
         </div>
+        {confidence && confidence.level && confidence.level !== 'Calculating...' && (
+          <span style={{
+            color: confidence.percentage >= 80 ? '#34d399' : confidence.percentage >= 60 ? '#fbbf24' : '#f87171',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            whiteSpace: 'nowrap'
+          }}>
+            Confidence: {confidence.level}
+          </span>
+        )}
         <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
           &theta;={formatTheta(theta)} SE={formatTheta(se)}
         </span>

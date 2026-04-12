@@ -29,7 +29,7 @@ const caseStudySectionSchema = new mongoose.Schema({
 const caseStudyQuestionSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'bowtie'],
+    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'cloze-dropdown', 'bowtie'],
     required: true
   },
   category: { type: String, default: '' },

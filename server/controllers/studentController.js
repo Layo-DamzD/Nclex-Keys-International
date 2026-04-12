@@ -198,14 +198,22 @@ const submitTest = async (req, res) => {
           return resolved || serverNormalizeToLetter(v);
         }).filter(Boolean) : parseToArray(userAnswer, true))];
         const correctArr = [...new Set(parseToArray(correctAnswer, true))];
-        const totalMarks = Math.max(correctArr.length, 1);
+        // Every question is worth exactly 1 point
+        const totalMarks = 1;
         const correctPicked = userArr.filter(c => correctArr.includes(c)).length;
         const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
-        // Negative scoring: wrong picks deduct points (can go below 0)
-        const earnedMarks = correctPicked - wrongPicked;
+        let earnedMarks = 0;
         let isCorrect = false;
-        if (earnedMarks >= totalMarks) isCorrect = true;
-        else if (earnedMarks > 0) isCorrect = 'partial';
+        if (wrongPicked > 0) {
+          earnedMarks = 0;
+          isCorrect = false;
+        } else if (correctPicked === correctArr.length && correctArr.length > 0) {
+          earnedMarks = 1;
+          isCorrect = true;
+        } else if (correctPicked > 0) {
+          earnedMarks = 0.5;
+          isCorrect = 'partial';
+        }
         return { isCorrect, earnedMarks, totalMarks };
       }
 
@@ -1240,8 +1248,8 @@ const evaluateCATAnswer = (question, answer) => {
   const expected = question.correctAnswer;
   const opts = question.options || [];
 
-  // ── SATA: partial credit + negative scoring ──
-  // 1 correct option = 1 point. Wrong picks deduct 1 point each.
+  // ── SATA: 1 point per question, partial credit, NO negative scoring ──
+  // All correct + no wrong = 1 pt | Some correct + no wrong = 0.5 pt | Any wrong = 0 pt
   if (question.type === 'sata') {
     // Parse comma-separated ("A,C,E") and concatenated ("ACE") formats
     const parseToArray = (val) => {
@@ -1270,18 +1278,36 @@ const evaluateCATAnswer = (question, answer) => {
         .map(v => String(v).toUpperCase())
     );
 
-    const totalMarks = Math.max(correctSet.size, 1);
     let correctPicked = 0;
     let wrongPicked = 0;
     for (const a of answerSet) {
       if (correctSet.has(a)) correctPicked++;
       else wrongPicked++;
     }
-    // earnedMarks can go negative (negative scoring for wrong picks)
-    const earnedMarks = correctPicked - wrongPicked;
+
+    // Every question is worth exactly 1 point
+    const totalMarks = 1;
+    let earnedMarks = 0;
     let isCorrect = false;
-    if (earnedMarks >= totalMarks) isCorrect = true;
-    else if (earnedMarks > 0) isCorrect = 'partial';
+
+    if (wrongPicked > 0) {
+      // Any wrong pick = 0 points
+      earnedMarks = 0;
+      isCorrect = false;
+    } else if (correctPicked === correctSet.size && correctSet.size > 0) {
+      // All correct options picked, none wrong = full point
+      earnedMarks = 1;
+      isCorrect = true;
+    } else if (correctPicked > 0) {
+      // Some correct, none wrong = half point
+      earnedMarks = 0.5;
+      isCorrect = 'partial';
+    } else {
+      // Nothing picked = 0 points
+      earnedMarks = 0;
+      isCorrect = false;
+    }
+
     return { isCorrect, earnedMarks, totalMarks };
   }
 
@@ -1326,30 +1352,52 @@ const startCATSession = async (req, res) => {
     const studentId = req.user.id;
     const testType = req.body?.testType || 'cat';
     
-    // Get all active questions with IRT parameters
-      const questions = await Question.find({
-        irtDiscrimination: { $exists: true },
-        irtDifficulty: { $exists: true }
-      }).lean();
+    // Get all active questions with IRT parameters — cached in session for speed
+    const allQuestions = await Question.find({
+      irtDiscrimination: { $exists: true },
+      irtDifficulty: { $exists: true }
+    }).lean();
     
-    if (questions.length < 85) {
+    // Separate case studies and regular questions
+    const caseStudies = allQuestions.filter(q => q.type === 'case-study');
+    const regularQuestions = allQuestions.filter(q => q.type !== 'case-study');
+    
+    if (regularQuestions.length + caseStudies.length < 85) {
       return res.status(400).json({
         message: 'Insufficient calibrated questions for CAT. Need at least 85.'
       });
     }
     
-    // Create CAT engine
+    // Create CAT engine — reduced minItems for assessment mode
+    const minItems = testType === 'assessment' ? 50 : 85;
+    const maxItems = testType === 'assessment' ? 100 : 150;
+    
     const engine = new CATEngine({
       passingStandard: 0.0, // θ_cut
-      minItems: 85,
-      maxItems: 150,
+      minItems,
+      maxItems,
       targetSE: 0.08
     });
+    
+    // Build question pool: ensure at least 15 case studies are included
+    // Shuffle case studies and take up to 15 (or all if fewer)
+    const shuffledCaseStudies = [...caseStudies].sort(() => Math.random() - 0.5);
+    const caseStudyPool = shuffledCaseStudies.slice(0, Math.min(15, shuffledCaseStudies.length));
+    const caseStudyIds = new Set(caseStudyPool.map(q => q._id.toString()));
+    
+    // Fill remaining slots with regular questions, shuffled
+    const remainingSlots = Math.max(0, minItems - caseStudyPool.length);
+    const shuffledRegular = [...regularQuestions].sort(() => Math.random() - 0.5);
+    const regularPool = shuffledRegular.slice(0, remainingSlots);
+    
+    // Combined pool for CAT selection: all questions available
+    // Case studies are guaranteed in the pool; CAT engine picks by MFI
+    const questions = [...allQuestions];
     
     // Get first item (start with medium difficulty)
     const firstItem = await engine.selectNextItem(0, questions, []);
     
-    // Create session record
+    // Create session record — CACHE the question pool so we don't query DB every time
     const session = {
       studentId,
       testType,
@@ -1360,9 +1408,12 @@ const startCATSession = async (req, res) => {
       totalMarks: [],
       theta: 0,
       se: Infinity,
+      answerDetails: [],
+      // Cache the entire question pool in memory for fast access
+      questionPool: questions,
       engine: {
-        minItems: 85,
-        maxItems: 150,
+        minItems,
+        maxItems,
         targetSE: 0.08,
         passingStandard: 0.0
       }
@@ -1399,8 +1450,10 @@ const submitCATAnswer = async (req, res) => {
       return res.status(404).json({ message: 'CAT session not found' });
     }
     
-    // Get question
-    const question = await Question.findById(questionId);
+    // Use CACHED question pool instead of querying DB every time (MAJOR speedup)
+    const questionPool = session.questionPool || [];
+    const question = questionPool.find(q => String(q._id) === String(questionId))
+      || await Question.findById(questionId).lean(); // fallback to DB if not in cache
     
       if (!question) {
         return res.status(404).json({ message: 'Question not found' });
@@ -1417,9 +1470,9 @@ const submitCATAnswer = async (req, res) => {
           for (const subAnswer of subQuestionAnswers) {
             const subQ = question.questions.find(sq => String(sq._id) === String(subAnswer.subQuestionId));
             if (subQ) {
-              const eval = evaluateCATAnswer(subQ, subAnswer.answer);
+              const subEval = evaluateCATAnswer(subQ, subAnswer.answer);
               batchEvaluations.push({
-                ...eval,
+                ...subEval,
                 subQuestionId: subAnswer.subQuestionId,
                 userAnswer: subAnswer.answer,
                 questionType: subQ.type
@@ -1491,22 +1544,16 @@ const submitCATAnswer = async (req, res) => {
       targetSE: session.engine.targetSE
     });
     
-    // Get all questions
-      const allQuestions = await Question.find({
-        irtDiscrimination: { $exists: true },
-        irtDifficulty: { $exists: true }
-      }).lean();
+    // Use CACHED question pool — no DB query needed (MAJOR speedup)
+    const allQuestions = questionPool;
     
-    // Re-estimate ability
-      const administeredDocs = await Question.find({
-        _id: { $in: session.administered }
-      }).lean();
-      const administeredMap = new Map(
-        administeredDocs.map((item) => [String(item._id), item])
-      );
-      const administeredItems = session.administered
-        .map((id) => administeredMap.get(String(id)))
-        .filter(Boolean);
+    // Use cached pool to build administered items — no DB query needed
+    const administeredMap = new Map(
+      questionPool.map((item) => [String(item._id), item])
+    );
+    const administeredItems = session.administered
+      .map((id) => administeredMap.get(String(id)))
+      .filter(Boolean);
     
     session.theta = engine.estimateAbilityEAP(
       session.responses, 
@@ -1515,6 +1562,18 @@ const submitCATAnswer = async (req, res) => {
     
     // Calculate standard error
     session.se = engine.calculateStandardError(session.theta, administeredItems);
+    
+    // Calculate confidence level based on SE
+    // SE < 0.15 = Very High (95%+), SE < 0.30 = High (80%+), SE < 0.50 = Moderate (60%+), SE < 0.80 = Low, else Very Low
+    const getConfidenceLevel = (se) => {
+      if (!se || se === Infinity || se === -Infinity) return { level: 'Calculating...', percentage: 0 };
+      if (se < 0.15) return { level: 'Very High', percentage: 95 };
+      if (se < 0.30) return { level: 'High', percentage: 80 };
+      if (se < 0.50) return { level: 'Moderate', percentage: 60 };
+      if (se < 0.80) return { level: 'Low', percentage: 40 };
+      return { level: 'Very Low', percentage: 20 };
+    };
+    const confidence = getConfidenceLevel(session.se);
     
     // Check if test should stop
     if (engine.shouldStop(session.theta, session.se, session.administered.length, 
@@ -1530,17 +1589,17 @@ const submitCATAnswer = async (req, res) => {
 
       // Build answers array with full details (handles both regular and case-study sub-questions)
       const answerDetails = session.answerDetails || [];
-      const answers = await Promise.all(answerDetails.map(async (detail) => {
+      const answers = answerDetails.map((detail) => {
         let questionData;
         if (detail.subQuestionId && detail.questionId) {
-          // Case-study sub-question: fetch from parent
-          const parent = administeredDocs.find(d => String(d._id) === String(detail.questionId));
+          // Case-study sub-question: fetch from parent in cached pool
+          const parent = questionPool.find(d => String(d._id) === String(detail.questionId));
           if (parent && Array.isArray(parent.questions)) {
             questionData = parent.questions.find(sq => String(sq._id) === String(detail.subQuestionId));
           }
         } else {
-          // Regular question
-          questionData = administeredDocs.find(d => String(d._id) === String(detail.questionId));
+          // Regular question: find in cached pool
+          questionData = questionPool.find(d => String(d._id) === String(detail.questionId));
         }
 
         return {
@@ -1564,7 +1623,7 @@ const submitCATAnswer = async (req, res) => {
           category: questionData?.category,
           subcategory: questionData?.subcategory,
         };
-      }));
+      });
 
       const totalQuestionsCount = answers.length;
 
@@ -1581,6 +1640,7 @@ const submitCATAnswer = async (req, res) => {
         passed,
         theta: session.theta,
         se: session.se,
+        confidence,
         answers
       });
       
@@ -1610,6 +1670,7 @@ const submitCATAnswer = async (req, res) => {
       questionNumber: session.administered.length + 1,
       theta: session.theta,
       se: session.se,
+      confidence,
       status: 'continue'
     });
     

@@ -46,6 +46,10 @@ const testResultSchema = new mongoose.Schema({
   passed: Boolean,
   theta: Number,            // CAT ability estimate
   se: Number,               // CAT standard error
+  confidence: {             // Confidence level derived from SE
+    level: String,          // 'Very High', 'High', 'Moderate', 'Low', 'Very Low'
+    percentage: Number      // Numeric confidence percentage
+  },
   answers: [answerSchema],
   proctoring: mongoose.Schema.Types.Mixed,
 });

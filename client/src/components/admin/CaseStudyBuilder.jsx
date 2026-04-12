@@ -13,12 +13,11 @@ const CASE_STUDY_TYPES = [
 
 const QUESTION_TYPES = [
   { value: 'multiple-choice', label: 'Multiple Choice' },
-  { value: 'sata', label: 'SATA' },
-  { value: 'bowtie', label: 'Bowtie' },
+  { value: 'sata', label: 'SATA (Select All That Apply)' },
   { value: 'fill-blank', label: 'Fill in the Blank' },
   { value: 'highlight', label: 'Highlight' },
-  { value: 'drag-drop', label: 'Drag & Drop' },
-  { value: 'matrix', label: 'Matrix' },
+  { value: 'bowtie', label: 'Bowtie' },
+  { value: 'cloze-dropdown', label: 'Cloze Dropdown' },
 ];
 
 
@@ -305,11 +304,6 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
         alert('Please enter at least 2 options');
         return;
       }
-    }
-
-    if (currentQuestion.type === 'matrix') {
-      alert('Matrix questions are disabled in Case Study Builder.');
-      return;
     }
 
     const normalizedQuestion = {
