@@ -522,9 +522,10 @@ const generateTest = async (req, res) => {
       }
     }
 
-    // For case study mode, only fetch case-study type questions
+    // For case study mode: fetch ALL case-study type questions regardless of category/subcategory
+    // Admin creates case studies under various subject categories, so we must not filter by category
     if (req.body.testType === 'caseStudy') {
-      query.type = 'case-study';
+      query = { type: 'case-study' };
     }
 
     // Filter by question type (Traditional vs Next Gen)

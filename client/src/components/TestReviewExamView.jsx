@@ -436,8 +436,9 @@ const TestReviewExamView = ({
         : null;
 
   const reviewRows = useMemo(
-    () =>
-      answers.map((item, idx) => ({
+    () => {
+      // Build flat rows, but also detect case study groups
+      const flatRows = answers.map((item, idx) => ({
         ...item,
         index: idx,
         status: getAnswerStatusMeta(item),
@@ -449,17 +450,87 @@ const TestReviewExamView = ({
           formatQuestionTimeLabel(item) === '-' && totalQuestions > 0 && Number.isFinite(Number(timeTaken))
             ? formatQuestionTimeLabel({ timeSpentSeconds: Math.round((Number(timeTaken) * 60) / totalQuestions) })
             : formatQuestionTimeLabel(item),
-      })),
+      }));
+
+      // Group sub-questions by parentCaseStudyId to insert group header rows
+      const grouped = [];
+      let questionNumber = 0;
+      let i = 0;
+      while (i < flatRows.length) {
+        const row = flatRows[i];
+        if (row.parentCaseStudyId) {
+          // Find all consecutive sub-questions belonging to this case study
+          const caseStudyId = row.parentCaseStudyId;
+          const subRows = [];
+          while (i < flatRows.length && flatRows[i].parentCaseStudyId === caseStudyId) {
+            subRows.push(flatRows[i]);
+            i++;
+          }
+          questionNumber++;
+          // Add a header row for the case study group
+          const allCorrect = subRows.every(r => r.status.tone === 'correct');
+          const allIncorrect = subRows.every(r => r.status.tone === 'incorrect');
+          const allUnanswered = subRows.every(r => r.status.tone === 'unanswered');
+          let groupTone = 'incorrect';
+          if (allCorrect) groupTone = 'correct';
+          else if (allUnanswered) groupTone = 'unanswered';
+
+          grouped.push({
+            isCaseStudyGroupHeader: true,
+            parentCaseStudyId: caseStudyId,
+            parentCaseStudyType: row.parentCaseStudyType,
+            groupQuestionNumber: questionNumber,
+            subCount: subRows.length,
+            correctCount: subRows.filter(r => r.status.tone === 'correct').length,
+            scenario: row.scenario,
+            status: { label: `Case Study (${subRows.length} Qs)`, tone: groupTone },
+            sectionLabel: row.sectionLabel,
+            subRows, // store references for filtering
+          });
+          // Add indented sub-rows
+          subRows.forEach((subRow, subIdx) => {
+            grouped.push({
+              ...subRow,
+              isCaseStudySubQuestion: true,
+              isCaseStudyGroupHeader: false,
+              subQuestionNumber: subIdx + 1,
+              groupQuestionNumber: questionNumber,
+            });
+          });
+        } else {
+          questionNumber++;
+          grouped.push({
+            ...row,
+            globalQuestionNumber: questionNumber,
+          });
+          i++;
+        }
+      }
+      return grouped;
+    },
     [answers, totalQuestions, timeTaken]
   );
 
-  const filteredReviewRows = useMemo(() => reviewRows.filter((row) => {
-    if (answerFilter === 'all') return true;
-    if (answerFilter === 'correct') return row.status.tone === 'correct';
-    if (answerFilter === 'incorrect') return row.status.tone === 'incorrect';
-    if (answerFilter === 'unanswered') return row.status.tone === 'unanswered';
-    return true;
-  }), [answerFilter, reviewRows]);
+  const filteredReviewRows = useMemo(() => {
+    if (answerFilter === 'all') return reviewRows;
+    // For case study groups: if any sub-question matches filter, show the whole group
+    return reviewRows.filter((row) => {
+      if (row.isCaseStudyGroupHeader) {
+        // Show header if any of its sub-rows match the filter
+        return row.subRows.some(sub => {
+          const tone = sub.status.tone;
+          if (answerFilter === 'correct') return tone === 'correct';
+          if (answerFilter === 'incorrect') return tone === 'incorrect';
+          if (answerFilter === 'unanswered') return tone === 'unanswered';
+          return true;
+        });
+      }
+      if (answerFilter === 'correct') return row.status.tone === 'correct';
+      if (answerFilter === 'incorrect') return row.status.tone === 'incorrect';
+      if (answerFilter === 'unanswered') return row.status.tone === 'unanswered';
+      return true;
+    });
+  }, [answerFilter, reviewRows]);
 
   const analysisBlocks = useMemo(() => {
     const bySubject = {};
@@ -1473,36 +1544,87 @@ const TestReviewExamView = ({
                 </thead>
                 <tbody>
                   {filteredReviewRows.map((row) => (
-                    <tr
-                      key={`${row.questionId || 'q'}-${row.index}`}
-                      className={row.index === activeQuestionIndex ? 'active' : ''}
-                      onClick={() => setActiveQuestionIndex(row.index)}
-                    >
-                      <td>{row.index + 1}</td>
-                      <td>{row.qidLabel}</td>
-                      <td>
-                        <span className={`exam-review-status ${row.status.tone}`}>
+                    row.isCaseStudyGroupHeader ? (
+                      // Case Study Group Header Row
+                      <tr
+                        key={`cs-header-${row.parentCaseStudyId}`}
+                        className="exam-review-cs-header"
+                        onClick={() => row.subRows.length > 0 && setActiveQuestionIndex(row.subRows[0].index)}
+                        style={{ background: '#f0f9ff', cursor: 'pointer' }}
+                      >
+                        <td style={{ fontWeight: 700, color: '#0369a1', paddingLeft: '12px' }}>
+                          <i className="fas fa-layer-group" style={{ marginRight: '6px', fontSize: '0.8em' }}></i>
+                          CS-{row.groupQuestionNumber}
+                        </td>
+                        <td colSpan={2} style={{ fontWeight: 600 }}>
                           {row.status.label}
-                        </span>
-                      </td>
-                      <td>{row.difficultyLabel}</td>
-                      <td>{row.marksLabel}</td>
-                      <td>{row.sectionLabel}</td>
-                      <td>{row.timeSpentLabel}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-primary exam-review-row-action"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveQuestionIndex(row.index);
-                            openQuestionReviewRuntime(row.index);
-                          }}
-                        >
-                          Review
-                        </button>
-                      </td>
-                    </tr>
+                          <span style={{ marginLeft: '8px', fontSize: '0.85em', color: '#64748b' }}>
+                            ({row.correctCount}/{row.subCount} correct)
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`exam-review-status ${row.status.tone}`}>
+                            {row.correctCount}/{row.subCount}
+                          </span>
+                        </td>
+                        <td>-</td>
+                        <td>{row.sectionLabel}</td>
+                        <td>-</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary exam-review-row-action"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (row.subRows.length > 0) {
+                                setActiveQuestionIndex(row.subRows[0].index);
+                                openQuestionReviewRuntime(row.subRows[0].index);
+                              }
+                            }}
+                          >
+                            Review
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      // Regular row or case study sub-question row
+                      <tr
+                        key={`${row.questionId || 'q'}-${row.index}`}
+                        className={row.index === activeQuestionIndex ? 'active' : ''}
+                        onClick={() => setActiveQuestionIndex(row.index)}
+                        style={row.isCaseStudySubQuestion ? { paddingLeft: '32px' } : undefined}
+                      >
+                        <td style={row.isCaseStudySubQuestion ? { paddingLeft: '32px', color: '#64748b' } : undefined}>
+                          {row.isCaseStudySubQuestion
+                            ? <span style={{ fontWeight: 500 }}>Q{row.subQuestionNumber}</span>
+                            : row.index + 1
+                          }
+                        </td>
+                        <td>{row.qidLabel}</td>
+                        <td>
+                          <span className={`exam-review-status ${row.status.tone}`}>
+                            {row.status.label}
+                          </span>
+                        </td>
+                        <td>{row.difficultyLabel}</td>
+                        <td>{row.marksLabel}</td>
+                        <td>{row.sectionLabel}</td>
+                        <td>{row.timeSpentLabel}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary exam-review-row-action"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveQuestionIndex(row.index);
+                              openQuestionReviewRuntime(row.index);
+                            }}
+                          >
+                            Review
+                          </button>
+                        </td>
+                      </tr>
+                    )
                   ))}
                 </tbody>
               </table>

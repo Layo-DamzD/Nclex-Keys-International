@@ -1124,6 +1124,8 @@ const TestSession = () => {
 
           allResults.push({
             questionId: subQ._id,
+            parentCaseStudyId: q._id,
+            parentCaseStudyType: q.caseStudyType || 'layered',
             userAnswer,
             isCorrect,
             earnedMarks: sataScoreMeta.earnedMarks,
@@ -1136,10 +1138,11 @@ const TestSession = () => {
             rationale: subQ.rationale,
             rationaleImageUrl: subQ.rationaleImageUrl,
             scenario: q.scenario,
+            sections: q.sections || [],
             highlightStart: subQ.highlightStart,
             highlightEnd: subQ.highlightEnd,
-            category: subQ.category,
-            subcategory: subQ.subcategory,
+            category: subQ.category || q.category,
+            subcategory: subQ.subcategory || q.subcategory,
             matrixColumns: subQ.matrixColumns,
             matrixRows: subQ.matrixRows,
             hotspotImageUrl: subQ.hotspotImageUrl,

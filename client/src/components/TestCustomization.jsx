@@ -145,16 +145,15 @@ const TestCustomization = () => {
   };
 
   const getCaseStudyCount = (subcat) => {
-    return subcategoryCounts?.['NGN Case Studies']?.[subcat] || 0;
+    // Case studies are stored under various subject categories, not just 'NGN Case Studies'
+    // Use the total from the dedicated caseStudies response instead
+    return 0;
   };
 
   const selectedCaseStudiesTotal = useMemo(() => {
-    if (selectedCaseStudies.length === 0 || selectedCaseStudies.length === CASE_STUDY_SUBCATEGORIES.length) {
-      // Use total for NGN Case Studies category
-      return Object.values(subcategoryCounts?.['NGN Case Studies'] || {}).reduce((sum, c) => sum + c, 0);
-    }
-    return selectedCaseStudies.reduce((sum, sub) => sum + getCaseStudyCount(sub), 0);
-  }, [selectedCaseStudies, subcategoryCounts]);
+    // Use the total from the server's caseStudies count (all type=case-study questions)
+    return caseStudyStatusCounts?.total || 0;
+  }, [caseStudyStatusCounts]);
 
   // Subject category helpers
   const getPairKey = (category, subcategory) => `${category}:::${subcategory}`;
@@ -511,15 +510,9 @@ const TestCustomization = () => {
         }
         navigate('/test-session', { state: navData });
       } else if (categoryTab === 'caseStudies') {
-        // Submit with case study subcategories
-        const caseStudySelections = selectedCaseStudies.length > 0
-          ? selectedCaseStudies.map(sub => ({ category: 'NGN Case Studies', subcategory: sub }))
-          : CASE_STUDY_SUBCATEGORIES.map(sub => ({ category: 'NGN Case Studies', subcategory: sub }));
-
+        // Case study mode: server fetches ALL case-study type questions regardless of category
+        // (admin creates case studies under various subject categories)
         const response = await axios.post('/api/student/generate-test', {
-          selections: caseStudySelections,
-          subcategories: caseStudySelections.map(item => item.subcategory),
-          filterMode: 'caseStudies',
           questionCount,
           timed: effectiveTimed,
           tutorMode: effectiveTutorMode,
