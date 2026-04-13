@@ -28,11 +28,9 @@ import PwaInstallPrompt from './components/PwaInstallPrompt';
 import CookieConsentBanner from './components/CookieConsentBanner';
 
 // ============================================================
-// MAINTENANCE MODE CONFIG
-// Set to a UTC timestamp to activate. Set to null/0 to disable.
-// April 15, 2025 at 12:00 PM Lagos time (UTC+1) = 11:00 UTC
+// MAINTENANCE MODE — set to true to show 403, false to disable
 // ============================================================
-const MAINTENANCE_START_UTC = new Date('2025-04-15T11:00:00Z').getTime();
+const MAINTENANCE_MODE = true;
 
 function MaintenancePage() {
   return (
@@ -166,8 +164,8 @@ function MaintenancePage() {
 }
 
 function App() {
-  // Show maintenance page if current time is past the scheduled time
-  const isMaintenance = MAINTENANCE_START_UTC && Date.now() >= MAINTENANCE_START_UTC;
+  // Show maintenance page when enabled
+  const isMaintenance = MAINTENANCE_MODE;
 
   if (isMaintenance) {
     return (
