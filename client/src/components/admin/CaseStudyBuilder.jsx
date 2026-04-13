@@ -12,12 +12,7 @@ const CASE_STUDY_TYPES = [
 ];
 
 const QUESTION_TYPES = [
-  { value: 'multiple-choice', label: 'Multiple Choice' },
-  { value: 'sata', label: 'SATA (Select All That Apply)' },
-  { value: 'fill-blank', label: 'Fill in the Blank' },
-  { value: 'highlight', label: 'Highlight' },
-  { value: 'bowtie', label: 'Bowtie' },
-  { value: 'cloze-dropdown', label: 'Cloze Dropdown' },
+  { value: 'matrix', label: 'Matrix (Case Study Question)' },
 ];
 
 
@@ -61,35 +56,35 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
 
   // For adding new questions
   const [currentQuestion, setCurrentQuestion] = useState({
-    type: 'multiple-choice',
+    type: 'matrix',
     questionText: '',
-    options: ['', '', '', ''],
-    correctAnswer: '',
+    options: [],
+    correctAnswer: [],
     visibleSectionIds: [],
-    bowtieCondition: ['', '', '', ''],
-    bowtieActions: ['', '', '', ''],
-    bowtieParameters: ['', '', '', ''],
+    matrixColumns: ['Column 1', 'Column 2', 'Column 3'],
+    matrixRows: [
+      { rowText: '', correctColumn: 0 },
+      { rowText: '', correctColumn: 0 },
+    ],
     rationale: '',
     difficulty: 'medium',
-    highlightStart: 0,
-    highlightEnd: 0,
   });
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(-1);
   const [activeQuestionTab, setActiveQuestionTab] = useState('new');
 
   const getEmptyQuestion = () => ({
-    type: 'multiple-choice',
+    type: 'matrix',
     questionText: '',
-    options: ['', '', '', ''],
-    correctAnswer: '',
+    options: [],
+    correctAnswer: [],
     visibleSectionIds: [],
-    bowtieCondition: ['', '', '', ''],
-    bowtieActions: ['', '', '', ''],
-    bowtieParameters: ['', '', '', ''],
+    matrixColumns: ['Column 1', 'Column 2', 'Column 3'],
+    matrixRows: [
+      { rowText: '', correctColumn: 0 },
+      { rowText: '', correctColumn: 0 },
+    ],
     rationale: '',
     difficulty: 'medium',
-    highlightStart: 0,
-    highlightEnd: 0,
   });
 
   useEffect(() => {
@@ -298,12 +293,20 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
       return;
     }
 
-    if (currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'sata') {
-      const validOptions = currentQuestion.options.filter(opt => opt.trim() !== '');
-      if (validOptions.length < 2) {
-        alert('Please enter at least 2 options');
+    // Matrix validation
+    if (currentQuestion.type === 'matrix') {
+      const rows = currentQuestion.matrixRows || [];
+      const cols = currentQuestion.matrixColumns || [];
+      if (cols.length < 2) {
+        alert('Please add at least 2 columns');
         return;
       }
+      if (rows.length < 1 || !rows.some(r => r.rowText?.trim())) {
+        alert('Please add at least one row with text');
+        return;
+      }
+      // Auto-set correctAnswer from matrixRows
+      currentQuestion.correctAnswer = rows.map(r => r.correctColumn);
     }
 
     const normalizedQuestion = {
@@ -355,15 +358,15 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
     setCurrentQuestion({
       ...getEmptyQuestion(),
       ...nextQuestion,
-      options: Array.isArray(nextQuestion.options) && nextQuestion.options.length ? nextQuestion.options : ['', '', '', ''],
+      options: Array.isArray(nextQuestion.options) && nextQuestion.options.length ? nextQuestion.options : [],
       highlightStart: Number(nextQuestion.highlightStart || 0),
       highlightEnd: Number(nextQuestion.highlightEnd || 0),
       visibleSectionIds: Array.isArray(nextQuestion.visibleSectionIds) ? nextQuestion.visibleSectionIds : [],
       bowtieCondition: Array.isArray(nextQuestion.bowtieCondition) && nextQuestion.bowtieCondition.length ? nextQuestion.bowtieCondition : ['', '', '', ''],
       bowtieActions: Array.isArray(nextQuestion.bowtieActions) && nextQuestion.bowtieActions.length ? nextQuestion.bowtieActions : ['', '', '', ''],
       bowtieParameters: Array.isArray(nextQuestion.bowtieParameters) && nextQuestion.bowtieParameters.length ? nextQuestion.bowtieParameters : ['', '', '', ''],
-      matrixColumns: Array.isArray(nextQuestion.matrixColumns) ? nextQuestion.matrixColumns : [],
-      matrixRows: Array.isArray(nextQuestion.matrixRows) ? nextQuestion.matrixRows : [],
+      matrixColumns: Array.isArray(nextQuestion.matrixColumns) && nextQuestion.matrixColumns.length ? nextQuestion.matrixColumns : ['Column 1', 'Column 2', 'Column 3'],
+      matrixRows: Array.isArray(nextQuestion.matrixRows) && nextQuestion.matrixRows.length ? nextQuestion.matrixRows : [{ rowText: '', correctColumn: 0 }, { rowText: '', correctColumn: 0 }],
     });
     setEditingQuestionIndex(index);
     setActiveQuestionTab(index);
@@ -861,37 +864,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                 />
               </div>
 
-              {/* Options for MC/SATA */}
-              {(currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'sata') && (
-                <div className="form-group">
-                  <label className="form-label">Options</label>
-                  {currentQuestion.options.map((opt, idx) => (
-                    <div key={idx} className="input-group mb-2">
-                      <span className="input-group-text">{String.fromCharCode(65 + idx)}</span>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={opt}
-                        onChange={(e) => handleOptionChange(idx, e.target.value)}
-                        placeholder={`Option ${String.fromCharCode(65 + idx)}`}
-                      />
-                      {currentQuestion.options.length > 2 && (
-                        <button
-                          type="button"
-                          className="btn btn-danger"
-                          onClick={() => removeOption(idx)}
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button type="button" className="btn btn-sm btn-primary" onClick={addOption}>
-                    Add Option
-                  </button>
-                </div>
-              )}
-
+              {/* Options for MC/SATA - removed: only matrix in case studies */}
               {currentQuestion.type === 'bowtie' && (
                 <div className="form-group">
                   <label className="form-label">Bowtie Choices</label>
@@ -989,6 +962,135 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                 </div>
               )}
 
+              {/* MATRIX QUESTION BUILDER */}
+              {currentQuestion.type === 'matrix' && (
+                <div className="form-group" style={{ background: '#f0f9ff', padding: '16px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                  <label className="form-label" style={{ fontWeight: 700, color: '#0369a1', marginBottom: '12px', display: 'block' }}>
+                    Matrix Configuration
+                  </label>
+
+                  {/* Column Headers */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label className="form-label" style={{ fontSize: '0.85rem' }}>Column Headers</label>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {(currentQuestion.matrixColumns || ['Column 1', 'Column 2', 'Column 3']).map((col, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="text"
+                            className="form-control form-control-sm"
+                            style={{ width: '140px' }}
+                            value={col}
+                            onChange={(e) => {
+                              const next = [...(currentQuestion.matrixColumns || ['Column 1', 'Column 2', 'Column 3'])];
+                              next[idx] = e.target.value;
+                              handleQuestionChange('matrixColumns', next);
+                            }}
+                            placeholder={`Col ${idx + 1}`}
+                          />
+                          {(currentQuestion.matrixColumns || []).length > 2 && (
+                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => {
+                              const next = (currentQuestion.matrixColumns || []).filter((_, i) => i !== idx);
+                              handleQuestionChange('matrixColumns', next);
+                            }} style={{ padding: '2px 6px' }}>×</button>
+                          )}
+                        </div>
+                      ))}
+                      <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => {
+                        const next = [...(currentQuestion.matrixColumns || ['Column 1', 'Column 2', 'Column 3']), `Column ${(currentQuestion.matrixColumns || []).length + 1}`];
+                        handleQuestionChange('matrixColumns', next);
+                      }} style={{ padding: '2px 8px' }}>+ Col</button>
+                    </div>
+                  </div>
+
+                  {/* Rows */}
+                  <div>
+                    <label className="form-label" style={{ fontSize: '0.85rem' }}>Rows (each row is one matching task)</label>
+                    {(currentQuestion.matrixRows || []).map((row, rowIdx) => (
+                      <div key={rowIdx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: 600, color: '#64748b', minWidth: '20px' }}>{rowIdx + 1}.</span>
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          style={{ flex: 1 }}
+                          value={row.rowText || ''}
+                          onChange={(e) => {
+                            const next = [...(currentQuestion.matrixRows || [])];
+                            next[rowIdx] = { ...next[rowIdx], rowText: e.target.value };
+                            handleQuestionChange('matrixRows', next);
+                          }}
+                          placeholder="Row description..."
+                        />
+                        <select
+                          className="form-control form-control-sm"
+                          style={{ width: '140px' }}
+                          value={row.correctColumn ?? 0}
+                          onChange={(e) => {
+                            const next = [...(currentQuestion.matrixRows || [])];
+                            next[rowIdx] = { ...next[rowIdx], correctColumn: Number(e.target.value) };
+                            handleQuestionChange('matrixRows', next);
+                          }}
+                        >
+                          {(currentQuestion.matrixColumns || ['Column 1', 'Column 2', 'Column 3']).map((col, cIdx) => (
+                            <option key={cIdx} value={cIdx}>{col}</option>
+                          ))}
+                        </select>
+                        {(currentQuestion.matrixRows || []).length > 1 && (
+                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => {
+                            const next = (currentQuestion.matrixRows || []).filter((_, i) => i !== rowIdx);
+                            handleQuestionChange('matrixRows', next);
+                          }} style={{ padding: '2px 6px' }}>×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-sm btn-outline-primary mt-2" onClick={() => {
+                      const next = [...(currentQuestion.matrixRows || []), { rowText: '', correctColumn: 0 }];
+                      handleQuestionChange('matrixRows', next);
+                    }}>+ Add Row</button>
+                  </div>
+
+                  {/* Preview Table */}
+                  {(currentQuestion.matrixRows || []).length > 0 && (currentQuestion.matrixColumns || []).length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <label className="form-label" style={{ fontSize: '0.85rem' }}>Preview</label>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ padding: '6px 10px', background: '#0369a1', color: '#fff', textAlign: 'left', borderRadius: '4px 0 0 0' }}>Row</th>
+                              {(currentQuestion.matrixColumns || []).map((col, cIdx) => (
+                                <th key={cIdx} style={{ padding: '6px 10px', background: '#0369a1', color: '#fff', textAlign: 'center' }}>{col}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(currentQuestion.matrixRows || []).map((row, rIdx) => (
+                              <tr key={rIdx}>
+                                <td style={{ padding: '6px 10px', border: '1px solid #e2e8f0', fontWeight: 500 }}>{row.rowText || `Row ${rIdx + 1}`}</td>
+                                {(currentQuestion.matrixColumns || []).map((_, cIdx) => (
+                                  <td key={cIdx} style={{
+                                    padding: '6px 10px',
+                                    border: '1px solid #e2e8f0',
+                                    textAlign: 'center',
+                                    background: row.correctColumn === cIdx ? '#dcfce7' : '#fff'
+                                  }}>
+                                    {row.correctColumn === cIdx ? '✓' : ''}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Auto-set correctAnswer from matrixRows */}
+                  {((currentQuestion.matrixRows || []).length > 0) && (
+                    <input type="hidden" value={JSON.stringify((currentQuestion.matrixRows || []).map(r => r.correctColumn))} readOnly />
+                  )}
+                </div>
+              )}
+
               {caseStudy.sections.length > 0 && (
                 <div className="form-group">
                   <label className="form-label">Visible Patient Tabs for this Question</label>
@@ -1017,77 +1119,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                 </div>
               )}
 
-              {/* Correct Answer for MC */}
-              {currentQuestion.type === 'multiple-choice' && (
-                <div className="form-group">
-                  <label className="form-label">Correct Answer</label>
-                  <select
-                    className="form-control"
-                    value={currentQuestion.correctAnswer}
-                    onChange={(e) => handleQuestionChange('correctAnswer', e.target.value)}
-                  >
-                    <option value="">Select correct answer</option>
-                    {currentQuestion.options.map((_, idx) => (
-                      <option key={idx} value={String.fromCharCode(65 + idx)}>
-                        {String.fromCharCode(65 + idx)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* SATA correct answers */}
-              {currentQuestion.type === 'sata' && (
-                <div className="form-group">
-                  <label className="form-label">Correct Answers (check all that apply)</label>
-                  <div className="sata-options">
-                    {currentQuestion.options.map((opt, idx) => (
-                      <div key={idx} className="form-check">
-                        <input
-                          type="checkbox"
-                          className="form-check-input"
-                          id={`sata-${idx}`}
-                          value={String.fromCharCode(65 + idx)}
-                          checked={currentQuestion.correctAnswer?.includes(String.fromCharCode(65 + idx))}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const current = currentQuestion.correctAnswer || [];
-                            if (e.target.checked) {
-                              handleQuestionChange('correctAnswer', [...current, value]);
-                            } else {
-                              handleQuestionChange('correctAnswer', current.filter(v => v !== value));
-                            }
-                          }}
-                        />
-                        <label className="form-check-label" htmlFor={`sata-${idx}`}>
-                          {String.fromCharCode(65 + idx)}. {opt || `Option ${idx + 1}`}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Fill in Blank */}
-              {currentQuestion.type === 'fill-blank' && (
-                <div className="form-group">
-                  <label className="form-label">Correct Answer</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={currentQuestion.correctAnswer}
-                    onChange={(e) => handleQuestionChange('correctAnswer', e.target.value)}
-                    placeholder="Enter the correct answer"
-                  />
-                  <small className="text-muted">For multiple answers, separate with semicolons</small>
-                </div>
-              )}
-
-              {currentQuestion.type === 'matrix' && (
-                <div className="alert alert-warning">
-                  Matrix question setup is disabled in Case Study Builder.
-                </div>
-              )}
+              {/* Correct Answer for MC - removed: only matrix in case studies */}
               <div className="form-group">
                 <label className="form-label">Rationale</label>
                 <textarea

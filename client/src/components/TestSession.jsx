@@ -282,8 +282,8 @@ const TestSession = () => {
   const dashboardReturnPath = settings?.returnTo || '/dashboard';
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  // 2 minutes per question for NCLEX-style timing (was 1 minute which is too short)
-  const [timeLeft, setTimeLeft] = useState(settings.timed ? settings.totalQuestions * 120 : null);
+  // Timer: 85 minutes max for NCLEX-style timing (caps at 85 min regardless of question count)
+  const [timeLeft, setTimeLeft] = useState(settings.timed ? Math.min(settings.totalQuestions * 120, 85 * 60) : null);
   // Per-question time tracking
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [questionTimeSpent, setQuestionTimeSpent] = useState({});
@@ -1081,16 +1081,25 @@ const TestSession = () => {
     // Normalize correct answer (handle both array and string formats)
     const correct = [...new Set(parseAnswerToArray(correctAnswer))];
 
-    const totalMarks = Math.max(correct.length, 1);
+    // 1 answer = 1 point: every SATA question is worth exactly 1 point
+    // All correct + no wrong = 1 pt | Some correct + no wrong = 0.5 pt | Any wrong = 0 pt
+    const totalMarks = 1;
     const correctPicked = user.filter((choice) => correct.includes(choice)).length;
     const wrongPicked = user.filter((choice) => !correct.includes(choice)).length;
-    // Negative scoring: wrong picks deduct points (can go below 0) — matches server behavior
-    const earnedMarks = correctPicked - wrongPicked;
-
+    let earnedMarks = 0;
     let isCorrect = false;
-    if (earnedMarks >= totalMarks) {
+
+    if (wrongPicked > 0) {
+      // Any wrong pick = 0 points
+      earnedMarks = 0;
+      isCorrect = false;
+    } else if (correctPicked === correct.length && correct.length > 0) {
+      // All correct options picked, none wrong = full point
+      earnedMarks = 1;
       isCorrect = true;
-    } else if (earnedMarks > 0) {
+    } else if (correctPicked > 0) {
+      // Some correct, none wrong = half point
+      earnedMarks = 0.5;
       isCorrect = 'partial';
     }
 
@@ -1242,7 +1251,7 @@ const TestSession = () => {
         answers: { ...answers, ...caseAnswers },
         results: allResults,
         totalQuestions: allResults.length,
-        timeTaken: settings.timed ? (settings.totalQuestions * 120 - timeLeft) / 60 : 0,
+        timeTaken: settings.timed ? (Math.min(settings.totalQuestions * 120, 85 * 60) - timeLeft) / 60 : 0,
         passed: (earnedTotal / possibleTotal) >= 0.7,
         isCustomTest: !settings?.fromPreparedTest,
         proctoring: isProctored ? {

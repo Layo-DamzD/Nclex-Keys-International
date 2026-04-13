@@ -57,8 +57,12 @@ class CATEngine {
    * Select next item using Maximum Fisher Information (MFI) [citation:9]
    */
   selectNextItem(theta, availableItems, administeredItems) {
+    // Use Set for O(1) administered lookup instead of Array.includes O(n)
+    const administeredSet = new Set(
+      (Array.isArray(administeredItems) ? administeredItems : []).map(id => String(id))
+    );
     const candidateItems = availableItems.filter(item => 
-      !administeredItems.includes(item._id.toString())
+      !administeredSet.has(String(item._id))
     );
     
     let bestItem = null;

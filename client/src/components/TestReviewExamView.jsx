@@ -710,6 +710,125 @@ const TestReviewExamView = ({
               <div className="mt-3">
                 <div className="label mb-1">Hotspot Target</div>
                 <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
+                {active.hotspotImageUrl && (
+                  <div className="mt-2">
+                    <img src={firstMediaUrl(active.hotspotImageUrl)} data-raw-src={active.hotspotImageUrl} data-fallback-index="0" onError={handleImageFallback} alt="Hotspot image" style={{ maxWidth: '320px', width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {active.type === 'matrix' && (
+              <div className="mt-3">
+                <div className="label mb-1">Matrix Answer</div>
+                {Array.isArray(active.matrixRows) && active.matrixRows.length > 0 && (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.9em' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ border: '1px solid #e2e8f0', padding: '6px 10px', background: '#f1f5f9', textAlign: 'left' }}>Row</th>
+                          {(active.matrixColumns || []).map((col, ci) => (
+                            <th key={ci} style={{ border: '1px solid #e2e8f0', padding: '6px 10px', background: '#f1f5f9', textAlign: 'center' }}>{col || `Col ${ci+1}`}</th>
+                          ))}
+                          <th style={{ border: '1px solid #e2e8f0', padding: '6px 10px', background: '#f1f5f9', textAlign: 'center' }}>Your Answer</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {active.matrixRows.map((row, ri) => {
+                          const userCol = Array.isArray(active.userAnswer) ? active.userAnswer[ri] : undefined;
+                          const isCorrect = userCol === row.correctColumn;
+                          return (
+                            <tr key={ri}>
+                              <td style={{ border: '1px solid #e2e8f0', padding: '6px 10px' }}>{row.rowText || `Row ${ri+1}`}</td>
+                              {(active.matrixColumns || []).map((_, ci) => (
+                                <td key={ci} style={{
+                                  border: '1px solid #e2e8f0',
+                                  padding: '6px 10px',
+                                  textAlign: 'center',
+                                  background: ci === row.correctColumn ? '#dcfce7' : 'transparent'
+                                }}>{ci === row.correctColumn ? '✓' : ''}</td>
+                              ))}
+                              <td style={{
+                                border: '1px solid #e2e8f0',
+                                padding: '6px 10px',
+                                textAlign: 'center',
+                                fontWeight: 600,
+                                color: isCorrect ? '#166534' : '#dc2626',
+                                background: isCorrect ? '#dcfce7' : '#fee2e2'
+                              }}>
+                                {userCol !== undefined ? (active.matrixColumns?.[userCol] || `Col ${userCol+1}`) : '(empty)'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {active.type === 'drag-drop' && (
+              <div className="mt-3">
+                <div className="label mb-1">Ordered Response</div>
+                <div style={{ fontSize: '0.9em' }}>
+                  <div style={{ marginBottom: '4px', color: '#6b7280', fontWeight: 500 }}>Your order:</div>
+                  {(active.userAnswer || '').split('|').filter(Boolean).map((item, idx) => (
+                    <div key={idx} style={{
+                      padding: '6px 12px',
+                      marginBottom: '4px',
+                      borderRadius: '6px',
+                      background: '#f1f5f9',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      {idx + 1}. {item}
+                    </div>
+                  ))}
+                  {(!active.userAnswer || !active.userAnswer.split('|').filter(Boolean).length) && (
+                    <div style={{ color: '#9ca3af' }}>Not answered</div>
+                  )}
+                  <div style={{ marginTop: '8px', marginBottom: '4px', color: '#6b7280', fontWeight: 500 }}>Correct order:</div>
+                  {(active.correctAnswer || '').split('|').filter(Boolean).map((item, idx) => (
+                    <div key={idx} style={{
+                      padding: '6px 12px',
+                      marginBottom: '4px',
+                      borderRadius: '6px',
+                      background: '#dcfce7',
+                      border: '1px solid #bbf7d0',
+                      color: '#166534'
+                    }}>
+                      {idx + 1}. {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {active.type === 'highlight' && (
+              <div className="mt-3">
+                <div className="label mb-1">Highlight Selection</div>
+                <div style={{ fontSize: '0.9em' }}>
+                  <span style={{ color: '#6b7280' }}>Your answer: </span>
+                  <span style={{
+                    background: active.isCorrect ? '#dcfce7' : '#fee2e2',
+                    color: active.isCorrect ? '#166534' : '#dc2626',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontWeight: 500
+                  }}>{active.userAnswer || '(empty)'}</span>
+                  {!active.isCorrect && (
+                    <><br />
+                    <span style={{ color: '#6b7280' }}>Correct: </span>
+                    <span style={{
+                      background: '#dcfce7',
+                      color: '#166534',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontWeight: 500
+                    }}>{active.correctAnswer}</span>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 

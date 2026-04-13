@@ -122,9 +122,23 @@ const UploadQuestion = () => {
     setCorrectAnswer('');
   }, [type, correctAnswer]);
 
+  // Case-study related categories/subcategories — only Matrix type allowed
+  const CASE_STUDY_CATEGORIES = ['NGN Case Studies'];
+  const isCaseStudyCategory = CASE_STUDY_CATEGORIES.includes(category);
+
+  // Filter question types based on category
+  const availableQuestionTypes = isCaseStudyCategory
+    ? QUESTION_TYPES.filter((t) => t.value === 'matrix')
+    : QUESTION_TYPES;
+
   const handleCategoryChange = (e) => {
-    setCategory(e.target.value);
+    const newCategory = e.target.value;
+    setCategory(newCategory);
     setSubcategory('');
+    // Auto-switch to Matrix if selecting a case-study category
+    if (CASE_STUDY_CATEGORIES.includes(newCategory) && type !== 'matrix') {
+      setType('matrix');
+    }
   };
 
   const handleOptionChange = (index, value) => {
@@ -601,7 +615,7 @@ const UploadQuestion = () => {
         <div className="form-group">
           <label className="form-label">Question Type</label>
           <div className="type-selector">
-            {QUESTION_TYPES.map((item) => (
+            {availableQuestionTypes.map((item) => (
               <button
                 type="button"
                 key={item.value}
@@ -914,38 +928,23 @@ const UploadQuestion = () => {
           <div className="form-group">
             <div className="upload-row-header">
               <label className="form-label">Drag & Drop Items (Ordered Response)</label>
-              <button type="button" className="btn btn-sm btn-primary" onClick={() => setDragDropItems((prev) => [...prev, ''])}>Add Item</button>
             </div>
-            <small className="text-muted d-block mb-3">Add items in the correct order. Students will drag to reorder.</small>
-            <div className="option-list">
-              {dragDropItems.map((item, idx) => (
-                <div key={idx} className="option-row">
-                  <div className="option-index">{String.fromCharCode(65 + idx)}</div>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={item}
-                    onChange={(e) => handleDragDropChange(idx, e.target.value)}
-                    placeholder={`Item ${String.fromCharCode(65 + idx)}`}
-                  />
-                  {dragDropItems.length > 2 && (
-                    <button type="button" className="btn btn-sm btn-danger" onClick={() => setDragDropItems((prev) => prev.filter((_, i) => i !== idx))}>Remove</button>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="drag-preview-card">
-              <div className="drag-preview-title">Preview of Student View</div>
-              <div className="drag-preview-list">
-                {dragPreviewItems.length === 0 ? (
-                  <div className="drag-preview-item empty">Items will preview here</div>
-                ) : (
-                  dragPreviewItems.map((item, idx) => (
-                    <div key={`${item}-${idx}`} className="drag-preview-item">{item}</div>
-                  ))
-                )}
-              </div>
-            </div>
+            <small className="text-muted d-block mb-3">
+              Enter items in the <strong>correct order</strong> — one per line. Students will drag to reorder them.
+            </small>
+            <textarea
+              className="form-control mb-3"
+              rows={Math.max(4, dragDropItems.length + 1)}
+              value={dragDropItems.join('\n')}
+              onChange={(e) => {
+                const lines = e.target.value.split('\n');
+                setDragDropItems(lines.length > 0 ? lines : ['']);
+              }}
+              placeholder={`Step 1: Assess patient vitals\nStep 2: Notify physician\nStep 3: Document findings\nStep 4: Monitor response`}
+            />
+            <small className="text-muted">
+              {dragDropItems.filter(i => i.trim()).length} item(s) entered. Minimum 2 required.
+            </small>
           </div>
         )}
 
@@ -1201,61 +1200,74 @@ const UploadQuestion = () => {
               rows="4"
               value={clozeTemplate}
               onChange={(e) => {
-                setClozeTemplate(e.target.value);
-                setQuestionText(e.target.value);
+                const val = e.target.value;
+                setClozeTemplate(val);
+                setQuestionText(val);
+                // Auto-detect {{blankN}} placeholders and sync clozeBlanks
+                const placeholderRegex = /\{\{(\w+)\}\}/g;
+                const found = [];
+                let match;
+                while ((match = placeholderRegex.exec(val)) !== null) {
+                  found.push(match[1]);
+                }
+                if (found.length > 0) {
+                  setClozeBlanks((prev) => {
+                    const existingMap = {};
+                    prev.forEach((b) => { existingMap[b.key] = b; });
+                    return found.map((key) => existingMap[key] || { key, optionsText: '', correctAnswer: '' });
+                  });
+                }
               }}
-              placeholder="Example: The mitral valve is best heard at {{blank1}}."
+              placeholder="Example: The mitral valve is best heard at {{blank1}} and the aortic area at {{blank2}}."
             />
             <small className="text-muted d-block mt-2">
-              Use placeholders like <code>{'{{blank1}}'}</code>, <code>{'{{blank2}}'}</code>.
+              Use placeholders like <code>{'{{blank1}}'}</code>, <code>{'{{blank2}}'}</code>. Blanks are auto-detected from the template above.
             </small>
 
-            <div className="upload-row-header mt-3">
-              <label className="form-label mb-0">Blank Definitions</label>
-              <button type="button" className="btn btn-sm btn-primary" onClick={addClozeBlank}>Add Blank</button>
-            </div>
-
-            <div className="option-list">
-              {clozeBlanks.map((blank, idx) => (
-                <div key={`blank-${idx}`} className="matrix-row-builder">
-                  <div className="upload-grid-three">
-                    <div>
-                      <label className="form-label">Blank Key</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={blank.key}
-                        onChange={(e) => updateClozeBlank(idx, 'key', e.target.value)}
-                        placeholder={`blank${idx + 1}`}
-                      />
+            <div className="mt-3">
+              <label className="form-label">
+                Blank Definitions ({clozeBlanks.length} blank{clozeBlanks.length !== 1 ? 's' : ''} detected)
+              </label>
+              <div className="option-list">
+                {clozeBlanks.map((blank, idx) => (
+                  <div key={`blank-${idx}`} style={{
+                    padding: '12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    marginBottom: '8px',
+                    background: '#f8fafc'
+                  }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '8px' }}>
+                      {'{{' + blank.key + '}}'}
                     </div>
-                    <div>
-                      <label className="form-label">Options (; separated)</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={blank.optionsText}
-                        onChange={(e) => updateClozeBlank(idx, 'optionsText', e.target.value)}
-                        placeholder="left 5th ICS MCL; right 2nd ICS"
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label">Correct Answer</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={blank.correctAnswer}
-                        onChange={(e) => updateClozeBlank(idx, 'correctAnswer', e.target.value)}
-                      />
+                    <div className="upload-grid-two">
+                      <div>
+                        <label className="form-label" style={{ fontSize: '0.8rem' }}>Options (semicolon-separated)</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={blank.optionsText}
+                          onChange={(e) => updateClozeBlank(idx, 'optionsText', e.target.value)}
+                          placeholder="Option A; Option B; Option C"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: '0.8rem' }}>Correct Answer</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={blank.correctAnswer}
+                          onChange={(e) => updateClozeBlank(idx, 'correctAnswer', e.target.value)}
+                          placeholder="Correct option"
+                        />
+                      </div>
                     </div>
                   </div>
-                  {clozeBlanks.length > 1 && (
-                    <button type="button" className="btn btn-sm btn-danger mt-2" onClick={() => removeClozeBlank(idx)}>
-                      Remove Blank
-                    </button>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
+              {clozeBlanks.length === 0 && (
+                <small className="text-muted">Add placeholders like {'{{blank1}}'} in the template above to define blanks.</small>
+              )}
             </div>
           </div>
         )}

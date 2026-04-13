@@ -257,8 +257,8 @@ const CatSession = () => {
   // showRationale is unused in CAT — rationale shown only in review after exam
   const [isCorrect, setIsCorrect] = useState(null);
 
-  // Timer: 2 minutes per question
-  const [timeLeft, setTimeLeft] = useState(120);
+  // Timer: 85 minutes total for both Assessment and CAT
+  const [timeLeft, setTimeLeft] = useState(85 * 60);
 
   // Answer state for all question types
   const [answer, setAnswer] = useState(null);
@@ -361,10 +361,7 @@ const CatSession = () => {
     setCaseDragSourceItems({});
     setCaseDragAnswerItems({});
     setActiveCaseTabByQuestion({});
-    // Give case studies more time: 2 min per sub-question
-    const subCount = currentQuestion?.type === 'case-study' && Array.isArray(currentQuestion?.questions)
-      ? currentQuestion.questions.length : 1;
-    setTimeLeft(120 * subCount);
+    // Timer continues counting down — do NOT reset per question (85 min total)
     setError('');
     setIsCorrect(null);
   }, [currentQuestion?._id]);
@@ -372,7 +369,7 @@ const CatSession = () => {
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
   const formatTheta = (value) => {
@@ -484,6 +481,7 @@ const CatSession = () => {
           setTheta(response.data.theta);
           setSe(response.data.se);
           if (response.data.confidence) setConfidence(response.data.confidence);
+          setLoading(false);
         }
       } else {
         const userAnswer = getCurrentUserAnswer();

@@ -330,8 +330,11 @@ const submitTest = async (req, res) => {
     ), 0);
     const possibleScore = enrichedAnswers.reduce((sum, row) => (
       sum + Number(row?.totalMarks ?? 1)
-    ), 0) || Math.max(Number(totalQuestions) || 0, 1);
+    ), 0) || Math.max(enrichedAnswers.length, 1);
     const computedPercentage = Math.round((earnedScore / possibleScore) * 100);
+
+    // 1 answer = 1 point: totalQuestions is the actual number of answer entries (including sub-questions)
+    const actualAnswerCount = enrichedAnswers.length;
 
     // Save test result with full answer details
     const testResult = new TestResult({
@@ -339,7 +342,7 @@ const submitTest = async (req, res) => {
       testName,
       date: new Date(),
       score: Number(earnedScore.toFixed(2)),
-      totalQuestions,
+      totalQuestions: actualAnswerCount, // actual answer count, not top-level question count
       totalPoints: Math.round(possibleScore),
       earnedPoints: Number(earnedScore.toFixed(2)),
       timeTaken,
@@ -1370,7 +1373,7 @@ const startCATSession = async (req, res) => {
     
     // Create CAT engine — reduced minItems for assessment mode
     const minItems = testType === 'assessment' ? 50 : 85;
-    const maxItems = testType === 'assessment' ? 100 : 150;
+    const maxItems = 150; // 150 max for both assessment and CAT
     
     const engine = new CATEngine({
       passingStandard: 0.0, // θ_cut
@@ -1536,23 +1539,26 @@ const submitCATAnswer = async (req, res) => {
       session.earnedMarks.push(evaluation.earnedMarks);
       session.totalMarks.push(evaluation.totalMarks);
     
-    // Recreate engine with session parameters
-    const engine = new CATEngine({
-      passingStandard: session.engine.passingStandard,
-      minItems: session.engine.minItems,
-      maxItems: session.engine.maxItems,
-      targetSE: session.engine.targetSE
-    });
+    // Reuse cached engine and administeredMap (set once on first answer)
+    if (!session.cachedEngine) {
+      session.cachedEngine = new CATEngine({
+        passingStandard: session.engine.passingStandard,
+        minItems: session.engine.minItems,
+        maxItems: session.engine.maxItems,
+        targetSE: session.engine.targetSE
+      });
+      session.cachedAdministeredMap = new Map(
+        questionPool.map((item) => [String(item._id), item])
+      );
+    }
+    const engine = session.cachedEngine;
     
     // Use CACHED question pool — no DB query needed (MAJOR speedup)
     const allQuestions = questionPool;
     
-    // Use cached pool to build administered items — no DB query needed
-    const administeredMap = new Map(
-      questionPool.map((item) => [String(item._id), item])
-    );
+    // Use cached administered items map
     const administeredItems = session.administered
-      .map((id) => administeredMap.get(String(id)))
+      .map((id) => session.cachedAdministeredMap.get(String(id)))
       .filter(Boolean);
     
     session.theta = engine.estimateAbilityEAP(
@@ -1632,7 +1638,7 @@ const submitCATAnswer = async (req, res) => {
         testName,
         date: new Date(),
         score: totalEarned,
-        totalQuestions: totalQuestionsCount,
+        totalQuestions: totalQuestionsCount, // actual answer count (includes sub-questions)
         totalPoints: totalPossible,
         earnedPoints: totalEarned,
         timeTaken: (new Date() - session.startTime) / 60000,
