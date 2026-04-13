@@ -258,7 +258,10 @@ const getCategoryStats = async (req, res) => {
 
     // Count questions per category/subcategory using canonical mapping
     // ONLY count questions that match a canonical category — skip everything else
+    // EXCLUDE case-study type questions (they have their own tab)
     questions.forEach(q => {
+      if (q.type === 'case-study') return;
+
       const cat = matchCategory(q.category);
 
       // Skip questions whose category doesn't match any canonical category
@@ -282,11 +285,15 @@ const getCategoryStats = async (req, res) => {
     });
 
     // Aggregate usage data from test results using canonical mapping
+    // EXCLUDE case-study type questions from subject category stats
     testResults.forEach(result => {
       if (result.answers) {
         result.answers.forEach(answer => {
           if (answer.questionId) {
             const q = answer.questionId;
+            // Skip case-study type questions
+            if (q.type === 'case-study') return;
+
             const cat = matchCategory(q.category);
             // Only count if category is canonical
             if (categoryStats[cat]) {

@@ -80,6 +80,7 @@ const TestCustomization = () => {
   });
   const [subjectStatusCounts, setSubjectStatusCounts] = useState(null);
   const [clientNeedStatusCounts, setClientNeedStatusCounts] = useState(null);
+  const [caseStudyStatusCounts, setCaseStudyStatusCounts] = useState(null);
 
   const navigate = useNavigate();
 
@@ -242,6 +243,12 @@ const TestCustomization = () => {
               total: statusResponse.data.clientNeeds.total || 0
             });
           }
+          if (statusResponse.data?.caseStudies) {
+            setCaseStudyStatusCounts({
+              ...statusResponse.data.caseStudies,
+              total: statusResponse.data.caseStudies.total || 0
+            });
+          }
         } catch (statusErr) {
           console.error('Failed to load question status counts', statusErr);
         }
@@ -394,7 +401,11 @@ const TestCustomization = () => {
   // Total questions in the question bank — switch based on active tab
   const activeStatusCounts = categoryTab === 'subjects'
     ? (subjectStatusCounts || statusCounts)
-    : (clientNeedStatusCounts || statusCounts);
+    : categoryTab === 'clientNeeds'
+      ? (clientNeedStatusCounts || statusCounts)
+      : categoryTab === 'caseStudies'
+        ? (caseStudyStatusCounts || statusCounts)
+        : statusCounts;
   const totalQuestionBank = activeStatusCounts.total || 0;
   const currentAvailable = categoryTab === 'clientNeeds' 
     ? selectedClientNeedsTotal 

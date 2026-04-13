@@ -928,21 +928,47 @@ const UploadQuestion = () => {
           <div className="form-group">
             <div className="upload-row-header">
               <label className="form-label">Drag & Drop Items (Ordered Response)</label>
+              <button type="button" className="btn btn-sm btn-primary" onClick={() => setDragDropItems(prev => [...prev, ''])}>Add Item</button>
             </div>
             <small className="text-muted d-block mb-3">
-              Enter items in the <strong>correct order</strong> — one per line. Students will drag to reorder them.
+              Enter items in the <strong>correct order</strong> (top to bottom). Students will see them shuffled and must drag to match this order.
             </small>
-            <textarea
-              className="form-control mb-3"
-              rows={Math.max(4, dragDropItems.length + 1)}
-              value={dragDropItems.join('\n')}
-              onChange={(e) => {
-                const lines = e.target.value.split('\n');
-                setDragDropItems(lines.length > 0 ? lines : ['']);
-              }}
-              placeholder={`Step 1: Assess patient vitals\nStep 2: Notify physician\nStep 3: Document findings\nStep 4: Monitor response`}
-            />
-            <small className="text-muted">
+            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9' }}>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', border: '1px solid #e2e8f0', fontWeight: 600, fontSize: '0.85rem' }}>Position</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', border: '1px solid #e2e8f0', fontWeight: 600, fontSize: '0.85rem' }}>Item Text (Correct Order)</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center', border: '1px solid #e2e8f0', fontWeight: 600, fontSize: '0.85rem' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dragDropItems.map((item, idx) => (
+                  <tr key={idx}>
+                    <td style={{ padding: '8px 12px', border: '1px solid #e2e8f0', textAlign: 'center', fontWeight: 600, color: '#64748b', width: '60px' }}>
+                      {idx + 1}
+                    </td>
+                    <td style={{ padding: '4px 8px', border: '1px solid #e2e8f0' }}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={item}
+                        onChange={(e) => handleDragDropChange(idx, e.target.value)}
+                        placeholder={`Step ${idx + 1}`}
+                        style={{ border: '1px solid #e2e8f0', borderRadius: '6px' }}
+                      />
+                    </td>
+                    <td style={{ padding: '4px 8px', border: '1px solid #e2e8f0', textAlign: 'center', width: '80px' }}>
+                      {dragDropItems.length > 2 && (
+                        <button type="button" className="btn btn-sm btn-danger" onClick={() => setDragDropItems(prev => prev.filter((_, i) => i !== idx))}>
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <small className="text-muted mt-2 d-block">
               {dragDropItems.filter(i => i.trim()).length} item(s) entered. Minimum 2 required.
             </small>
           </div>
@@ -1194,81 +1220,157 @@ const UploadQuestion = () => {
 
         {type === 'cloze-dropdown' && (
           <div className="form-group">
-            <label className="form-label">Cloze Template</label>
-            <textarea
-              className="form-control"
-              rows="4"
-              value={clozeTemplate}
-              onChange={(e) => {
-                const val = e.target.value;
-                setClozeTemplate(val);
-                setQuestionText(val);
-                // Auto-detect {{blankN}} placeholders and sync clozeBlanks
-                const placeholderRegex = /\{\{(\w+)\}\}/g;
-                const found = [];
-                let match;
-                while ((match = placeholderRegex.exec(val)) !== null) {
-                  found.push(match[1]);
-                }
-                if (found.length > 0) {
-                  setClozeBlanks((prev) => {
-                    const existingMap = {};
-                    prev.forEach((b) => { existingMap[b.key] = b; });
-                    return found.map((key) => existingMap[key] || { key, optionsText: '', correctAnswer: '' });
-                  });
-                }
-              }}
-              placeholder="Example: The mitral valve is best heard at {{blank1}} and the aortic area at {{blank2}}."
-            />
-            <small className="text-muted d-block mt-2">
-              Use placeholders like <code>{'{{blank1}}'}</code>, <code>{'{{blank2}}'}</code>. Blanks are auto-detected from the template above.
-            </small>
-
-            <div className="mt-3">
-              <label className="form-label">
-                Blank Definitions ({clozeBlanks.length} blank{clozeBlanks.length !== 1 ? 's' : ''} detected)
-              </label>
-              <div className="option-list">
-                {clozeBlanks.map((blank, idx) => (
-                  <div key={`blank-${idx}`} style={{
-                    padding: '12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    marginBottom: '8px',
-                    background: '#f8fafc'
-                  }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '8px' }}>
-                      {'{{' + blank.key + '}}'}
-                    </div>
-                    <div className="upload-grid-two">
-                      <div>
-                        <label className="form-label" style={{ fontSize: '0.8rem' }}>Options (semicolon-separated)</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={blank.optionsText}
-                          onChange={(e) => updateClozeBlank(idx, 'optionsText', e.target.value)}
-                          placeholder="Option A; Option B; Option C"
-                        />
-                      </div>
-                      <div>
-                        <label className="form-label" style={{ fontSize: '0.8rem' }}>Correct Answer</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={blank.correctAnswer}
-                          onChange={(e) => updateClozeBlank(idx, 'correctAnswer', e.target.value)}
-                          placeholder="Correct option"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {clozeBlanks.length === 0 && (
-                <small className="text-muted">Add placeholders like {'{{blank1}}'} in the template above to define blanks.</small>
-              )}
+            <div className="upload-row-header">
+              <label className="form-label">Cloze Dropdown (Fill-in with Dropdowns)</label>
             </div>
+            <small className="text-muted d-block mb-3">
+              Type a sentence. Click "Add Blank" to insert a dropdown placeholder. Then fill in 4 options for each blank and select the correct one.
+            </small>
+            
+            {/* Sentence builder */}
+            <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+              <label className="form-label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Sentence with Blanks</label>
+              <textarea
+                className="form-control mb-2"
+                rows="3"
+                value={clozeTemplate}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setClozeTemplate(val);
+                  setQuestionText(val);
+                  // Auto-detect {{blankN}} placeholders and sync clozeBlanks
+                  const placeholderRegex = /\{\{(\w+)\}\}/g;
+                  const found = [];
+                  let match;
+                  while ((match = placeholderRegex.exec(val)) !== null) {
+                    found.push(match[1]);
+                  }
+                  if (found.length > 0) {
+                    setClozeBlanks((prev) => {
+                      const existingMap = {};
+                      prev.forEach((b) => { existingMap[b.key] = b; });
+                      return found.map((key) => existingMap[key] || { key, optionsText: '', correctAnswer: '' });
+                    });
+                  }
+                }}
+                placeholder="e.g., The nurse should {{blank1}} the patient and {{blank2}} the medication."
+              />
+              <button type="button" className="btn btn-sm btn-outline-primary" onClick={addClozeBlank}>
+                <i className="fas fa-plus me-1"></i>Add Blank
+              </button>
+            </div>
+            
+            {/* Sentence preview */}
+            {clozeTemplate.trim() && (
+              <div style={{ padding: '16px', background: '#fff', borderRadius: '8px', border: '2px solid #3b82f6', marginBottom: '16px' }}>
+                <label className="form-label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block', color: '#1e40af' }}>
+                  <i className="fas fa-eye me-1"></i>Preview (how students see it)
+                </label>
+                <div style={{ fontSize: '1.05rem', lineHeight: '2' }}>
+                  {(() => {
+                    const parts = clozeTemplate.split(/({{blank\d+}})/g);
+                    return parts.map((part, idx) => {
+                      const blankMatch = part.match(/{{blank(\d+)}}/);
+                      if (blankMatch) {
+                        const blankIdx = parseInt(blankMatch[1]) - 1;
+                        const blank = clozeBlanks[blankIdx];
+                        return (
+                          <span key={idx} style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            margin: '0 4px',
+                            background: '#dbeafe',
+                            border: '2px solid #3b82f6',
+                            borderRadius: '6px',
+                            color: '#1e40af',
+                            fontWeight: 600,
+                            minWidth: '80px',
+                            textAlign: 'center',
+                          }}>
+                            {blank?.correctAnswer || `Dropdown ${blankIdx + 1}`}
+                            <i className="fas fa-caret-down ms-1"></i>
+                          </span>
+                        );
+                      }
+                      return <span key={idx}>{part}</span>;
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
+            
+            {/* Blank configuration - table format */}
+            {clozeBlanks.map((blank, blankIdx) => {
+              const blankToken = `{{blank${blankIdx + 1}}}`;
+              const isInTemplate = clozeTemplate.includes(blankToken);
+              return (
+                <div key={blankIdx} style={{
+                  padding: '16px',
+                  marginBottom: '12px',
+                  background: isInTemplate ? '#f0fdf4' : '#fef2f2',
+                  borderRadius: '8px',
+                  border: `1px solid ${isInTemplate ? '#bbf7d0' : '#fecaca'}`
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <strong style={{ color: isInTemplate ? '#166534' : '#dc2626' }}>
+                      {blankToken} {!isInTemplate && <span style={{ fontWeight: 400, fontSize: '0.85rem' }}>(not in sentence!)</span>}
+                    </strong>
+                    {clozeBlanks.length > 1 && (
+                      <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeClozeBlank(blankIdx)}>
+                        <i className="fas fa-trash me-1"></i>Remove
+                      </button>
+                    )}
+                  </div>
+                  
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9' }}>
+                        <th style={{ padding: '6px 10px', border: '1px solid #e2e8f0', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600 }}>Option</th>
+                        <th style={{ padding: '6px 10px', border: '1px solid #e2e8f0', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600 }}>Text</th>
+                        <th style={{ padding: '6px 10px', border: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.8rem', fontWeight: 600 }}>Correct?</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const options = String(blank.optionsText || '').split(';').filter(Boolean);
+                        while (options.length < 4) options.push('');
+                        return options.slice(0, 4).map((opt, optIdx) => {
+                          const optionLetter = String.fromCharCode(65 + optIdx);
+                          const isCorrect = blank.correctAnswer === opt.trim();
+                          return (
+                            <tr key={optIdx}>
+                              <td style={{ padding: '4px 10px', border: '1px solid #e2e8f0', fontWeight: 600, color: '#64748b', textAlign: 'center' }}>{optionLetter}</td>
+                              <td style={{ padding: '4px 8px', border: '1px solid #e2e8f0' }}>
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm"
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const newOptions = [...options.slice(0, optIdx), e.target.value, ...options.slice(optIdx + 1)].filter(Boolean);
+                                    updateClozeBlank(blankIdx, 'optionsText', newOptions.join('; '));
+                                  }}
+                                  placeholder={`Option ${optionLetter}`}
+                                  style={{ border: isCorrect ? '2px solid #22c55e' : '1px solid #e2e8f0', borderRadius: '6px' }}
+                                />
+                              </td>
+                              <td style={{ padding: '4px 8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                                <input
+                                  type="radio"
+                                  name={`cloze-correct-${blankIdx}`}
+                                  checked={isCorrect}
+                                  onChange={() => updateClozeBlank(blankIdx, 'correctAnswer', opt.trim())}
+                                  style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
           </div>
         )}
 

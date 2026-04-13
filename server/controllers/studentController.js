@@ -298,8 +298,26 @@ const submitTest = async (req, res) => {
     });
 
     // Track incorrect questions using SERVER-EVALUATED results
+    // Build a map from sub-question IDs to parent case-study IDs
+    // so that incorrect sub-questions are tracked by their parent case-study document
+    const subQToParentMap = new Map();
+    for (const doc of questionDocs) {
+      if (doc.type === 'case-study' && Array.isArray(doc.questions)) {
+        for (const subQ of doc.questions) {
+          if (subQ._id) {
+            subQToParentMap.set(String(subQ._id), String(doc._id));
+          }
+        }
+      }
+    }
+
     for (const enriched of enrichedAnswers) {
-      const qid = enriched.questionId;
+      let qid = enriched.questionId;
+      // For case-study sub-questions, use the parent case-study ID instead
+      const parentId = subQToParentMap.get(String(qid));
+      if (parentId) {
+        qid = parentId;
+      }
       if (enriched.isCorrect === true || enriched.isCorrect === 'partial') {
         // If answered correctly or partially, remove from incorrect questions if present
         user.incorrectQuestions = user.incorrectQuestions.filter(
@@ -393,16 +411,18 @@ const getSubcategoryCounts = async (req, res) => {
     const customOmittedIds = user?.customTestOmittedQuestions || [];
 
     // Fetch all questions and remap to canonical categories/subcategories
-    const allQuestions = await Question.find({}, '_id category subcategory').lean();
+    // Include 'type' field so we can exclude case-study questions from subject counts
+    const allQuestions = await Question.find({}, '_id category subcategory type').lean();
     const usedQuestions = customUsedIds.length > 0
-      ? await Question.find({ _id: { $in: customUsedIds } }, '_id category subcategory').lean()
+      ? await Question.find({ _id: { $in: customUsedIds } }, '_id category subcategory type').lean()
       : [];
     const omittedQuestions = customOmittedIds.length > 0
-      ? await Question.find({ _id: { $in: customOmittedIds } }, '_id category subcategory').lean()
+      ? await Question.find({ _id: { $in: customOmittedIds } }, '_id category subcategory type').lean()
       : [];
 
     // Build counts using canonical category/subcategory mapping
     // ONLY count questions that match canonical categories AND canonical subcategories
+    // EXCLUDE case-study type questions from subject counts (they have their own tab)
     const buildCounts = (questions) => {
       const acc = {
         countsByCategorySubcategory: {},
@@ -410,6 +430,9 @@ const getSubcategoryCounts = async (req, res) => {
         countsByCategory: {}
       };
       questions.forEach((q) => {
+        // Exclude case-study type questions from subject category counters
+        if (q.type === 'case-study') return;
+
         const canonicalCat = matchCategory(q.category);
         const canonicalSub = matchSubcategory(canonicalCat, q.subcategory);
 
@@ -645,14 +668,22 @@ const formatTimeAgo = (date) => {
 const countQuestionBank = async () => {
   const allQuestions = await Question.find(
     {},
-    '_id category subcategory clientNeed clientNeedSubcategory'
+    '_id category subcategory clientNeed clientNeedSubcategory type'
   ).lean();
 
   const subjectIds = new Set();
   const clientNeedIds = new Set();
+  const caseStudyIds = new Set();
 
   for (const q of allQuestions) {
     const qId = String(q._id);
+
+    // Case-study type questions have their own separate counter
+    if (q.type === 'case-study') {
+      caseStudyIds.add(qId);
+      continue;
+    }
+
     const canonicalCat = matchCategory(q.category);
     const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
     if (canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub)) {
@@ -667,7 +698,8 @@ const countQuestionBank = async () => {
   return {
     subjectCount: subjectIds.size,
     clientNeedCount: clientNeedIds.size,
-    total: new Set([...subjectIds, ...clientNeedIds]).size
+    caseStudyCount: caseStudyIds.size,
+    total: new Set([...subjectIds, ...clientNeedIds, ...caseStudyIds]).size
   };
 };
 
@@ -2139,7 +2171,7 @@ const getQuestionStatusCounts = async (req, res) => {
     // Get all questions with fields needed to determine which "tab" they belong to
     const allQuestions = await Question.find(
       {},
-      '_id category subcategory clientNeed clientNeedSubcategory isNextGen'
+      '_id category subcategory clientNeed clientNeedSubcategory isNextGen type'
     ).lean();
 
     // Get status sets from user document
@@ -2169,14 +2201,22 @@ const getQuestionStatusCounts = async (req, res) => {
       return counts;
     };
 
-    // Partition questions into subjects (canonical categories) vs client needs
+    // Partition questions into subjects (canonical categories) vs client needs vs case studies
     const subjectQuestionIds = [];
     const clientNeedQuestionIds = [];
     const subjectNgnIds = [];
     const clientNeedNgnIds = [];
+    const caseStudyQuestionIds = [];
 
     for (const q of allQuestions) {
       const qId = String(q._id);
+
+      // Case-study type questions have their own separate counter
+      if (q.type === 'case-study') {
+        caseStudyQuestionIds.push(qId);
+        continue;
+      }
+
       const canonicalCat = matchCategory(q.category);
       const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
       const isCanonicalSubject = canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub);
@@ -2200,6 +2240,7 @@ const getQuestionStatusCounts = async (req, res) => {
 
     const subjectCounts = computeCounts(subjectQuestionIds);
     const clientNeedCounts = computeCounts(clientNeedQuestionIds);
+    const caseStudyCounts = computeCounts(caseStudyQuestionIds);
     const allCounts = computeCounts(allQuestions.map(q => String(q._id)));
 
     res.json({
@@ -2215,15 +2256,20 @@ const getQuestionStatusCounts = async (req, res) => {
       correct: allCounts.correct,
       correctNgn: 0,
       total: allQuestions.length,
-      // Tab-specific: subjects
+      // Tab-specific: subjects (excluding case-study type questions)
       subjects: {
         ...subjectCounts,
         total: subjectQuestionIds.length
       },
-      // Tab-specific: client needs
+      // Tab-specific: client needs (excluding case-study type questions)
       clientNeeds: {
         ...clientNeedCounts,
         total: clientNeedQuestionIds.length
+      },
+      // Tab-specific: case studies
+      caseStudies: {
+        ...caseStudyCounts,
+        total: caseStudyQuestionIds.length
       }
     });
   } catch (error) {

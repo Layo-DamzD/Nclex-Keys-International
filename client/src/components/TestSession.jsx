@@ -282,8 +282,8 @@ const TestSession = () => {
   const dashboardReturnPath = settings?.returnTo || '/dashboard';
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  // Timer: 85 minutes max for NCLEX-style timing (caps at 85 min regardless of question count)
-  const [timeLeft, setTimeLeft] = useState(settings.timed ? Math.min(settings.totalQuestions * 120, 85 * 60) : null);
+  // Timer: 85 seconds per question
+  const [timeLeft, setTimeLeft] = useState(settings.timed ? settings.totalQuestions * 85 : null);
   // Per-question time tracking
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [questionTimeSpent, setQuestionTimeSpent] = useState({});
@@ -304,17 +304,6 @@ const TestSession = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatText, setChatText] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  const isProctored = Boolean(settings?.proctored && settings?.fromPreparedTest);
-  const [proctoringReady, setProctoringReady] = useState(!isProctored);
-  const [proctoringError, setProctoringError] = useState('');
-  const [proctoringViolations, setProctoringViolations] = useState(0);
-  const [proctoringEvents, setProctoringEvents] = useState([]);
-  const [snapshotCount, setSnapshotCount] = useState(0);
-  const proctorVideoRef = useRef(null);
-  const proctorStreamRef = useRef(null);
-  const proctorSnapshotTimerRef = useRef(null);
-  const proctorSubmittingRef = useRef(false);
-
   // Case study state
   const [caseIndex, setCaseIndex] = useState(0);
   const [caseAnswers, setCaseAnswers] = useState({});
@@ -330,6 +319,107 @@ const TestSession = () => {
   const [caseDragSourceItems, setCaseDragSourceItems] = useState({});
   const [caseDragAnswerItems, setCaseDragAnswerItems] = useState({});
   const hideInProgressAnswerHints = Boolean(settings?.tutorMode || settings?.timed);
+
+  // Tutor mode: track which questions have been revealed (show rationale after answering)
+  const [tutorRevealed, setTutorRevealed] = useState({});
+
+  const revealTutorQuestion = (qId) => {
+    if (settings?.tutorMode) {
+      setTutorRevealed(prev => ({ ...prev, [qId]: true }));
+    }
+  };
+
+  // Helper: check if a tutor-mode answer is correct (for MCQ/SATA)
+  const normalizeToLetter = (val) => {
+    if (!val) return '';
+    const s = String(val).trim().toUpperCase();
+    if (/^[A-Z]$/.test(s)) return s;
+    const n = parseInt(s, 10);
+    if (n >= 1 && n <= 26) return String.fromCharCode(64 + n);
+    return s;
+  };
+
+  const isTutorCorrect = (q, userAnswer, answerKey) => {
+    if (!q || userAnswer === undefined || userAnswer === null) return null;
+    const type = q.type;
+    const correct = q.correctAnswer;
+    if (type === 'multiple-choice' || type === 'highlight' || type === 'hotspot' || type === 'drag-drop' || type === 'fill-blank') {
+      const normUser = normalizeToLetter(userAnswer);
+      const normCorrect = normalizeToLetter(correct);
+      if (type === 'fill-blank') {
+        const acceptable = String(correct).split(';').map(a => a.trim().toLowerCase());
+        return acceptable.includes(String(userAnswer).trim().toLowerCase());
+      }
+      return normUser === normCorrect && normUser !== '';
+    }
+    if (type === 'sata') {
+      const parseArr = (v) => {
+        if (Array.isArray(v)) return v.map(x => normalizeToLetter(x)).filter(Boolean);
+        const s = String(v);
+        if (s.includes(',')) return s.split(',').map(x => normalizeToLetter(x.trim())).filter(Boolean);
+        if (/^[A-Za-z]+$/.test(s)) return s.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+        return [normalizeToLetter(v)].filter(Boolean);
+      };
+      const userArr = [...new Set(parseArr(userAnswer))];
+      const correctArr = [...new Set(parseArr(correct))];
+      const wrongPicked = userArr.filter(c => !correctArr.includes(c));
+      if (wrongPicked.length > 0) return false;
+      if (userArr.length === correctArr.length && correctArr.length > 0) return true;
+      if (userArr.length > 0) return 'partial';
+      return false;
+    }
+    return null;
+  };
+
+  // Tutor rationale box component
+  const TutorRationale = ({ q, revealed }) => {
+    if (!settings?.tutorMode || !revealed || !q) return null;
+    const answerVal = (q._id === (currentQ?.questions?.[caseIndex])?._id)
+      ? caseAnswers[q._id] || answers[q._id]
+      : answers[q._id] || caseAnswers[q._id];
+    if (answerVal === undefined || answerVal === null || answerVal === '' || (Array.isArray(answerVal) && answerVal.length === 0)) return null;
+    const correct = isTutorCorrect(q, answerVal, q.correctAnswer);
+    const correctLetter = normalizeToLetter(q.correctAnswer);
+    let correctText = correctLetter;
+    if (q.type === 'sata' && q.correctAnswer) {
+      const parseArr = (v) => {
+        if (Array.isArray(v)) return v.map(x => normalizeToLetter(x)).filter(Boolean);
+        const s = String(v);
+        if (s.includes(',')) return s.split(',').map(x => normalizeToLetter(x.trim())).filter(Boolean);
+        if (/^[A-Za-z]+$/.test(s)) return s.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+        return [normalizeToLetter(v)].filter(Boolean);
+      };
+      correctText = [...new Set(parseArr(q.correctAnswer))].sort().join(', ');
+    }
+    if (q.type === 'fill-blank') {
+      correctText = q.correctAnswer;
+    }
+    return (
+      <div style={{
+        marginTop: '12px',
+        padding: '12px 16px',
+        borderRadius: '10px',
+        border: `2px solid ${correct === true ? '#22c55e' : correct === 'partial' ? '#f59e0b' : '#ef4444'}`,
+        background: correct === true ? '#f0fdf4' : correct === 'partial' ? '#fffbeb' : '#fef2f2',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: q.rationale ? '8px' : '0' }}>
+          <i className={`fas ${correct === true ? 'fa-check-circle' : correct === 'partial' ? 'fa-exclamation-circle' : 'fa-times-circle'}`}
+            style={{ fontSize: '1.1rem', color: correct === true ? '#16a34a' : correct === 'partial' ? '#d97706' : '#dc2626' }} />
+          <strong style={{ color: correct === true ? '#166534' : correct === 'partial' ? '#92400e' : '#991b1b' }}>
+            {correct === true ? 'Correct!' : correct === 'partial' ? 'Partially Correct' : 'Incorrect'}
+          </strong>
+          <span style={{ color: '#64748b', fontSize: '0.85rem', marginLeft: 'auto' }}>
+            Correct answer: <strong>{correctText}</strong>
+          </span>
+        </div>
+        {q.rationale && (
+          <div style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.5', borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
+            <strong>Rationale:</strong> {q.rationale}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Reset question start time when question changes
   useEffect(() => {
@@ -364,89 +454,10 @@ const TestSession = () => {
   }, []);
 
 
-  const appendProctorEvent = (type, detail = '') => {
-    const evt = {
-      type,
-      detail,
-      at: new Date().toISOString()
-    };
-    setProctoringEvents((prev) => [...prev.slice(-49), evt]);
-  };
-
-  const captureProctorSnapshot = () => {
-    const video = proctorVideoRef.current;
-    if (!video || video.videoWidth <= 0 || video.videoHeight <= 0) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    setSnapshotCount((prev) => prev + 1);
-    appendProctorEvent('snapshot', 'Periodic webcam snapshot captured');
-  };
-
-  const requestFullscreen = async () => {
-    if (document.fullscreenElement) return true;
-    const target = document.documentElement;
-    if (!target?.requestFullscreen) return false;
-    try {
-      await target.requestFullscreen();
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const registerViolation = (reason) => {
-    appendProctorEvent('violation', reason);
-    setProctoringViolations((prev) => {
-      const next = prev + 1;
-      if (next >= 3 && !proctorSubmittingRef.current) {
-        proctorSubmittingRef.current = true;
-        window.alert('Proctoring violation limit reached. Your test will be submitted now.');
-        handleSubmit();
-      } else {
-        window.alert(`Proctoring warning (${next}/3): ${reason}`);
-      }
-      return next;
-    });
-  };
-
-  const beginProctoredSession = async () => {
-    if (!isProctored) {
-      setProctoringReady(true);
-      return;
-    }
-
-    setProctoringError('');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: true
-      });
-      proctorStreamRef.current = stream;
-      if (proctorVideoRef.current) {
-        proctorVideoRef.current.srcObject = stream;
-        await proctorVideoRef.current.play().catch(() => {});
-      }
-
-      const fullScreenOk = await requestFullscreen();
-      if (!fullScreenOk) {
-        throw new Error('Fullscreen permission is required for proctored tests.');
-      }
-
-      appendProctorEvent('start', 'Proctored session started');
-      setProctoringReady(true);
-    } catch (error) {
-      setProctoringError(error?.message || 'Camera, microphone, and fullscreen access are required.');
-      setProctoringReady(false);
-    }
-  };
 
   // Timer effect
   useEffect(() => {
-    if (settings.timed && timeLeft !== null && timeLeft > 0 && !submitted && !isPaused && proctoringReady) {
+    if (settings.timed && timeLeft !== null && timeLeft > 0 && !submitted && !isPaused) {
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -459,10 +470,10 @@ const TestSession = () => {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [settings.timed, timeLeft, submitted, isPaused, proctoringReady]);
+  }, [settings.timed, timeLeft, submitted, isPaused]);
 
   useEffect(() => {
-    if (!questions.length || submitted || (isProctored && !proctoringReady)) {
+    if (!questions.length || submitted) {
       setIsBooting(false);
       return;
     }
@@ -481,56 +492,8 @@ const TestSession = () => {
     }, 90);
 
     return () => clearInterval(timer);
-  }, [questions.length, submitted, isProctored, proctoringReady]);
+  }, [questions.length, submitted]);
 
-
-  useEffect(() => {
-    if (!isProctored || !proctoringReady || submitted) return undefined;
-
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        registerViolation('Tab switch/minimize detected.');
-      }
-    };
-
-    const onBlur = () => {
-      registerViolation('Window focus lost.');
-    };
-
-    const onFullscreen = () => {
-      if (!document.fullscreenElement) {
-        registerViolation('Exited fullscreen mode.');
-      }
-    };
-
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('blur', onBlur);
-    document.addEventListener('fullscreenchange', onFullscreen);
-
-    proctorSnapshotTimerRef.current = window.setInterval(() => {
-      captureProctorSnapshot();
-    }, 30000);
-
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('blur', onBlur);
-      document.removeEventListener('fullscreenchange', onFullscreen);
-      if (proctorSnapshotTimerRef.current) {
-        window.clearInterval(proctorSnapshotTimerRef.current);
-        proctorSnapshotTimerRef.current = null;
-      }
-    };
-  }, [isProctored, proctoringReady, submitted]);
-
-  useEffect(() => () => {
-    if (proctorSnapshotTimerRef.current) {
-      window.clearInterval(proctorSnapshotTimerRef.current);
-    }
-    if (proctorStreamRef.current) {
-      proctorStreamRef.current.getTracks().forEach((track) => track.stop());
-      proctorStreamRef.current = null;
-    }
-  }, []);
 
   // Initialize drag for non‑case drag-drop - Two box system
   useEffect(() => {
@@ -568,13 +531,20 @@ const TestSession = () => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const handleAnswer = (qId, answer) => {
+  const handleAnswer = (qId, answer, qType) => {
     if (isPaused) return;
     setAnswers(prev => ({ ...prev, [qId]: answer }));
+    // For fill-blank, reveal on blur instead (handled separately)
+    if (qType !== 'fill-blank') {
+      revealTutorQuestion(qId);
+    }
   };
-  const handleCaseAnswer = (subQId, answer) => {
+  const handleCaseAnswer = (subQId, answer, subQType) => {
     if (isPaused) return;
     setCaseAnswers(prev => ({ ...prev, [subQId]: answer }));
+    if (subQType !== 'fill-blank') {
+      revealTutorQuestion(subQId);
+    }
   };
   const clearCurrentQuestionAnswer = () => {
     if (isPaused) return;
@@ -1251,15 +1221,10 @@ const TestSession = () => {
         answers: { ...answers, ...caseAnswers },
         results: allResults,
         totalQuestions: allResults.length,
-        timeTaken: settings.timed ? (Math.min(settings.totalQuestions * 120, 85 * 60) - timeLeft) / 60 : 0,
+        timeTaken: settings.timed ? (settings.totalQuestions * 85 - timeLeft) / 60 : 0,
         passed: (earnedTotal / possibleTotal) >= 0.7,
         isCustomTest: !settings?.fromPreparedTest,
-        proctoring: isProctored ? {
-          enabled: true,
-          violations: proctoringViolations,
-          snapshotCount,
-          events: proctoringEvents
-        } : null,
+        proctoring: null,
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -1276,17 +1241,6 @@ const TestSession = () => {
       console.error('Submit failed:', error);
       setSubmitReviewError('Submit saved locally but server review id was not created.');
     } finally {
-      if (proctorSnapshotTimerRef.current) {
-        window.clearInterval(proctorSnapshotTimerRef.current);
-        proctorSnapshotTimerRef.current = null;
-      }
-      if (proctorStreamRef.current) {
-        proctorStreamRef.current.getTracks().forEach((track) => track.stop());
-        proctorStreamRef.current = null;
-      }
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
     }
   };
 
@@ -1298,30 +1252,6 @@ const TestSession = () => {
     setIsPaused((prev) => !prev);
   }
 
-
-  if (isProctored && !proctoringReady) {
-    return (
-      <div className="exam-boot-screen">
-        <div className="exam-boot-card" style={{ maxWidth: 760, textAlign: 'left' }}>
-          <h3 style={{ marginBottom: 10 }}>Proctored Test Requirements</h3>
-          <p style={{ marginBottom: 10 }}>Before this prepared test starts, you must complete the checks below:</p>
-          <ul style={{ marginBottom: 14 }}>
-            <li>Stay in fullscreen for the entire test.</li>
-            <li>Do not switch tabs, apps, or minimize the browser.</li>
-            <li>Allow camera and microphone access.</li>
-            <li>Periodic webcam snapshots are captured.</li>
-            <li>3 violations will auto-submit your test.</li>
-          </ul>
-          {proctoringError && <div className="alert alert-danger">{proctoringError}</div>}
-          <div className="d-flex gap-2">
-            <button type="button" className="btn btn-secondary" onClick={() => navigate(dashboardReturnPath)}>Cancel</button>
-            <button type="button" className="btn btn-primary" onClick={beginProctoredSession}>Start Proctoring Check</button>
-          </div>
-          <video ref={proctorVideoRef} autoPlay muted playsInline style={{ width: 1, height: 1, opacity: 0, position: 'absolute', pointerEvents: 'none' }} />
-        </div>
-      </div>
-    );
-  }
 
   if (isBooting) {
     return (
@@ -1479,25 +1409,48 @@ const TestSession = () => {
                 <div className="options">
                   {subQ.options.map((opt, idx) => {
                     const letter = String.fromCharCode(65 + idx);
+                    const isSelected = caseAnswers[subQId] === letter;
+                    const isRevealed = settings?.tutorMode && tutorRevealed[subQId];
+                    const correctLetter = normalizeToLetter(subQ.correctAnswer);
+                    const showCorrect = isRevealed && letter === correctLetter;
+                    const showWrong = isRevealed && isSelected && letter !== correctLetter;
                     return (
                       <div
                         key={idx}
-                        className={`option ${caseAnswers[subQId] === letter ? 'selected' : ''}`}
+                        className={`option ${isSelected ? 'selected' : ''}`}
                         onClick={() => handleCaseAnswer(subQId, letter)}
+                        style={isRevealed ? {
+                          borderColor: showCorrect ? '#22c55e' : showWrong ? '#ef4444' : undefined,
+                          background: showCorrect ? '#f0fdf4' : showWrong ? '#fef2f2' : undefined,
+                        } : undefined}
                       >
                         <span className="option-letter">{letter}</span>
                         {opt}
+                        {isRevealed && showCorrect && <i className="fas fa-check ms-auto" style={{ color: '#22c55e' }} />}
+                        {isRevealed && showWrong && <i className="fas fa-times ms-auto" style={{ color: '#ef4444' }} />}
                       </div>
                     );
                   })}
                 </div>
               )}
+              <TutorRationale q={subQ} revealed={tutorRevealed[subQId]} />
 
               {subQ.type === 'sata' && (
                 <div className="options">
                   {subQ.options.map((opt, idx) => {
                     const letter = String.fromCharCode(65 + idx);
                     const selected = caseAnswers[subQId]?.includes(letter) || false;
+                    const isRevealed = settings?.tutorMode && tutorRevealed[subQId];
+                    const parseArr = (v) => {
+                      if (Array.isArray(v)) return v.map(x => normalizeToLetter(x)).filter(Boolean);
+                      const s = String(v);
+                      if (s.includes(',')) return s.split(',').map(x => normalizeToLetter(x.trim())).filter(Boolean);
+                      if (/^[A-Za-z]+$/.test(s)) return s.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+                      return [normalizeToLetter(v)].filter(Boolean);
+                    };
+                    const correctSet = isRevealed ? new Set(parseArr(subQ.correctAnswer)) : new Set();
+                    const isCorrectOpt = isRevealed && correctSet.has(letter);
+                    const isWrongOpt = isRevealed && selected && !correctSet.has(letter);
                     return (
                       <div
                         key={idx}
@@ -1510,9 +1463,15 @@ const TestSession = () => {
                             handleCaseAnswer(subQId, [...current, letter]);
                           }
                         }}
+                        style={isRevealed ? {
+                          borderColor: isCorrectOpt ? '#22c55e' : isWrongOpt ? '#ef4444' : undefined,
+                          background: isCorrectOpt ? '#f0fdf4' : isWrongOpt ? '#fef2f2' : undefined,
+                        } : undefined}
                       >
                         <span className="option-letter">{letter}</span>
                         {opt}
+                        {isRevealed && isCorrectOpt && <i className="fas fa-check ms-auto" style={{ color: '#22c55e' }} />}
+                        {isRevealed && isWrongOpt && <i className="fas fa-times ms-auto" style={{ color: '#ef4444' }} />}
                       </div>
                     );
                   })}
@@ -1589,7 +1548,7 @@ const TestSession = () => {
                     placeholder="Type your answer"
                     value={caseAnswers[subQId] || ''}
                     disabled={isPaused}
-                    onChange={(e) => handleCaseAnswer(subQId, e.target.value)}
+                    onChange={(e) => handleCaseAnswer(subQId, e.target.value, 'fill-blank')}
                   />
                   {!hideInProgressAnswerHints && subQ.correctAnswer?.includes(';') && (
                     <small className="text-muted mt-2 d-block">
@@ -1983,25 +1942,48 @@ const TestSession = () => {
           <div className="options">
             {currentQ.options.map((opt, idx) => {
               const letter = String.fromCharCode(65 + idx);
+              const isSelected = answers[currentQ._id] === letter;
+              const isRevealed = settings?.tutorMode && tutorRevealed[currentQ._id];
+              const correctLetter = normalizeToLetter(currentQ.correctAnswer);
+              const showCorrect = isRevealed && letter === correctLetter;
+              const showWrong = isRevealed && isSelected && letter !== correctLetter;
               return (
                 <div
                   key={idx}
-                  className={`option ${answers[currentQ._id] === letter ? 'selected' : ''}`}
+                  className={`option ${isSelected ? 'selected' : ''}`}
                   onClick={() => handleAnswer(currentQ._id, letter)}
+                  style={isRevealed ? {
+                    borderColor: showCorrect ? '#22c55e' : showWrong ? '#ef4444' : undefined,
+                    background: showCorrect ? '#f0fdf4' : showWrong ? '#fef2f2' : undefined,
+                  } : undefined}
                 >
                   <span className="option-letter">{letter}</span>
                   {opt}
+                  {isRevealed && showCorrect && <i className="fas fa-check ms-auto" style={{ color: '#22c55e' }} />}
+                  {isRevealed && showWrong && <i className="fas fa-times ms-auto" style={{ color: '#ef4444' }} />}
                 </div>
               );
             })}
           </div>
         )}
+        <TutorRationale q={currentQ} revealed={tutorRevealed[currentQ._id]} />
 
         {currentQ.type === 'sata' && (
           <div className="options">
             {currentQ.options.map((opt, idx) => {
               const letter = String.fromCharCode(65 + idx);
               const selected = answers[currentQ._id]?.includes(letter) || false;
+              const isRevealed = settings?.tutorMode && tutorRevealed[currentQ._id];
+              const parseArr = (v) => {
+                if (Array.isArray(v)) return v.map(x => normalizeToLetter(x)).filter(Boolean);
+                const s = String(v);
+                if (s.includes(',')) return s.split(',').map(x => normalizeToLetter(x.trim())).filter(Boolean);
+                if (/^[A-Za-z]+$/.test(s)) return s.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+                return [normalizeToLetter(v)].filter(Boolean);
+              };
+              const correctSet = isRevealed ? new Set(parseArr(currentQ.correctAnswer)) : new Set();
+              const isCorrectOpt = isRevealed && correctSet.has(letter);
+              const isWrongOpt = isRevealed && selected && !correctSet.has(letter);
               return (
                 <div
                   key={idx}
@@ -2014,9 +1996,15 @@ const TestSession = () => {
                       handleAnswer(currentQ._id, [...current, letter]);
                     }
                   }}
+                  style={isRevealed ? {
+                    borderColor: isCorrectOpt ? '#22c55e' : isWrongOpt ? '#ef4444' : undefined,
+                    background: isCorrectOpt ? '#f0fdf4' : isWrongOpt ? '#fef2f2' : undefined,
+                  } : undefined}
                 >
                   <span className="option-letter">{letter}</span>
                   {opt}
+                  {isRevealed && isCorrectOpt && <i className="fas fa-check ms-auto" style={{ color: '#22c55e' }} />}
+                  {isRevealed && isWrongOpt && <i className="fas fa-times ms-auto" style={{ color: '#ef4444' }} />}
                 </div>
               );
             })}
@@ -2031,7 +2019,13 @@ const TestSession = () => {
               placeholder="Type your answer"
               value={answers[currentQ._id] || ''}
               disabled={isPaused}
-              onChange={(e) => handleAnswer(currentQ._id, e.target.value)}
+              onChange={(e) => handleAnswer(currentQ._id, e.target.value, 'fill-blank')}
+              onBlur={() => {
+                // Reveal tutor rationale when user finishes typing and moves away
+                if (settings?.tutorMode && answers[currentQ._id]?.trim()) {
+                  revealTutorQuestion(currentQ._id);
+                }
+              }}
             />
             {!hideInProgressAnswerHints && currentQ.correctAnswer?.includes(';') && (
               <small className="text-muted mt-2 d-block">
@@ -2040,6 +2034,7 @@ const TestSession = () => {
             )}
           </div>
         )}
+        <TutorRationale q={currentQ} revealed={tutorRevealed[currentQ._id]} />
 
         {currentQ.type === 'highlight' && (
           <div className="highlight-container">
@@ -2281,7 +2276,6 @@ const TestSession = () => {
         </div>
       )}
       <CalculatorModal show={showCalculator} onClose={() => setShowCalculator(false)} />
-      <video ref={proctorVideoRef} autoPlay muted playsInline style={{ width: 1, height: 1, opacity: 0, position: 'fixed', left: -9999, top: -9999, pointerEvents: 'none' }} />
       <div style={{ position: 'fixed', right: 14, bottom: 76, zIndex: 1200 }}>
         <button
           type="button"

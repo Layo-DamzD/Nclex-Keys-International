@@ -257,8 +257,8 @@ const CatSession = () => {
   // showRationale is unused in CAT — rationale shown only in review after exam
   const [isCorrect, setIsCorrect] = useState(null);
 
-  // Timer: 85 minutes total for both Assessment and CAT
-  const [timeLeft, setTimeLeft] = useState(85 * 60);
+  // Timer: 85 seconds per question (resets on each new question)
+  const [timeLeft, setTimeLeft] = useState(85);
 
   // Answer state for all question types
   const [answer, setAnswer] = useState(null);
@@ -282,6 +282,7 @@ const CatSession = () => {
   // UI state
   const [showCalculator, setShowCalculator] = useState(false);
   const [markedQuestions, setMarkedQuestions] = useState([]);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Block copy/paste during exam
   useEffect(() => {
@@ -308,7 +309,7 @@ const CatSession = () => {
 
   // Timer effect
   useEffect(() => {
-    if (status === 'completed' || loading) return;
+    if (status === 'completed' || loading || isPaused) return;
     if (timeLeft <= 0) {
       // Auto-submit with no answer when time runs out
       submitAnswerWithCurrent();
@@ -318,7 +319,7 @@ const CatSession = () => {
       setTimeLeft(prev => prev - 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, status, loading]);
+  }, [timeLeft, status, loading, isPaused]);
 
   // Initialize drag-drop when question changes
   useEffect(() => {
@@ -361,7 +362,9 @@ const CatSession = () => {
     setCaseDragSourceItems({});
     setCaseDragAnswerItems({});
     setActiveCaseTabByQuestion({});
-    // Timer continues counting down — do NOT reset per question (85 min total)
+    // Reset timer to 85 seconds for each new question
+    setTimeLeft(85);
+    setIsPaused(false);
     setError('');
     setIsCorrect(null);
   }, [currentQuestion?._id]);
@@ -687,6 +690,12 @@ const CatSession = () => {
   const handleExitSession = () => {
     const shouldExit = window.confirm('Exit this CAT session? Your progress will be lost.');
     if (shouldExit) navigate('/dashboard');
+  };
+
+  const togglePause = () => {
+    if (status === 'completed' || loading) return;
+    setShowCalculator(false);
+    setIsPaused(prev => !prev);
   };
 
   // Case study navigation
@@ -1644,6 +1653,9 @@ const CatSession = () => {
             <div className="timer" style={{ fontWeight: 700, fontSize: '1.1rem' }}>
               <i className="fas fa-clock me-1"></i>{formatTime(timeLeft)}
             </div>
+            <button type="button" className={`btn btn-${isPaused ? 'success' : 'warning'} btn-sm`} onClick={togglePause} disabled={loading}>
+              {isPaused ? 'Resume' : 'Pause'}
+            </button>
             {isMarked && (
               <span style={{ color: '#fbbf24', fontSize: '1.1rem' }} title="Marked for review">
                 <i className="fas fa-flag"></i>
@@ -1800,6 +1812,20 @@ const CatSession = () => {
         </div>
 
         <CalculatorModal show={showCalculator} onClose={() => setShowCalculator(false)} />
+        {isPaused && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,23,0.55)', backdropFilter: 'blur(3px)', zIndex: 20, display: 'grid', placeItems: 'center', padding: '20px' }}>
+            <div style={{ width: 'min(420px, 100%)', background: 'rgba(15,23,42,0.95)', color: '#fff', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '16px', padding: '18px 18px 16px', boxShadow: '0 16px 40px rgba(0,0,0,0.35)' }}>
+              <h4 style={{ margin: '0 0 8px' }}>Test Paused</h4>
+              <p style={{ margin: '0 0 14px', color: 'rgba(226,232,240,0.9)' }}>
+                Your timer is paused and question actions are locked.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-outline-light" onClick={handleExitSession}>Exit Test</button>
+                <button type="button" className="btn btn-success" onClick={togglePause}>Resume Test</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1823,6 +1849,9 @@ const CatSession = () => {
           <div className="timer" style={{ fontWeight: 700, fontSize: '1.1rem' }}>
             <i className="fas fa-clock me-1"></i>{formatTime(timeLeft)}
           </div>
+          <button type="button" className={`btn btn-${isPaused ? 'success' : 'warning'} btn-sm`} onClick={togglePause} disabled={loading}>
+            {isPaused ? 'Resume' : 'Pause'}
+          </button>
           {isMarked && (
             <span style={{ color: '#fbbf24', fontSize: '1.1rem' }} title="Marked for review">
               <i className="fas fa-flag"></i>
@@ -1923,6 +1952,20 @@ const CatSession = () => {
       </div>
 
       <CalculatorModal show={showCalculator} onClose={() => setShowCalculator(false)} />
+      {isPaused && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,23,0.55)', backdropFilter: 'blur(3px)', zIndex: 20, display: 'grid', placeItems: 'center', padding: '20px' }}>
+          <div style={{ width: 'min(420px, 100%)', background: 'rgba(15,23,42,0.95)', color: '#fff', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '16px', padding: '18px 18px 16px', boxShadow: '0 16px 40px rgba(0,0,0,0.35)' }}>
+            <h4 style={{ margin: '0 0 8px' }}>Test Paused</h4>
+            <p style={{ margin: '0 0 14px', color: 'rgba(226,232,240,0.9)' }}>
+              Your timer is paused and question actions are locked.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" className="btn btn-outline-light" onClick={handleExitSession}>Exit Test</button>
+              <button type="button" className="btn btn-success" onClick={togglePause}>Resume Test</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
