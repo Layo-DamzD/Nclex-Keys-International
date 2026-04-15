@@ -27,10 +27,7 @@ import { AppThemeProvider } from './context/AppThemeContext';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import CookieConsentBanner from './components/CookieConsentBanner';
 
-// ============================================================
-// MAINTENANCE MODE — set to 0 to disable
-// ============================================================
-const MAINTENANCE_MODE = true;
+const MAINTENANCE_MODE = false;
 
 function MaintenancePage() {
   return (

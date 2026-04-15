@@ -15,7 +15,7 @@ app.set('trust proxy', true);
 // ============================================================
 // MAINTENANCE MODE — set to false to disable, true to block entire API
 // ============================================================
-const MAINTENANCE_MODE = true;
+const MAINTENANCE_MODE = false;
 
 // Maintenance middleware — blocks everything
 app.use((req, res, next) => {
