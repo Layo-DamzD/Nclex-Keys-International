@@ -77,10 +77,9 @@ const useLandingPageContent = (pageKey) => {
       console.log('[LandingPage] Fetching from:', url);
 
       try {
-        // Fast timeout - 3 seconds for faster response
         const res = await axios.get(url, {
           params: { _t: Date.now() },
-          timeout: 3000,
+          timeout: 10000,
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'

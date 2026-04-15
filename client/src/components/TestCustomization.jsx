@@ -416,8 +416,8 @@ const TestCustomization = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Handle Assessment mode - same as CAT (real NCLEX adaptive testing)
-    if (testType === 'assessment' || testType === 'cat') {
+    // Handle CAT mode only - NOT assessments
+    if (testType === 'cat') {
       setLoading(true);
       setError('');
       try {
@@ -435,7 +435,13 @@ const TestCustomization = () => {
       return;
     }
 
-    // Assessment always uses CAT (handled above). For practice, let user choose timed/tutor.
+    // Assessment: force 150 questions with timed mode
+    if (testType === 'assessment') {
+      setQuestionCount(150);
+      setQuestionCountInput('150');
+    }
+
+    // For practice/caseStudy, let user choose timed/tutor.
     const isAssessment = testType === 'assessment';
     const isCaseStudy = testType === 'caseStudy';
     const isPractice = testType === 'practice';
@@ -1397,8 +1403,8 @@ const TestCustomization = () => {
         </div>
         )}
 
-        {/* Number of Questions - Hide for CAT and Assessment mode */}
-        {testType !== 'cat' && testType !== 'assessment' && (
+        {/* Number of Questions - Hide for CAT mode, show read-only for Assessment */}
+        {testType !== 'cat' && (
           <div className="question-count-section" style={{
             marginBottom: '20px',
             padding: '16px',
@@ -1417,8 +1423,10 @@ const TestCustomization = () => {
           <input
             type="number"
             className="form-control"
-            value={questionCountInput}
+            value={testType === 'assessment' ? '150' : questionCountInput}
+            readOnly={testType === 'assessment'}
             onChange={(e) => {
+              if (testType === 'assessment') return;
               const inputValue = e.target.value;
               // Allow empty input for clearing
               setQuestionCountInput(inputValue);

@@ -492,6 +492,75 @@ const generateTest = async (req, res) => {
   try {
     const { subcategories, selections, questionCount, timed, tutorMode, filterMode, clientNeedsSelections, includeTraditional, includeNextGen, difficulty } = req.body;
     
+    // Assessment mode: exactly 150 questions with at least 40 case studies
+    if (req.body.testType === 'assessment') {
+      const MIN_CASE_STUDIES = 40;
+      const ASSESSMENT_TOTAL = 150;
+
+      // Get all case study questions
+      const allCaseStudies = await Question.find({ type: 'case-study' }).lean();
+      if (allCaseStudies.length < MIN_CASE_STUDIES) {
+        return res.status(400).json({
+          message: `Assessment requires at least ${MIN_CASE_STUDIES} case studies. Only ${allCaseStudies.length} available.`
+        });
+      }
+
+      // Get all regular (non-case-study) questions
+      const regularQuery = { type: { $ne: 'case-study' } };
+      if (difficulty) regularQuery.difficulty = difficulty;
+      const allRegular = await Question.find(regularQuery).lean();
+      const regularNeeded = ASSESSMENT_TOTAL - MIN_CASE_STUDIES; // 110
+
+      if (allRegular.length < regularNeeded) {
+        return res.status(400).json({
+          message: `Assessment needs ${regularNeeded} regular questions. Only ${allRegular.length} available.`
+        });
+      }
+
+      // Shuffle and pick 40 case studies
+      const shuffledCaseStudies = [...allCaseStudies].sort(() => Math.random() - 0.5);
+      const selectedCaseStudies = shuffledCaseStudies.slice(0, MIN_CASE_STUDIES);
+
+      // Shuffle and pick 110 regular questions
+      const shuffledRegular = [...allRegular].sort(() => Math.random() - 0.5);
+      const selectedRegular = shuffledRegular.slice(0, regularNeeded);
+
+      // Combine and shuffle the full set
+      const allSelected = [...selectedCaseStudies, ...selectedRegular].sort(() => Math.random() - 0.5);
+
+      const formattedQuestions = allSelected.map((q) => ({
+        _id: q._id,
+        type: q.type,
+        questionText: q.questionText,
+        questionImageUrl: q.questionImageUrl,
+        options: q.options,
+        rationaleImageUrl: q.rationaleImageUrl,
+        hotspotImageUrl: q.hotspotImageUrl,
+        hotspotTargets: q.hotspotTargets,
+        clozeTemplate: q.clozeTemplate,
+        clozeBlanks: q.clozeBlanks,
+        category: q.category,
+        subcategory: q.subcategory,
+        clientNeed: q.clientNeed,
+        clientNeedSubcategory: q.clientNeedSubcategory,
+        isNextGen: q.isNextGen,
+        ...(q.type === 'case-study'
+          ? {
+              scenario: q.scenario,
+              sections: Array.isArray(q.sections) ? q.sections : [],
+              questions: Array.isArray(q.questions) ? q.questions : []
+            }
+          : {}),
+        ...(tutorMode ? { rationale: q.rationale } : {}),
+        correctAnswer: q.correctAnswer
+      }));
+
+      return res.json({
+        questions: formattedQuestions,
+        settings: { timed: true, tutorMode: false, totalQuestions: ASSESSMENT_TOTAL }
+      });
+    }
+
     let query = {};
     
     // Handle Client Needs filtering

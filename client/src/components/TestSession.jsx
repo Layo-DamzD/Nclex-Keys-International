@@ -945,36 +945,7 @@ const TestSession = () => {
     handleCaseAnswer(subQ._id, newItems.map(item => item.text).join('|'));
   };
 
-  // Correctness helpers
-  // Normalize answer to letter format (A, B, C, D, etc.)
-  // Handles: "A", "a", "1", 1, "Option 1", "option 1", etc.
-  const normalizeToLetter = (answer) => {
-    if (answer === null || answer === undefined) return '';
-    const str = String(answer).trim().toUpperCase();
-    
-    // Already a letter (A-Z)
-    if (/^[A-Z]$/.test(str)) return str;
-    
-    // Number format (1-26) -> convert to letter
-    const numMatch = str.match(/^(\d+)$/);
-    if (numMatch) {
-      const num = parseInt(numMatch[1], 10);
-      if (num >= 1 && num <= 26) {
-        return String.fromCharCode(64 + num); // 1->A, 2->B, etc.
-      }
-    }
-    
-    // "Option X" or "OPTION X" format
-    const optionMatch = str.match(/OPTION\s*(\d+)/i);
-    if (optionMatch) {
-      const num = parseInt(optionMatch[1], 10);
-      if (num >= 1 && num <= 26) {
-        return String.fromCharCode(64 + num);
-      }
-    }
-    
-    return str; // Return as-is if no match
-  };
+  // (normalizeToLetter is already defined above at line 333 - do not redeclare here)
   
   const isFillBlankCorrect = (userAnswer, correctAnswer) => {
     if (!userAnswer || !correctAnswer) return false;

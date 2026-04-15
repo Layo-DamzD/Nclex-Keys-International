@@ -80,6 +80,48 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(-1);
   const [activeQuestionTab, setActiveQuestionTab] = useState('new');
 
+  // Drag-drop state
+  const [dragDropItems, setDragDropItems] = useState(['', '', '', '']);
+
+  // Highlight state
+  const [highlightSelectableWords, setHighlightSelectableWords] = useState([]);
+  const [highlightCorrectWords, setHighlightCorrectWords] = useState([]);
+
+  // Cloze dropdown state
+  const [clozeTemplate, setClozeTemplate] = useState('');
+  const [clozeBlanks, setClozeBlanks] = useState([]);
+
+  // Hotspot state
+  const [hotspotImageUrl, setHotspotImageUrl] = useState('');
+  const [hotspotTargets, setHotspotTargets] = useState([]);
+
+  const handleDragDropChange = (index, value) => {
+    setDragDropItems((prev) => prev.map((item, i) => (i === index ? value : item)));
+  };
+
+  const addClozeBlank = () => {
+    const nextIdx = clozeBlanks.length + 1;
+    setClozeTemplate(prev => prev + `{{blank${nextIdx}}}`);
+    setClozeBlanks(prev => [...prev, { key: `blank${nextIdx}`, optionsText: '', correctAnswer: '' }]);
+  };
+
+  const removeClozeBlank = (idx) => {
+    setClozeBlanks(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const addHotspotTarget = () => {
+    const nextId = `T${hotspotTargets.length + 1}`;
+    setHotspotTargets(prev => [...prev, { id: nextId, label: `Spot ${prev.length + 1}`, x: 50, y: 50, radius: 6 }]);
+  };
+
+  const updateHotspotTarget = (idx, field, value) => {
+    setHotspotTargets(prev => prev.map((t, i) => i === idx ? { ...t, [field]: field === 'x' || field === 'y' || field === 'radius' ? Number(value) : value } : t));
+  };
+
+  const removeHotspotTarget = (idx) => {
+    setHotspotTargets(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const getEmptyQuestion = () => ({
     type: 'matrix',
     questionText: '',
@@ -301,7 +343,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
       return;
     }
 
-    // Matrix validation
+    // Type-specific validation
     if (currentQuestion.type === 'matrix') {
       const rows = currentQuestion.matrixRows || [];
       const cols = currentQuestion.matrixColumns || [];
@@ -313,8 +355,44 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
         alert('Please add at least one row with text');
         return;
       }
-      // Auto-set correctAnswer from matrixRows
       currentQuestion.correctAnswer = rows.map(r => r.correctColumn);
+    } else if (currentQuestion.type === 'multiple-choice') {
+      const opts = currentQuestion.options || [];
+      if (opts.length < 2) { alert('Please add at least 2 options'); return; }
+      if (opts.filter(Boolean).length < 2) { alert('Please fill in at least 2 options'); return; }
+      if (!currentQuestion.correctAnswer) { alert('Please select a correct answer'); return; }
+    } else if (currentQuestion.type === 'sata') {
+      const opts = currentQuestion.options || [];
+      if (opts.length < 3) { alert('Please add at least 3 options for SATA'); return; }
+      if (!Array.isArray(currentQuestion.correctAnswer) || currentQuestion.correctAnswer.length < 2) {
+        alert('Please select at least 2 correct answers'); return;
+      }
+    } else if (currentQuestion.type === 'fill-blank') {
+      if (!currentQuestion.correctAnswer || !String(currentQuestion.correctAnswer).trim()) {
+        alert('Please enter a correct answer'); return;
+      }
+    } else if (currentQuestion.type === 'highlight') {
+      if (highlightSelectableWords.length === 0) { alert('Please select at least one clickable word'); return; }
+      if (highlightCorrectWords.length === 0) { alert('Please select at least one correct word'); return; }
+      currentQuestion.highlightSelectableWords = highlightSelectableWords;
+      currentQuestion.highlightCorrectWords = highlightCorrectWords;
+      const words = currentQuestion.questionText.split(/\s+/).filter(w => w.trim());
+      currentQuestion.correctAnswer = highlightCorrectWords.map(idx => words[idx]).join('|');
+    } else if (currentQuestion.type === 'drag-drop') {
+      const items = dragDropItems.filter(item => item.trim() !== '');
+      if (items.length < 2) { alert('Please enter at least 2 items'); return; }
+      currentQuestion.options = items;
+      currentQuestion.correctAnswer = items.join('|');
+    } else if (currentQuestion.type === 'hotspot') {
+      if (!hotspotImageUrl.trim()) { alert('Please provide a hotspot image URL'); return; }
+      if (!currentQuestion.correctAnswer) { alert('Please select a correct target'); return; }
+      currentQuestion.hotspotImageUrl = hotspotImageUrl;
+      currentQuestion.hotspotTargets = hotspotTargets;
+    } else if (currentQuestion.type === 'cloze-dropdown') {
+      if (!clozeTemplate.trim()) { alert('Please enter a sentence with blanks'); return; }
+      if (clozeBlanks.length === 0) { alert('Please add at least one blank'); return; }
+      currentQuestion.clozeTemplate = clozeTemplate;
+      currentQuestion.clozeBlanks = clozeBlanks;
     }
 
     const normalizedQuestion = {
@@ -872,7 +950,304 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                 />
               </div>
 
-              {/* Options for MC/SATA - removed: only matrix in case studies */}
+              {/* MULTIPLE CHOICE OPTIONS */}
+              {(currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'sata') && (
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="form-label">
+                      {currentQuestion.type === 'multiple-choice' ? 'Options (select correct answer)' : 'Options (check all correct answers)'}
+                    </label>
+                    <button type="button" className="btn btn-sm btn-primary" onClick={addOption}>+ Add Option</button>
+                  </div>
+                  {currentQuestion.options.map((opt, idx) => (
+                    <div key={idx} className="d-flex align-items-center gap-2 mb-2">
+                      <span style={{ fontWeight: 600, minWidth: '24px' }}>{String.fromCharCode(65 + idx)}.</span>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={opt}
+                        onChange={(e) => handleOptionChange(idx, e.target.value)}
+                        placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                      />
+                      {currentQuestion.type === 'multiple-choice' ? (
+                        <input
+                          type="radio"
+                          name="cs-mc-correct"
+                          value={idx}
+                          checked={currentQuestion.correctAnswer === idx || currentQuestion.correctAnswer === String.fromCharCode(65 + idx)}
+                          onChange={() => handleQuestionChange('correctAnswer', String.fromCharCode(65 + idx))}
+                        />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={Array.isArray(currentQuestion.correctAnswer) ? currentQuestion.correctAnswer.includes(String.fromCharCode(65 + idx)) : false}
+                          onChange={(e) => {
+                            let selected = Array.isArray(currentQuestion.correctAnswer) ? [...currentQuestion.correctAnswer] : [];
+                            const letter = String.fromCharCode(65 + idx);
+                            if (e.target.checked) {
+                              if (!selected.includes(letter)) selected.push(letter);
+                            } else {
+                              selected = selected.filter(s => s !== letter);
+                            }
+                            handleQuestionChange('correctAnswer', selected);
+                          }}
+                        />
+                      )}
+                      {currentQuestion.options.length > 2 && (
+                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeOption(idx)}>
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <small className="text-muted">
+                    {currentQuestion.type === 'sata' ? 'Check all correct answers (2 or more).' : 'Select the single correct answer.'}
+                  </small>
+                </div>
+              )}
+
+              {/* FILL IN THE BLANK */}
+              {currentQuestion.type === 'fill-blank' && (
+                <div className="form-group">
+                  <label className="form-label">Correct Answer</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={currentQuestion.correctAnswer || ''}
+                    onChange={(e) => handleQuestionChange('correctAnswer', e.target.value)}
+                    placeholder="Enter the correct answer"
+                  />
+                  <small className="text-muted">For multiple acceptable answers, separate with semicolons (;)</small>
+                </div>
+              )}
+
+              {/* HIGHLIGHT */}
+              {currentQuestion.type === 'highlight' && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Step 1: Click words to make them <strong style={{ color: '#3b82f6' }}>SELECTABLE</strong> (blue = selectable)</label>
+                    <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', lineHeight: '2' }}>
+                      {currentQuestion.questionText.split(/\s+/).filter(w => w.trim()).map((word, idx) => {
+                        const isSelectable = highlightSelectableWords.includes(idx);
+                        const isCorrect = highlightCorrectWords.includes(idx);
+                        return (
+                          <span
+                            key={idx}
+                            onClick={() => {
+                              if (isSelectable) {
+                                setHighlightSelectableWords(prev => prev.filter(i => i !== idx));
+                                setHighlightCorrectWords(prev => prev.filter(i => i !== idx));
+                              } else {
+                                setHighlightSelectableWords(prev => [...prev, idx].sort((a, b) => a - b));
+                              }
+                            }}
+                            style={{
+                              cursor: 'pointer',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              margin: '2px',
+                              display: 'inline-block',
+                              background: isCorrect ? '#bbf7d0' : isSelectable ? '#dbeafe' : '#f1f5f9',
+                              color: isCorrect ? '#166534' : isSelectable ? '#1e40af' : '#64748b',
+                              border: isSelectable ? `2px solid ${isCorrect ? '#22c55e' : '#3b82f6'}` : '2px solid transparent',
+                              fontWeight: isSelectable ? 600 : 400,
+                            }}
+                          >
+                            {word}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {highlightSelectableWords.length > 0 && (
+                    <div className="form-group">
+                      <label className="form-label">Step 2: Click blue words to mark them as <strong style={{ color: '#22c55e' }}>CORRECT</strong></label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {highlightSelectableWords.map(idx => {
+                          const word = currentQuestion.questionText.split(/\s+/).filter(w => w.trim())[idx];
+                          const isCorrect = highlightCorrectWords.includes(idx);
+                          return (
+                            <span
+                              key={idx}
+                              onClick={() => {
+                                if (isCorrect) {
+                                  setHighlightCorrectWords(prev => prev.filter(i => i !== idx));
+                                } else {
+                                  setHighlightCorrectWords(prev => [...prev, idx].sort((a, b) => a - b));
+                                }
+                              }}
+                              style={{
+                                cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontWeight: 600,
+                                background: isCorrect ? '#bbf7d0' : '#dbeafe',
+                                color: isCorrect ? '#166534' : '#1e40af',
+                                border: `2px solid ${isCorrect ? '#22c55e' : '#3b82f6'}`,
+                              }}
+                            >
+                              {word}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* DRAG & DROP */}
+              {currentQuestion.type === 'drag-drop' && (
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="form-label">Drag & Drop Items (Ordered Response)</label>
+                    <button type="button" className="btn btn-sm btn-primary" onClick={() => setDragDropItems(prev => [...prev, ''])}>Add Item</button>
+                  </div>
+                  <small className="text-muted d-block mb-3">
+                    Enter items in the <strong>correct order</strong> (top to bottom). Students will see them shuffled.
+                  </small>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', border: '1px solid #e2e8f0', fontWeight: 600, fontSize: '0.85rem' }}>Position</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', border: '1px solid #e2e8f0', fontWeight: 600, fontSize: '0.85rem' }}>Item Text (Correct Order)</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', border: '1px solid #e2e8f0', fontWeight: 600, fontSize: '0.85rem' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dragDropItems.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e2e8f0', textAlign: 'center', fontWeight: 600, color: '#64748b', width: '60px' }}>{idx + 1}</td>
+                          <td style={{ padding: '4px 8px', border: '1px solid #e2e8f0' }}>
+                            <input type="text" className="form-control" value={item} onChange={(e) => handleDragDropChange(idx, e.target.value)} placeholder={`Step ${idx + 1}`} style={{ border: '1px solid #e2e8f0', borderRadius: '6px' }} />
+                          </td>
+                          <td style={{ padding: '4px 8px', border: '1px solid #e2e8f0', textAlign: 'center', width: '80px' }}>
+                            {dragDropItems.length > 2 && (
+                              <button type="button" className="btn btn-sm btn-danger" onClick={() => setDragDropItems(prev => prev.filter((_, i) => i !== idx))}>
+                                <i className="fas fa-trash"></i>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <small className="text-muted mt-2 d-block">{dragDropItems.filter(i => i.trim()).length} item(s) entered. Minimum 2 required.</small>
+                </div>
+              )}
+
+              {/* HOTSPOT */}
+              {currentQuestion.type === 'hotspot' && (
+                <div className="form-group">
+                  <label className="form-label">Hotspot Question Image URL</label>
+                  <input
+                    type="url"
+                    className="form-control"
+                    value={hotspotImageUrl}
+                    onChange={(e) => setHotspotImageUrl(e.target.value)}
+                    placeholder="https://.../image.png or /api/uploads/..."
+                  />
+                  <div className="upload-row-header mt-3">
+                    <label className="form-label mb-0">Hotspot Targets</label>
+                    <button type="button" className="btn btn-sm btn-primary" onClick={addHotspotTarget}>Add Target</button>
+                  </div>
+                  <div className="option-list">
+                    {hotspotTargets.map((target, idx) => (
+                      <div key={`target-${idx}`} className="matrix-row-builder">
+                        <div className="upload-grid-three">
+                          <div>
+                            <label className="form-label">Target ID</label>
+                            <input type="text" className="form-control" value={target.id} onChange={(e) => updateHotspotTarget(idx, 'id', e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="form-label">Label</label>
+                            <input type="text" className="form-control" value={target.label} onChange={(e) => updateHotspotTarget(idx, 'label', e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="form-label">Correct</label>
+                            <input type="radio" name="cs-hotspot-correct" checked={currentQuestion.correctAnswer === target.id} onChange={() => handleQuestionChange('correctAnswer', target.id)} />
+                          </div>
+                        </div>
+                        <div className="upload-grid-three mt-2">
+                          <div>
+                            <label className="form-label">X (%)</label>
+                            <input type="number" min="0" max="100" className="form-control" value={target.x} onChange={(e) => updateHotspotTarget(idx, 'x', e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="form-label">Y (%)</label>
+                            <input type="number" min="0" max="100" className="form-control" value={target.y} onChange={(e) => updateHotspotTarget(idx, 'y', e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="form-label">Radius (%)</label>
+                            <input type="number" min="1" max="20" className="form-control" value={target.radius} onChange={(e) => updateHotspotTarget(idx, 'radius', e.target.value)} />
+                          </div>
+                        </div>
+                        {hotspotTargets.length > 1 && (
+                          <button type="button" className="btn btn-sm btn-danger mt-2" onClick={() => removeHotspotTarget(idx)}>Remove Target</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CLOZE DROPDOWN */}
+              {currentQuestion.type === 'cloze-dropdown' && (
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="form-label">Cloze Dropdown (Fill-in with Dropdowns)</label>
+                    <button type="button" className="btn btn-sm btn-primary" onClick={addClozeBlank}><i className="fas fa-plus me-1"></i>Add Blank</button>
+                  </div>
+                  <small className="text-muted d-block mb-3">Type a sentence. Click "Add Blank" to insert a dropdown placeholder.</small>
+                  <textarea
+                    className="form-control mb-3"
+                    rows="3"
+                    value={clozeTemplate || currentQuestion.questionText || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setClozeTemplate(val);
+                      handleQuestionChange('questionText', val);
+                      const placeholderRegex = /\{\{(\w+)\}\}/g;
+                      const found = [];
+                      let match;
+                      while ((match = placeholderRegex.exec(val)) !== null) { found.push(match[1]); }
+                      if (found.length > 0) {
+                        setClozeBlanks((prev) => {
+                          const existingMap = {};
+                          prev.forEach((b) => { existingMap[b.key] = b; });
+                          return found.map((key) => existingMap[key] || { key, optionsText: '', correctAnswer: '' });
+                        });
+                      }
+                    }}
+                    placeholder="e.g., The nurse should {{blank1}} the patient."
+                  />
+                  {clozeBlanks.map((blank, blankIdx) => {
+                    const blankToken = `{{blank${blankIdx + 1}}}`;
+                    return (
+                      <div key={blankIdx} style={{ padding: '12px', marginBottom: '8px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                        <strong style={{ color: '#166534' }}>{blankToken}</strong>
+                        <div className="row g-2 mt-2">
+                          <div className="col-md-6">
+                            <label className="form-label" style={{ fontSize: '0.8rem' }}>Options (comma-separated)</label>
+                            <input type="text" className="form-control form-control-sm" value={blank.optionsText} onChange={(e) => {
+                              const next = [...clozeBlanks];
+                              next[blankIdx] = { ...next[blankIdx], optionsText: e.target.value };
+                              setClozeBlanks(next);
+                            }} placeholder="assess, monitor, evaluate" />
+                          </div>
+                          <div className="col-md-6">
+                            <label className="form-label" style={{ fontSize: '0.8rem' }}>Correct Answer</label>
+                            <input type="text" className="form-control form-control-sm" value={blank.correctAnswer} onChange={(e) => {
+                              const next = [...clozeBlanks];
+                              next[blankIdx] = { ...next[blankIdx], correctAnswer: e.target.value };
+                              setClozeBlanks(next);
+                            }} placeholder="assess" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* BOWTIE */}
               {currentQuestion.type === 'bowtie' && (
                 <div className="form-group">
                   <label className="form-label">Bowtie Choices</label>

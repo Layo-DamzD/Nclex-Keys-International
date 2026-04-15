@@ -109,10 +109,12 @@ const Testimonials = ({ content = {} }) => {
   useEffect(() => {
     if (testimonials.length <= 1) return;
     
-    const timeout = setTimeout(() => {
-      // Force mark all as loaded after 8 seconds
+    // Check if any testimonials have images; if not, start immediately
+    const hasAnyImages = testimonials.some((t) => t.imageUrl || t.avatar);
+    const timeout = hasAnyImages ? setTimeout(() => {
+      // Force mark all as loaded after 3 seconds
       testimonials.forEach((_, index) => handleImageLoad(index));
-    }, 8000);
+    }, 3000) : null;
 
     testimonials.forEach((testimonial, index) => {
       const imgUrl = testimonial.imageUrl || testimonial.avatar;
