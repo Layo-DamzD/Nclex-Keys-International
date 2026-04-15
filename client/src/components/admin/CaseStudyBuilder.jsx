@@ -12,7 +12,15 @@ const CASE_STUDY_TYPES = [
 ];
 
 const QUESTION_TYPES = [
-  { value: 'matrix', label: 'Matrix (Case Study Question)' },
+  { value: 'multiple-choice', label: 'Multiple Choice' },
+  { value: 'sata', label: 'SATA (Select All That Apply)' },
+  { value: 'fill-blank', label: 'Fill in the Blank' },
+  { value: 'highlight', label: 'Highlight' },
+  { value: 'drag-drop', label: 'Drag & Drop (Ordered Response)' },
+  { value: 'matrix', label: 'Matrix' },
+  { value: 'hotspot', label: 'Hotspot' },
+  { value: 'cloze-dropdown', label: 'Cloze Dropdown' },
+  { value: 'bowtie', label: 'Bowtie' },
 ];
 
 

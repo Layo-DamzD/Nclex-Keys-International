@@ -105,22 +105,28 @@ const Testimonials = ({ content = {} }) => {
     setLoadedImages(prev => new Set([...prev, index]));
   };
 
-  // Preload all images before starting auto-slide
+  // Preload images with timeout fallback so carousel doesn't hang
   useEffect(() => {
     if (testimonials.length <= 1) return;
     
-    // Preload images
+    const timeout = setTimeout(() => {
+      // Force mark all as loaded after 8 seconds
+      testimonials.forEach((_, index) => handleImageLoad(index));
+    }, 8000);
+
     testimonials.forEach((testimonial, index) => {
       const imgUrl = testimonial.imageUrl || testimonial.avatar;
       if (imgUrl) {
         const img = new window.Image();
         img.onload = () => handleImageLoad(index);
-        img.onerror = () => handleImageLoad(index); // Still mark as loaded even on error
+        img.onerror = () => handleImageLoad(index);
         img.src = firstMediaUrl(imgUrl);
       } else {
         handleImageLoad(index);
       }
     });
+
+    return () => clearTimeout(timeout);
   }, [testimonials]);
 
   // Auto-slide only after all images are loaded

@@ -349,8 +349,8 @@ const TestCustomization = () => {
     }, { available: 0, used: 0, omitted: 0 });
   }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts]);
 
-  // Practice test and case study: min 85. CAT/Assessment: handled server-side (min 85).
-  const questionRangeMin = testType === 'caseStudy' ? 1 : 85;
+  // Practice test and case study: min 5.
+  const questionRangeMin = testType === 'caseStudy' ? 5 : 5;
   const questionRangeMax = 150;
 
   useEffect(() => {

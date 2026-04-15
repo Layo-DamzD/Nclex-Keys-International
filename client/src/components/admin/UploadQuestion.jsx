@@ -122,23 +122,12 @@ const UploadQuestion = () => {
     setCorrectAnswer('');
   }, [type, correctAnswer]);
 
-  // Case-study related categories/subcategories — only Matrix type allowed
-  const CASE_STUDY_CATEGORIES = ['NGN Case Studies'];
-  const isCaseStudyCategory = CASE_STUDY_CATEGORIES.includes(category);
-
-  // Filter question types based on category
-  const availableQuestionTypes = isCaseStudyCategory
-    ? QUESTION_TYPES.filter((t) => t.value === 'matrix')
-    : QUESTION_TYPES;
+  const availableQuestionTypes = QUESTION_TYPES;
 
   const handleCategoryChange = (e) => {
     const newCategory = e.target.value;
     setCategory(newCategory);
     setSubcategory('');
-    // Auto-switch to Matrix if selecting a case-study category
-    if (CASE_STUDY_CATEGORIES.includes(newCategory) && type !== 'matrix') {
-      setType('matrix');
-    }
   };
 
   const handleOptionChange = (index, value) => {
@@ -421,7 +410,7 @@ const UploadQuestion = () => {
         return;
       }
       questionData.options = items;
-      questionData.correctAnswer = items.map((_, idx) => String.fromCharCode(65 + idx)).join(',');
+      questionData.correctAnswer = items.join('|');
     } else if (type === 'matrix') {
       const matrixData = buildMatrixQuestionData(questionData);
       if (!matrixData) {
