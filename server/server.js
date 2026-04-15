@@ -12,6 +12,22 @@ const PORT = process.env.PORT || 5000;
 // Ensure real client IP is preserved behind reverse proxies (Render/Vercel/Nginx)
 app.set('trust proxy', true);
 
+// ============================================================
+// MAINTENANCE MODE — set to false to disable, true to block entire API
+// ============================================================
+const MAINTENANCE_MODE = true;
+
+// Maintenance middleware — blocks everything
+app.use((req, res, next) => {
+  if (MAINTENANCE_MODE) {
+    return res.status(403).json({
+      error: '403',
+      message: 'This service is temporarily unavailable. Please contact the developer.'
+    });
+  }
+  next();
+});
+
 // Middleware
 app.use(cors());
 // Allow very large request payloads so long rationales and rich uploads are not truncated.
