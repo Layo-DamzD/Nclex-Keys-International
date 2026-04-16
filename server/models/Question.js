@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const matrixRowSchema = new mongoose.Schema({
   rowText: { type: String, required: true },
   columns: [String], // column headers for this row (if different per row)
-  correctColumn: { type: Number, required: true } // index of correct column (0-based)
+  correctColumn: { type: Number }, // index of correct column (0-based) - legacy single-select
+  correctColumns: [Number], // array of correct column indices for multi-select
 }, { _id: false });
 
 const hotspotTargetSchema = new mongoose.Schema({
@@ -29,7 +30,7 @@ const caseStudySectionSchema = new mongoose.Schema({
 const caseStudyQuestionSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'cloze-dropdown', 'bowtie', 'matrix'],
+    enum: ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'cloze-dropdown', 'bowtie', 'matrix', 'hotspot'],
     required: true
   },
   category: { type: String, default: '' },

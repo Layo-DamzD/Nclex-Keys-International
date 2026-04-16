@@ -42,9 +42,9 @@ const UploadQuestion = () => {
   const [dragDropItems, setDragDropItems] = useState(['', '', '', '']);
   const [matrixColumns, setMatrixColumns] = useState(['Column 1', 'Column 2', 'Column 3']);
   const [matrixRows, setMatrixRows] = useState([
-    { rowText: '', correctColumn: 0 },
-    { rowText: '', correctColumn: 0 },
-    { rowText: '', correctColumn: 0 },
+    { rowText: '', correctColumns: [0] },
+    { rowText: '', correctColumns: [0] },
+    { rowText: '', correctColumns: [0] },
   ]);
   const [hotspotImageUrl, setHotspotImageUrl] = useState('');
   const [hotspotTargets, setHotspotTargets] = useState([
@@ -84,9 +84,9 @@ const UploadQuestion = () => {
     setMatrixColumns(editingQuestion.matrixColumns || ['Column 1', 'Column 2', 'Column 3']);
     setMatrixRows(
       editingQuestion.matrixRows || [
-        { rowText: '', correctColumn: 0 },
-        { rowText: '', correctColumn: 0 },
-        { rowText: '', correctColumn: 0 },
+        { rowText: '', correctColumns: [0] },
+        { rowText: '', correctColumns: [0] },
+        { rowText: '', correctColumns: [0] },
       ],
     );
     setHotspotImageUrl(editingQuestion.hotspotImageUrl || '');
@@ -211,9 +211,9 @@ const UploadQuestion = () => {
     setDragDropItems(['', '', '', '']);
     setMatrixColumns(['Column 1', 'Column 2', 'Column 3']);
     setMatrixRows([
-      { rowText: '', correctColumn: 0 },
-      { rowText: '', correctColumn: 0 },
-      { rowText: '', correctColumn: 0 },
+      { rowText: '', correctColumns: [0] },
+      { rowText: '', correctColumns: [0] },
+      { rowText: '', correctColumns: [0] },
     ]);
     setHotspotImageUrl('');
     setHotspotTargets([{ id: 'A', label: 'Target A', x: 50, y: 50, radius: 6 }]);
@@ -315,7 +315,7 @@ const UploadQuestion = () => {
 
     const cleanedRows = matrixRows.map((row) => ({
       rowText: (row.rowText || '').trim(),
-      correctColumn: Number(row.correctColumn || 0),
+      correctColumns: Array.isArray(row.correctColumns) ? row.correctColumns : (row.correctColumn !== undefined ? [Number(row.correctColumn)] : []),
     }));
 
     if (cleanedRows.length < 1) {
@@ -328,19 +328,22 @@ const UploadQuestion = () => {
         setError(`Matrix row ${i + 1} text is required`);
         return null;
       }
-      if (
-        Number.isNaN(cleanedRows[i].correctColumn) ||
-        cleanedRows[i].correctColumn < 0 ||
-        cleanedRows[i].correctColumn >= cleanedColumns.length
-      ) {
-        setError(`Matrix row ${i + 1} has an invalid correct column`);
+      const cols = cleanedRows[i].correctColumns;
+      if (!Array.isArray(cols) || cols.length === 0) {
+        setError(`Matrix row ${i + 1} must have at least one correct column selected`);
         return null;
+      }
+      for (const c of cols) {
+        if (Number.isNaN(c) || c < 0 || c >= cleanedColumns.length) {
+          setError(`Matrix row ${i + 1} has an invalid correct column index`);
+          return null;
+        }
       }
     }
 
     questionData.matrixColumns = cleanedColumns;
     questionData.matrixRows = cleanedRows;
-    questionData.correctAnswer = cleanedRows.map((r) => r.correctColumn);
+    questionData.correctAnswer = cleanedRows.map((r) => r.correctColumns);
     questionData.options = [];
     return questionData;
   };
@@ -691,30 +694,74 @@ const UploadQuestion = () => {
           />
         </div>
 
-        {(category === 'Adult Health' || category === 'Child Health') && subcategory === 'Cardiovascular' && (
-          <div className="form-group">
-            <label className="form-label">ECG / Question Image (optional)</label>
+        <div className="form-group">
+          <label className="form-label">
+            <i className="fas fa-image me-2" style={{ color: '#6366f1' }}></i>
+            Question Image (optional)
+          </label>
+          <small className="text-muted d-block mb-2">
+            Attach an image to this question (e.g., ECG strip, chart, diagram, clinical photo). You can paste a URL or upload a file.
+          </small>
+          <input
+            type="url"
+            className="form-control mb-2"
+            value={questionImageUrl}
+            onChange={(e) => setQuestionImageUrl(e.target.value)}
+            placeholder="Paste image URL (https://.../image.png or /api/uploads/...)"
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>or</span>
+          </div>
+          <div style={{ position: 'relative' }}>
             <input
-              type="url"
-              className="form-control mb-2"
-              value={questionImageUrl}
-              onChange={(e) => setQuestionImageUrl(e.target.value)}
-              placeholder="https://.../ecg.png or /api/uploads/..."
+              type="file"
+              className="form-control"
+              accept="image/*"
+              onChange={(e) => uploadAsset(e.target.files?.[0], 'question')}
+              style={{ display: 'block' }}
             />
-            <input type="file" className="form-control" accept="image/*" onChange={(e) => uploadAsset(e.target.files?.[0], 'question')} />
-            {assetUploading === 'question' && <small className="text-muted">Uploading ECG image...</small>}
-            {questionImageUrl && (
+          </div>
+          {assetUploading === 'question' && (
+            <small className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+              <i className="fas fa-spinner fa-spin"></i> Uploading image...
+            </small>
+          )}
+          {questionImageUrl && (
+            <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
               <img
                 src={firstMediaUrl(questionImageUrl)}
                 data-raw-src={questionImageUrl}
                 data-fallback-index="0"
                 onError={handlePreviewImageFallback}
                 alt="Question visual preview"
-                style={{ marginTop: '10px', maxWidth: '320px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                style={{ maxWidth: '400px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }}
               />
-            )}
-          </div>
-        )}
+              <button
+                type="button"
+                onClick={() => setQuestionImageUrl('')}
+                style={{
+                  position: 'absolute',
+                  top: '6px',
+                  right: '6px',
+                  background: 'rgba(239, 68, 68, 0.9)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                title="Remove image"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+          )}
+        </div>
 
         {(type === 'multiple-choice' || type === 'sata') && (
           <div className="form-group">
@@ -966,90 +1013,144 @@ const UploadQuestion = () => {
         {type === 'matrix' && (
           <div className="form-group">
             <div className="upload-row-header">
-              <label className="form-label">Matrix Configuration</label>
+              <label className="form-label" style={{ fontWeight: 700, color: '#0369a1', marginBottom: '12px', display: 'block' }}>
+                Matrix Configuration
+              </label>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Column Headers</label>
-              <div className="option-list">
+            {/* Column Headers - inline editable */}
+            <div style={{ marginBottom: '16px' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem' }}>Column Headers</label>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {matrixColumns.map((col, idx) => (
-                  <div key={idx} className="option-row">
-                    <div className="option-index">{idx + 1}</div>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <input
                       type="text"
-                      className="form-control"
+                      className="form-control form-control-sm"
+                      style={{ width: '140px' }}
                       value={col}
                       onChange={(e) => {
                         const next = [...matrixColumns];
                         next[idx] = e.target.value;
                         setMatrixColumns(next);
                       }}
-                      placeholder={`Column ${idx + 1}`}
+                      placeholder={`Col ${idx + 1}`}
                     />
                     {matrixColumns.length > 2 && (
-                      <button type="button" className="btn btn-sm btn-danger" onClick={() => setMatrixColumns((prev) => prev.filter((_, i) => i !== idx))}>Remove</button>
+                      <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => {
+                        const next = matrixColumns.filter((_, i) => i !== idx);
+                        // Update correctColumns values that point to removed or later columns
+                        const updatedRows = matrixRows.map(row => ({
+                          ...row,
+                          correctColumns: (Array.isArray(row.correctColumns) ? row.correctColumns : (row.correctColumn !== undefined ? [row.correctColumn] : []))
+                            .map(c => c > idx ? c - 1 : (c === idx ? 0 : c))
+                        }));
+                        setMatrixColumns(next);
+                        setMatrixRows(updatedRows);
+                      }} style={{ padding: '2px 6px' }}>x</button>
                     )}
                   </div>
                 ))}
+                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => {
+                  setMatrixColumns((prev) => [...prev, `Column ${prev.length + 1}`]);
+                }} style={{ padding: '2px 8px' }}>+ Col</button>
               </div>
-              <button type="button" className="btn btn-sm btn-primary mt-2" onClick={() => setMatrixColumns((prev) => [...prev, `Column ${prev.length + 1}`])}>
-                Add Column
-              </button>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Rows and Correct Column</label>
-              <div className="option-list">
-                {matrixRows.map((row, rowIdx) => (
-                  <div key={rowIdx} className="matrix-row-builder">
-                    <div className="upload-grid-two">
-                      <div>
-                        <label className="form-label">Row {rowIdx + 1} Text</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={row.rowText}
-                          onChange={(e) => {
-                            const next = [...matrixRows];
-                            next[rowIdx] = { ...next[rowIdx], rowText: e.target.value };
-                            setMatrixRows(next);
-                          }}
-                          placeholder="Row text"
-                        />
-                      </div>
-                      <div>
-                        <label className="form-label">Correct Column</label>
-                        <select
-                          className="form-control"
-                          value={row.correctColumn}
-                          onChange={(e) => {
-                            const next = [...matrixRows];
-                            next[rowIdx] = { ...next[rowIdx], correctColumn: Number(e.target.value) };
-                            setMatrixRows(next);
-                          }}
-                        >
-                          {matrixColumns.map((col, colIdx) => (
-                            <option key={colIdx} value={colIdx}>{col || `Column ${colIdx + 1}`}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    {matrixRows.length > 1 && (
-                      <button type="button" className="btn btn-sm btn-danger mt-2" onClick={() => setMatrixRows((prev) => prev.filter((_, i) => i !== rowIdx))}>
-                        Remove Row
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="btn btn-sm btn-primary mt-2"
-                onClick={() => setMatrixRows((prev) => [...prev, { rowText: '', correctColumn: 0 }])}
-              >
-                Add Row
-              </button>
+            {/* Rows - inline with radio-style correct column selection */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.85rem' }}>Rows (select correct column for each row)</label>
+              {matrixRows.map((row, rowIdx) => (
+                <div key={rowIdx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 600, color: '#64748b', minWidth: '20px' }}>{rowIdx + 1}.</span>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    style={{ flex: 1 }}
+                    value={row.rowText || ''}
+                    onChange={(e) => {
+                      const next = [...matrixRows];
+                      next[rowIdx] = { ...next[rowIdx], rowText: e.target.value };
+                      setMatrixRows(next);
+                    }}
+                    placeholder="Row description..."
+                  />
+                  {matrixColumns.map((col, colIdx) => {
+                    const isSelected = Array.isArray(row.correctColumns) && row.correctColumns.includes(colIdx);
+                    return (
+                    <label key={colIdx} style={{
+                      display: 'flex', alignItems: 'center', gap: '3px',
+                      padding: '3px 8px', borderRadius: '6px', cursor: 'pointer',
+                      background: isSelected ? '#dcfce7' : '#f1f5f9',
+                      border: `1px solid ${isSelected ? '#22c55e' : '#e2e8f0'}`,
+                      fontSize: '0.8rem', whiteSpace: 'nowrap'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          const next = [...matrixRows];
+                          const current = Array.isArray(next[rowIdx].correctColumns) ? [...next[rowIdx].correctColumns] : (next[rowIdx].correctColumn !== undefined ? [next[rowIdx].correctColumn] : []);
+                          if (isSelected) {
+                            next[rowIdx] = { ...next[rowIdx], correctColumns: current.filter(c => c !== colIdx) };
+                          } else {
+                            next[rowIdx] = { ...next[rowIdx], correctColumns: [...current, colIdx] };
+                          }
+                          setMatrixRows(next);
+                        }}
+                        style={{ margin: 0 }}
+                      />
+                      {col || `Col ${colIdx + 1}`}
+                    </label>
+                    );
+                  })}
+                  {matrixRows.length > 1 && (
+                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => {
+                      setMatrixRows((prev) => prev.filter((_, i) => i !== rowIdx));
+                    }} style={{ padding: '2px 6px' }}>x</button>
+                  )}
+                </div>
+              ))}
+              <button type="button" className="btn btn-sm btn-outline-primary mt-2" onClick={() => {
+                setMatrixRows((prev) => [...prev, { rowText: '', correctColumns: [0] }]);
+              }}>+ Add Row</button>
             </div>
+
+            {/* Preview Table */}
+            {matrixRows.length > 0 && matrixColumns.length > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <label className="form-label" style={{ fontSize: '0.85rem' }}>Preview</label>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ padding: '6px 10px', background: '#0369a1', color: '#fff', textAlign: 'left', borderRadius: '4px 0 0 0' }}>Row</th>
+                        {matrixColumns.map((col, cIdx) => (
+                          <th key={cIdx} style={{ padding: '6px 10px', background: '#0369a1', color: '#fff', textAlign: 'center' }}>{col}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matrixRows.map((row, rIdx) => (
+                        <tr key={rIdx}>
+                          <td style={{ padding: '6px 10px', border: '1px solid #e2e8f0', fontWeight: 500 }}>{row.rowText || `Row ${rIdx + 1}`}</td>
+                          {matrixColumns.map((_, cIdx) => (
+                            <td key={cIdx} style={{
+                              padding: '6px 10px',
+                              border: '1px solid #e2e8f0',
+                              textAlign: 'center',
+                              background: Array.isArray(row.correctColumns) && row.correctColumns.includes(cIdx) ? '#dcfce7' : '#fff'
+                            }}>
+                              {Array.isArray(row.correctColumns) && row.correctColumns.includes(cIdx) ? '\u2713' : ''}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1366,20 +1467,58 @@ const UploadQuestion = () => {
         <div className="form-group">
           <label className="form-label">Rationale/Explanation</label>
           <textarea className="form-control" rows="3" value={rationale} onChange={(e) => setRationale(e.target.value)} required />
-          <div className="mt-2">
-            <label className="form-label">Rationale Image (optional)</label>
-            <input type="url" className="form-control mb-2" value={rationaleImageUrl} onChange={(e) => setRationaleImageUrl(e.target.value)} placeholder="https://.../rationale.png or /api/uploads/..." />
+          <div className="mt-2" style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label className="form-label">
+              <i className="fas fa-image me-2" style={{ color: '#6366f1' }}></i>
+              Rationale Image (optional)
+            </label>
+            <small className="text-muted d-block mb-2">
+              Add an image to the explanation (e.g., diagram, chart, annotated image).
+            </small>
+            <input type="url" className="form-control mb-2" value={rationaleImageUrl} onChange={(e) => setRationaleImageUrl(e.target.value)} placeholder="Paste image URL (https://.../rationale.png or /api/uploads/...)" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>or</span>
+            </div>
             <input type="file" className="form-control" accept="image/*" onChange={(e) => uploadAsset(e.target.files?.[0], 'rationale')} />
-            {assetUploading === 'rationale' && <small className="text-muted">Uploading image...</small>}
+            {assetUploading === 'rationale' && (
+              <small className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                <i className="fas fa-spinner fa-spin"></i> Uploading image...
+              </small>
+            )}
             {rationaleImageUrl && (
-              <img
-                src={firstMediaUrl(rationaleImageUrl)}
-                data-raw-src={rationaleImageUrl}
-                data-fallback-index="0"
-                onError={handlePreviewImageFallback}
-                alt="Rationale preview"
-                style={{ marginTop: '10px', maxWidth: '260px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-              />
+              <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
+                <img
+                  src={firstMediaUrl(rationaleImageUrl)}
+                  data-raw-src={rationaleImageUrl}
+                  data-fallback-index="0"
+                  onError={handlePreviewImageFallback}
+                  alt="Rationale preview"
+                  style={{ maxWidth: '400px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setRationaleImageUrl('')}
+                  style={{
+                    position: 'absolute',
+                    top: '6px',
+                    right: '6px',
+                    background: 'rgba(239, 68, 68, 0.9)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="Remove image"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
             )}
           </div>
         </div>

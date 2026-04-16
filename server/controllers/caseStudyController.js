@@ -61,6 +61,9 @@ const createCaseStudy = async (req, res) => {
     if (!payload.title || !payload.scenario || !payload.category || !payload.subcategory) {
       return res.status(400).json({ message: 'Title, scenario, category, and subcategory are required' });
     }
+    if (!payload.type || !['6-question', 'bowtie', 'trend', 'matrix'].includes(payload.type)) {
+      return res.status(400).json({ message: 'Valid case study type is required (6-question, bowtie, trend, or matrix)' });
+    }
 
     payload.questions = normalizeCaseStudyQuestions(payload.questions, payload.category, payload.subcategory);
 
@@ -70,14 +73,23 @@ const createCaseStudy = async (req, res) => {
     });
     await caseStudy.save();
 
-    const linkedQuestion = await Question.create(buildLinkedQuestionPayload(caseStudy));
-    caseStudy.linkedQuestionId = linkedQuestion._id;
-    await caseStudy.save();
+    try {
+      const linkedQuestion = await Question.create(buildLinkedQuestionPayload(caseStudy));
+      caseStudy.linkedQuestionId = linkedQuestion._id;
+      await caseStudy.save();
+    } catch (linkedError) {
+      console.error('Linked question creation failed (case study saved without link):', linkedError.message);
+      // Case study is still saved, just without a linked question
+    }
 
     res.status(201).json(caseStudy);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Case study creation error:', error);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ message: 'Validation error: ' + messages.join(', ') });
+    }
+    res.status(500).json({ message: 'Server error: ' + (error.message || 'Unknown error') });
   }
 };
 
@@ -120,12 +132,14 @@ const updateCaseStudy = async (req, res) => {
 
     res.json(caseStudy);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Case study update error:', error);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ message: 'Validation error: ' + messages.join(', ') });
+    }
+    res.status(500).json({ message: 'Server error: ' + (error.message || 'Unknown error') });
   }
 };
-
-// @desc    Delete case study
 // @route   DELETE /api/admin/case-studies/:id
 // @access  Private (admin only)
 const deleteCaseStudy = async (req, res) => {

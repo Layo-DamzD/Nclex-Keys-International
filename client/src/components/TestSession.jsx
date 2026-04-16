@@ -278,50 +278,86 @@ const AssessmentGauge = ({ percentage }) => {
 const TestSession = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { questions, settings, testType } = location.state || { questions: [], settings: {} };
-  const dashboardReturnPath = settings?.returnTo || '/dashboard';
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState({});
+
+  // --- Pause/Resume Persistence: check localStorage for saved state ---
+  const [restoredState, setRestoredState] = useState(() => {
+    // If a new test is being started (location.state has questions), don't restore
+    if (location.state?.questions?.length > 0) {
+      localStorage.removeItem('nclex-test-session-state');
+      return null;
+    }
+    try {
+      const saved = localStorage.getItem('nclex-test-session-state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Only restore if saved within 24 hours
+        if (parsed.savedAt && (Date.now() - parsed.savedAt) < 24 * 60 * 60 * 1000) {
+          return parsed;
+        }
+        localStorage.removeItem('nclex-test-session-state');
+      }
+    } catch (e) {
+      console.warn('Failed to restore test state:', e);
+    }
+    return null;
+  });
+
+  const locationQuestions = location.state?.questions || [];
+  const locationSettings = location.state?.settings || {};
+  const locationTestType = location.state?.testType;
+
+  // Use restored state if available and no new test was explicitly started
+  const questions = restoredState?.questions?.length ? restoredState.questions : locationQuestions;
+  const settings = restoredState?.settings || locationSettings;
+  const testType = restoredState?.testType || locationTestType;
+  const dashboardReturnPath = restoredState?.dashboardReturnPath || settings?.returnTo || '/dashboard';
+  const [currentIndex, setCurrentIndex] = useState(restoredState?.currentIndex || 0);
+  const [answers, setAnswers] = useState(restoredState?.answers || {});
   // Timer: 85 seconds per question
-  const [timeLeft, setTimeLeft] = useState(settings.timed ? settings.totalQuestions * 85 : null);
+  const [timeLeft, setTimeLeft] = useState(() => {
+    if (restoredState?.timeLeft !== undefined && restoredState?.timeLeft !== null) {
+      return restoredState.timeLeft;
+    }
+    return settings.timed ? settings.totalQuestions * 85 : null;
+  });
   // Per-question time tracking
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
-  const [questionTimeSpent, setQuestionTimeSpent] = useState({});
+  const [questionTimeSpent, setQuestionTimeSpent] = useState(restoredState?.questionTimeSpent || {});
   const [submitted, setSubmitted] = useState(false);
   const [results, setResults] = useState([]);
   const [submittedResultId, setSubmittedResultId] = useState('');
   const [submitReviewError, setSubmitReviewError] = useState('');
   const [showReview] = useState(false);
   const [filter] = useState('all');
-  const [markedQuestions, setMarkedQuestions] = useState({});
+  const [markedQuestions, setMarkedQuestions] = useState(restoredState?.markedQuestions || {});
   const [showCalculator, setShowCalculator] = useState(false);
   const [showNavigatorModal, setShowNavigatorModal] = useState(false);
-  const [activeCaseTabByQuestion, setActiveCaseTabByQuestion] = useState({});
-  const [isBooting, setIsBooting] = useState(true);
+  const [activeCaseTabByQuestion, setActiveCaseTabByQuestion] = useState(restoredState?.activeCaseTabByQuestion || {});
+  const [isBooting, setIsBooting] = useState(!restoredState);
   const [bootProgress, setBootProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([]);
+  const [chatMessages, setChatMessages] = useState(restoredState?.chatMessages || []);
   const [chatText, setChatText] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   // Case study state
-  const [caseIndex, setCaseIndex] = useState(0);
-  const [caseAnswers, setCaseAnswers] = useState({});
+  const [caseIndex, setCaseIndex] = useState(restoredState?.caseIndex || 0);
+  const [caseAnswers, setCaseAnswers] = useState(restoredState?.caseAnswers || {});
 
   // Highlight ref
   const highlightRef = useRef(null);
 
   // Drag & drop state (non‑case) - Two box system
-  const [dragSourceItems, setDragSourceItems] = useState([]); // Display box
-  const [dragAnswerItems, setDragAnswerItems] = useState([]);  // Answer arrangement box
+  const [dragSourceItems, setDragSourceItems] = useState(restoredState?.dragSourceItems || []); // Display box
+  const [dragAnswerItems, setDragAnswerItems] = useState(restoredState?.dragAnswerItems || []);  // Answer arrangement box
   const [dragItems, setDragItems] = useState([]); // Legacy - kept for compatibility
   const [caseDragItems, setCaseDragItems] = useState({});
-  const [caseDragSourceItems, setCaseDragSourceItems] = useState({});
-  const [caseDragAnswerItems, setCaseDragAnswerItems] = useState({});
+  const [caseDragSourceItems, setCaseDragSourceItems] = useState(restoredState?.caseDragSourceItems || {});
+  const [caseDragAnswerItems, setCaseDragAnswerItems] = useState(restoredState?.caseDragAnswerItems || {});
   const hideInProgressAnswerHints = Boolean(settings?.tutorMode || settings?.timed);
 
   // Tutor mode: track which questions have been revealed (show rationale after answering)
-  const [tutorRevealed, setTutorRevealed] = useState({});
+  const [tutorRevealed, setTutorRevealed] = useState(restoredState?.tutorRevealed || {});
 
   const revealTutorQuestion = (qId) => {
     if (settings?.tutorMode) {
@@ -366,6 +402,26 @@ const TestSession = () => {
       if (wrongPicked.length > 0) return false;
       if (userArr.length === correctArr.length && correctArr.length > 0) return true;
       if (userArr.length > 0) return 'partial';
+      return false;
+    }
+    if (type === 'matrix') {
+      if (!Array.isArray(userAnswer) || !q.matrixRows?.length) return false;
+      let totalCorrect = 0;
+      let totalCells = 0;
+      for (let i = 0; i < q.matrixRows.length; i++) {
+        const row = q.matrixRows[i];
+        let correctCols = [];
+        if (Array.isArray(row.correctColumns) && row.correctColumns.length > 0) {
+          correctCols = row.correctColumns;
+        } else if (row.correctColumn !== undefined && row.correctColumn !== null) {
+          correctCols = [row.correctColumn];
+        }
+        totalCells += correctCols.length;
+        const userCols = Array.isArray(userAnswer[i]) ? userAnswer[i] : (userAnswer[i] !== undefined ? [userAnswer[i]] : []);
+        totalCorrect += userCols.filter(c => correctCols.includes(c)).length;
+      }
+      if (totalCorrect === totalCells && totalCells > 0) return true;
+      if (totalCorrect > 0) return 'partial';
       return false;
     }
     return null;
@@ -494,6 +550,38 @@ const TestSession = () => {
     return () => clearInterval(timer);
   }, [questions.length, submitted]);
 
+  // --- Pause/Resume: Save test state to localStorage when paused ---
+  useEffect(() => {
+    if (isPaused && !submitted && questions.length > 0) {
+      const stateToSave = {
+        questions, settings, testType,
+        currentIndex, answers, timeLeft,
+        questionTimeSpent, markedQuestions,
+        caseIndex, caseAnswers,
+        activeCaseTabByQuestion, tutorRevealed,
+        dragSourceItems, dragAnswerItems,
+        caseDragSourceItems, caseDragAnswerItems,
+        chatMessages,
+        savedAt: Date.now(),
+        dashboardReturnPath
+      };
+      try {
+        localStorage.setItem('nclex-test-session-state', JSON.stringify(stateToSave));
+      } catch (e) {
+        console.warn('Failed to save test state:', e);
+      }
+    }
+  }, [isPaused, submitted, questions.length, currentIndex, answers, timeLeft,
+      questionTimeSpent, markedQuestions, caseIndex, caseAnswers,
+      activeCaseTabByQuestion, tutorRevealed, dragSourceItems, dragAnswerItems,
+      caseDragSourceItems, caseDragAnswerItems, chatMessages, settings, testType, dashboardReturnPath]);
+
+  // --- Pause/Resume: Clear saved state when test is submitted ---
+  useEffect(() => {
+    if (submitted) {
+      localStorage.removeItem('nclex-test-session-state');
+    }
+  }, [submitted]);
 
   // Initialize drag for non‑case drag-drop - Two box system
   useEffect(() => {
@@ -534,17 +622,10 @@ const TestSession = () => {
   const handleAnswer = (qId, answer, qType) => {
     if (isPaused) return;
     setAnswers(prev => ({ ...prev, [qId]: answer }));
-    // For fill-blank, reveal on blur instead (handled separately)
-    if (qType !== 'fill-blank') {
-      revealTutorQuestion(qId);
-    }
   };
   const handleCaseAnswer = (subQId, answer, subQType) => {
     if (isPaused) return;
     setCaseAnswers(prev => ({ ...prev, [subQId]: answer }));
-    if (subQType !== 'fill-blank') {
-      revealTutorQuestion(subQId);
-    }
   };
   const clearCurrentQuestionAnswer = () => {
     if (isPaused) return;
@@ -559,6 +640,17 @@ const TestSession = () => {
     setAnswers((prev) => ({ ...prev, [q._id]: undefined }));
   };
 
+  // Helper: check if current question is revealed in tutor mode
+  const getCurrentQuestionRevealed = () => {
+    const q = questions[currentIndex];
+    if (!q) return true;
+    if (q.type === 'case-study') {
+      const subQ = q.questions?.[caseIndex];
+      return subQ?._id ? !!tutorRevealed[subQ._id] : true;
+    }
+    return q._id ? !!tutorRevealed[q._id] : true;
+  };
+
   const handleNext = () => {
     if (isPaused) return;
     // Track time spent on current question before moving
@@ -571,6 +663,21 @@ const TestSession = () => {
       }));
     }
     setQuestionStartTime(Date.now());
+    // In tutor mode: first click reveals answer, second click moves to next
+    if (settings?.tutorMode) {
+      let currentQId;
+      if (q?.type === 'case-study') {
+        currentQId = q.questions?.[caseIndex]?._id;
+      } else {
+        currentQId = q?._id;
+      }
+      if (currentQId && !tutorRevealed[currentQId]) {
+        // First click: reveal answer, don't move
+        revealTutorQuestion(currentQId);
+        return;
+      }
+      // Already revealed, fall through to move
+    }
     
     if (q?.type === 'case-study') {
       if (caseIndex < q.questions.length - 1) {
@@ -676,6 +783,7 @@ const TestSession = () => {
   const handleExitSession = () => {
     const shouldExit = window.confirm('Exit this test session and return to dashboard?');
     if (shouldExit) {
+      localStorage.removeItem('nclex-test-session-state');
       navigate(dashboardReturnPath);
     }
   };
@@ -964,12 +1072,37 @@ const TestSession = () => {
     if (!userAnswer || !correctAnswer) return false;
     return userAnswer === correctAnswer;
   };
-  const isMatrixCorrect = (userAnswer, matrixRows) => {
-    if (!userAnswer || !Array.isArray(userAnswer)) return false;
-    for (let i = 0; i < matrixRows.length; i++) {
-      if (userAnswer[i] !== matrixRows[i].correctColumn) return false;
+  const scoreMatrix = (userAnswer, matrixRows) => {
+    if (!userAnswer || !Array.isArray(userAnswer) || !matrixRows || matrixRows.length === 0) {
+      return { isCorrect: false, earnedMarks: 0, totalMarks: matrixRows?.length || 0 };
     }
-    return true;
+    let totalCorrect = 0;
+    let totalCells = 0;
+    let earnedMarks = 0;
+    for (let i = 0; i < matrixRows.length; i++) {
+      const row = matrixRows[i];
+      // Support both old (correctColumn) and new (correctColumns) formats
+      let correctCols = [];
+      if (Array.isArray(row.correctColumns) && row.correctColumns.length > 0) {
+        correctCols = row.correctColumns;
+      } else if (row.correctColumn !== undefined && row.correctColumn !== null) {
+        correctCols = [row.correctColumn];
+      }
+      totalCells += correctCols.length;
+      const userCols = Array.isArray(userAnswer[i]) ? userAnswer[i] : (userAnswer[i] !== undefined ? [userAnswer[i]] : []);
+      // Correct selections
+      const correctPicked = userCols.filter(c => correctCols.includes(c)).length;
+      // Wrong selections (penalty)
+      const wrongPicked = userCols.filter(c => !correctCols.includes(c)).length;
+      const rowEarned = Math.max(0, correctPicked - wrongPicked * 0.5);
+      earnedMarks += rowEarned;
+      totalCorrect += correctPicked;
+    }
+    return {
+      isCorrect: totalCorrect === totalCells && earnedMarks === totalCells ? true : (earnedMarks > 0 ? 'partial' : false),
+      earnedMarks: Math.round(earnedMarks * 100) / 100,
+      totalMarks: totalCells || matrixRows.length || 0
+    };
   };
   const isHotspotCorrect = (userAnswer, correctAnswer) => {
     if (!userAnswer || !correctAnswer) return false;
@@ -1054,6 +1187,18 @@ const TestSession = () => {
   async function handleSubmit() {
     if (submitted) return;
     setIsPaused(false);
+    // Reveal tutor rationale for the last question before submitting
+    if (settings?.tutorMode) {
+      const lastQ = questions[questions.length - 1];
+      if (lastQ) {
+        if (lastQ.type === 'case-study') {
+          const lastSubQ = lastQ.questions?.[caseIndex];
+          if (lastSubQ?._id) revealTutorQuestion(lastSubQ._id);
+        } else if (lastQ._id) {
+          revealTutorQuestion(lastQ._id);
+        }
+      }
+    }
     // Don't show loading screen - go directly to test summary
     setSubmitted(true);
 
@@ -1081,7 +1226,9 @@ const TestSession = () => {
           } else if (subQ.type === 'drag-drop') {
             isCorrect = isDragDropCorrect(userAnswer, subQ.correctAnswer);
           } else if (subQ.type === 'matrix') {
-            isCorrect = isMatrixCorrect(userAnswer, subQ.matrixRows);
+            const matrixScore = scoreMatrix(userAnswer, subQ.matrixRows);
+            isCorrect = matrixScore.isCorrect;
+            sataScoreMeta = { earnedMarks: matrixScore.earnedMarks, totalMarks: matrixScore.totalMarks };
           } else if (subQ.type === 'hotspot') {
             isCorrect = isHotspotCorrect(userAnswer, subQ.correctAnswer);
           } else if (subQ.type === 'bowtie') {
@@ -1089,7 +1236,7 @@ const TestSession = () => {
           } else if (subQ.type === 'cloze-dropdown') {
             isCorrect = isClozeDropdownCorrect(userAnswer, subQ.correctAnswer);
           }
-          if (subQ.type !== 'sata') {
+          if (subQ.type !== 'sata' && subQ.type !== 'matrix') {
             sataScoreMeta = { earnedMarks: isCorrect === true ? 1 : 0, totalMarks: 1 };
           }
 
@@ -1143,7 +1290,9 @@ const TestSession = () => {
         } else if (q.type === 'drag-drop') {
           isCorrect = isDragDropCorrect(userAnswer, q.correctAnswer);
         } else if (q.type === 'matrix') {
-          isCorrect = isMatrixCorrect(userAnswer, q.matrixRows);
+          const matrixScore = scoreMatrix(userAnswer, q.matrixRows);
+          isCorrect = matrixScore.isCorrect;
+          sataScoreMeta = { earnedMarks: matrixScore.earnedMarks, totalMarks: matrixScore.totalMarks };
         } else if (q.type === 'hotspot') {
           isCorrect = isHotspotCorrect(userAnswer, q.correctAnswer);
         } else if (q.type === 'bowtie') {
@@ -1151,7 +1300,7 @@ const TestSession = () => {
         } else if (q.type === 'cloze-dropdown') {
           isCorrect = isClozeDropdownCorrect(userAnswer, q.correctAnswer);
         }
-        if (q.type !== 'sata') {
+        if (q.type !== 'sata' && q.type !== 'matrix') {
           sataScoreMeta = { earnedMarks: isCorrect === true ? 1 : 0, totalMarks: 1 };
         }
 
@@ -1246,31 +1395,61 @@ const TestSession = () => {
     );
   }
 
-  // --- Submitted view: redirect to test review immediately ---
+  // --- Submitted view: show loading spinner while navigating to review ---
   if (submitted) {
     if (submittedResultId) {
       // Navigate to review (may already be navigating from handleSubmit, but ensure it)
       navigate(`/test-review/${submittedResultId}`);
-      return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f9fafb' }}>
-          <div style={{ textAlign: 'center' }}>
-            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2.5rem', color: '#059669' }}></i>
-            <p style={{ marginTop: '20px', color: '#374151', fontSize: '1.15rem', fontWeight: 600 }}>Test completed!</p>
-            <p style={{ marginTop: '8px', color: '#6b7280', fontSize: '0.95rem' }}>Loading test analysis, kindly be patient...</p>
-          </div>
-        </div>
-      );
     }
-    // No result ID yet (error case) — show fallback with dashboard option
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f9fafb' }}>
-        <div style={{ textAlign: 'center', background: '#fff', padding: '40px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-          <i className="fas fa-check-circle" style={{ fontSize: '3rem', color: '#22c55e', marginBottom: '16px' }}></i>
-          <h3 style={{ color: '#1f2937', marginBottom: '8px' }}>Test Submitted!</h3>
-          {submitReviewError && <p style={{ color: '#dc2626', fontSize: '0.9rem', marginBottom: '16px' }}>{submitReviewError}</p>}
-          <button className="btn btn-primary" onClick={() => navigate(dashboardReturnPath)}>
-            <i className="fas fa-home me-2"></i>Back to Dashboard
-          </button>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0fdfa 100%)' }}>
+        <div style={{ textAlign: 'center', maxWidth: '420px', padding: '20px' }}>
+          <div style={{
+            width: '80px', height: '80px', margin: '0 auto 28px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #059669, #10b981)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(5, 150, 105, 0.3)',
+          }}>
+            <i className="fas fa-check" style={{ fontSize: '2rem', color: '#fff' }}></i>
+          </div>
+          <div style={{
+            width: '48px', height: '48px', margin: '0 auto 24px',
+            position: 'relative',
+          }}>
+            <div style={{
+              width: '100%', height: '100%',
+              border: '4px solid #e5e7eb',
+              borderTop: '4px solid #059669',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }}></div>
+            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+          </div>
+          <h3 style={{ color: '#065f46', fontSize: '1.3rem', fontWeight: 700, marginBottom: '10px' }}>
+            Your test has been submitted successfully
+          </h3>
+          <p style={{ color: '#6b7280', fontSize: '1rem', lineHeight: 1.6 }}>
+            Kindly hold on while the review page loads
+          </p>
+          {submitReviewError && (
+            <div style={{
+              marginTop: '20px', padding: '12px 16px', borderRadius: '10px',
+              background: '#fef2f2', border: '1px solid #fecaca',
+              color: '#dc2626', fontSize: '0.88rem'
+            }}>
+              {submitReviewError}
+            </div>
+          )}
+          {!submittedResultId && (
+            <button
+              className="btn btn-outline-primary"
+              style={{ marginTop: '20px' }}
+              onClick={() => navigate(dashboardReturnPath)}
+            >
+              <i className="fas fa-home me-2"></i>Back to Dashboard
+            </button>
+          )}
         </div>
       </div>
     );
@@ -1407,8 +1586,6 @@ const TestSession = () => {
                   })}
                 </div>
               )}
-              <TutorRationale q={subQ} revealed={tutorRevealed[subQId]} />
-
               {subQ.type === 'sata' && (
                 <div className="options">
                   {subQ.options.map((opt, idx) => {
@@ -1723,16 +1900,19 @@ const TestSession = () => {
                           {subQ.matrixColumns.map((col, colIdx) => (
                             <td key={colIdx} className="text-center">
                               <input
-                                type="radio"
-                                name={`matrix-${subQId}-${rowIdx}`}
-                                value={colIdx}
+                                type="checkbox"
                                 disabled={isPaused}
-                                checked={caseAnswers[subQId]?.[rowIdx] === colIdx}
+                                checked={Array.isArray(caseAnswers[subQId]?.[rowIdx]) ? caseAnswers[subQId][rowIdx].includes(colIdx) : false}
                                 onChange={() => {
-                                  const current = caseAnswers[subQId] || [];
-                                  const newAnswers = [...current];
-                                  newAnswers[rowIdx] = colIdx;
-                                  handleCaseAnswer(subQId, newAnswers);
+                                  const current = caseAnswers[subQId] ? [...caseAnswers[subQId]] : [];
+                                  if (!Array.isArray(current[rowIdx])) current[rowIdx] = [];
+                                  const rowSelections = [...current[rowIdx]];
+                                  if (rowSelections.includes(colIdx)) {
+                                    current[rowIdx] = rowSelections.filter(c => c !== colIdx);
+                                  } else {
+                                    current[rowIdx] = [...rowSelections, colIdx];
+                                  }
+                                  handleCaseAnswer(subQId, current);
                                 }}
                               />
                             </td>
@@ -1819,6 +1999,7 @@ const TestSession = () => {
                   </div>
                 </div>
               )}
+              <TutorRationale q={subQ} revealed={tutorRevealed[subQId]} />
             </div>
           </div>
         </div>
@@ -1834,9 +2015,15 @@ const TestSession = () => {
             Navigator
           </button>
           {currentIndex === questions.length - 1 && caseIndex === currentQ.questions.length - 1 ? (
-            <button className="btn btn-success" onClick={handleSubmit} disabled={isPaused}>Submit Test</button>
+            settings?.tutorMode && !getCurrentQuestionRevealed() ? (
+              <button className="btn btn-primary" onClick={handleNext} disabled={isPaused}>Check Answer</button>
+            ) : (
+              <button className="btn btn-success" onClick={handleSubmit} disabled={isPaused}>Submit Test</button>
+            )
           ) : (
-            <button className="btn btn-primary" onClick={handleNext} disabled={isPaused}>Next</button>
+            <button className="btn btn-primary" onClick={handleNext} disabled={isPaused}>
+              {settings?.tutorMode && !getCurrentQuestionRevealed() ? 'Check Answer' : 'Next'}
+            </button>
           )}
         </div>
         {isPaused && (
@@ -1940,8 +2127,6 @@ const TestSession = () => {
             })}
           </div>
         )}
-        <TutorRationale q={currentQ} revealed={tutorRevealed[currentQ._id]} />
-
         {currentQ.type === 'sata' && (
           <div className="options">
             {currentQ.options.map((opt, idx) => {
@@ -1995,10 +2180,7 @@ const TestSession = () => {
               disabled={isPaused}
               onChange={(e) => handleAnswer(currentQ._id, e.target.value, 'fill-blank')}
               onBlur={() => {
-                // Reveal tutor rationale when user finishes typing and moves away
-                if (settings?.tutorMode && answers[currentQ._id]?.trim()) {
-                  revealTutorQuestion(currentQ._id);
-                }
+                // Tutor rationale is revealed on Next, not on blur
               }}
             />
             {!hideInProgressAnswerHints && currentQ.correctAnswer?.includes(';') && (
@@ -2008,8 +2190,6 @@ const TestSession = () => {
             )}
           </div>
         )}
-        <TutorRationale q={currentQ} revealed={tutorRevealed[currentQ._id]} />
-
         {currentQ.type === 'highlight' && (
           <div className="highlight-container">
             <p className="text-muted mb-3">
@@ -2197,16 +2377,19 @@ const TestSession = () => {
                     {currentQ.matrixColumns.map((col, colIdx) => (
                       <td key={colIdx} className="text-center">
                         <input
-                          type="radio"
-                          name={`matrix-${currentQ._id}-${rowIdx}`}
-                          value={colIdx}
+                          type="checkbox"
                           disabled={isPaused}
-                          checked={answers[currentQ._id]?.[rowIdx] === colIdx}
+                          checked={Array.isArray(answers[currentQ._id]?.[rowIdx]) ? answers[currentQ._id][rowIdx].includes(colIdx) : false}
                           onChange={() => {
-                            const current = answers[currentQ._id] || [];
-                            const newAnswers = [...current];
-                            newAnswers[rowIdx] = colIdx;
-                            handleAnswer(currentQ._id, newAnswers);
+                            const current = answers[currentQ._id] ? [...answers[currentQ._id]] : [];
+                            if (!Array.isArray(current[rowIdx])) current[rowIdx] = [];
+                            const rowSelections = [...current[rowIdx]];
+                            if (rowSelections.includes(colIdx)) {
+                              current[rowIdx] = rowSelections.filter(c => c !== colIdx);
+                            } else {
+                              current[rowIdx] = [...rowSelections, colIdx];
+                            }
+                            handleAnswer(currentQ._id, current);
                           }}
                         />
                       </td>
@@ -2217,6 +2400,7 @@ const TestSession = () => {
             </table>
           </div>
         )}
+        <TutorRationale q={currentQ} revealed={tutorRevealed[currentQ._id]} />
       </div>
 
       <div className="navigation exam-runtime-navigation">
@@ -2230,9 +2414,15 @@ const TestSession = () => {
           Navigator
         </button>
         {currentIndex === questions.length - 1 ? (
-          <button className="btn btn-success" onClick={handleSubmit} disabled={isPaused}>Submit Test</button>
+          settings?.tutorMode && !getCurrentQuestionRevealed() ? (
+            <button className="btn btn-primary" onClick={handleNext} disabled={isPaused}>Check Answer</button>
+          ) : (
+            <button className="btn btn-success" onClick={handleSubmit} disabled={isPaused}>Submit Test</button>
+          )
         ) : (
-          <button className="btn btn-primary" onClick={handleNext} disabled={isPaused}>Next</button>
+          <button className="btn btn-primary" onClick={handleNext} disabled={isPaused}>
+            {settings?.tutorMode && !getCurrentQuestionRevealed() ? 'Check Answer' : 'Next'}
+          </button>
         )}
       </div>
       {isPaused && (

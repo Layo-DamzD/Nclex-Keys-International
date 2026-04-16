@@ -38,7 +38,12 @@ const StudentDashboard = () => {
   const [daysUntilExamCount, setDaysUntilExamCount] = useState(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showExamCelebration, setShowExamCelebration] = useState(false);
-  const [examCelebrationDismissed, setExamCelebrationDismissed] = useState(false);
+  const [examCelebrationDismissed, setExamCelebrationDismissed] = useState(() => {
+    try {
+      const key = `exam-celebration-dismissed:${user?._id || 'anon'}`;
+      return localStorage.getItem(key) === 'true';
+    } catch { return false; }
+  });
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [notificationItems, setNotificationItems] = useState([]);
   const [showPreparedTestAlert, setShowPreparedTestAlert] = useState(false);
@@ -95,14 +100,24 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     if (daysUntilExamCount == null || daysUntilExamCount > 5 || daysUntilExamCount < 0) {
+      // Re-allow celebration popup if exam date changes to within 5 days
+      // but only if it hasn't been explicitly dismissed this exam cycle
       setExamCelebrationDismissed(false);
+      try {
+        const key = `exam-celebration-dismissed:${user?._id || 'anon'}`;
+        localStorage.removeItem(key);
+      } catch {}
     }
-  }, [daysUntilExamCount]);
+  }, [daysUntilExamCount, user?._id]);
 
   const handleCloseExamCelebration = useCallback(() => {
     setShowExamCelebration(false);
     setExamCelebrationDismissed(true);
-  }, []);
+    try {
+      const key = `exam-celebration-dismissed:${user?._id || 'anon'}`;
+      localStorage.setItem(key, 'true');
+    } catch {}
+  }, [user?._id]);
 
   useEffect(() => {
     if (!showExamCelebration) return undefined;
@@ -230,7 +245,11 @@ const StudentDashboard = () => {
         const availableTests = Array.isArray(response.data) ? response.data : [];
         if (!mounted || availableTests.length === 0) return;
         setPreparedTestCount(availableTests.length);
-        setShowPreparedTestAlert(true);
+        // Only show alert if not previously dismissed this session
+        const dismissedKey = `prepared-test-alert-dismissed:${user?._id || 'anon'}`;
+        if (!sessionStorage.getItem(dismissedKey)) {
+          setShowPreparedTestAlert(true);
+        }
       } catch (error) {
         console.error('Failed to check prepared tests:', error);
       }
@@ -357,7 +376,10 @@ const StudentDashboard = () => {
 
       {showPreparedTestAlert && (
         <div className="student-notification-popup-overlay" role="dialog" aria-modal="true" aria-label="Prepared tests available">
-          <div className="student-notification-popup-backdrop" onClick={() => setShowPreparedTestAlert(false)} />
+          <div className="student-notification-popup-backdrop" onClick={() => {
+                  try { sessionStorage.setItem(`prepared-test-alert-dismissed:${user._id}`, 'true'); } catch {}
+                  setShowPreparedTestAlert(false);
+                }} />
           <div className="student-notification-popup-card">
             <div className="student-notification-popup-header">
               <div className="student-notification-popup-icon"><i className="fas fa-bell" /></div>
@@ -365,7 +387,10 @@ const StudentDashboard = () => {
                 <div className="student-notification-popup-eyebrow">Tutor Update</div>
                 <h3>Prepared test is ready</h3>
               </div>
-              <button type="button" className="student-notification-popup-close" onClick={() => setShowPreparedTestAlert(false)} aria-label="Close">
+              <button type="button" className="student-notification-popup-close" onClick={() => {
+                  try { sessionStorage.setItem(`prepared-test-alert-dismissed:${user._id}`, 'true'); } catch {}
+                  setShowPreparedTestAlert(false);
+                }} aria-label="Close">
                 <i className="fas fa-times" />
               </button>
             </div>
@@ -373,7 +398,10 @@ const StudentDashboard = () => {
               <p>Your tutor has prepared {preparedTestCount > 1 ? `${preparedTestCount} tests` : 'a test'} for you. Open <strong>Take Prepared Test</strong> to start now.</p>
             </div>
             <div className="student-notification-popup-footer">
-              <button type="button" className="btn btn-outline-secondary" onClick={() => setShowPreparedTestAlert(false)}>Later</button>
+              <button type="button" className="btn btn-outline-secondary" onClick={() => {
+                  try { sessionStorage.setItem(`prepared-test-alert-dismissed:${user._id}`, 'true'); } catch {}
+                  setShowPreparedTestAlert(false);
+                }}>Later</button>
               <button
                 type="button"
                 className="btn btn-primary"

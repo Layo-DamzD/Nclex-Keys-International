@@ -238,9 +238,31 @@ const submitTest = async (req, res) => {
 
       if (type === 'matrix') {
         const rows = result.matrixRows || q?.matrixRows;
-        if (!userAnswer || !Array.isArray(userAnswer) || !Array.isArray(rows)) return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
-        const isCorrect = rows.every((row, i) => userAnswer[i] === row.correctColumn);
-        return { isCorrect, earnedMarks: isCorrect ? 1 : 0, totalMarks: 1 };
+        if (!userAnswer || !Array.isArray(userAnswer) || !Array.isArray(rows) || rows.length === 0) return { isCorrect: false, earnedMarks: 0, totalMarks: rows?.length || 0 };
+        let totalCorrect = 0;
+        let totalCells = 0;
+        let earnedMarks = 0;
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          let correctCols = [];
+          if (Array.isArray(row.correctColumns) && row.correctColumns.length > 0) {
+            correctCols = row.correctColumns;
+          } else if (row.correctColumn !== undefined && row.correctColumn !== null) {
+            correctCols = [row.correctColumn];
+          }
+          totalCells += correctCols.length;
+          const userCols = Array.isArray(userAnswer[i]) ? userAnswer[i] : (userAnswer[i] !== undefined ? [userAnswer[i]] : []);
+          const correctPicked = userCols.filter(c => correctCols.includes(c)).length;
+          const wrongPicked = userCols.filter(c => !correctCols.includes(c)).length;
+          const rowEarned = Math.max(0, correctPicked - wrongPicked * 0.5);
+          earnedMarks += rowEarned;
+          totalCorrect += correctPicked;
+        }
+        return {
+          isCorrect: totalCorrect === totalCells && earnedMarks === totalCells ? true : (earnedMarks > 0 ? 'partial' : false),
+          earnedMarks: Math.round(earnedMarks * 100) / 100,
+          totalMarks: totalCells || rows.length || 0
+        };
       }
 
       if (type === 'hotspot') {

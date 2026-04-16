@@ -71,8 +71,8 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
     visibleSectionIds: [],
     matrixColumns: ['Column 1', 'Column 2', 'Column 3'],
     matrixRows: [
-      { rowText: '', correctColumn: 0 },
-      { rowText: '', correctColumn: 0 },
+      { rowText: '', correctColumns: [0] },
+      { rowText: '', correctColumns: [0] },
     ],
     rationale: '',
     difficulty: 'medium',
@@ -130,8 +130,8 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
     visibleSectionIds: [],
     matrixColumns: ['Column 1', 'Column 2', 'Column 3'],
     matrixRows: [
-      { rowText: '', correctColumn: 0 },
-      { rowText: '', correctColumn: 0 },
+      { rowText: '', correctColumns: [0] },
+      { rowText: '', correctColumns: [0] },
     ],
     rationale: '',
     difficulty: 'medium',
@@ -355,7 +355,14 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
         alert('Please add at least one row with text');
         return;
       }
-      currentQuestion.correctAnswer = rows.map(r => r.correctColumn);
+      currentQuestion.correctAnswer = rows.map(r => r.correctColumns || (r.correctColumn !== undefined ? [r.correctColumn] : []));
+      for (const r of rows) {
+        const cols = r.correctColumns || (r.correctColumn !== undefined ? [r.correctColumn] : []);
+        if (!Array.isArray(cols) || cols.length === 0) {
+          alert('Each row must have at least one correct column selected');
+          return;
+        }
+      }
     } else if (currentQuestion.type === 'multiple-choice') {
       const opts = currentQuestion.options || [];
       if (opts.length < 2) { alert('Please add at least 2 options'); return; }
@@ -452,7 +459,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
       bowtieActions: Array.isArray(nextQuestion.bowtieActions) && nextQuestion.bowtieActions.length ? nextQuestion.bowtieActions : ['', '', '', ''],
       bowtieParameters: Array.isArray(nextQuestion.bowtieParameters) && nextQuestion.bowtieParameters.length ? nextQuestion.bowtieParameters : ['', '', '', ''],
       matrixColumns: Array.isArray(nextQuestion.matrixColumns) && nextQuestion.matrixColumns.length ? nextQuestion.matrixColumns : ['Column 1', 'Column 2', 'Column 3'],
-      matrixRows: Array.isArray(nextQuestion.matrixRows) && nextQuestion.matrixRows.length ? nextQuestion.matrixRows : [{ rowText: '', correctColumn: 0 }, { rowText: '', correctColumn: 0 }],
+      matrixRows: Array.isArray(nextQuestion.matrixRows) && nextQuestion.matrixRows.length ? nextQuestion.matrixRows : [{ rowText: '', correctColumns: [0] }, { rowText: '', correctColumns: [0] }],
     });
     setEditingQuestionIndex(index);
     setActiveQuestionTab(index);
@@ -1403,20 +1410,37 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                           }}
                           placeholder="Row description..."
                         />
-                        <select
-                          className="form-control form-control-sm"
-                          style={{ width: '140px' }}
-                          value={row.correctColumn ?? 0}
-                          onChange={(e) => {
-                            const next = [...(currentQuestion.matrixRows || [])];
-                            next[rowIdx] = { ...next[rowIdx], correctColumn: Number(e.target.value) };
-                            handleQuestionChange('matrixRows', next);
-                          }}
-                        >
-                          {(currentQuestion.matrixColumns || ['Column 1', 'Column 2', 'Column 3']).map((col, cIdx) => (
-                            <option key={cIdx} value={cIdx}>{col}</option>
-                          ))}
-                        </select>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                          {(currentQuestion.matrixColumns || ['Column 1', 'Column 2', 'Column 3']).map((col, cIdx) => {
+                            const isSelected = Array.isArray(row.correctColumns) && row.correctColumns.includes(cIdx);
+                            return (
+                              <label key={cIdx} style={{
+                                display: 'flex', alignItems: 'center', gap: '3px',
+                                padding: '3px 8px', borderRadius: '6px', cursor: 'pointer',
+                                background: isSelected ? '#dcfce7' : '#f1f5f9',
+                                border: `1px solid ${isSelected ? '#22c55e' : '#e2e8f0'}`,
+                                fontSize: '0.8rem', whiteSpace: 'nowrap'
+                              }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    const next = [...(currentQuestion.matrixRows || [])];
+                                    const current = Array.isArray(next[rowIdx].correctColumns) ? [...next[rowIdx].correctColumns] : (next[rowIdx].correctColumn !== undefined ? [next[rowIdx].correctColumn] : []);
+                                    if (isSelected) {
+                                      next[rowIdx] = { ...next[rowIdx], correctColumns: current.filter(c => c !== cIdx) };
+                                    } else {
+                                      next[rowIdx] = { ...next[rowIdx], correctColumns: [...current, cIdx] };
+                                    }
+                                    handleQuestionChange('matrixRows', next);
+                                  }}
+                                  style={{ margin: 0 }}
+                                />
+                                {col}
+                              </label>
+                            );
+                          })}
+                        </div>
                         {(currentQuestion.matrixRows || []).length > 1 && (
                           <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => {
                             const next = (currentQuestion.matrixRows || []).filter((_, i) => i !== rowIdx);
@@ -1426,7 +1450,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                       </div>
                     ))}
                     <button type="button" className="btn btn-sm btn-outline-primary mt-2" onClick={() => {
-                      const next = [...(currentQuestion.matrixRows || []), { rowText: '', correctColumn: 0 }];
+                      const next = [...(currentQuestion.matrixRows || []), { rowText: '', correctColumns: [0] }];
                       handleQuestionChange('matrixRows', next);
                     }}>+ Add Row</button>
                   </div>
@@ -1454,9 +1478,9 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                                     padding: '6px 10px',
                                     border: '1px solid #e2e8f0',
                                     textAlign: 'center',
-                                    background: row.correctColumn === cIdx ? '#dcfce7' : '#fff'
+                                    background: Array.isArray(row.correctColumns) && row.correctColumns.includes(cIdx) ? '#dcfce7' : '#fff'
                                   }}>
-                                    {row.correctColumn === cIdx ? '✓' : ''}
+                                    {Array.isArray(row.correctColumns) && row.correctColumns.includes(cIdx) ? '✓' : ''}
                                   </td>
                                 ))}
                               </tr>
@@ -1469,7 +1493,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
 
                   {/* Auto-set correctAnswer from matrixRows */}
                   {((currentQuestion.matrixRows || []).length > 0) && (
-                    <input type="hidden" value={JSON.stringify((currentQuestion.matrixRows || []).map(r => r.correctColumn))} readOnly />
+                    <input type="hidden" value={JSON.stringify((currentQuestion.matrixRows || []).map(r => r.correctColumns || (r.correctColumn !== undefined ? [r.correctColumn] : [])))} readOnly />
                   )}
                 </div>
               )}

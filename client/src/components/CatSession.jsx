@@ -242,15 +242,39 @@ const CatSession = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const initialData = location.state || {};
-  const testType = initialData.testType || 'cat';
+
+  // --- Pause/Resume Persistence: check localStorage for saved CAT state ---
+  const [restoredState, setRestoredState] = useState(() => {
+    // If a new test is being started (location.state has a question), don't restore
+    if (initialData.question) {
+      localStorage.removeItem('nclex-cat-session-state');
+      return null;
+    }
+    try {
+      const saved = localStorage.getItem('nclex-cat-session-state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Only restore if saved within 24 hours
+        if (parsed.savedAt && (Date.now() - parsed.savedAt) < 24 * 60 * 60 * 1000) {
+          return parsed;
+        }
+        localStorage.removeItem('nclex-cat-session-state');
+      }
+    } catch (e) {
+      console.warn('Failed to restore CAT state:', e);
+    }
+    return null;
+  });
+
+  const testType = restoredState?.testType || initialData.testType || 'cat';
 
   // Core state
-  const [currentQuestion, setCurrentQuestion] = useState(initialData.question || null);
-  const [questionNumber, setQuestionNumber] = useState(initialData.questionNumber || 1);
-  const [theta, setTheta] = useState(initialData.theta || 0);
-  const [se, setSe] = useState(initialData.se || null);
-  const [confidence, setConfidence] = useState(null);
-  const [status, setStatus] = useState('continue');
+  const [currentQuestion, setCurrentQuestion] = useState(restoredState?.currentQuestion || initialData.question || null);
+  const [questionNumber, setQuestionNumber] = useState(restoredState?.questionNumber || initialData.questionNumber || 1);
+  const [theta, setTheta] = useState(restoredState?.theta || initialData.theta || 0);
+  const [se, setSe] = useState(restoredState?.se || initialData.se || null);
+  const [confidence, setConfidence] = useState(restoredState?.confidence || null);
+  const [status, setStatus] = useState(restoredState?.status || 'continue');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -258,31 +282,32 @@ const CatSession = () => {
   const [isCorrect, setIsCorrect] = useState(null);
 
   // Timer: 85 seconds per question (resets on each new question)
-  const [timeLeft, setTimeLeft] = useState(85);
+  const [timeLeft, setTimeLeft] = useState(restoredState?.timeLeft || 85);
 
   // Answer state for all question types
-  const [answer, setAnswer] = useState(null);
-  const [selectedOptions, setSelectedOptions] = useState([]);
-  const [fillBlankAnswer, setFillBlankAnswer] = useState('');
-  const [dragSourceItems, setDragSourceItems] = useState([]);
-  const [dragAnswerItems, setDragAnswerItems] = useState([]);
-  const [matrixAnswers, setMatrixAnswers] = useState([]);
-  const [clozeAnswers, setClozeAnswers] = useState({});
-  const [hotspotAnswer, setHotspotAnswer] = useState('');
-  const [bowtieAnswers, setBowtieAnswers] = useState({});
-  const [highlightAnswer, setHighlightAnswer] = useState('');
+  const [answer, setAnswer] = useState(restoredState?.answer ?? null);
+  const [selectedOptions, setSelectedOptions] = useState(restoredState?.selectedOptions || []);
+  const [fillBlankAnswer, setFillBlankAnswer] = useState(restoredState?.fillBlankAnswer || '');
+  const [dragSourceItems, setDragSourceItems] = useState(restoredState?.dragSourceItems || []);
+  const [dragAnswerItems, setDragAnswerItems] = useState(restoredState?.dragAnswerItems || []);
+  const [matrixAnswers, setMatrixAnswers] = useState(restoredState?.matrixAnswers || []);
+  const [clozeAnswers, setClozeAnswers] = useState(restoredState?.clozeAnswers || {});
+  const [hotspotAnswer, setHotspotAnswer] = useState(restoredState?.hotspotAnswer || '');
+  const [bowtieAnswers, setBowtieAnswers] = useState(restoredState?.bowtieAnswers || {});
+  const [highlightAnswer, setHighlightAnswer] = useState(restoredState?.highlightAnswer || '');
 
   // Case study state
-  const [caseIndex, setCaseIndex] = useState(0);
-  const [caseAnswers, setCaseAnswers] = useState({});
-  const [activeCaseTabByQuestion, setActiveCaseTabByQuestion] = useState({});
-  const [caseDragSourceItems, setCaseDragSourceItems] = useState({});
-  const [caseDragAnswerItems, setCaseDragAnswerItems] = useState({});
+  const [caseIndex, setCaseIndex] = useState(restoredState?.caseIndex || 0);
+  const [caseAnswers, setCaseAnswers] = useState(restoredState?.caseAnswers || {});
+  const [activeCaseTabByQuestion, setActiveCaseTabByQuestion] = useState(restoredState?.activeCaseTabByQuestion || {});
+  const [caseDragSourceItems, setCaseDragSourceItems] = useState(restoredState?.caseDragSourceItems || {});
+  const [caseDragAnswerItems, setCaseDragAnswerItems] = useState(restoredState?.caseDragAnswerItems || {});
 
   // UI state
   const [showCalculator, setShowCalculator] = useState(false);
-  const [markedQuestions, setMarkedQuestions] = useState([]);
+  const [markedQuestions, setMarkedQuestions] = useState(restoredState?.markedQuestions || []);
   const [isPaused, setIsPaused] = useState(false);
+  const [isCatSubmitting, setIsCatSubmitting] = useState(false);
 
   // Block copy/paste during exam
   useEffect(() => {
@@ -320,6 +345,42 @@ const CatSession = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, [timeLeft, status, loading, isPaused]);
+
+  // --- Pause/Resume: Save CAT state to localStorage when paused ---
+  useEffect(() => {
+    if (isPaused && currentQuestion && status !== 'completed') {
+      const stateToSave = {
+        currentQuestion, theta, se, questionNumber, confidence,
+        testType, status,
+        timeLeft,
+        answer, selectedOptions, fillBlankAnswer,
+        dragSourceItems, dragAnswerItems,
+        matrixAnswers, clozeAnswers,
+        hotspotAnswer, bowtieAnswers, highlightAnswer,
+        caseIndex, caseAnswers,
+        activeCaseTabByQuestion, caseDragSourceItems, caseDragAnswerItems,
+        markedQuestions,
+        savedAt: Date.now()
+      };
+      try {
+        localStorage.setItem('nclex-cat-session-state', JSON.stringify(stateToSave));
+      } catch (e) {
+        console.warn('Failed to save CAT state:', e);
+      }
+    }
+  }, [isPaused, currentQuestion, theta, se, questionNumber, confidence,
+      testType, status, timeLeft, answer, selectedOptions, fillBlankAnswer,
+      dragSourceItems, dragAnswerItems, matrixAnswers, clozeAnswers,
+      hotspotAnswer, bowtieAnswers, highlightAnswer,
+      caseIndex, caseAnswers, activeCaseTabByQuestion,
+      caseDragSourceItems, caseDragAnswerItems, markedQuestions]);
+
+  // --- Pause/Resume: Clear saved CAT state when test completes ---
+  useEffect(() => {
+    if (status === 'completed') {
+      localStorage.removeItem('nclex-cat-session-state');
+    }
+  }, [status]);
 
   // Initialize drag-drop when question changes
   useEffect(() => {
@@ -475,7 +536,11 @@ const CatSession = () => {
         // Handle server response (next question or completed)
         if (response.data.status === 'completed') {
           if (response.data.result?._id) {
-            navigate(`/test-review/${response.data.result._id}`);
+            localStorage.removeItem('nclex-cat-session-state');
+            setIsCatSubmitting(true);
+            setTimeout(() => {
+              navigate(`/test-review/${response.data.result._id}`);
+            }, 2000);
           }
           return;
         } else {
@@ -538,7 +603,18 @@ const CatSession = () => {
       const userAns = caseAnswers[subQ._id] || [];
       const rows = subQ.matrixRows || [];
       if (Array.isArray(userAns) && rows.length > 0) {
-        return rows.every((row, i) => userAns[i] === row.correctColumn);
+        let totalCorrect = 0;
+        let totalCells = 0;
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          let correctCols = Array.isArray(row.correctColumns) && row.correctColumns.length > 0
+            ? row.correctColumns
+            : (row.correctColumn !== undefined ? [row.correctColumn] : []);
+          totalCells += correctCols.length;
+          const userCols = Array.isArray(userAns[i]) ? userAns[i] : (userAns[i] !== undefined ? [userAns[i]] : []);
+          totalCorrect += userCols.filter(c => correctCols.includes(c)).length;
+        }
+        return totalCells > 0 && totalCorrect === totalCells;
       }
       return false;
     } else if (subQ.type === 'hotspot') {
@@ -612,7 +688,18 @@ const CatSession = () => {
       const userAns = subQ ? (caseAnswers[subQ._id] || []) : matrixAnswers;
       const rows = question.matrixRows || [];
       if (Array.isArray(userAns) && rows.length > 0) {
-        wasCorrect = rows.every((row, i) => userAns[i] === row.correctColumn);
+        let totalCorrect = 0;
+        let totalCells = 0;
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          let correctCols = Array.isArray(row.correctColumns) && row.correctColumns.length > 0
+            ? row.correctColumns
+            : (row.correctColumn !== undefined ? [row.correctColumn] : []);
+          totalCells += correctCols.length;
+          const userCols = Array.isArray(userAns[i]) ? userAns[i] : (userAns[i] !== undefined ? [userAns[i]] : []);
+          totalCorrect += userCols.filter(c => correctCols.includes(c)).length;
+        }
+        wasCorrect = totalCells > 0 && totalCorrect === totalCells;
       }
     } else if (question.type === 'hotspot') {
       const userAns = subQ ? (caseAnswers[subQ._id] || '') : hotspotAnswer;
@@ -647,9 +734,13 @@ const CatSession = () => {
 
     // CAT: no rationale during exam — proceed immediately to next question or review
     if (response.data.status === 'completed') {
-      // Skip completion screen — go straight to test review
+      // Show submission spinner before navigating to review
       if (response.data.result?._id) {
-        navigate(`/test-review/${response.data.result._id}`);
+        localStorage.removeItem('nclex-cat-session-state');
+        setIsCatSubmitting(true);
+        setTimeout(() => {
+          navigate(`/test-review/${response.data.result._id}`);
+        }, 2000);
       }
       return;
     } else {
@@ -689,7 +780,10 @@ const CatSession = () => {
 
   const handleExitSession = () => {
     const shouldExit = window.confirm('Exit this CAT session? Your progress will be lost.');
-    if (shouldExit) navigate('/dashboard');
+    if (shouldExit) {
+      localStorage.removeItem('nclex-cat-session-state');
+      navigate('/dashboard');
+    }
   };
 
   const togglePause = () => {
@@ -861,6 +955,46 @@ const CatSession = () => {
     if (!id) return '';
     return `Q-${String(id).substring(0, 8)}`;
   };
+
+  // ========================
+  // CAT SUBMISSION LOADING STATE
+  // ========================
+  if (isCatSubmitting) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0fdfa 100%)' }}>
+        <div style={{ textAlign: 'center', maxWidth: '420px', padding: '20px' }}>
+          <div style={{
+            width: '80px', height: '80px', margin: '0 auto 28px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #059669, #10b981)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(5, 150, 105, 0.3)',
+          }}>
+            <i className="fas fa-check" style={{ fontSize: '2rem', color: '#fff' }}></i>
+          </div>
+          <div style={{
+            width: '48px', height: '48px', margin: '0 auto 24px',
+            position: 'relative',
+          }}>
+            <div style={{
+              width: '100%', height: '100%',
+              border: '4px solid #e5e7eb',
+              borderTop: '4px solid #059669',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }}></div>
+            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+          </div>
+          <h3 style={{ color: '#065f46', fontSize: '1.3rem', fontWeight: 700, marginBottom: '10px' }}>
+            Your test has been submitted successfully
+          </h3>
+          <p style={{ color: '#6b7280', fontSize: '1rem', lineHeight: 1.6 }}>
+            Kindly hold on while the review page loads
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // ========================
   // COMPLETED STATE
@@ -1342,7 +1476,7 @@ const CatSession = () => {
       : (newAnswers) => setMatrixAnswers(newAnswers);
     return (
       <div className="matrix-container">
-        <p className="mb-3">For each item, select the correct option:</p>
+        <p className="mb-3">For each item, select the correct option(s):</p>
         <table className="matrix-table table table-bordered">
           <thead>
             <tr>
@@ -1359,14 +1493,20 @@ const CatSession = () => {
                 {(q.matrixColumns || []).map((col, colIdx) => (
                   <td key={colIdx} className="text-center">
                     <input
-                      type="radio"
-                      name={`matrix-${q._id}-${rowIdx}`}
-                      value={colIdx}
+                      type="checkbox"
                       disabled={loading}
-                      checked={currentMatrixAns[rowIdx] === colIdx}
+                      checked={Array.isArray(currentMatrixAns[rowIdx]) ? currentMatrixAns[rowIdx].includes(colIdx) : currentMatrixAns[rowIdx] === colIdx}
                       onChange={() => {
                         const newAnswers = [...currentMatrixAns];
-                        newAnswers[rowIdx] = colIdx;
+                        if (!Array.isArray(newAnswers[rowIdx])) {
+                          newAnswers[rowIdx] = newAnswers[rowIdx] !== undefined ? [newAnswers[rowIdx]] : [];
+                        }
+                        const rowSelections = [...newAnswers[rowIdx]];
+                        if (rowSelections.includes(colIdx)) {
+                          newAnswers[rowIdx] = rowSelections.filter(c => c !== colIdx);
+                        } else {
+                          newAnswers[rowIdx] = [...rowSelections, colIdx];
+                        }
                         setter(newAnswers);
                       }}
                     />

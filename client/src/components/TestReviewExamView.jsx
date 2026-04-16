@@ -806,28 +806,37 @@ const TestReviewExamView = ({
                       </thead>
                       <tbody>
                         {active.matrixRows.map((row, ri) => {
-                          const userCol = Array.isArray(active.userAnswer) ? active.userAnswer[ri] : undefined;
-                          const isCorrect = userCol === row.correctColumn;
+                          // Support both old (correctColumn) and new (correctColumns) formats
+                          let correctCols = [];
+                          if (Array.isArray(row.correctColumns) && row.correctColumns.length > 0) {
+                            correctCols = row.correctColumns;
+                          } else if (row.correctColumn !== undefined && row.correctColumn !== null) {
+                            correctCols = [row.correctColumn];
+                          }
+                          const userCols = Array.isArray(active.userAnswer?.[ri]) ? active.userAnswer[ri] : (active.userAnswer?.[ri] !== undefined ? [active.userAnswer[ri]] : []);
+                          const correctPicked = userCols.filter(c => correctCols.includes(c));
+                          const wrongPicked = userCols.filter(c => !correctCols.includes(c));
+                          const isRowCorrect = correctPicked.length === correctCols.length && wrongPicked.length === 0;
+                          const isRowPartial = correctPicked.length > 0 && !isRowCorrect;
                           return (
                             <tr key={ri}>
                               <td style={{ border: '1px solid #e2e8f0', padding: '6px 10px' }}>{row.rowText || `Row ${ri+1}`}</td>
                               {(active.matrixColumns || []).map((_, ci) => (
                                 <td key={ci} style={{
-                                  border: '1px solid #e2e8f0',
-                                  padding: '6px 10px',
-                                  textAlign: 'center',
-                                  background: ci === row.correctColumn ? '#dcfce7' : 'transparent'
-                                }}>{ci === row.correctColumn ? '✓' : ''}</td>
+                                  border: '1px solid #e2e8f0', padding: '6px 10px', textAlign: 'center',
+                                  background: correctCols.includes(ci) ? '#dcfce7' : 'transparent'
+                                }}>
+                                  {correctCols.includes(ci) ? '✓' : ''}
+                                </td>
                               ))}
                               <td style={{
-                                border: '1px solid #e2e8f0',
-                                padding: '6px 10px',
-                                textAlign: 'center',
+                                border: '1px solid #e2e8f0', padding: '6px 10px', textAlign: 'center',
                                 fontWeight: 600,
-                                color: isCorrect ? '#166534' : '#dc2626',
-                                background: isCorrect ? '#dcfce7' : '#fee2e2'
+                                color: isRowCorrect ? '#166534' : (isRowPartial ? '#92400e' : '#dc2626'),
+                                background: isRowCorrect ? '#dcfce7' : (isRowPartial ? '#fffbeb' : '#fee2e2')
                               }}>
-                                {userCol !== undefined ? (active.matrixColumns?.[userCol] || `Col ${userCol+1}`) : '(empty)'}
+                                {userCols.length > 0 ? userCols.map(c => active.matrixColumns?.[c] || `Col ${c+1}`).join(', ') : '(empty)'}
+                                {isRowPartial && <span style={{ fontSize: '0.8em', color: '#d97706' }}> (partial)</span>}
                               </td>
                             </tr>
                           );

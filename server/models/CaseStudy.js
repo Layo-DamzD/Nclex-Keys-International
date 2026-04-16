@@ -31,7 +31,8 @@ const caseStudySchema = new mongoose.Schema({
     matrixColumns: [String],
     matrixRows: [{
       rowText: String,
-      correctColumn: Number
+      correctColumn: Number,
+      correctColumns: [Number],
     }],
     // For bowtie questions
     visibleSectionIds: [String],
