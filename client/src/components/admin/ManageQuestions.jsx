@@ -47,6 +47,7 @@ const ManageQuestions = ({ onSectionChange }) => {
       const params = new URLSearchParams({
         page: String(pagination.page),
         limit: pagination.perPage,
+        isDraft: 'false',
         ...(filters.uncategorized && { uncategorized: 'true' }),
         ...(!filters.uncategorized && filters.category && { category: filters.category }),
         ...(!filters.uncategorized && filters.type && { type: filters.type }),

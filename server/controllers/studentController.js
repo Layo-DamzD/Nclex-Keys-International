@@ -434,12 +434,12 @@ const getSubcategoryCounts = async (req, res) => {
 
     // Fetch all questions and remap to canonical categories/subcategories
     // Include 'type' field so we can exclude case-study questions from subject counts
-    const allQuestions = await Question.find({}, '_id category subcategory type').lean();
+    const allQuestions = await Question.find({ isDraft: { $ne: true } }, '_id category subcategory type').lean();
     const usedQuestions = customUsedIds.length > 0
-      ? await Question.find({ _id: { $in: customUsedIds } }, '_id category subcategory type').lean()
+      ? await Question.find({ _id: { $in: customUsedIds }, isDraft: { $ne: true } }, '_id category subcategory type').lean()
       : [];
     const omittedQuestions = customOmittedIds.length > 0
-      ? await Question.find({ _id: { $in: customOmittedIds } }, '_id category subcategory type').lean()
+      ? await Question.find({ _id: { $in: customOmittedIds }, isDraft: { $ne: true } }, '_id category subcategory type').lean()
       : [];
 
     // Build counts using canonical category/subcategory mapping
@@ -520,7 +520,7 @@ const generateTest = async (req, res) => {
       const ASSESSMENT_TOTAL = 150;
 
       // Get all case study questions
-      const allCaseStudies = await Question.find({ type: 'case-study' }).lean();
+      const allCaseStudies = await Question.find({ type: 'case-study', isDraft: { $ne: true } }).lean();
       if (allCaseStudies.length < MIN_CASE_STUDIES) {
         return res.status(400).json({
           message: `Assessment requires at least ${MIN_CASE_STUDIES} case studies. Only ${allCaseStudies.length} available.`
@@ -528,7 +528,7 @@ const generateTest = async (req, res) => {
       }
 
       // Get all regular (non-case-study) questions
-      const regularQuery = { type: { $ne: 'case-study' } };
+      const regularQuery = { type: { $ne: 'case-study' }, isDraft: { $ne: true } };
       if (difficulty) regularQuery.difficulty = difficulty;
       const allRegular = await Question.find(regularQuery).lean();
       const regularNeeded = ASSESSMENT_TOTAL - MIN_CASE_STUDIES; // 110
@@ -759,7 +759,7 @@ const formatTimeAgo = (date) => {
  */
 const countQuestionBank = async () => {
   const allQuestions = await Question.find(
-    {},
+    { isDraft: { $ne: true } },
     '_id category subcategory clientNeed clientNeedSubcategory type'
   ).lean();
 
@@ -1482,7 +1482,8 @@ const startCATSession = async (req, res) => {
     // Get all active questions with IRT parameters — cached in session for speed
     const allQuestions = await Question.find({
       irtDiscrimination: { $exists: true },
-      irtDifficulty: { $exists: true }
+      irtDifficulty: { $exists: true },
+      isDraft: { $ne: true }
     }).lean();
     
     // Separate case studies and regular questions
@@ -2201,6 +2202,7 @@ const getClientNeedsCounts = async (req, res) => {
     // ensuring the displayed counts match the questions actually available.
     const questions = await Question.find(
       {
+        isDraft: { $ne: true },
         $or: [
           { clientNeed: { $exists: true, $ne: null, $ne: '' } },
           { clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' } }
@@ -2262,7 +2264,7 @@ const getQuestionStatusCounts = async (req, res) => {
 
     // Get all questions with fields needed to determine which "tab" they belong to
     const allQuestions = await Question.find(
-      {},
+      { isDraft: { $ne: true } },
       '_id category subcategory clientNeed clientNeedSubcategory isNextGen type'
     ).lean();
 

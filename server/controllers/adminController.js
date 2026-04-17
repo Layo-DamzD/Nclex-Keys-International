@@ -183,7 +183,7 @@ const exportQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getQuestions = async (req, res) => {
   try {
-    const { category, subcategory, type, difficulty, clientNeed, uncategorized } = req.query;
+    const { category, subcategory, type, difficulty, clientNeed, uncategorized, isDraft } = req.query;
     const rawPage = Number(req.query.page || 1);
     const rawLimit = String(req.query.limit || '10').trim().toLowerCase();
     const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
@@ -196,6 +196,9 @@ const getQuestions = async (req, res) => {
     if (type) filter.type = type;
     if (difficulty) filter.difficulty = String(difficulty).toLowerCase();
     if (clientNeed) filter.clientNeed = clientNeed;
+    if (isDraft !== undefined && isDraft !== '') {
+      filter.isDraft = isDraft === 'true';
+    }
 
     // Handle uncategorized filter: return questions not matching any
     // canonical subject category or predefined client need category
@@ -229,7 +232,7 @@ const getQuestions = async (req, res) => {
     const total = await Question.countDocuments(filter);
     let query = Question.find(filter)
       .sort({ createdAt: -1 })
-      .select('questionText type category subcategory difficulty timesUsed correctAttempts incorrectAttempts caseStudyId');
+      .select('questionText type category subcategory difficulty timesUsed correctAttempts incorrectAttempts caseStudyId isDraft');
 
     if (!includeAll) {
       query = query.limit(limit).skip((page - 1) * limit);
