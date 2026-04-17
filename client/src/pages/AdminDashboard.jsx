@@ -21,6 +21,7 @@ import StudentFeedback from '../components/admin/StudentFeedback';
 import AdminApproval from '../components/admin/AdminApproval';
 import ExamSupportChat from '../components/admin/ExamSupportChat';
 import AdminSettings from '../components/admin/AdminSettings';
+import AdminChatPanel from '../components/admin/AdminChatPanel';
 import PwaInstallButton from '../components/PwaInstallButton';
 import { useAppTheme } from '../context/AppThemeContext';
 import './AdminDashboard.css';
@@ -406,6 +407,12 @@ const AdminDashboard = () => {
         {activeSection === 'student-feedback' && userRole === 'superadmin' && (
           <div className="section active">
             <StudentFeedback />
+          </div>
+        )}
+
+        {activeSection === 'live-chat' && userRole === 'superadmin' && (
+          <div className="section active">
+            <AdminChatPanel />
           </div>
         )}
 

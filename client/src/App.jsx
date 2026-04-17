@@ -26,6 +26,7 @@ import AdminTestReviewPage from './pages/AdminTestReviewPage';
 import { AppThemeProvider } from './context/AppThemeContext';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import CookieConsentBanner from './components/CookieConsentBanner';
+import ChatWidget from './components/ChatWidget';
 
 const MAINTENANCE_MODE = false;
 
@@ -181,6 +182,7 @@ function App() {
         <AppThemeProvider>
           <PwaInstallPrompt />
           <CookieConsentBanner />
+          <ChatWidget />
           <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />

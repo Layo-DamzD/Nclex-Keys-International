@@ -50,6 +50,7 @@ const AdminSidebar = ({
         { id: 'admin-approval', icon: 'user-check', label: 'Admin Approval' },
         { id: 'logs', icon: 'history', label: 'System Logs' },
         { id: 'student-feedback', icon: 'comment-dots', label: 'Student Feedback' },
+        { id: 'live-chat', icon: 'headset', label: 'Live Chat Support' },
         { id: 'settings', icon: 'cog', label: 'Settings' }
       ]
     }
