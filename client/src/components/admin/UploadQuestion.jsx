@@ -386,12 +386,19 @@ const UploadQuestion = () => {
     };
 
     if (type === 'multiple-choice' || type === 'sata') {
-      questionData.options = options.filter((opt) => opt.trim() !== '');
-      // Keep optionImages aligned: only keep images for non-empty options
-      const filteredOptionImages = options
-        .map((opt, idx) => (opt.trim() !== '' ? (optionImages[idx] || '') : null))
-        .filter(Boolean);
-      questionData.optionImages = filteredOptionImages;
+      // Keep options that have text OR an image (or both)
+      const keptIndices = options
+        .map((opt, idx) => ((opt || '').trim() !== '' || (optionImages[idx] || '').trim() !== '') ? idx : -1)
+        .filter(i => i >= 0);
+
+      if (keptIndices.length < 2) {
+        setError('Please provide at least 2 options (text, image, or both)');
+        setLoading(false);
+        return;
+      }
+
+      questionData.options = keptIndices.map(i => (options[i] || '').trim());
+      questionData.optionImages = keptIndices.map(i => (optionImages[i] || '').trim());
 
       if (type === 'multiple-choice') {
         if (!correctAnswer) {
@@ -806,7 +813,7 @@ const UploadQuestion = () => {
                       className="form-control option-input"
                       value={opt}
                       onChange={(e) => handleOptionChange(idx, e.target.value)}
-                      placeholder={`Option ${String.fromCharCode(65 + idx)} text`}
+                      placeholder={`Option ${String.fromCharCode(65 + idx)} text (optional if image added)`}
                       style={{ flex: 1 }}
                     />
                     <button
