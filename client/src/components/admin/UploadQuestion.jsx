@@ -634,7 +634,7 @@ const UploadQuestion = () => {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="form-card upload-form-card">
+      <form onSubmit={handleSubmit} className="form-card upload-form-card" noValidate>
         <div className="form-group">
           <label className="form-label">Question Type</label>
           <div className="type-selector">
@@ -734,11 +734,11 @@ const UploadQuestion = () => {
             Attach an image to this question (e.g., ECG strip, chart, diagram, clinical photo). You can paste a URL or upload a file.
           </small>
           <input
-            type="url"
+            type="text"
             className="form-control mb-2"
             value={questionImageUrl}
             onChange={(e) => setQuestionImageUrl(e.target.value)}
-            placeholder="Paste image URL (https://.../image.png or /api/uploads/...)"
+            placeholder="Paste image URL here (or upload file below)"
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>or</span>
@@ -1261,7 +1261,7 @@ const UploadQuestion = () => {
           <div className="form-group">
             <label className="form-label">Hotspot Question Image URL</label>
             <input
-              type="url"
+              type="text"
               className="form-control"
               value={hotspotImageUrl}
               onChange={(e) => setHotspotImageUrl(e.target.value)}
@@ -1578,7 +1578,7 @@ const UploadQuestion = () => {
             <small className="text-muted d-block mb-2">
               Add an image to the explanation (e.g., diagram, chart, annotated image).
             </small>
-            <input type="url" className="form-control mb-2" value={rationaleImageUrl} onChange={(e) => setRationaleImageUrl(e.target.value)} placeholder="Paste image URL (https://.../rationale.png or /api/uploads/...)" />
+            <input type="text" className="form-control mb-2" value={rationaleImageUrl} onChange={(e) => setRationaleImageUrl(e.target.value)} placeholder="Paste image URL here (or upload file below)" />
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>or</span>
             </div>
