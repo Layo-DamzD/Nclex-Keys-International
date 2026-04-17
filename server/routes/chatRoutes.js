@@ -3,7 +3,7 @@ const router = express.Router();
 const ChatMessage = require('../models/ChatMessage');
 const Activity = require('../models/Activity');
 const User = require('../models/user');
-const ZAI = require('z-ai-web-dev-sdk');
+const ZAI = require('z-ai-web-dev-sdk').default;
 const { authOnly, adminOnly } = require('../middleware/authMiddleware');
 const { sendChatEscalationEmail } = require('../services/emailService');
 
@@ -29,6 +29,11 @@ let zaiInstance = null;
 const getZAI = async () => {
   if (!zaiInstance) {
     zaiInstance = await ZAI.create();
+  }
+  if (!zaiInstance || !zaiInstance.chat) {
+    // Fallback: try requiring with .default again (module reload edge case)
+    const ZAIFresh = require('z-ai-web-dev-sdk').default;
+    zaiInstance = await ZAIFresh.create();
   }
   return zaiInstance;
 };
