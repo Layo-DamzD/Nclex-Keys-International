@@ -8,6 +8,15 @@ const normalizeCaseStudyQuestions = (questions, category, subcategory) =>
     subcategory
   }));
 
+// Map CaseStudy type to the linked Question's caseStudyType field
+// so tests know whether it's layered, bowtie, or trend
+const CASE_STUDY_TYPE_MAP = {
+  '6-question': 'layered',
+  'matrix': 'layered',
+  'bowtie': 'bowtie',
+  'trend': 'trend',
+};
+
 const buildLinkedQuestionPayload = (caseStudyDoc) => ({
   type: 'case-study',
   category: caseStudyDoc.category,
@@ -20,7 +29,8 @@ const buildLinkedQuestionPayload = (caseStudyDoc) => ({
   scenario: caseStudyDoc.scenario,
   sections: Array.isArray(caseStudyDoc.sections) ? caseStudyDoc.sections : [],
   questions: Array.isArray(caseStudyDoc.questions) ? caseStudyDoc.questions : [],
-  caseStudyId: caseStudyDoc._id
+  caseStudyId: caseStudyDoc._id,
+  caseStudyType: CASE_STUDY_TYPE_MAP[caseStudyDoc.type] || 'layered'
 });
 
 // @desc    Get all case studies
@@ -31,6 +41,24 @@ const getCaseStudies = async (req, res) => {
     const caseStudies = await CaseStudy.find()
       .sort({ createdAt: -1 })
       .select('title type category subcategory createdAt isActive linkedQuestionId');
+
+    // Backfill: fix any linked questions missing caseStudyType
+    // This runs silently in the background to repair existing data
+    const backfillPromises = caseStudies
+      .filter(cs => cs.linkedQuestionId)
+      .map(async (cs) => {
+        try {
+          const linked = await Question.findById(cs.linkedQuestionId).select('caseStudyType').lean();
+          if (linked && !linked.caseStudyType) {
+            const mappedType = CASE_STUDY_TYPE_MAP[cs.type] || 'layered';
+            await Question.findByIdAndUpdate(cs.linkedQuestionId, { caseStudyType: mappedType });
+          }
+        } catch (e) { /* silent backfill - don't block the response */ }
+      });
+    if (backfillPromises.length) {
+      Promise.all(backfillPromises).catch(() => {});
+    }
+
     res.json(caseStudies);
   } catch (error) {
     console.error(error);

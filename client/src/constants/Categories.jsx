@@ -426,32 +426,21 @@ export const CATEGORIES = {
   "NGN Case Studies": [
     "Adult Health Case Study",
     "Analyze Cues",
-    "Bowtie Questions",
-    "Chart / Exhibit Questions",
-    "Cloze Dropdown",
     "Critical Care Case Study",
     "Delegation Case Study",
-    "Drag & Drop",
     "Emergency Case Study",
     "Evaluate Outcomes",
-    "Extended Multiple Response",
     "Generate Solutions",
-    "Highlight Questions",
     "Lab Interpretation Case Study",
     "Maternal Case Study",
-    "Matrix Questions",
     "Medication Case Study",
     "Mental Health Case Study",
-    "Multiple Response Grouping",
-    "NGN Question Types",
     "Pediatric Case Study",
     "Prioritization Case Study",
     "Prioritize Hypotheses",
     "Recognize Cues",
-    "SATA Case Study",
-    "Stand-Alone NGN",
     "Take Action",
-    "Trend Questions"
+    "Matrix Questions"
   ],
 
   "Pediatrics": [
