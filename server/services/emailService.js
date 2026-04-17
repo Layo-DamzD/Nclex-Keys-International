@@ -706,6 +706,114 @@ const sendTestAssignmentEmail = async ({
   }
 };
 
+// Email notification when a chat is escalated to human support
+const sendChatEscalationEmail = async ({
+  to = process.env.CHAT_ESCALATION_EMAIL_TO || 'nclexkeysintl.academy@gmail.com',
+  visitorName = 'Unknown',
+  visitorEmail = '',
+  sessionId,
+  reason = '',
+  messageCount = 0,
+  lastMessage = '',
+}) => {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'not_configured' };
+  }
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    return { sent: false, reason: 'transporter_unavailable' };
+  }
+
+  const baseUrl = getClientBaseUrl();
+  const adminChatUrl = `${baseUrl}/admin/dashboard`;
+
+  const subject = `[URGENT] NCLEX KEYS - Chat Escalation from ${visitorName}`;
+  const text = [
+    'A visitor/student has escalated a chat conversation to human support.',
+    '',
+    `Name: ${visitorName}`,
+    visitorEmail ? `Email: ${visitorEmail}` : '',
+    `Session ID: ${sessionId}`,
+    `Messages in conversation: ${messageCount}`,
+    reason ? `Reason: ${reason}` : 'No reason provided.',
+    lastMessage ? `Last message: "${lastMessage}"` : '',
+    '',
+    'Please log in to the admin dashboard to view the full conversation and respond.',
+    adminChatUrl,
+    '',
+    'NCLEX KEYS International'
+  ].filter(Boolean).join('\n');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:640px;margin:0 auto;padding:24px;">
+      <div style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);padding:20px 24px;border-radius:12px 12px 0 0;margin:-24px -24px 20px;">
+        <h2 style="margin:0;color:#ffffff;font-size:18px;">
+          <span style="margin-right:8px;">&#x1F514;</span> New Chat Escalation
+        </h2>
+      </div>
+      <p style="margin:0 0 16px;color:#374151;">A visitor/student has escalated a chat conversation and needs human support.</p>
+      <table cellpadding="10" cellspacing="0" style="width:100%;border-collapse:collapse;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 16px;">
+        <tr>
+          <td style="font-weight:700;width:160px;border-bottom:1px solid #e5e7eb;color:#475569;">Name</td>
+          <td style="border-bottom:1px solid #e5e7eb;">${visitorName}</td>
+        </tr>
+        ${visitorEmail ? `<tr>
+          <td style="font-weight:700;border-bottom:1px solid #e5e7eb;color:#475569;">Email</td>
+          <td style="border-bottom:1px solid #e5e7eb;">${visitorEmail}</td>
+        </tr>` : ''}
+        <tr>
+          <td style="font-weight:700;border-bottom:1px solid #e5e7eb;color:#475569;">Session ID</td>
+          <td style="border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:0.85rem;color:#64748b;">${sessionId}</td>
+        </tr>
+        <tr>
+          <td style="font-weight:700;border-bottom:1px solid #e5e7eb;color:#475569;">Messages</td>
+          <td style="border-bottom:1px solid #e5e7eb;">${messageCount}</td>
+        </tr>
+        ${reason ? `<tr>
+          <td style="font-weight:700;border-bottom:1px solid #e5e7eb;color:#475569;">Reason</td>
+          <td style="border-bottom:1px solid #e5e7eb;">${reason}</td>
+        </tr>` : ''}
+      </table>
+      ${lastMessage ? `
+        <div style="background:#f0f7ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin:0 0 16px;">
+          <div style="font-size:0.75rem;font-weight:600;color:#0369a1;margin-bottom:4px;">LATEST MESSAGE</div>
+          <div style="font-size:0.9rem;color:#1e293b;">"${lastMessage.length > 300 ? lastMessage.slice(0, 300) + '...' : lastMessage}"</div>
+        </div>
+      ` : ''}
+      <p style="margin:20px 0 8px;">
+        <a href="${adminChatUrl}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">
+          Open Admin Dashboard to Respond
+        </a>
+      </p>
+      <p style="color:#6b7280;font-size:0.85rem;margin:0;">
+        Go to <strong>Live Chat Support</strong> in the admin sidebar to view and respond to this conversation.
+      </p>
+      <p style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;color:#94a3b8;font-size:0.8rem;">
+        NCLEX KEYS International &mdash; Automated Escalation Alert
+      </p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html,
+      priority: 'high',
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
+};
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
@@ -717,5 +825,6 @@ module.exports = {
   buildResetUrl,
   sendStudentWelcomeEmail,
   sendStudentOtpEmail,
-  sendTestAssignmentEmail
+  sendTestAssignmentEmail,
+  sendChatEscalationEmail,
 };

@@ -14,7 +14,7 @@ const AdminChatPanel = () => {
 
   const fetchEscalated = async () => {
     try {
-      const res = await axios.get('/api/admin/chat/admin/escalated', {
+      const res = await axios.get('/api/chat/admin/escalated', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const s = res.data?.sessions || [];
@@ -33,13 +33,31 @@ const AdminChatPanel = () => {
 
   useEffect(() => {
     fetchEscalated();
+    const intervalId = window.setInterval(fetchEscalated, 15000);
+    return () => window.clearInterval(intervalId);
   }, []);
+
+  // Poll active session messages for real-time updates
+  useEffect(() => {
+    if (!activeSession) return;
+    const intervalId = window.setInterval(async () => {
+      try {
+        const res = await axios.get(`/api/chat/admin/session/${activeSession}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setSessionMessages(res.data?.messages || []);
+      } catch (err) {
+        // silent
+      }
+    }, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [activeSession]);
 
   const openSession = async (sessionId) => {
     setActiveSession(sessionId);
     setAdminReply('');
     try {
-      const res = await axios.get(`/api/admin/chat/admin/session/${sessionId}`, {
+      const res = await axios.get(`/api/chat/admin/session/${sessionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSessionMessages(res.data?.messages || []);
@@ -52,7 +70,7 @@ const AdminChatPanel = () => {
     if (!adminReply.trim() || !activeSession) return;
     setResponding(true);
     try {
-      await axios.post('/api/admin/chat/admin/respond', {
+      await axios.post('/api/chat/admin/respond', {
         sessionId: activeSession,
         message: adminReply.trim(),
       }, {
@@ -73,7 +91,7 @@ const AdminChatPanel = () => {
   const resolveSession = async (sessionId) => {
     if (!confirm('Mark this conversation as resolved?')) return;
     try {
-      await axios.post('/api/admin/chat/admin/resolve', {
+      await axios.post('/api/chat/admin/resolve', {
         sessionId,
       }, {
         headers: { Authorization: `Bearer ${token}` },

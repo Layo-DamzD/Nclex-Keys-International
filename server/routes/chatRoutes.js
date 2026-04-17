@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const ChatMessage = require('../models/ChatMessage');
+const Activity = require('../models/Activity');
+const User = require('../models/user');
 const ZAI = require('z-ai-web-dev-sdk');
+const { authOnly, adminOnly } = require('../middleware/authMiddleware');
+const { sendChatEscalationEmail } = require('../services/emailService');
 
 // System prompt for the NCLEX AI Tutor
 const NCLEX_SYSTEM_PROMPT = `You are Keys, a friendly and knowledgeable NCLEX tutor for NCLEX Keys International — a nursing exam preparation platform. Your role is to help nursing students understand concepts, answer NCLEX-related questions, and provide study guidance.
@@ -171,6 +175,49 @@ router.post('/escalate', async (req, res) => {
     });
     await escalationMsg.save();
 
+    // ── Notify admin via email ──
+    const chatHistory = await ChatMessage.find({ sessionId })
+      .sort({ createdAt: 1 })
+      .limit(20)
+      .select('senderRole visitorName visitorEmail message createdAt')
+      .lean();
+
+    const lastUserMsg = [...chatHistory].reverse().find(m => m.senderRole === 'student' || m.senderRole === 'visitor');
+
+    sendChatEscalationEmail({
+      visitorName: visitorName || lastUserMsg?.visitorName || 'Unknown',
+      visitorEmail: visitorEmail || lastUserMsg?.visitorEmail || '',
+      sessionId,
+      reason: reason || '',
+      messageCount: chatHistory.length,
+      lastMessage: lastUserMsg?.message || '',
+    }).catch(err => console.error('Chat escalation email failed:', err.message));
+
+    // ── Notify admin in-app via Activity ──
+    try {
+      // Find all admin users to notify
+      const admins = await User.find({ role: { $in: ['admin', 'superadmin'] }, status: 'active' }).select('_id').lean();
+      const activityPromises = admins.map(admin => {
+        const activity = new Activity({
+          student: admin._id,
+          type: 'notification',
+          text: 'New Chat Escalation',
+          detail: `${visitorName || 'A visitor'} has requested to speak with a real person via the chat widget.`,
+          description: `Session: ${sessionId}${reason ? ' | Reason: ' + reason : ''}`,
+          metadata: {
+            category: 'chat_escalation',
+            sessionId,
+            visitorName: visitorName || 'Unknown',
+            visitorEmail: visitorEmail || '',
+          },
+        });
+        return activity.save();
+      });
+      await Promise.all(activityPromises);
+    } catch (actErr) {
+      console.error('Chat escalation activity creation failed:', actErr.message);
+    }
+
     return res.json({
       message: 'Your request has been sent to our support team. We will respond as soon as possible!',
       escalated: true,
@@ -200,13 +247,13 @@ router.get('/history/:sessionId', async (req, res) => {
 });
 
 // ============================================================
-// ADMIN ROUTES
+// ADMIN ROUTES (protected)
 // ============================================================
 
-// @route   GET /api/admin/chat/escalated
+// @route   GET /api/chat/admin/escalated
 // @desc    Get all escalated conversations (grouped by session)
 // @access  Admin only
-router.get('/admin/escalated', async (req, res) => {
+router.get('/admin/escalated', authOnly, adminOnly, async (req, res) => {
   try {
     // Get all escalated sessions that are not yet resolved
     const escalatedMessages = await ChatMessage.find({
@@ -247,7 +294,7 @@ router.get('/admin/escalated', async (req, res) => {
 // @route   GET /api/admin/chat/session/:sessionId
 // @desc    Get full conversation for a session
 // @access  Admin only
-router.get('/admin/session/:sessionId', async (req, res) => {
+router.get('/admin/session/:sessionId', authOnly, adminOnly, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const messages = await ChatMessage.find({ sessionId })
@@ -265,7 +312,7 @@ router.get('/admin/session/:sessionId', async (req, res) => {
 // @route   POST /api/admin/chat/respond
 // @desc    Admin sends a response to an escalated chat
 // @access  Admin only
-router.post('/admin/respond', async (req, res) => {
+router.post('/admin/respond', authOnly, adminOnly, async (req, res) => {
   try {
     const { sessionId, message } = req.body;
 
@@ -300,7 +347,7 @@ router.post('/admin/respond', async (req, res) => {
 // @route   POST /api/admin/chat/resolve
 // @desc    Mark an escalated conversation as resolved
 // @access  Admin only
-router.post('/admin/resolve', async (req, res) => {
+router.post('/admin/resolve', authOnly, adminOnly, async (req, res) => {
   try {
     const { sessionId } = req.body;
 

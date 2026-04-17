@@ -2483,3 +2483,24 @@ html[data-app-theme='dark'] .admin-dashboard-page.admin-super .btn-primary:hover
   font-weight: 600;
   margin-top: 4px;
 }
+
+/* Admin Chat Notification Toast Animations */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
