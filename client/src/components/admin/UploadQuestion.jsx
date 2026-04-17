@@ -879,7 +879,7 @@ const UploadQuestion = () => {
             <label className="form-label">Main Category (Subject)</label>
             <select className="form-control" value={category} onChange={handleCategoryChange} required>
               <option value="">Select Category</option>
-              {Object.keys(CATEGORIES).map((cat) => (
+              {Object.keys(CATEGORIES).filter((cat) => cat !== 'NGN Case Studies').map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
