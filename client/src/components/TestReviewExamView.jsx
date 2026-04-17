@@ -764,13 +764,19 @@ const TestReviewExamView = ({
                     >
                       <span className="exam-review-runtime-option-indicator" />
                       <span className="exam-review-runtime-option-number">{letter}.</span>
-                      <span
-                        className="exam-review-runtime-option-text"
-                        style={isWrong ? { textDecoration: 'line-through', color: '#dc2626' } : correct ? { color: '#166534', fontWeight: 600 } : {}}
-                      >
-                        {opt}{optionPercent(letter)}
-                        {correct && <span style={{ marginLeft: 8, fontSize: '0.85em' }}>✓</span>}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                        <span
+                          className="exam-review-runtime-option-text"
+                          style={isWrong ? { textDecoration: 'line-through', color: '#dc2626' } : correct ? { color: '#166534', fontWeight: 600 } : {}}
+                        >
+                          {opt}{optionPercent(letter)}
+                          {correct && <span style={{ marginLeft: 8, fontSize: '0.85em' }}>✓</span>}
+                        </span>
+                        {active.optionImages?.[idx] && (
+                          <img src={active.optionImages[idx]} alt={`Option ${letter}`}
+                            style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                        )}
+                      </div>
                     </div>
                   );
                 })}

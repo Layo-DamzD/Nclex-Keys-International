@@ -1578,7 +1578,13 @@ const TestSession = () => {
                         } : undefined}
                       >
                         <span className="option-letter">{letter}</span>
-                        {opt}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
+                          {opt && <span>{opt}</span>}
+                          {subQ.optionImages?.[idx] && (
+                            <img src={subQ.optionImages[idx]} alt={`Option ${letter}`}
+                              style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                          )}
+                        </div>
                         {isRevealed && showCorrect && <i className="fas fa-check ms-auto" style={{ color: '#22c55e' }} />}
                         {isRevealed && showWrong && <i className="fas fa-times ms-auto" style={{ color: '#ef4444' }} />}
                       </div>
@@ -1620,7 +1626,13 @@ const TestSession = () => {
                         } : undefined}
                       >
                         <span className="option-letter">{letter}</span>
-                        {opt}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
+                          {opt && <span>{opt}</span>}
+                          {subQ.optionImages?.[idx] && (
+                            <img src={subQ.optionImages[idx]} alt={`Option ${letter}`}
+                              style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                          )}
+                        </div>
                         {isRevealed && isCorrectOpt && <i className="fas fa-check ms-auto" style={{ color: '#22c55e' }} />}
                         {isRevealed && isWrongOpt && <i className="fas fa-times ms-auto" style={{ color: '#ef4444' }} />}
                       </div>
@@ -2119,7 +2131,13 @@ const TestSession = () => {
                   } : undefined}
                 >
                   <span className="option-letter">{letter}</span>
-                  {opt}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
+                    {opt && <span>{opt}</span>}
+                    {currentQ.optionImages?.[idx] && (
+                      <img src={currentQ.optionImages[idx]} alt={`Option ${letter}`}
+                        style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                    )}
+                  </div>
                   {isRevealed && showCorrect && <i className="fas fa-check ms-auto" style={{ color: '#22c55e' }} />}
                   {isRevealed && showWrong && <i className="fas fa-times ms-auto" style={{ color: '#ef4444' }} />}
                 </div>
@@ -2161,7 +2179,13 @@ const TestSession = () => {
                   } : undefined}
                 >
                   <span className="option-letter">{letter}</span>
-                  {opt}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
+                    {opt && <span>{opt}</span>}
+                    {currentQ.optionImages?.[idx] && (
+                      <img src={currentQ.optionImages[idx]} alt={`Option ${letter}`}
+                        style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                    )}
+                  </div>
                   {isRevealed && isCorrectOpt && <i className="fas fa-check ms-auto" style={{ color: '#22c55e' }} />}
                   {isRevealed && isWrongOpt && <i className="fas fa-times ms-auto" style={{ color: '#ef4444' }} />}
                 </div>

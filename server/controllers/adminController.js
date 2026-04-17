@@ -320,6 +320,7 @@ const createQuestion = async (req, res) => {
       questionText: req.body?.questionText,
       questionImageUrl: req.body?.questionImageUrl,
       options: req.body?.options,
+      optionImages: req.body?.optionImages,
       correctAnswer: req.body?.correctAnswer,
       rationale: req.body?.rationale,
       rationaleImageUrl: req.body?.rationaleImageUrl,

@@ -38,6 +38,7 @@ const caseStudyQuestionSchema = new mongoose.Schema({
   questionText: { type: String, default: '' },
   questionImageUrl: { type: String, default: '' },
   options: [String],
+  optionImages: [String], // image URL for each option (1:1 index mapping with options)
   correctAnswer: mongoose.Schema.Types.Mixed,
   rationale: { type: String, default: '' },
   rationaleImageUrl: { type: String, default: '' },
@@ -83,6 +84,7 @@ const questionSchema = new mongoose.Schema({
   questionText: { type: String, required: true },
   questionImageUrl: { type: String, default: '' },
   options: [String],
+  optionImages: [String], // image URL for each option (1:1 index mapping with options)
   correctAnswer: mongoose.Schema.Types.Mixed,
   rationale: String,
   rationaleImageUrl: String,

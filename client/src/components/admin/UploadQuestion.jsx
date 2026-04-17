@@ -30,6 +30,7 @@ const UploadQuestion = () => {
   const [questionText, setQuestionText] = useState('');
   const [questionImageUrl, setQuestionImageUrl] = useState('');
   const [options, setOptions] = useState(['', '', '', '']);
+  const [optionImages, setOptionImages] = useState(['', '', '', '']);
   const [correctAnswer, setCorrectAnswer] = useState('');
   const [rationale, setRationale] = useState('');
   const [rationaleImageUrl, setRationaleImageUrl] = useState('');
@@ -74,6 +75,7 @@ const UploadQuestion = () => {
     setQuestionText(editingQuestion.questionText || '');
     setQuestionImageUrl(editingQuestion.questionImageUrl || '');
     setOptions(editingQuestion.options || ['', '', '', '']);
+    setOptionImages(editingQuestion.optionImages || ['', '', '', '']);
     setCorrectAnswer(editingQuestion.correctAnswer || '');
     setRationale(editingQuestion.rationale || '');
     setRationaleImageUrl(editingQuestion.rationaleImageUrl || '');
@@ -138,7 +140,10 @@ const UploadQuestion = () => {
     setDragDropItems((prev) => prev.map((item, i) => (i === index ? value : item)));
   };
 
-  const addOption = () => setOptions((prev) => [...prev, '']);
+  const addOption = () => {
+    setOptions((prev) => [...prev, '']);
+    setOptionImages((prev) => [...prev, '']);
+  };
 
   // Use shared utility functions from imageUpload.js
   const firstMediaUrl = (rawUrl) => resolveMediaCandidates(rawUrl)[0] || '';
@@ -178,6 +183,14 @@ const UploadQuestion = () => {
         setRationaleImageUrl(freshUrl);
       } else if (targetField === 'question') {
         setQuestionImageUrl(freshUrl);
+      } else if (targetField.startsWith('option-')) {
+        const idx = parseInt(targetField.replace('option-', ''), 10);
+        setOptionImages(prev => {
+          const updated = [...prev];
+          while (updated.length <= idx) updated.push('');
+          updated[idx] = freshUrl;
+          return updated;
+        });
       }
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to upload image');
@@ -187,7 +200,10 @@ const UploadQuestion = () => {
   };
 
   const removeOption = (index) => {
-    if (options.length > 2) setOptions((prev) => prev.filter((_, i) => i !== index));
+    if (options.length > 2) {
+      setOptions((prev) => prev.filter((_, i) => i !== index));
+      setOptionImages((prev) => prev.filter((_, i) => i !== index));
+    }
   };
 
   const resetForm = () => {
@@ -200,6 +216,7 @@ const UploadQuestion = () => {
     setQuestionText('');
     setQuestionImageUrl('');
     setOptions(['', '', '', '']);
+    setOptionImages(['', '', '', '']);
     setCorrectAnswer('');
     setRationale('');
     setRationaleImageUrl('');
@@ -365,10 +382,16 @@ const UploadQuestion = () => {
       rationale,
       rationaleImageUrl,
       difficulty,
+      optionImages,
     };
 
     if (type === 'multiple-choice' || type === 'sata') {
       questionData.options = options.filter((opt) => opt.trim() !== '');
+      // Keep optionImages aligned: only keep images for non-empty options
+      const filteredOptionImages = options
+        .map((opt, idx) => (opt.trim() !== '' ? (optionImages[idx] || '') : null))
+        .filter(Boolean);
+      questionData.optionImages = filteredOptionImages;
 
       if (type === 'multiple-choice') {
         if (!correctAnswer) {
@@ -560,6 +583,7 @@ const UploadQuestion = () => {
       difficulty,
       isDraft: true, // Mark as draft
       options: options.filter((opt) => opt.trim() !== ''),
+      optionImages,
       correctAnswer: correctAnswer || '',
       highlightSelectableWords,
       highlightCorrectWords,
@@ -769,37 +793,109 @@ const UploadQuestion = () => {
               <label className="form-label">Answer Options</label>
               <button type="button" className="btn btn-sm btn-primary" onClick={addOption}>Add Option</button>
             </div>
+            <small className="text-muted d-block mb-3">
+              Each option can have text, an image, or both. Use the image button to attach an image to any option.
+            </small>
             <div className="option-list">
               {options.map((opt, idx) => (
-                <div key={idx} className="option-row">
-                  <div className="option-index">{String.fromCharCode(65 + idx)}</div>
-                  <input
-                    type="text"
-                    className="form-control option-input"
-                    value={opt}
-                    onChange={(e) => handleOptionChange(idx, e.target.value)}
-                    placeholder={`Option ${String.fromCharCode(65 + idx)}`}
-                  />
-                  {type === 'multiple-choice' && (
-                    <label className="option-correct-toggle">
-                      <input
-                        type="radio"
-                        name="correct-option"
-                        value={String.fromCharCode(65 + idx)}
-                        checked={correctAnswer === String.fromCharCode(65 + idx)}
-                        onChange={(e) => setCorrectAnswer(e.target.value)}
+                <div key={idx} className="option-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px', padding: '12px', marginBottom: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fafbfc' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="option-index" style={{ minWidth: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{String.fromCharCode(65 + idx)}</div>
+                    <input
+                      type="text"
+                      className="form-control option-input"
+                      value={opt}
+                      onChange={(e) => handleOptionChange(idx, e.target.value)}
+                      placeholder={`Option ${String.fromCharCode(65 + idx)} text`}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => {
+                        const input = document.getElementById(`option-image-input-${idx}`);
+                        if (input) input.click();
+                      }}
+                      style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#6366f1', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer' }}
+                      title="Attach image to this option"
+                    >
+                      <i className="fas fa-image"></i>
+                    </button>
+                    <input
+                      id={`option-image-input-${idx}`}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => uploadAsset(e.target.files?.[0], `option-${idx}`)}
+                    />
+                    {type === 'multiple-choice' && (
+                      <label className="option-correct-toggle" style={{ whiteSpace: 'nowrap' }}>
+                        <input
+                          type="radio"
+                          name="correct-option"
+                          value={String.fromCharCode(65 + idx)}
+                          checked={correctAnswer === String.fromCharCode(65 + idx)}
+                          onChange={(e) => setCorrectAnswer(e.target.value)}
+                        />
+                        <span>Correct</span>
+                      </label>
+                    )}
+                    {type === 'sata' && (
+                      <label className="option-correct-toggle" style={{ whiteSpace: 'nowrap' }}>
+                        <input type="checkbox" name="sata-option" value={String.fromCharCode(65 + idx)} />
+                        <span>Correct</span>
+                      </label>
+                    )}
+                    {options.length > 2 && (
+                      <button type="button" className="btn btn-sm btn-danger" onClick={() => removeOption(idx)}>Remove</button>
+                    )}
+                  </div>
+                  {assetUploading === `option-${idx}` && (
+                    <small className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '40px' }}>
+                      <i className="fas fa-spinner fa-spin"></i> Uploading image...
+                    </small>
+                  )}
+                  {optionImages[idx] && (
+                    <div style={{ paddingLeft: '40px', position: 'relative', display: 'inline-block' }}>
+                      <img
+                        src={firstMediaUrl(optionImages[idx])}
+                        data-raw-src={optionImages[idx]}
+                        data-fallback-index="0"
+                        onError={handlePreviewImageFallback}
+                        alt={`Option ${String.fromCharCode(65 + idx)} image`}
+                        style={{ maxHeight: '120px', maxWidth: '300px', borderRadius: '6px', border: '1px solid #e2e8f0', objectFit: 'contain' }}
                       />
-                      <span>Correct</span>
-                    </label>
-                  )}
-                  {type === 'sata' && (
-                    <label className="option-correct-toggle">
-                      <input type="checkbox" name="sata-option" value={String.fromCharCode(65 + idx)} />
-                      <span>Correct</span>
-                    </label>
-                  )}
-                  {options.length > 2 && (
-                    <button type="button" className="btn btn-sm btn-danger" onClick={() => removeOption(idx)}>Remove</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOptionImages(prev => {
+                            const updated = [...prev];
+                            updated[idx] = '';
+                            return updated;
+                          });
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '-6px',
+                          right: '-6px',
+                          background: '#ef4444',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '20px',
+                          height: '20px',
+                          cursor: 'pointer',
+                          fontSize: '0.65rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                        }}
+                        title="Remove image"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
