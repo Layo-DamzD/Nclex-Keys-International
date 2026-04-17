@@ -99,6 +99,9 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
     setDragDropItems((prev) => prev.map((item, i) => (i === index ? value : item)));
   };
 
+  // Delete confirmation modal state
+  const [deleteModal, setDeleteModal] = useState({ open: false, caseStudyId: null, caseStudyTitle: '' });
+
   // ── Unsaved changes detection & localStorage backup ──
   const CS_DRAFT_KEY = 'nclex_casestudy_draft_backup';
   const hasSavedRef = useRef(false);
@@ -272,19 +275,22 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
     }
   };
 
-  const handleDeleteCaseStudy = async (caseStudyId, caseStudyTitle) => {
-    if (!window.confirm(`Are you sure you want to delete "${caseStudyTitle}"?`)) {
-      return;
-    }
+  const handleDeleteCaseStudy = (caseStudyId, caseStudyTitle) => {
+    setDeleteModal({ open: true, caseStudyId, caseStudyTitle });
+  };
+
+  const confirmDeleteCaseStudy = async () => {
+    if (!deleteModal.open) return;
     try {
       const token = sessionStorage.getItem('adminToken');
-      await axios.delete(`/api/admin/case-studies/${caseStudyId}`, {
+      await axios.delete(`/api/admin/case-studies/${deleteModal.caseStudyId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchCaseStudies();
-      alert('Case study deleted successfully');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete case study');
+    } finally {
+      setDeleteModal({ open: false, caseStudyId: null, caseStudyTitle: '' });
     }
   };
 
@@ -715,6 +721,64 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteModal.open && (
+          <div className="modal fade show d-block" tabIndex="-1" role="dialog" aria-modal="true" style={{ background: 'rgba(2,6,23,0.6)' }}>
+            <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '440px' }}>
+              <div className="modal-content" style={{ borderRadius: '16px', border: 'none', overflow: 'hidden' }}>
+                <div style={{
+                  background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                  padding: '24px 24px 16px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                    <i className="fas fa-exclamation-triangle" style={{ fontSize: '28px', color: '#dc2626' }}></i>
+                  </div>
+                  <h5 style={{ margin: '0 0 4px', fontWeight: 700, color: '#991b1b' }}>Delete Case Study?</h5>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#7f1d1d' }}>
+                    Are you sure you want to delete <strong>"{deleteModal.caseStudyTitle}"</strong>? This action cannot be undone.
+                  </p>
+                </div>
+                <div style={{ padding: '20px 24px 24px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{
+                      flex: 1,
+                      background: '#f1f5f9',
+                      color: '#475569',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      fontWeight: 600,
+                      padding: '10px',
+                    }}
+                    onClick={() => setDeleteModal({ open: false, caseStudyId: null, caseStudyTitle: '' })}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{
+                      flex: 1,
+                      background: '#dc2626',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontWeight: 600,
+                      padding: '10px',
+                    }}
+                    onClick={confirmDeleteCaseStudy}
+                  >
+                    <i className="fas fa-trash-alt" style={{ marginRight: '6px' }}></i>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

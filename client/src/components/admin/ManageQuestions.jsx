@@ -21,6 +21,7 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [previewQuestion, setPreviewQuestion] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(-1);
+  const [deleteModal, setDeleteModal] = useState({ open: false, questionId: null, bulk: false, count: 0 });
 
   const categories = ['__uncategorized__', '', ...Object.keys(CATEGORIES)];
   const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
@@ -89,16 +90,35 @@ const ManageQuestions = ({ onSectionChange }) => {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this question?')) return;
+  const handleDelete = (id) => {
+    setDeleteModal({ open: true, questionId: id, bulk: false, count: 1 });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal.open) return;
     try {
       const token = sessionStorage.getItem('adminToken');
-      await axios.delete(`/api/admin/questions/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (deleteModal.bulk) {
+        const response = await axios.post('/api/admin/questions/bulk-delete',
+          { ids: selectedQuestionIds },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const deletedCount = Number(response?.data?.deletedCount || 0);
+        const requestedCount = Number(response?.data?.requestedCount || selectedQuestionIds.length);
+        setSelectedQuestionIds([]);
+        if (deletedCount < requestedCount) {
+          alert(`Deleted ${deletedCount} of ${requestedCount} selected question(s).`);
+        }
+      } else {
+        await axios.delete(`/api/admin/questions/${deleteModal.questionId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
       fetchQuestions();
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to delete question');
+      alert(error.response?.data?.message || 'Failed to delete');
+    } finally {
+      setDeleteModal({ open: false, questionId: null, bulk: false, count: 0 });
     }
   };
 
@@ -196,25 +216,9 @@ const ManageQuestions = ({ onSectionChange }) => {
     });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (!selectedQuestionIds.length) return;
-    if (!window.confirm(`Delete ${selectedQuestionIds.length} selected question(s)?`)) return;
-    try {
-      const token = sessionStorage.getItem('adminToken');
-      const response = await axios.post(
-        '/api/admin/questions/bulk-delete',
-        { ids: selectedQuestionIds },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const deletedCount = Number(response?.data?.deletedCount || 0);
-      const requestedCount = Number(response?.data?.requestedCount || selectedQuestionIds.length);
-      if (deletedCount < requestedCount) {
-        alert(`Deleted ${deletedCount} of ${requestedCount} selected question(s).`);
-      }
-      fetchQuestions();
-    } catch (error) {
-      alert(error.response?.data?.message || 'Failed to delete selected questions');
-    }
+    setDeleteModal({ open: true, questionId: null, bulk: true, count: selectedQuestionIds.length });
   };
 
   const getTypeLabel = (type) => {
@@ -642,6 +646,66 @@ const ManageQuestions = ({ onSectionChange }) => {
                   }}
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.open && (
+        <div className="modal fade show d-block" tabIndex="-1" role="dialog" aria-modal="true" style={{ background: 'rgba(2,6,23,0.6)' }}>
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '440px' }}>
+            <div className="modal-content" style={{ borderRadius: '16px', border: 'none', overflow: 'hidden' }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                padding: '24px 24px 16px',
+                textAlign: 'center',
+              }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                  <i className="fas fa-exclamation-triangle" style={{ fontSize: '28px', color: '#dc2626' }}></i>
+                </div>
+                <h5 style={{ margin: '0 0 4px', fontWeight: 700, color: '#991b1b' }}>Confirm Deletion</h5>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#7f1d1d' }}>
+                  {deleteModal.bulk
+                    ? `You are about to permanently delete ${deleteModal.count} question(s). This action cannot be undone.`
+                    : 'You are about to permanently delete this question. This action cannot be undone.'}
+                </p>
+              </div>
+              <div style={{ padding: '20px 24px 24px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{
+                    flex: 1,
+                    background: '#f1f5f9',
+                    color: '#475569',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    fontWeight: 600,
+                    padding: '10px',
+                  }}
+                  onClick={() => setDeleteModal({ open: false, questionId: null, bulk: false, count: 0 })}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{
+                    flex: 1,
+                    background: '#dc2626',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: 600,
+                    padding: '10px',
+                  }}
+                  onClick={confirmDelete}
+                >
+                  <i className="fas fa-trash-alt" style={{ marginRight: '6px' }}></i>
+                  Delete {deleteModal.bulk ? `(${deleteModal.count})` : ''}
                 </button>
               </div>
             </div>

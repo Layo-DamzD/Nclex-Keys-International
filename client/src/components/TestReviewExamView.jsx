@@ -567,6 +567,13 @@ const TestReviewExamView = ({
     };
   }, [answers]);
 
+  // Weak areas: subjects with < 70% accuracy and at least 1 question
+  const weakAreas = useMemo(() => {
+    return analysisBlocks.subjects
+      .filter((s) => s.pct < 70 && s.total > 0)
+      .sort((a, b) => a.pct - b.pct);
+  }, [analysisBlocks.subjects]);
+
   const difficultyMeter = useMemo(() => {
     const weight = { easy: 1, medium: 2, hard: 3 };
     const vals = answers
@@ -1207,6 +1214,100 @@ const TestReviewExamView = ({
             </p>
           </div>
           {actions && <div className="exam-review-actions">{actions}</div>}
+        </div>
+
+        {/* Congratulations Banner with Weak Areas */}
+        <div style={{
+          background: percent >= 70
+            ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)'
+            : 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+          borderRadius: '16px',
+          padding: '28px 28px 24px',
+          marginBottom: '20px',
+          border: percent >= 70
+            ? '1px solid #bbf7d0'
+            : '1px solid #fde68a',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {/* Decorative confetti dots */}
+          <div style={{ position: 'absolute', top: '8px', right: '16px', fontSize: '40px', opacity: 0.15, lineHeight: 1 }}>
+            {percent >= 70 ? '🎉' : '💪'}
+          </div>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>
+            {percent >= 70 ? '🎉' : '💪'}
+          </div>
+          <h3 style={{
+            margin: '0 0 6px',
+            fontSize: '1.3rem',
+            fontWeight: 700,
+            color: percent >= 70 ? '#166534' : '#92400e',
+          }}>
+            {percent >= 70
+              ? 'Congratulations on completing your test!'
+              : 'Great effort on completing your test!'}
+          </h3>
+          <p style={{
+            margin: '0 0 6px',
+            fontSize: '0.95rem',
+            color: percent >= 70 ? '#15803d' : '#a16207',
+            lineHeight: 1.6,
+          }}>
+            {percent >= 70
+              ? `You scored ${percent}% — keep up the amazing work!`
+              : `You scored ${percent}% — every attempt brings you closer to your goal.`}
+          </p>
+          {weakAreas.length > 0 && (
+            <>
+              <p style={{
+                margin: '12px 0 8px',
+                fontSize: '0.92rem',
+                fontWeight: 600,
+                color: '#1e293b',
+              }}>
+                Based on your test result, kindly review the following weak areas:
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {weakAreas.map((area) => (
+                  <span key={area.name} style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#fff',
+                    border: '1px solid #fecaca',
+                    borderRadius: '8px',
+                    padding: '6px 14px',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    color: '#991b1b',
+                  }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: area.pct < 50 ? '#ef4444' : '#f97316',
+                    }}></span>
+                    {area.name}{' '}
+                    <span style={{ fontWeight: 400, color: '#6b7280' }}>({area.pct}%)</span>
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+          {weakAreas.length === 0 && percent < 70 && (
+            <p style={{ margin: '8px 0 0', fontSize: '0.92rem', color: '#15803d', fontWeight: 500 }}>
+              No specific weak areas detected — review all subjects to maintain your edge!
+            </p>
+          )}
+          <p style={{
+            margin: '14px 0 0',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            color: percent >= 70 ? '#16a34a' : '#d97706',
+          }}>
+            Keep pushing, you are almost there! 💓💞
+          </p>
         </div>
 
         <div className="exam-review-summary-tabs" role="tablist" aria-label="Summary tabs">

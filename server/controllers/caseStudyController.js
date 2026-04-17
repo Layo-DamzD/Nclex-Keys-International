@@ -12,6 +12,8 @@ const buildLinkedQuestionPayload = (caseStudyDoc) => ({
   type: 'case-study',
   category: caseStudyDoc.category,
   subcategory: caseStudyDoc.subcategory,
+  clientNeed: caseStudyDoc.clientNeed || '',
+  clientNeedSubcategory: caseStudyDoc.clientNeedSubcategory || '',
   questionText: caseStudyDoc.title,
   rationale: caseStudyDoc.scenario,
   difficulty: 'medium',

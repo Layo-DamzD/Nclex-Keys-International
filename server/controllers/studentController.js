@@ -38,47 +38,19 @@ const submitTest = async (req, res) => {
     // Pre-track seen questions and omitted questions (these don't depend on correctness evaluation)
     const questionIds = [...new Set(results.map((r) => String(r.questionId)).filter(Boolean))];
 
-    for (const result of results) {
-      const qid = result.questionId;
-      const qidStr = String(qid);
-
-      // Add to seenQuestions if not already there
-      if (!user.seenQuestions.some((id) => String(id) === qidStr)) {
-        user.seenQuestions.push(qid);
-      }
-
-      // Track Create Test analytics per student without removing global availability.
-      if (isCustomTest && !user.customTestUsedQuestions.some((id) => String(id) === qidStr)) {
-        user.customTestUsedQuestions.push(qid);
-      }
-
-      if (isCustomTest) {
-        const omitted = !isAnswered(result?.userAnswer);
-        const hasOmitted = user.customTestOmittedQuestions.some((id) => String(id) === qidStr);
-        if (omitted && !hasOmitted) {
-          user.customTestOmittedQuestions.push(qid);
-        } else if (!omitted && hasOmitted) {
-          user.customTestOmittedQuestions = user.customTestOmittedQuestions.filter((id) => String(id) !== qidStr);
-        }
-      }
-    }
-
-    // Fetch question docs for server-side evaluation
-    // Include case-study questions with their sub-questions so we can evaluate sub-Q answers
+    // Fetch question docs first so we can map sub-question IDs to parent case-study IDs
+    // This is needed BEFORE the tracking loop so case-study counters use parent IDs
     let questionDocs = await Question.find({ _id: { $in: questionIds } })
       .select('_id type category subcategory questionText questionImageUrl options correctAnswer rationale rationaleImageUrl matrixRows matrixColumns hotspotImageUrl hotspotTargets clozeTemplate clozeBlanks scenario sections caseStudyType questions');
 
-    // For case-study sub-questions, we also need to fetch the parent case-study documents.
-    // Sub-question IDs won't match top-level _id, so we find parents whose questions array contains matching sub-IDs.
+    // For case-study sub-questions, also fetch the parent case-study documents.
     const foundIds = new Set(questionDocs.map(q => String(q._id)));
     const missingIds = questionIds.filter(id => !foundIds.has(String(id)));
     if (missingIds.length > 0) {
-      // Find all case-study documents that contain these sub-question IDs
       const parentCaseStudies = await Question.find({
         type: 'case-study',
         'questions._id': { $in: missingIds }
       }).select('_id type category subcategory questions scenario sections caseStudyType');
-      // Add parents not already loaded (they won't duplicate since sub-Q IDs differ from parent _id)
       for (const parent of parentCaseStudies) {
         if (!foundIds.has(String(parent._id))) {
           questionDocs.push(parent);
@@ -88,15 +60,45 @@ const submitTest = async (req, res) => {
 
     const questionMap = new Map(questionDocs.map((q) => [String(q._id), q]));
 
-    // Also build a map of case-study sub-question IDs -> sub-question docs
-    // so that sub-questions from case studies can be evaluated server-side
+    // Build maps for sub-question resolution
     const subQuestionMap = new Map();
+    const subQToParentMap = new Map();
     for (const doc of questionDocs) {
       if (doc.type === 'case-study' && Array.isArray(doc.questions)) {
         for (const subQ of doc.questions) {
           if (subQ._id) {
             subQuestionMap.set(String(subQ._id), subQ);
+            subQToParentMap.set(String(subQ._id), String(doc._id));
           }
+        }
+      }
+    }
+
+    for (const result of results) {
+      let qid = result.questionId;
+      const qidStr = String(qid);
+
+      // For case-study sub-questions, use the parent case-study ID for tracking
+      const parentQid = subQToParentMap.get(qidStr);
+      const trackingId = parentQid || qidStr;
+
+      // Add to seenQuestions if not already there
+      if (!user.seenQuestions.some((id) => String(id) === String(trackingId))) {
+        user.seenQuestions.push(trackingId);
+      }
+
+      // Track Create Test analytics per student without removing global availability.
+      if (isCustomTest && !user.customTestUsedQuestions.some((id) => String(id) === String(trackingId))) {
+        user.customTestUsedQuestions.push(trackingId);
+      }
+
+      if (isCustomTest) {
+        const omitted = !isAnswered(result?.userAnswer);
+        const hasOmitted = user.customTestOmittedQuestions.some((id) => String(id) === String(trackingId));
+        if (omitted && !hasOmitted) {
+          user.customTestOmittedQuestions.push(trackingId);
+        } else if (!omitted && hasOmitted) {
+          user.customTestOmittedQuestions = user.customTestOmittedQuestions.filter((id) => String(id) !== String(trackingId));
         }
       }
     }
@@ -320,19 +322,7 @@ const submitTest = async (req, res) => {
     });
 
     // Track incorrect questions using SERVER-EVALUATED results
-    // Build a map from sub-question IDs to parent case-study IDs
-    // so that incorrect sub-questions are tracked by their parent case-study document
-    const subQToParentMap = new Map();
-    for (const doc of questionDocs) {
-      if (doc.type === 'case-study' && Array.isArray(doc.questions)) {
-        for (const subQ of doc.questions) {
-          if (subQ._id) {
-            subQToParentMap.set(String(subQ._id), String(doc._id));
-          }
-        }
-      }
-    }
-
+    // subQToParentMap was already built above — reuse it here
     for (const enriched of enrichedAnswers) {
       let qid = enriched.questionId;
       // For case-study sub-questions, use the parent case-study ID instead
@@ -1486,8 +1476,32 @@ const startCATSession = async (req, res) => {
       isDraft: { $ne: true }
     }).lean();
     
-    // Separate case studies and regular questions
-    const caseStudies = allQuestions.filter(q => q.type === 'case-study');
+    // Fetch case studies separately — they typically don't have IRT params
+    // but must still appear in CAT / assessment sessions
+    const caseStudies = await Question.find({
+      type: 'case-study',
+      isDraft: { $ne: true }
+    }).lean();
+
+    // Assign default medium-difficulty IRT params to case studies so the
+    // CAT engine can calculate Fisher information and include them in selection.
+    // These are reasonable defaults: discrimination = 0.8, difficulty = 0.0 (medium),
+    // guessing = 0 (no guessing for case studies), model = 2PL
+    const irtDefaults = {
+      irtDiscrimination: 0.8,
+      irtDifficulty: 0.0,
+      irtGuessing: 0,
+      irtModel: '2PL'
+    };
+
+    // Deduplicate: remove any case-study already in allQuestions (e.g. one that was calibrated)
+    const existingIds = new Set(allQuestions.map(q => String(q._id)));
+    const freshCaseStudies = caseStudies.filter(cs => !existingIds.has(String(cs._id)));
+    for (const cs of freshCaseStudies) {
+      Object.assign(cs, irtDefaults);
+      allQuestions.push(cs);
+    }
+    
     const regularQuestions = allQuestions.filter(q => q.type !== 'case-study');
     
     if (regularQuestions.length + caseStudies.length < 85) {
