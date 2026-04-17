@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation, useNavigate, useParams, useBlocker } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
 import bowtiePreviewImage from '../../assets/exam-previews/bowtie-preview.svg';
@@ -97,6 +97,105 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
 
   const handleDragDropChange = (index, value) => {
     setDragDropItems((prev) => prev.map((item, i) => (i === index ? value : item)));
+  };
+
+  // ── Unsaved changes detection & localStorage backup ──
+  const CS_DRAFT_KEY = 'nclex_casestudy_draft_backup';
+  const hasSavedRef = useRef(false);
+
+  const getCaseStudyFormData = useCallback(() => ({
+    caseStudy: { title: caseStudy.title, category: caseStudy.category, subcategory: caseStudy.subcategory, type: caseStudy.type, scenario: caseStudy.scenario, sections: caseStudy.sections, questions: caseStudy.questions, isActive: caseStudy.isActive },
+    currentQuestion, activeTab, newSection, editingSectionIndex, editSectionData,
+  }), [caseStudy, currentQuestion, activeTab, newSection, editingSectionIndex, editSectionData]);
+
+  const isCaseStudyEmpty = useCallback(() => {
+    return !caseStudy.title?.trim() && !caseStudy.scenario?.trim() && (caseStudy.questions || []).length === 0;
+  }, [caseStudy]);
+
+  const hasUnsavedChanges = useCallback(() => {
+    if (hasSavedRef.current) return false;
+    if (isEditing) return !isCaseStudyEmpty();
+    return !isCaseStudyEmpty();
+  }, [isEditing, isCaseStudyEmpty]);
+
+  // Auto-save to localStorage every 5 seconds
+  useEffect(() => {
+    if (isEditing || isCaseStudyEmpty() || showList) return;
+    const interval = setInterval(() => {
+      if (!isCaseStudyEmpty()) {
+        try {
+          const data = getCaseStudyFormData();
+          localStorage.setItem(CS_DRAFT_KEY, JSON.stringify({ ...data, _savedAt: Date.now() }));
+        } catch (e) { /* ignore */ }
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isEditing, isCaseStudyEmpty, getCaseStudyFormData, showList]);
+
+  // Recovery banner
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(false);
+  const [recoveredDraft, setRecoveredDraft] = useState(null);
+
+  useEffect(() => {
+    if (isEditing) return;
+    try {
+      const raw = localStorage.getItem(CS_DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft._savedAt && Date.now() - draft._savedAt < 24 * 60 * 60 * 1000) {
+        const hasContent = draft.caseStudy?.title?.trim() || (draft.caseStudy?.questions || []).length > 0 || draft.caseStudy?.scenario?.trim();
+        if (hasContent) {
+          setRecoveredDraft(draft);
+          setShowRecoveryBanner(true);
+        }
+      } else {
+        localStorage.removeItem(CS_DRAFT_KEY);
+      }
+    } catch (e) { /* ignore */ }
+  }, [isEditing]);
+
+  const recoverCaseStudyDraft = () => {
+    if (!recoveredDraft?.caseStudy) return;
+    setCaseStudy(prev => ({
+      ...prev,
+      ...recoveredDraft.caseStudy,
+      sections: recoveredDraft.caseStudy.sections || prev.sections,
+      questions: recoveredDraft.caseStudy.questions || prev.questions,
+    }));
+    if (recoveredDraft.activeTab) setActiveTab(recoveredDraft.activeTab);
+    setShowRecoveryBanner(false);
+    setRecoveredDraft(null);
+    localStorage.removeItem(CS_DRAFT_KEY);
+  };
+
+  const discardCaseStudyDraft = () => {
+    localStorage.removeItem(CS_DRAFT_KEY);
+    setShowRecoveryBanner(false);
+    setRecoveredDraft(null);
+  };
+
+  // Browser back/refresh warning
+  useEffect(() => {
+    const handler = (e) => {
+      if (hasUnsavedChanges() && !showList) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Your case study has been auto-saved.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedChanges, showList]);
+
+  // React Router navigation blocker
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedChanges() && !showList && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  const markSaved = () => {
+    hasSavedRef.current = true;
+    localStorage.removeItem(CS_DRAFT_KEY);
   };
 
   const addClozeBlank = () => {
@@ -513,6 +612,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
         });
         alert('Case study created successfully');
       }
+      markSaved();
       setShowList(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save case study');
@@ -624,6 +724,69 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
   // Create/Edit View
   return (
     <div className="case-study-builder">
+      {/* Recovery banner */}
+      {showRecoveryBanner && (
+        <div style={{
+          padding: '16px 20px', background: '#fef3c7', border: '1px solid #f59e0b',
+          borderRadius: '10px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+        }}>
+          <i className="fas fa-undo" style={{ color: '#d97706', fontSize: '1.2rem' }}></i>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <strong style={{ color: '#92400e' }}>We found an unsaved case study!</strong>
+            <p style={{ margin: '4px 0 0', color: '#92400e', fontSize: '0.9rem' }}>
+              You were working on a case study recently. Would you like to recover it?
+            </p>
+          </div>
+          <button type="button" onClick={recoverCaseStudyDraft} style={{
+            background: '#d97706', color: '#fff', border: 'none', borderRadius: '8px',
+            padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
+          }}>
+            <i className="fas fa-magic me-1"></i> Recover
+          </button>
+          <button type="button" onClick={discardCaseStudyDraft} style={{
+            background: '#fff', color: '#92400e', border: '1px solid #fbbf24', borderRadius: '8px',
+            padding: '8px 16px', cursor: 'pointer', fontSize: '0.9rem',
+          }}>
+            Discard
+          </button>
+        </div>
+      )}
+
+      {/* Navigation blocker modal */}
+      {blocker.state === 'blocked' && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 9999,
+        }} onClick={(e) => { if (e.target === e.currentTarget) blocker.reset?.(); }}>
+          <div style={{
+            background: '#fff', borderRadius: '16px', padding: '32px',
+            maxWidth: '440px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="fas fa-exclamation-triangle" style={{ color: '#d97706', fontSize: '1.3rem' }}></i>
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#1e293b' }}>Unsaved Changes</h3>
+            </div>
+            <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '8px' }}>
+              You have unsaved changes on this case study. Your progress has been <strong>auto-saved</strong>, so you can recover it later.
+            </p>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '24px' }}>Are you sure you want to leave this page?</p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => blocker.reset?.()} style={{
+                background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1',
+                borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 600,
+              }}>Stay & Continue</button>
+              <button onClick={() => blocker.proceed?.()} style={{
+                background: '#ef4444', color: '#fff', border: 'none',
+                borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 600,
+              }}>Leave Anyway</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
         <button className="btn btn-outline-secondary" onClick={handleBackToList}>
           <i className="fas fa-arrow-left" style={{ marginRight: '8px' }}></i>
