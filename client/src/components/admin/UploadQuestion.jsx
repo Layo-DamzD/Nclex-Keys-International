@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useLocation, useNavigate, useBlocker } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
 import { NCLEX_CLIENT_NEEDS_CATEGORIES } from '../../constants/ClientNeeds';
@@ -125,6 +125,139 @@ const UploadQuestion = () => {
   }, [type, correctAnswer]);
 
   const availableQuestionTypes = QUESTION_TYPES;
+
+  // ── Unsaved changes detection & localStorage backup ──
+  const DRAFT_KEY = 'nclex_upload_draft_backup';
+  const hasSavedRef = useRef(false);
+
+  const getCurrentFormData = useCallback(() => ({
+    type, category, subcategory, clientNeed, clientNeedSubcategory, isNextGen,
+    questionText, questionImageUrl, options, optionImages, correctAnswer,
+    rationale, rationaleImageUrl, difficulty, highlightSelectableWords,
+    highlightCorrectWords, dragDropItems, matrixColumns, matrixRows,
+    hotspotImageUrl, hotspotTargets, clozeTemplate, clozeBlanks,
+  }), [type, category, subcategory, clientNeed, clientNeedSubcategory, isNextGen,
+    questionText, questionImageUrl, options, optionImages, correctAnswer,
+    rationale, rationaleImageUrl, difficulty, highlightSelectableWords,
+    highlightCorrectWords, dragDropItems, matrixColumns, matrixRows,
+    hotspotImageUrl, hotspotTargets, clozeTemplate, clozeBlanks]);
+
+  const isEmptyForm = useCallback(() => {
+    const d = getCurrentFormData();
+    return !d.questionText?.trim() && !d.questionImageUrl?.trim() &&
+      d.options.every(o => !o?.trim()) && d.optionImages.every(o => !o?.trim()) &&
+      !d.rationale?.trim() && !d.rationaleImageUrl?.trim();
+  }, [getCurrentFormData]);
+
+  // Check if form has been modified from initial state
+  const hasUnsavedChanges = useCallback(() => {
+    if (hasSavedRef.current) return false;
+    if (editingQuestion) return !isEmptyForm();
+    return !isEmptyForm();
+  }, [editingQuestion, isEmptyForm]);
+
+  // Auto-save to localStorage every 5 seconds if there's unsaved data
+  useEffect(() => {
+    if (editingQuestion || isEmptyForm()) return;
+    const interval = setInterval(() => {
+      if (!isEmptyForm()) {
+        try {
+          const data = getCurrentFormData();
+          localStorage.setItem(DRAFT_KEY, JSON.stringify({
+            ...data,
+            _savedAt: Date.now(),
+          }));
+        } catch (e) { /* quota exceeded, ignore */ }
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [editingQuestion, isEmptyForm, getCurrentFormData]);
+
+  // On mount, check for recovered draft
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(false);
+  const [recoveredDraft, setRecoveredDraft] = useState(null);
+
+  useEffect(() => {
+    if (editingQuestion) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      // Only recover if saved within the last 24 hours
+      if (draft._savedAt && Date.now() - draft._savedAt < 24 * 60 * 60 * 1000) {
+        const hasContent = draft.questionText?.trim() || draft.options?.some(o => o?.trim()) ||
+          draft.optionImages?.some(o => o?.trim()) || draft.rationale?.trim();
+        if (hasContent) {
+          setRecoveredDraft(draft);
+          setShowRecoveryBanner(true);
+        }
+      } else {
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    } catch (e) { /* ignore */ }
+  }, [editingQuestion]);
+
+  const recoverDraft = () => {
+    if (!recoveredDraft) return;
+    const d = recoveredDraft;
+    setType(d.type || 'multiple-choice');
+    setCategory(d.category || '');
+    setSubcategory(d.subcategory || '');
+    setClientNeed(d.clientNeed || '');
+    setClientNeedSubcategory(d.clientNeedSubcategory || '');
+    setIsNextGen(d.isNextGen || false);
+    setQuestionText(d.questionText || '');
+    setQuestionImageUrl(d.questionImageUrl || '');
+    setOptions(d.options || ['', '', '', '']);
+    setOptionImages(d.optionImages || ['', '', '', '']);
+    setCorrectAnswer(d.correctAnswer || '');
+    setRationale(d.rationale || '');
+    setRationaleImageUrl(d.rationaleImageUrl || '');
+    setDifficulty(d.difficulty || 'medium');
+    setHighlightSelectableWords(d.highlightSelectableWords || []);
+    setHighlightCorrectWords(d.highlightCorrectWords || []);
+    setDragDropItems(d.dragDropItems || ['', '', '', '']);
+    setMatrixColumns(d.matrixColumns || ['Column 1', 'Column 2', 'Column 3']);
+    setMatrixRows(d.matrixRows || [{ rowText: '', correctColumns: [0] }, { rowText: '', correctColumns: [0] }, { rowText: '', correctColumns: [0] }]);
+    setHotspotImageUrl(d.hotspotImageUrl || '');
+    setHotspotTargets(d.hotspotTargets || [{ id: 'A', label: 'Target A', x: 50, y: 50, radius: 6 }]);
+    setClozeTemplate(d.clozeTemplate || '');
+    setClozeBlanks(d.clozeBlanks || [{ key: 'blank1', optionsText: '', correctAnswer: '' }]);
+    setShowRecoveryBanner(false);
+    setRecoveredDraft(null);
+    localStorage.removeItem(DRAFT_KEY);
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setShowRecoveryBanner(false);
+    setRecoveredDraft(null);
+  };
+
+  // Warn on browser back/forward/refresh with unsaved changes
+  useEffect(() => {
+    const handler = (e) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave? Your progress has been auto-saved.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedChanges]);
+
+  // Block react-router navigation (back button etc) with unsaved changes
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedChanges() && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Clear draft after successful save
+  const markSaved = () => {
+    hasSavedRef.current = true;
+    localStorage.removeItem(DRAFT_KEY);
+  };
 
   const handleCategoryChange = (e) => {
     const newCategory = e.target.value;
@@ -563,6 +696,7 @@ const UploadQuestion = () => {
         });
         alert('Question created successfully!');
       }
+      markSaved();
       navigate('/admin/dashboard?section=questions');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save question');
@@ -616,6 +750,7 @@ const UploadQuestion = () => {
         });
         alert('Draft saved successfully!');
       }
+      markSaved();
       navigate('/admin/dashboard?section=questions');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save draft');
@@ -628,6 +763,93 @@ const UploadQuestion = () => {
 
   return (
     <div className="upload-question">
+      {/* Recovery banner - shows when a draft was auto-saved */}
+      {showRecoveryBanner && (
+        <div style={{
+          padding: '16px 20px',
+          background: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '10px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+        }}>
+          <i className="fas fa-undo" style={{ color: '#d97706', fontSize: '1.2rem' }}></i>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <strong style={{ color: '#92400e' }}>We found an unsaved question!</strong>
+            <p style={{ margin: '4px 0 0', color: '#92400e', fontSize: '0.9rem' }}>
+              It looks like you were working on a question recently. Would you like to recover it?
+            </p>
+          </div>
+          <button type="button" onClick={recoverDraft} style={{
+            background: '#d97706', color: '#fff', border: 'none', borderRadius: '8px',
+            padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
+          }}>
+            <i className="fas fa-magic me-1"></i> Recover
+          </button>
+          <button type="button" onClick={discardDraft} style={{
+            background: '#fff', color: '#92400e', border: '1px solid #fbbf24', borderRadius: '8px',
+            padding: '8px 16px', cursor: 'pointer', fontSize: '0.9rem',
+          }}>
+            Discard
+          </button>
+        </div>
+      )}
+
+      {/* Navigation blocker modal - shows when back button pressed with unsaved changes */}
+      {blocker.state === 'blocked' && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 9999,
+        }}
+          onClick={(e) => { if (e.target === e.currentTarget) blocker.reset?.(); }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: '16px', padding: '32px',
+            maxWidth: '440px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{
+                width: '48px', height: '48px', borderRadius: '50%', background: '#fef3c7',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <i className="fas fa-exclamation-triangle" style={{ color: '#d97706', fontSize: '1.3rem' }}></i>
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#1e293b' }}>Unsaved Changes</h3>
+            </div>
+            <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '8px' }}>
+              You have unsaved changes on this form. Your progress has been <strong>auto-saved</strong>, so you can recover it later.
+            </p>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '24px' }}>
+              Are you sure you want to leave this page?
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => blocker.reset?.()}
+                style={{
+                  background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1',
+                  borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 600,
+                }}
+              >
+                Stay & Continue
+              </button>
+              <button
+                onClick={() => blocker.proceed?.()}
+                style={{
+                  background: '#ef4444', color: '#fff', border: 'none',
+                  borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 600,
+                }}
+              >
+                Leave Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="upload-question-header">
         <h2>{editingQuestion ? 'Edit NCLEX Question' : 'Upload NCLEX Questions'}</h2>
       </div>
