@@ -27,30 +27,50 @@ Key guidelines:
 // Initialize ZAI lazily (singleton)
 // Tries .z-ai-config file first, then falls back to environment variables
 let zaiInstance = null;
+let zaiInitAttempted = false;
+
 const getZAI = async () => {
-  if (!zaiInstance) {
-    try {
-      zaiInstance = await ZAI.create();
-    } catch {
-      // Config file not found (e.g. on Render) — build from env vars
-      console.log('[ZAI] .z-ai-config not found, loading from environment variables...');
-      zaiInstance = new ZAI({
-        baseUrl: process.env.ZAI_BASE_URL,
-        apiKey: process.env.ZAI_API_KEY,
-        chatId: process.env.ZAI_CHAT_ID,
-        userId: process.env.ZAI_USER_ID,
-        token: process.env.ZAI_TOKEN,
-      });
-      if (!process.env.ZAI_BASE_URL || !process.env.ZAI_API_KEY) {
-        throw new Error('ZAI config missing: set ZAI_BASE_URL, ZAI_API_KEY, ZAI_CHAT_ID, ZAI_USER_ID, ZAI_TOKEN env vars (or provide .z-ai-config file)');
-      }
-      console.log('[ZAI] Successfully loaded from environment variables');
+  if (zaiInstance) return zaiInstance;
+
+  if (zaiInitAttempted) {
+    throw new Error('ZAI initialization was previously attempted and failed');
+  }
+  zaiInitAttempted = true;
+
+  try {
+    zaiInstance = await ZAI.create();
+    console.log('[ZAI] Loaded from .z-ai-config file');
+    return zaiInstance;
+  } catch (fileErr) {
+    console.log('[ZAI] .z-ai-config not found, trying environment variables...');
+  }
+
+  // Fallback: build from env vars
+  const baseUrl = process.env.ZAI_BASE_URL;
+  const apiKey = process.env.ZAI_API_KEY;
+
+  if (!baseUrl || !apiKey) {
+    throw new Error('ZAI config missing: set ZAI_BASE_URL, ZAI_API_KEY, ZAI_CHAT_ID, ZAI_USER_ID, ZAI_TOKEN env vars (or provide .z-ai-config file)');
+  }
+
+  try {
+    zaiInstance = new ZAI({
+      baseUrl,
+      apiKey,
+      chatId: process.env.ZAI_CHAT_ID,
+      userId: process.env.ZAI_USER_ID,
+      token: process.env.ZAI_TOKEN,
+    });
+    // Verify the instance is properly initialized
+    if (!zaiInstance || !zaiInstance.chat) {
+      throw new Error('ZAI instance missing chat property');
     }
+    console.log('[ZAI] Successfully loaded from environment variables');
+    return zaiInstance;
+  } catch (envErr) {
+    console.error('[ZAI] Failed to initialize from env vars:', envErr.message);
+    throw envErr;
   }
-  if (!zaiInstance || !zaiInstance.chat) {
-    throw new Error('ZAI instance is not properly initialized');
-  }
-  return zaiInstance;
 };
 
 // ============================================================
@@ -153,7 +173,10 @@ router.post('/send', async (req, res) => {
         waitingForHuman: false,
       });
     } catch (aiError) {
-      console.error('AI SDK error:', aiError.message);
+      console.error('[AI Chat] Error:', aiError.message);
+      // Reset singleton so next request can retry
+      zaiInstance = null;
+      zaiInitAttempted = false;
       return res.json({
         reply: "I'm having trouble connecting right now. Please try again in a moment, or tap 'Talk to a Person' below to reach our support team directly. 💙",
         escalated: false,
