@@ -1476,6 +1476,23 @@ const TestSession = () => {
 
     return (
       <div className="test-session case-study-session app-no-copy" style={{ position: 'relative' }}>
+        {/* Nclex Keys Watermark */}
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          pointerEvents: 'none', zIndex: 9999, overflow: 'hidden',
+          opacity: 0.06, transform: 'rotate(-30deg)', transformOrigin: 'center',
+        }}>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              top: `${(i % 4) * 28 + 5}%`,
+              left: `${Math.floor(i / 4) * 50 - 10}%`,
+              fontSize: '3rem', fontWeight: 800, color: '#000',
+              whiteSpace: 'nowrap', fontFamily: "'Inter', sans-serif",
+              letterSpacing: '2px',
+            }}>Nclex Keys</div>
+          ))}
+        </div>
         <div className="test-header">
           <div className="d-flex align-items-center gap-2">
             <h3 className="mb-0 me-3">Case Study {currentIndex + 1} of {questions.length} – Q{caseIndex + 1}/{currentQ.questions.length}</h3>
@@ -2060,6 +2077,23 @@ const TestSession = () => {
   // Regular (non-case) question
   return (
     <div className="test-session exam-runtime-skin app-no-copy" style={{ position: 'relative' }}>
+      {/* Nclex Keys Watermark */}
+      <div style={{
+        position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+        pointerEvents: 'none', zIndex: 9999, overflow: 'hidden',
+        opacity: 0.06, transform: 'rotate(-30deg)', transformOrigin: 'center',
+      }}>
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            top: `${(i % 4) * 28 + 5}%`,
+            left: `${Math.floor(i / 4) * 50 - 10}%`,
+            fontSize: '3rem', fontWeight: 800, color: '#000',
+            whiteSpace: 'nowrap', fontFamily: "'Inter', sans-serif",
+            letterSpacing: '2px',
+          }}>Nclex Keys</div>
+        ))}
+      </div>
       <div className="test-header">
         <div className="d-flex align-items-center gap-2">
           <h3 className="mb-0 me-3">Question {currentIndex + 1} of {questions.length}</h3>

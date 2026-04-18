@@ -2147,6 +2147,9 @@ const getPerformanceDataDetailed = async (req, res) => {
       .sort({ date: 1 })
       .select('date percentage answers score totalQuestions');
 
+    const user = await User.findById(studentId).select('seenQuestions');
+    const seenSet = new Set((user?.seenQuestions || []).map(id => String(id)));
+
     // Score trend (last 10 tests)
     const trend = testResults.slice(-10).map(t => ({
       date: t.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -2184,6 +2187,59 @@ const getPerformanceDataDetailed = async (req, res) => {
       accuracy: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0
     })).sort((a, b) => a.accuracy - b.accuracy);
 
+    // ── Bank-level statistics per subject/lesson/client need ──
+    const allQuestions = await Question.find(
+      { isDraft: { $ne: true } },
+      '_id category subcategory clientNeed clientNeedSubcategory type'
+    ).lean();
+
+    // Per-subject: { total, used }
+    const bankBySubject = {};
+    // Per-lesson (subcategory): { total, used }
+    const bankByLesson = {};
+    // Per-client-need: { total, used }
+    const bankByClientNeed = {};
+    // Per-client-need-subcategory: { total, used }
+    const bankByClientNeedSub = {};
+
+    for (const q of allQuestions) {
+      const qId = String(q._id);
+      const isUsed = seenSet.has(qId);
+
+      // Subject mapping
+      const canonicalCat = matchCategory(q.category);
+      if (canonicalCat && CATEGORIES[canonicalCat]) {
+        if (!bankBySubject[canonicalCat]) bankBySubject[canonicalCat] = { total: 0, used: 0 };
+        bankBySubject[canonicalCat].total++;
+        if (isUsed) bankBySubject[canonicalCat].used++;
+
+        const canonicalSub = matchSubcategory(canonicalCat, q.subcategory);
+        if (canonicalSub) {
+          if (!bankByLesson[canonicalSub]) bankByLesson[canonicalSub] = { total: 0, used: 0 };
+          bankByLesson[canonicalSub].total++;
+          if (isUsed) bankByLesson[canonicalSub].used++;
+        }
+      }
+
+      // Client Need mapping
+      const cnMatches = getClientNeedMatches(q);
+      for (const cn of cnMatches) {
+        if (!bankByClientNeed[cn]) bankByClientNeed[cn] = { total: 0, used: 0 };
+        bankByClientNeed[cn].total++;
+        if (isUsed) bankByClientNeed[cn].used++;
+      }
+
+      // Client Need Subcategory mapping
+      if (q.clientNeedSubcategory && String(q.clientNeedSubcategory).trim()) {
+        const cnSub = matchClientNeedCategory(q.clientNeedSubcategory);
+        if (cnSub) {
+          if (!bankByClientNeedSub[cnSub]) bankByClientNeedSub[cnSub] = { total: 0, used: 0 };
+          bankByClientNeedSub[cnSub].total++;
+          if (isUsed) bankByClientNeedSub[cnSub].used++;
+        }
+      }
+    }
+
     res.json({
       trend,
       weakAreas: weakAreas.length > 0 ? weakAreas : [
@@ -2198,7 +2254,14 @@ const getPerformanceDataDetailed = async (req, res) => {
           ? Math.max(...testResults.map(t => t.percentage))
           : 0
       },
-      allAnswers
+      allAnswers,
+      // Bank totals
+      totalQuestionBank: allQuestions.length,
+      usedQuestionCount: seenSet.size,
+      bankBySubject,
+      bankByLesson,
+      bankByClientNeed,
+      bankByClientNeedSub
     });
   } catch (error) {
     console.error(error);
