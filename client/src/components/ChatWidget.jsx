@@ -38,6 +38,11 @@ const ChatWidget = () => {
           // Check if any message is escalated
           const hasEscalation = res.data.messages.some(m => m.escalated && !m.resolved);
           setEscalated(hasEscalation);
+          // Check if admin has already responded
+          const hasAdminReply = res.data.messages.some(m => m.senderRole === 'admin');
+          if (hasAdminReply) {
+            setWaitingForHuman(false);
+          }
         } else {
           // Show welcome message
           setMessages([{
@@ -59,6 +64,37 @@ const ChatWidget = () => {
     };
     loadHistory();
   }, [sessionId]);
+
+  // Poll for new messages when escalated (so admin replies show up)
+  useEffect(() => {
+    if (!escalated) return;
+
+    const pollMessages = async () => {
+      try {
+        const res = await axios.get(`/api/chat/history/${sessionId}`);
+        const serverMessages = res.data?.messages || [];
+        if (serverMessages.length > 0) {
+          setMessages(serverMessages);
+          // Check if admin has responded
+          const hasAdminReply = serverMessages.some(m => m.senderRole === 'admin');
+          if (hasAdminReply) {
+            setWaitingForHuman(false);
+          }
+          // Check if conversation is resolved
+          const allResolved = serverMessages.every(m => m.resolved);
+          if (allResolved) {
+            setEscalated(false);
+          }
+        }
+      } catch (e) {
+        // silent
+      }
+    };
+
+    pollMessages();
+    const intervalId = window.setInterval(pollMessages, 5000); // poll every 5s
+    return () => window.clearInterval(intervalId);
+  }, [escalated, sessionId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -381,6 +417,14 @@ const ChatWidget = () => {
               <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
                 <i className="fas fa-clock" style={{ marginRight: '4px' }}></i>
                 Waiting for support team response...
+              </span>
+            </div>
+          )}
+          {escalated && !waitingForHuman && (
+            <div className="chat-widget-footer chat-escalated-footer" style={{ background: '#f0fdf4' }}>
+              <span style={{ fontSize: '0.78rem', color: '#16a34a' }}>
+                <i className="fas fa-check-circle" style={{ marginRight: '4px' }}></i>
+                Support team is responding
               </span>
             </div>
           )}

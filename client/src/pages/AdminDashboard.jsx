@@ -23,6 +23,7 @@ import ExamSupportChat from '../components/admin/ExamSupportChat';
 import AdminSettings from '../components/admin/AdminSettings';
 import AdminChatPanel from '../components/admin/AdminChatPanel';
 import AdminChatNotification from '../components/admin/AdminChatNotification';
+import ChatWidget from '../components/ChatWidget';
 
 import PwaInstallButton from '../components/PwaInstallButton';
 import { useAppTheme } from '../context/AppThemeContext';
@@ -445,6 +446,7 @@ const AdminDashboard = () => {
           />
         )}
       </main>
+      <ChatWidget />
     </div>
   );
 };

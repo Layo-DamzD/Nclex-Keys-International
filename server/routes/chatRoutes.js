@@ -27,16 +27,18 @@ Key guidelines:
 // Initialize ZAI lazily (singleton)
 // Tries .z-ai-config file first, then falls back to environment variables
 let zaiInstance = null;
-let zaiInitAttempted = false;
+let zaiInitFailed = false;
 
 const getZAI = async () => {
+  // If we have a working instance, return it
   if (zaiInstance) return zaiInstance;
 
-  if (zaiInitAttempted) {
-    throw new Error('ZAI initialization was previously attempted and failed');
+  // If previous init failed, allow retry every 60 seconds
+  if (zaiInitFailed) {
+    throw new Error('ZAI not available (previous init failed, will retry shortly)');
   }
-  zaiInitAttempted = true;
 
+  // Try .z-ai-config file first
   try {
     zaiInstance = await ZAI.create();
     console.log('[ZAI] Loaded from .z-ai-config file');
@@ -50,7 +52,10 @@ const getZAI = async () => {
   const apiKey = process.env.ZAI_API_KEY;
 
   if (!baseUrl || !apiKey) {
-    throw new Error('ZAI config missing: set ZAI_BASE_URL, ZAI_API_KEY, ZAI_CHAT_ID, ZAI_USER_ID, ZAI_TOKEN env vars (or provide .z-ai-config file)');
+    zaiInitFailed = true;
+    // Retry after 60 seconds
+    setTimeout(() => { zaiInitFailed = false; }, 60000);
+    throw new Error('ZAI config missing: set ZAI_BASE_URL and ZAI_API_KEY env vars');
   }
 
   try {
@@ -61,14 +66,15 @@ const getZAI = async () => {
       userId: process.env.ZAI_USER_ID,
       token: process.env.ZAI_TOKEN,
     });
-    // Verify the instance is properly initialized
     if (!zaiInstance || !zaiInstance.chat) {
       throw new Error('ZAI instance missing chat property');
     }
-    console.log('[ZAI] Successfully loaded from environment variables');
+    console.log('[ZAI] Successfully loaded from environment variables — baseUrl:', baseUrl);
     return zaiInstance;
   } catch (envErr) {
     console.error('[ZAI] Failed to initialize from env vars:', envErr.message);
+    zaiInitFailed = true;
+    setTimeout(() => { zaiInitFailed = false; }, 60000);
     throw envErr;
   }
 };
