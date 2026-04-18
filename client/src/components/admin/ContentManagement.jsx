@@ -8,14 +8,20 @@ const ContentManagement = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState(null);
 
-  // ── Search & Filter ──
-  const [searchQuery, setSearchQuery] = useState('');
+  // ── Filter ──
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   // ── Bulk Selection & Download ──
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
+
+  // ── Toast notification ──
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const [formData, setFormData] = useState({
     title: '',
@@ -50,14 +56,7 @@ const ContentManagement = () => {
   // ── Filtered materials ──
   const categories = ['all', ...new Set(materials.map(m => m.category))];
   const filtered = materials.filter(m => {
-    const matchesCategory = categoryFilter === 'all' || m.category === categoryFilter;
-    const query = searchQuery.toLowerCase().trim();
-    const matchesSearch = !query || 
-      (m.title || '').toLowerCase().includes(query) ||
-      (m.description || '').toLowerCase().includes(query) ||
-      (m.category || '').toLowerCase().includes(query) ||
-      (m.uploadedBy?.name || '').toLowerCase().includes(query);
-    return matchesCategory && matchesSearch;
+    return categoryFilter === 'all' || m.category === categoryFilter;
   });
 
   // ── Selection handlers ──
@@ -115,7 +114,7 @@ const ContentManagement = () => {
         link.click();
         link.remove();
       } else {
-        window.alert('Could not download this material. Please try again.');
+        showToast('Could not download this material', 'error');
       }
     }
   };
@@ -139,6 +138,7 @@ const ContentManagement = () => {
 
     setBulkDownloading(false);
     setSelectedIds([]);
+    showToast(`Downloaded ${selectedMaterials.length} materials successfully!`);
   };
 
   const handleFileChange = (e) => {
@@ -149,7 +149,7 @@ const ContentManagement = () => {
     }
     const fileName = String(file.name || '').toLowerCase();
     if (!fileName.endsWith('.pdf')) {
-      alert('Only PDF files are allowed.');
+      showToast('Only PDF files are allowed.', 'error');
       e.target.value = '';
       setSelectedFile(null);
       return;
@@ -177,8 +177,9 @@ const ContentManagement = () => {
         backupUrl: response.data.backupUrl || '',
         fileType: response.data.fileType
       }));
+      showToast('File uploaded successfully! Now click "Save Material" to publish it.');
     } catch {
-      alert('File upload failed');
+      showToast('File upload failed', 'error');
     } finally {
       setUploading(false);
     }
@@ -209,8 +210,9 @@ const ContentManagement = () => {
       setSelectedFile(null);
       setSelectedIds([]);
       fetchMaterials();
+      showToast(editingMaterial ? 'Material updated successfully!' : 'New content saved and published!');
     } catch {
-      setError('Failed to save material');
+      showToast('Failed to save material', 'error');
     }
   };
 
@@ -236,8 +238,9 @@ const ContentManagement = () => {
       });
       setSelectedIds(prev => prev.filter(x => x !== id));
       fetchMaterials();
+      showToast('Material deleted successfully!');
     } catch {
-      alert('Failed to delete material');
+      showToast('Failed to delete material', 'error');
     }
   };
 
@@ -358,33 +361,13 @@ const ContentManagement = () => {
         </div>
       )}
 
-      {/* Search & Filter Bar */}
+      {/* Category Filter Only */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* Search input */}
-        <div style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
-          <svg
-            width="16" height="16" viewBox="0 0 16 16" fill="none"
-            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}
-          >
-            <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search materials by title, description, category..."
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setSelectedIds([]); }}
-            style={{ paddingLeft: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '14px' }}
-          />
-        </div>
-
-        {/* Category filter */}
         <select
           className="form-control"
           value={categoryFilter}
           onChange={(e) => { setCategoryFilter(e.target.value); setSelectedIds([]); }}
-          style={{ width: 'auto', minWidth: '140px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '14px' }}
+          style={{ width: 'auto', minWidth: '180px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '14px' }}
         >
           {categories.map(cat => (
             <option key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</option>
@@ -473,10 +456,10 @@ const ContentManagement = () => {
         {/* Materials */}
         {filtered.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af' }}>
-            <i className="fas fa-search" style={{ fontSize: '24px', marginBottom: '8px', display: 'block', opacity: 0.4 }}></i>
+            <i className="fas fa-folder-open" style={{ fontSize: '24px', marginBottom: '8px', display: 'block', opacity: 0.4 }}></i>
             <p style={{ margin: 0 }}>
-              {searchQuery || categoryFilter !== 'all'
-                ? 'No materials match your search.'
+              {categoryFilter !== 'all'
+                ? 'No materials in this category.'
                 : 'No materials uploaded yet.'}
             </p>
           </div>
@@ -601,6 +584,27 @@ const ContentManagement = () => {
       <div style={{ marginTop: '12px', fontSize: '13px', color: '#9ca3af', textAlign: 'right' }}>
         Showing {filtered.length} of {materials.length} materials
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: '24px', right: '24px', zIndex: 9999,
+          padding: '14px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: 500,
+          background: toast.type === 'success' ? '#009688' : '#dc2626',
+          color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          animation: 'cmToastIn 0.3s ease'
+        }}>
+          <i className={`fas ${toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
+          {toast.message}
+          <style>{`
+            @keyframes cmToastIn {
+              from { opacity: 0; transform: translateY(-12px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 };

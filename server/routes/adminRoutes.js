@@ -16,6 +16,7 @@ const {
   createAdminTest,
   createStudentByAdmin,
   toggleStudentStatus,
+  updateStudentPaymentDate,
   sendNotification,
   deleteStudent,
   getStudentList,
@@ -83,6 +84,7 @@ router.post('/questions/bulk-import', protect, adminOnly, upload.single('file'),
 router.get('/students', protect, adminOnly, getStudents);
 router.post('/students', protect, adminOnly, createStudentByAdmin);
 router.put('/students/:id/toggle-status', protect, superAdminOnly, toggleStudentStatus);
+router.put('/students/:id/payment-date', protect, adminOnly, updateStudentPaymentDate);
 router.delete('/students/:id', protect, superAdminOnly, deleteStudent);
 router.post('/students/notify', protect, adminOnly, sendNotification);
 

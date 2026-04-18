@@ -1203,6 +1203,40 @@ const deleteStudent = async (req, res) => {
   }
 };
 
+// @desc    Update student last payment date (subscription start)
+// @route   PUT /api/admin/students/:id/payment-date
+// @access  Private (admin only)
+const updateStudentPaymentDate = async (req, res) => {
+  try {
+    const { lastPaymentDate } = req.body;
+
+    if (!lastPaymentDate) {
+      return res.status(400).json({ message: 'Payment date is required' });
+    }
+
+    const parsedDate = new Date(lastPaymentDate);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format' });
+    }
+
+    const student = await User.findById(req.params.id);
+    if (!student || student.role !== 'student') {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    student.subscriptionStartDate = parsedDate;
+    await student.save();
+
+    res.json({
+      message: 'Payment date updated successfully',
+      subscriptionStartDate: student.subscriptionStartDate
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Send notification to students
 // @route   POST /api/admin/students/notify
 // @access  Private (admin only, superadmin can send to all)
@@ -2381,6 +2415,7 @@ module.exports = {
   createStudentByAdmin,
   createAdminTest,
   toggleStudentStatus,
+  updateStudentPaymentDate,
   sendNotification,
   deleteStudent,
   getStudentList,

@@ -25,6 +25,11 @@ const AllStudents = () => {
   const [removingDeviceByKey, setRemovingDeviceByKey] = useState({});
   const [selectedDeviceRecordsByStudent, setSelectedDeviceRecordsByStudent] = useState({});
 
+  // Payment date update
+  const [paymentUpdateStudentId, setPaymentUpdateStudentId] = useState(null);
+  const [paymentDate, setPaymentDate] = useState('');
+  const [paymentUpdating, setPaymentUpdating] = useState(false);
+
   // Notification state
   const [notifyTitle, setNotifyTitle] = useState('');
   const [notifyMessage, setNotifyMessage] = useState('');
@@ -32,6 +37,33 @@ const AllStudents = () => {
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [notifyStatus, setNotifyStatus] = useState('');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+
+  const handleUpdatePaymentDate = async (studentId) => {
+    if (!paymentDate) {
+      setNotifyStatus('Please select a payment date');
+      return;
+    }
+    setPaymentUpdating(true);
+    setNotifyStatus('');
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      await axios.put(`/api/admin/students/${studentId}/payment-date`, {
+        lastPaymentDate: paymentDate
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPaymentUpdateStudentId(null);
+      setPaymentDate('');
+      setActionStatusType('success');
+      setActionStatus('Payment date updated successfully!');
+      fetchStudents();
+    } catch (err) {
+      const message = err?.response?.data?.message || 'Failed to update payment date';
+      setNotifyStatus(message);
+    } finally {
+      setPaymentUpdating(false);
+    }
+  };
 
   const formatDateTime = (value) => {
     if (!value) return 'N/A';
@@ -509,6 +541,11 @@ const AllStudents = () => {
                     <td className="all-students-email-cell">{student.email}</td>
                     <td className="all-students-program-cell">{student.program || 'NCLEX-RN'}</td>
                     <td className="all-students-progress-cell">
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        {student.subscriptionStartDate
+                          ? new Date(student.subscriptionStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                          : 'N/A'}
+                      </div>
                       <div className="all-students-progress" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div className="all-students-progress-track" style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '4px' }}>
                           <div style={{ 
@@ -546,7 +583,24 @@ const AllStudents = () => {
                         </button>
                       )}
 
-                      {/* Delete - Only Super Admin */}
+                      {/* Update Payment Date - Both Roles */}
+                      <button
+                        className="btn btn-sm"
+                        style={{
+                          background: '#009688',
+                          color: 'white',
+                          marginRight: '8px'
+                        }}
+                        onClick={() => {
+                          setPaymentUpdateStudentId(student._id);
+                          setPaymentDate(student.subscriptionStartDate
+                            ? new Date(student.subscriptionStartDate).toISOString().split('T')[0]
+                            : '');
+                        }}
+                      >
+                        <i className="fas fa-calendar-alt me-1" style={{ fontSize: '10px' }}></i>
+                        Payment
+                      </button>
                       {isSuperAdmin && (
                         <button
                           className="btn btn-sm btn-danger"
@@ -695,6 +749,64 @@ const AllStudents = () => {
           </div>
         )}
       </div>
+
+      {/* Payment Date Update Modal */}
+      {paymentUpdateStudentId && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)', zIndex: 2000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setPaymentUpdateStudentId(null)}
+        >
+          <div
+            style={{
+              background: '#fff', borderRadius: '12px', padding: '24px',
+              maxWidth: '400px', width: '100%',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#1f2937' }}>
+              Update Last Payment Date
+            </h3>
+            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
+              This will update the student's subscription start date.
+            </p>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="form-label" style={{ fontSize: '13px', fontWeight: 500, marginBottom: '6px', display: 'block' }}>
+                Last Payment Date
+              </label>
+              <input
+                type="date"
+                className="form-control"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                style={{ borderRadius: '8px', border: '1px solid #d1d5db', padding: '10px 12px', fontSize: '14px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                className="btn"
+                onClick={() => setPaymentUpdateStudentId(null)}
+                style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#6b7280' }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                onClick={() => handleUpdatePaymentDate(paymentUpdateStudentId)}
+                disabled={paymentUpdating || !paymentDate}
+                style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: paymentUpdating || !paymentDate ? '#d1d5db' : '#009688', color: '#fff', fontWeight: 600 }}
+              >
+                {paymentUpdating ? 'Updating...' : 'Update Date'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -46,16 +46,16 @@ const TestCustomization = () => {
   const [timedMode, setTimedMode] = useState(true);
   const [assessmentMode, setAssessmentMode] = useState(false);
 
-  // ── Test Type (question format): 'classic' | 'caseStudy' | 'mixed' ──
+  // ── Test Type (question format): 'classic' | 'ngn' | 'mixed' ──
   const [questionFormat, setQuestionFormat] = useState('mixed');
 
   // ── Organization: 'subjects' | 'clientNeeds' ──
   const [organization, setOrganization] = useState('subjects');
 
-  // ── Question Type Tab ──
+  // ── Question Type Tab: 'all' | 'sata' | 'unfoldingNgn' | 'standardizedNgn' ──
   const [questionTypeTab, setQuestionTypeTab] = useState('all');
 
-  // ── Status filter (radio): 'unused' | 'incorrect' | 'marked' | 'correct' | 'all' | 'omitted' ──
+  // ── Status filter (radio): 'unused' | 'incorrect' | 'marked' | 'correctOnRetake' | 'custom' | 'all' | 'omitted' ──
   const [statusFilter, setStatusFilter] = useState('unused');
 
   // ── Selections ──
@@ -306,8 +306,15 @@ const TestCustomization = () => {
     if (statusFilter === 'all') {
       return { unused: true, incorrect: true, marked: true, omitted: true, correct: true };
     }
+    if (statusFilter === 'custom') {
+      return { unused: false, incorrect: false, marked: false, omitted: false, correct: false };
+    }
     const filters = { unused: false, incorrect: false, marked: false, omitted: false, correct: false };
-    filters[statusFilter] = true;
+    if (statusFilter === 'correctOnRetake') {
+      filters.correct = true;
+    } else {
+      filters[statusFilter] = true;
+    }
     return filters;
   };
 
@@ -436,7 +443,7 @@ const TestCustomization = () => {
           <div className="tc-radio-row">
             {[
               { value: 'classic', label: 'Classic' },
-              { value: 'caseStudy', label: 'Case Studies' },
+              { value: 'ngn', label: 'NGN' },
               { value: 'mixed', label: 'Mixed' },
             ].map(opt => (
               <div
@@ -482,9 +489,10 @@ const TestCustomization = () => {
           {/* Tabs */}
           <div className="tc-qtype-tabs">
             {[
-              { key: 'all', label: `All (${totalQ})` },
-              { key: 'sata', label: `SATA (${statusCounts.unused || 0})` },
-              { key: 'ngnCaseStudies', label: `Case Studies (${statusCounts.markedNgn || 0})` },
+              { key: 'all', label: `All (${totalQ.toLocaleString()})` },
+              { key: 'sata', label: `SATA (${(statusCounts.unused || 0).toLocaleString()})` },
+              { key: 'unfoldingNgn', label: `Unfolding NGN Case Studies (${(statusCounts.markedNgn || 0).toLocaleString()})` },
+              { key: 'standardizedNgn', label: `Standardized NGN Case Studies (${(statusCounts.unusedNgn || 0).toLocaleString()})` },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -499,12 +507,13 @@ const TestCustomization = () => {
           {/* Status radio buttons (2 columns) */}
           <div className="tc-status-grid">
             {[
-              { key: 'unused', label: 'Unused', counts: `${statusCounts.unused || 0} Classic + ${statusCounts.unusedNgn || 0} NGN` },
-              { key: 'marked', label: 'Marked', counts: `${(statusCounts.marked || 0) - (statusCounts.markedNgn || 0)} Classic + ${statusCounts.markedNgn || 0} NGN` },
-              { key: 'incorrect', label: 'Incorrect', counts: `${statusCounts.incorrect || 0} Classic + ${statusCounts.incorrectNgn || 0} NGN` },
-              { key: 'all', label: 'All', counts: `${classicTotal} Classic + ${ngnTotal} NGN` },
-              { key: 'correct', label: 'Correct On Reattempt', counts: `${statusCounts.correct || 0} Classic + ${statusCounts.correctNgn || 0} NGN` },
-              { key: 'omitted', label: 'Omitted', counts: `${statusCounts.omitted || 0} Classic + ${statusCounts.omittedNgn || 0} NGN` },
+              { key: 'unused', label: 'Unused', count: statusCounts.unused || 0, hasInfo: false },
+              { key: 'marked', label: 'Marked', count: statusCounts.marked || 0, hasInfo: false },
+              { key: 'incorrect', label: 'Incorrect', count: statusCounts.incorrect || 0, hasInfo: false },
+              { key: 'all', label: 'All', count: statusCounts.total || 0, hasInfo: false },
+              { key: 'correctOnRetake', label: 'Correct On Retake', count: statusCounts.correct || 0, hasInfo: true },
+              { key: 'custom', label: 'Custom', count: 0, hasInfo: false },
+              { key: 'omitted', label: 'Omitted', count: statusCounts.omitted || 0, hasInfo: false },
             ].map(item => (
               <div
                 key={item.key}
@@ -515,11 +524,42 @@ const TestCustomization = () => {
                   {statusFilter === item.key && <div className="tc-radio-dot" />}
                 </div>
                 <div className="tc-status-radio-text">
-                  <span className="tc-status-radio-label">{item.label}</span>
-                  <span className="tc-status-radio-count">{item.counts}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className="tc-status-radio-label">{item.label}</span>
+                    {item.hasInfo && (
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                        <circle cx="8" cy="8" r="7" stroke="#009688" strokeWidth="1.5"/>
+                        <path d="M8 7v3.5M8 5v.5" stroke="#009688" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  {item.count > 0 && <span className="tc-status-radio-count">{item.count.toLocaleString()}</span>}
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* TEST LENGTH */}
+        <div className="tc-section">
+          <div className="tc-section-title">TEST LENGTH</div>
+          <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px' }}>
+            Number of questions per test (maximum of 150)
+          </div>
+          <div className="tc-count-row">
+            <input
+              className="tc-count-input"
+              type="number"
+              value={questionCountInput}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val)) {
+                  setQuestionCountInput(e.target.value);
+                  setQuestionCount(Math.min(150, Math.max(5, val)));
+                }
+              }}
+              onBlur={() => setQuestionCountInput(String(questionCount))}
+            />
           </div>
         </div>
 
@@ -774,7 +814,7 @@ const TestCustomization = () => {
             <div className="tc-summary-item">
               <span className="tc-summary-label">Format</span>
               <span className="tc-summary-value">
-                {questionFormat === 'classic' ? 'Classic' : questionFormat === 'caseStudy' ? 'Case Studies' : 'Mixed'}
+                {questionFormat === 'classic' ? 'Classic' : questionFormat === 'ngn' ? 'NGN' : 'Mixed'}
               </span>
             </div>
             <div className="tc-summary-item">
