@@ -6,11 +6,6 @@ const StudyMaterials = () => {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
   const [filter, setFilter] = useState('all');
-  const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState(null);
-  const [downloading, setDownloading] = useState(false);
-  const [confirmDownload, setConfirmDownload] = useState(false);
-  const [downloadError, setDownloadError] = useState('');
 
   useEffect(() => {
     const fetchMaterials = async () => {
@@ -18,9 +13,6 @@ const StudyMaterials = () => {
         setFetchError('');
         const token = localStorage.getItem('token');
         if (!token) {
-          // No token found — user may have just signed up and token isn't stored yet.
-          // Try fetching without auth header (backend uses authOnly, which returns 401 without token).
-          // Show a helpful message instead of silently showing nothing.
           setFetchError('Please log in to view study materials.');
           setLoading(false);
           return;
@@ -46,20 +38,9 @@ const StudyMaterials = () => {
     fetchMaterials();
   }, []);
 
-  // Helper: extract file extension from URL
-  const getExtFromUrl = (url) => {
-    try {
-      const pathname = new URL(url, window.location.origin).pathname;
-      const match = pathname.match(/\.(\w{2,5})$/);
-      return match ? match[1].toLowerCase() : null;
-    } catch {
-      return null;
-    }
-  };
-
   const categories = ['all', ...new Set(materials.map(m => m.category))];
-  const filtered = filter === 'all' 
-    ? materials 
+  const filtered = filter === 'all'
+    ? materials
     : materials.filter(m => m.category === filter);
 
   const getIcon = (type) => {
@@ -71,115 +52,74 @@ const StudyMaterials = () => {
     }
   };
 
-  const openDownloadModal = (material) => {
-    setSelectedMaterial(material);
-    setConfirmDownload(false);
-    setShowDownloadModal(true);
-  };
-
-  const closeDownloadModal = () => {
-    setShowDownloadModal(false);
-    setSelectedMaterial(null);
-    setConfirmDownload(false);
-    setDownloading(false);
-  };
-
-  const handleDownload = async () => {
-    if (!selectedMaterial?.fileUrl) {
+  // Direct download — downloads straight to device without preview/modal
+  const handleDownload = async (material) => {
+    if (!material?.fileUrl) {
       window.alert('No file available for download.');
-      closeDownloadModal();
       return;
     }
 
-    if (!confirmDownload) {
-      return;
-    }
-
-    setDownloading(true);
-    setDownloadError('');
     try {
-      const fileUrl = selectedMaterial.fileUrl;
-      const backupUrl = selectedMaterial.backupUrl || '';
+      const fileUrl = material.fileUrl;
+      const backupUrl = material.backupUrl || '';
       const token = localStorage.getItem('token');
 
-      // Use server-side proxy download to avoid CORS issues with Cloudinary
-      // This works for all storage backends (Cloudinary, local, etc.)
       const params = new URLSearchParams({
         url: fileUrl,
-        title: selectedMaterial.title || 'study-material',
-        fileType: selectedMaterial.fileType || 'pdf',
+        title: material.title || 'study-material',
+        fileType: material.fileType || 'pdf',
       });
       if (backupUrl) {
         params.set('backupUrl', backupUrl);
       }
-      
+
       const response = await fetch(`/api/student/download-material?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
-      // Handle server redirect response (for /api/images/* MongoDB-stored files)
       if (response.ok) {
         const contentType = response.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           const data = await response.json().catch(() => null);
           if (data?.redirect) {
-            // Server told us to fetch directly from MongoDB
-            console.log('Following server redirect to:', data.redirect);
             const directResp = await fetch(data.redirect);
-            if (!directResp.ok) {
-              throw new Error('Failed to retrieve the file from storage. Please try again.');
-            }
+            if (!directResp.ok) throw new Error('Failed to retrieve file from storage.');
             const blob = await directResp.blob();
-            if (blob.size === 0) {
-              throw new Error('The downloaded file is empty. Please contact support.');
-            }
-            triggerDownload(blob, selectedMaterial);
-            closeDownloadModal();
+            if (blob.size === 0) throw new Error('The downloaded file is empty.');
+            triggerDownload(blob, material);
             return;
           }
-          // Not a redirect response — fall through to blob handling below
-          // (need to re-read body since we consumed it with .json())
-          throw new Error('Unexpected server response. Please try again.');
+          throw new Error('Unexpected server response.');
         }
-        // Non-JSON ok response — proceed to blob download
       } else {
         const errorData = await response.json().catch(() => ({}));
         const errorCode = errorData.code;
-        const errorMsg = errorData.message || `Download failed (HTTP ${response.status})`;
-
-        // For 404 / FILE_NOT_FOUND: don't try fallback — the file is genuinely gone
-        // For network/5xx errors with external URLs: try direct open as last resort
         if (errorCode !== 'FILE_NOT_FOUND' && fileUrl.startsWith('http')) {
-          console.warn('Server proxy failed, falling back to direct URL open:', errorMsg);
-          window.open(fileUrl, '_blank');
-          closeDownloadModal();
+          const link = document.createElement('a');
+          link.href = fileUrl;
+          link.setAttribute('download', '');
+          link.setAttribute('target', '_blank');
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
           return;
         }
-        throw new Error(errorMsg);
+        throw new Error(errorData.message || `Download failed (HTTP ${response.status})`);
       }
 
-      // Verify we got a binary response (not an HTML error page)
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('text/html')) {
-        throw new Error('The file could not be retrieved. It may have been moved or deleted.');
+      const respContentType = response.headers.get('content-type') || '';
+      if (respContentType.includes('text/html')) {
+        throw new Error('The file could not be retrieved.');
       }
 
       const blob = await response.blob();
-      if (blob.size === 0) {
-        throw new Error('The downloaded file is empty. Please contact support.');
-      }
+      if (blob.size === 0) throw new Error('The downloaded file is empty.');
 
-      triggerDownload(blob, selectedMaterial);
-      closeDownloadModal();
+      triggerDownload(blob, material);
     } catch (error) {
       console.error('Failed to download material:', error);
-      let userMessage = error.message || 'Could not download this material right now. Please try again.';
-      if (userMessage.includes('Invalid') || userMessage.includes('invalid')) {
-        userMessage += ' The file link may be broken. Please contact support.';
-      }
-      setDownloadError(userMessage);
-    } finally {
-      setDownloading(false);
+      window.alert(error.message || 'Could not download this material right now.');
     }
   };
 
@@ -214,18 +154,12 @@ const StudyMaterials = () => {
     }
   };
 
-  // Helper: retry download (clear error and allow re-attempt)
-  const handleRetry = () => {
-    setDownloadError('');
-    setConfirmDownload(true);
-  };
-
   if (loading) return <div className="text-center py-5">Loading materials...</div>;
 
   return (
     <div className="study-materials">
       <h3 className="mb-4">Study Materials</h3>
-      
+
       {/* Fetch error banner */}
       {fetchError && (
         <div className="alert alert-danger mb-3" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -236,7 +170,7 @@ const StudyMaterials = () => {
           </button>
         </div>
       )}
-      
+
       <div className="filter-buttons mb-4">
         {categories.map(cat => (
           <button
@@ -265,9 +199,9 @@ const StudyMaterials = () => {
                   <span className="badge bg-info mb-2">{material.category}</span>
                 </div>
                 <div className="card-footer bg-transparent">
-                  <button 
+                  <button
                     className="btn btn-primary w-100"
-                    onClick={() => openDownloadModal(material)}
+                    onClick={() => handleDownload(material)}
                   >
                     <i className="fas fa-download me-2"></i>Download
                   </button>
@@ -275,99 +209,6 @@ const StudyMaterials = () => {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Download Confirmation Modal */}
-      {showDownloadModal && selectedMaterial && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <i className="fas fa-download me-2"></i>Download File
-                </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={closeDownloadModal}
-                  disabled={downloading}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <div className="d-flex align-items-center mb-3">
-                  <i className={`fas ${getIcon(selectedMaterial.fileType)} fa-3x me-3 text-primary`}></i>
-                  <div>
-                    <h6 className="mb-1">{selectedMaterial.title}</h6>
-                    <small className="text-muted">{selectedMaterial.category}</small>
-                  </div>
-                </div>
-                <div className="alert alert-warning mb-3">
-                  <i className="fas fa-exclamation-triangle me-2"></i>
-                  <strong>Warning:</strong> This file will be downloaded directly to your device. Make sure you have enough storage space.
-                </div>
-                {downloadError && (
-                  <div className="alert alert-danger mb-3">
-                    <div className="d-flex align-items-start">
-                      <i className="fas fa-times-circle me-2 mt-1"></i>
-                      <div className="flex-grow-1">
-                        {downloadError}
-                      </div>
-                      <button 
-                        className="btn btn-sm btn-outline-danger ms-2" 
-                        onClick={handleRetry}
-                        disabled={downloading}
-                        style={{ whiteSpace: 'nowrap' }}
-                      >
-                        <i className="fas fa-redo me-1"></i>Retry
-                      </button>
-                    </div>
-                  </div>
-                )}
-                <div className="form-check">
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    id="confirmDownload"
-                    checked={confirmDownload}
-                    onChange={(e) => setConfirmDownload(e.target.checked)}
-                    disabled={downloading}
-                  />
-                  <label className="form-check-label" htmlFor="confirmDownload">
-                    I understand this file will be downloaded to my device
-                  </label>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={closeDownloadModal}
-                  disabled={downloading}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="button" 
-                  className="btn btn-primary" 
-                  onClick={handleDownload}
-                  disabled={downloading || !confirmDownload}
-                >
-                  {downloading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2"></span>
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-check me-2"></i>
-                      Yes, Download
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
