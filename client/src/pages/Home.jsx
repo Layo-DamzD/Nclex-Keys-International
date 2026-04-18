@@ -8,6 +8,7 @@ import Testimonials from '../components/Testimonials';
 import Footer from '../components/Footer';
 import LandingLayoutRenderer from '../components/LandingLayoutRenderer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
+import ChatWidget from '../components/ChatWidget';
 
 const HOME_SECTION_FALLBACK_ORDER = ['hero', 'stats', 'program', 'testimonials'];
 const TESTIMONIAL_SECTION_ALIASES = ['testimonials', 'successStories', 'success', 'successStory'];
@@ -193,6 +194,7 @@ const Home = () => {
         <Navbar />
         <FallbackContent />
         <Footer />
+        <ChatWidget />
       </>
     );
   }
@@ -204,6 +206,7 @@ const Home = () => {
         <Navbar />
         <FallbackContent />
         <Footer />
+        <ChatWidget />
       </>
     );
   }
@@ -226,6 +229,7 @@ const Home = () => {
         <FallbackContent />
       )}
       <Footer content={isStructured ? sections.footer : undefined} />
+      <ChatWidget />
     </>
   );
 };

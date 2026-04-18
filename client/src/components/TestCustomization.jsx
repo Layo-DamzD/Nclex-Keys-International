@@ -70,43 +70,6 @@ const PlusIcon = () => (
   </svg>
 );
 
-// ─── Progress Bar Component ─────────────────────────────────────────────
-const ProgressBar = ({ currentStep, totalSteps, stepLabels }) => {
-  const steps = [];
-  for (let i = 1; i <= totalSteps; i++) {
-    steps.push({
-      num: i,
-      label: stepLabels[i - 1] || `Step ${i}`,
-      isActive: i === currentStep,
-      isCompleted: i < currentStep
-    });
-  }
-
-  return (
-    <div className="tc-progress-bar">
-      {steps.map((step, idx) => (
-        <React.Fragment key={step.num}>
-          {idx > 0 && (
-            <div className={`tc-progress-line${step.isCompleted ? ' completed' : ''}`} />
-          )}
-          <div className="tc-progress-step">
-            <div className={`tc-progress-circle${step.isActive ? ' active' : ''}${step.isCompleted ? ' completed' : ''}`}>
-              {step.isCompleted ? (
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M3 7L6 10L11 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              ) : step.num}
-            </div>
-            <span className={`tc-progress-label${step.isActive ? ' active' : ''}${step.isCompleted ? ' completed' : ''}`}>
-              {step.label}
-            </span>
-          </div>
-        </React.Fragment>
-      ))}
-    </div>
-  );
-};
-
 // ─── Main Component ─────────────────────────────────────────────────────
 const TestCustomization = () => {
   const { user } = useUser();
@@ -524,7 +487,7 @@ const TestCustomization = () => {
         {/* Back + Title */}
         <div className="tc-step-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button className="tc-btn-back" onClick={() => goBack('choose')} style={{ padding: '8px 12px' }}>
+            <button className="tc-back-arrow" onClick={() => goBack('choose')}>
               <BackArrowIcon />
             </button>
             <h2 className="tc-step-title">{title}</h2>
@@ -546,14 +509,12 @@ const TestCustomization = () => {
         {/* Checkbox List */}
         <div className="tc-checkbox-list">
           <div className="tc-checkbox-header">
-            <span className="tc-checkbox-header-label">Select {title}</span>
-            <button
-              className={`tc-select-all-btn${allSelected ? ' active' : ''}`}
-              onClick={handleSelectAll}
-            >
-              <SelectAllIcon />
-              {allSelected ? 'Deselect All' : 'Select All'}
-            </button>
+            <div className="tc-select-all-wrapper" onClick={handleSelectAll}>
+              <div className={`tc-checkbox-box${allSelected ? ' selected' : ''}`} style={{ background: allSelected ? '#3b82f6' : '#fff', borderColor: allSelected ? '#3b82f6' : '#d1d5db' }}>
+                {allSelected && <CheckIcon />}
+              </div>
+              <span className="tc-select-all-text">Select All</span>
+            </div>
           </div>
           <div className="tc-scrollable-list">
             {items.map((item) => {
@@ -579,11 +540,11 @@ const TestCustomization = () => {
         {/* Actions */}
         <div className="tc-actions">
           <button className="tc-btn tc-btn-back" onClick={() => goBack('choose')}>
-            <ArrowLeftIcon /> Back
+            Back
           </button>
           {categoryType === 'subjects' ? (
             <button className="tc-btn tc-btn-next" onClick={() => goForward('lessons')}>
-              Next <ArrowRightIcon />
+              Next →
             </button>
           ) : (
             <button
@@ -591,7 +552,7 @@ const TestCustomization = () => {
               onClick={() => goForward('settings')}
               disabled={!canProceed}
             >
-              Next <ArrowRightIcon />
+              Next →
             </button>
           )}
         </div>
@@ -608,7 +569,7 @@ const TestCustomization = () => {
         {/* Back + Title */}
         <div className="tc-step-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button className="tc-btn-back" onClick={() => goBack('categories')} style={{ padding: '8px 12px' }}>
+            <button className="tc-back-arrow" onClick={() => goBack('categories')}>
               <BackArrowIcon />
             </button>
             <h2 className="tc-step-title">Lessons</h2>
@@ -636,14 +597,14 @@ const TestCustomization = () => {
             const catTotal = categoryTotals[category] || 0;
 
             return (
-              <div key={category} className="tc-checkbox-list" style={{ marginBottom: '14px' }}>
+              <div key={category} className="tc-checkbox-list" style={{ marginBottom: '0' }}>
                 {/* Category header */}
-                <div className="tc-checkbox-header" style={{ background: '#f0f9ff' }}>
-                  <span className="tc-checkbox-header-label" style={{ color: '#0369a1' }}>{category}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span className="tc-checkbox-count" style={{ fontSize: '0.75rem' }}>{catTotal}</span>
+                <div className="tc-subject-group-header">
+                  <span className="tc-subject-group-name">{category}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="tc-subject-group-count">{catTotal}</span>
                     <button
-                      className={`tc-select-all-btn${allSubSelected ? ' active' : ''}`}
+                      className="tc-subject-select-all"
                       onClick={() => {
                         const subcatKeys = subcategories.map(sub => getPairKey(category, sub));
                         if (allSubSelected) {
@@ -684,28 +645,26 @@ const TestCustomization = () => {
         </div>
 
         {/* Select all subcategories */}
-        <div style={{ marginBottom: '20px' }}>
-          <button
-            className={`tc-select-all-btn${selectedSubcategoryPairs.length === allPossiblePairs.length ? ' active' : ''}`}
-            onClick={handleSelectAllSubcategories}
-            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-          >
-            <SelectAllIcon />
-            {selectedSubcategoryPairs.length === allPossiblePairs.length ? 'Deselect All Lessons' : 'Select All Lessons'}
-          </button>
+        <div style={{ marginBottom: '20px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
+          <div className="tc-select-all-wrapper" onClick={handleSelectAllSubcategories}>
+            <div className="tc-checkbox-box" style={{ background: selectedSubcategoryPairs.length === allPossiblePairs.length ? '#3b82f6' : '#fff', borderColor: selectedSubcategoryPairs.length === allPossiblePairs.length ? '#3b82f6' : '#d1d5db' }}>
+              {selectedSubcategoryPairs.length === allPossiblePairs.length && <CheckIcon />}
+            </div>
+            <span className="tc-select-all-text">Select All</span>
+          </div>
         </div>
 
         {/* Actions */}
         <div className="tc-actions">
           <button className="tc-btn tc-btn-back" onClick={() => goBack('categories')}>
-            <ArrowLeftIcon /> Back
+            Back
           </button>
           <button
             className="tc-btn tc-btn-next"
             onClick={() => goForward('settings')}
             disabled={selectedSubcategoryStats.available === 0}
           >
-            Next <ArrowRightIcon />
+            Next →
           </button>
         </div>
       </div>
@@ -724,12 +683,11 @@ const TestCustomization = () => {
         <div className="tc-step-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
-              className="tc-btn-back"
+              className="tc-back-arrow"
               onClick={() => {
                 if (categoryType === 'subjects') goBack('lessons');
                 else goBack('categories');
               }}
-              style={{ padding: '8px 12px' }}
             >
               <BackArrowIcon />
             </button>
@@ -901,7 +859,7 @@ const TestCustomization = () => {
             if (categoryType === 'subjects') goBack('lessons');
             else goBack('categories');
           }}>
-            <ArrowLeftIcon /> Back
+            Back
           </button>
           <button
             className={`tc-btn tc-btn-generate${loading ? ' loading' : ''}`}
@@ -909,7 +867,7 @@ const TestCustomization = () => {
             disabled={loading}
           >
             {loading ? <span className="tc-spinner" /> : null}
-            {loading ? 'Loading Pool...' : 'Generate Test'}
+            {loading ? 'Loading...' : 'GENERATE TEST'}
           </button>
         </div>
       </div>
@@ -1025,40 +983,21 @@ const TestCustomization = () => {
   };
 
   // ── Compute total steps for progress bar ──
-  const totalSteps = categoryType === 'subjects' ? 4 : 3;
-  const currentStepNum = flowStep === 'choose' ? 1
-    : flowStep === 'categories' ? 2
-    : flowStep === 'lessons' ? 3
-    : categoryType === 'subjects' ? 4 : 3;
-
-  const stepLabels = categoryType === 'subjects'
-    ? ['Choose', 'Subjects', 'Lessons', 'Settings']
-    : ['Choose', categoryType === 'clientNeeds' ? 'Client Needs' : 'Case Studies', 'Settings'];
+  // No progress bar - matching ArcherReview clean design
 
   return (
     <div className="tc-container">
-      {/* Progress Bar */}
-      {flowStep !== 'choose' && (
-        <ProgressBar
-          currentStep={currentStepNum}
-          totalSteps={totalSteps}
-          stepLabels={stepLabels}
-        />
-      )}
-
       {/* Watermark */}
-      {user && (
-        <div style={{
-          position: 'fixed', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%) rotate(-35deg)',
-          fontSize: '72px', fontWeight: 800,
-          color: 'rgba(0,0,0,0.02)',
-          whiteSpace: 'nowrap', pointerEvents: 'none',
-          zIndex: 999998, letterSpacing: '8px'
-        }}>
-          {user.name || user.email || ''}
-        </div>
-      )}
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%) rotate(-35deg)',
+        fontSize: '72px', fontWeight: 800,
+        color: 'rgba(0,0,0,0.02)',
+        whiteSpace: 'nowrap', pointerEvents: 'none',
+        zIndex: 999998, letterSpacing: '8px'
+      }}>
+        Nclex Keys
+      </div>
 
       {/* Animated Content */}
       <div key={animKey} className={animDirection === 'forward' ? 'tc-slide-enter' : 'tc-slide-enter-back'}>

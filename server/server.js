@@ -75,6 +75,7 @@ app.use('/api/content', require('./routes/contentRoutes'));
 app.use('/api/admin/case-studies', require('./routes/caseStudyRoutes'));
 app.use('/api/admin/tests', require('./routes/testRoutes'));
 app.use('/api/admin/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/chat', require('./routes/chatRoutes'));
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
