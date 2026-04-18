@@ -35,14 +35,8 @@ const StudentSidebar = ({
   const program = user.program || 'NCLEX-RN';
 
   const navItems = [
-    { id: 'dashboard', icon: 'tachometer-alt', label: 'Dashboard' },
-    { id: 'prepared-tests', icon: 'file-alt', label: 'Take Prepared Test' },
     { id: 'create-test', icon: 'plus-circle', label: 'Create Test' },
     { id: 'previous-tests', icon: 'history', label: 'Previous Tests' },
-    { id: 'incorrect-questions', icon: 'exclamation-circle', label: 'Incorrect Question' },
-    { id: 'performance', icon: 'chart-line', label: 'Performance Analysis' },
-    { id: 'topic-analysis', icon: 'chart-pie', label: 'Topic Analysis' },
-    { id: 'materials', icon: 'book', label: 'Study Materials' },
     { id: 'profile', icon: 'user-circle', label: 'My Profile' },
   ];
 

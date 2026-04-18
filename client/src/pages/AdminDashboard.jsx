@@ -21,9 +21,6 @@ import StudentFeedback from '../components/admin/StudentFeedback';
 import AdminApproval from '../components/admin/AdminApproval';
 import ExamSupportChat from '../components/admin/ExamSupportChat';
 import AdminSettings from '../components/admin/AdminSettings';
-import AdminChatPanel from '../components/admin/AdminChatPanel';
-import AdminChatNotification from '../components/admin/AdminChatNotification';
-import ChatWidget from '../components/ChatWidget';
 
 import PwaInstallButton from '../components/PwaInstallButton';
 import { useAppTheme } from '../context/AppThemeContext';
@@ -115,7 +112,7 @@ const AdminDashboard = () => {
         const token = sessionStorage.getItem('adminToken');
         if (!token) return;
 
-        const [adminsRes, feedbackRes, supportRes, chatEscalatedRes] = await Promise.all([
+        const [adminsRes, feedbackRes, supportRes] = await Promise.all([
           axios.get('/api/admin/users/admins', {
             headers: { Authorization: `Bearer ${token}` }
           }),
@@ -125,15 +122,11 @@ const AdminDashboard = () => {
           axios.get('/api/admin/exam-support/conversations', {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get('/api/chat/admin/escalated', {
-            headers: { Authorization: `Bearer ${token}` }
-          }).catch(() => ({ data: { sessions: [] } }))
         ]);
 
         const admins = Array.isArray(adminsRes.data) ? adminsRes.data : [];
         const feedback = Array.isArray(feedbackRes.data) ? feedbackRes.data : [];
         const supportConversations = Array.isArray(supportRes.data) ? supportRes.data : [];
-        const escalatedSessions = chatEscalatedRes.data?.sessions || [];
 
         const pendingApprovals = admins.filter(
           (item) => item?.role !== 'superadmin' && item?.approved !== true
@@ -148,16 +141,11 @@ const AdminDashboard = () => {
           0
         );
 
-        const pendingChats = escalatedSessions.filter(
-          (item) => !item.adminResponded
-        ).length;
-
         if (mounted) {
           setSidebarBadges({
             'admin-approval': pendingApprovals,
             'student-feedback': unreadFeedback,
             'exam-support': unreadSupport,
-            'live-chat': pendingChats
           });
         }
       } catch (error) {
@@ -422,12 +410,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {activeSection === 'live-chat' && userRole === 'superadmin' && (
-          <div className="section active">
-            <AdminChatPanel />
-          </div>
-        )}
-
         {activeSection === 'settings' && (
           <div className="section active">
             <AdminSettings
@@ -437,16 +419,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Admin Chat Escalation Notification Toast */}
-        {userRole === 'superadmin' && (
-          <AdminChatNotification
-            enabled={true}
-            token={sessionStorage.getItem('adminToken')}
-            onGoToLiveChat={() => handleSectionChange('live-chat')}
-          />
-        )}
       </main>
-      <ChatWidget />
     </div>
   );
 };
