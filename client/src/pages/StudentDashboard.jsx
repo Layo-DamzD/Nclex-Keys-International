@@ -20,7 +20,6 @@ import Profile from '../components/Profile';
 import StudentFeedbackModal from '../components/StudentFeedbackModal';
 import ExamCountdownCelebration from '../components/ExamCountdownCelebration';
 import StudentNotificationPopup from '../components/StudentNotificationPopup';
-import ChatWidget from '../components/ChatWidget';
 
 const MOBILE_BREAKPOINT = 992;
 
@@ -611,7 +610,6 @@ const StudentDashboard = () => {
           </div>
         )}
       </main>
-      <ChatWidget />
     </div>
   );
 };
