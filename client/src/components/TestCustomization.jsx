@@ -8,7 +8,7 @@ import './TestCustomization.css';
 
 // ─── Constants ──────────────────────────────────────────────────────────
 const CLIENT_NEEDS_CATEGORIES = NCLEX_CLIENT_NEEDS_CATEGORIES;
-const CASE_STUDY_SUBCATEGORIES = CATEGORIES['NGN Case Studies'] || [];
+
 const TEAL = '#009688';
 const TEAL_LIGHT = '#E0F2F1';
 const TEAL_DARK = '#00796B';

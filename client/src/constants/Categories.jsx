@@ -423,25 +423,9 @@ export const CATEGORIES = {
     "Trauma & Stress Disorders (PTSD)"
   ],
 
-  "NGN Case Studies": [
-    "Adult Health Case Study",
-    "Analyze Cues",
-    "Critical Care Case Study",
-    "Delegation Case Study",
-    "Emergency Case Study",
-    "Evaluate Outcomes",
-    "Generate Solutions",
-    "Lab Interpretation Case Study",
-    "Maternal Case Study",
-    "Medication Case Study",
-    "Mental Health Case Study",
-    "Pediatric Case Study",
-    "Prioritization Case Study",
-    "Prioritize Hypotheses",
-    "Recognize Cues",
-    "Take Action",
-    "Matrix Questions"
-  ],
+  "Standalone NGN": [],
+
+  "Unfolding NGN": [],
 
   "Pediatrics": [
     "Chronic Illness in Children",

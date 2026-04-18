@@ -23,7 +23,7 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [previewIndex, setPreviewIndex] = useState(-1);
   const [deleteModal, setDeleteModal] = useState({ open: false, questionId: null, bulk: false, count: 0 });
 
-  const categories = ['__uncategorized__', '', ...Object.keys(CATEGORIES).filter((cat) => cat !== 'NGN Case Studies')];
+  const categories = ['__uncategorized__', '', ...Object.keys(CATEGORIES).filter((cat) => cat !== 'Standalone NGN' && cat !== 'Unfolding NGN')];
   const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
 
   // Sync filters with URL search params (e.g. when clicking "Uncategorized" from AdminStats)
