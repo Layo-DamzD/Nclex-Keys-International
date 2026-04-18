@@ -25,15 +25,30 @@ Key guidelines:
 - If a student seems frustrated or anxious, offer words of encouragement.`;
 
 // Initialize ZAI lazily (singleton)
+// Tries .z-ai-config file first, then falls back to environment variables
 let zaiInstance = null;
 const getZAI = async () => {
   if (!zaiInstance) {
-    zaiInstance = await ZAI.create();
+    try {
+      zaiInstance = await ZAI.create();
+    } catch {
+      // Config file not found (e.g. on Render) — build from env vars
+      console.log('[ZAI] .z-ai-config not found, loading from environment variables...');
+      zaiInstance = new ZAI({
+        baseUrl: process.env.ZAI_BASE_URL,
+        apiKey: process.env.ZAI_API_KEY,
+        chatId: process.env.ZAI_CHAT_ID,
+        userId: process.env.ZAI_USER_ID,
+        token: process.env.ZAI_TOKEN,
+      });
+      if (!process.env.ZAI_BASE_URL || !process.env.ZAI_API_KEY) {
+        throw new Error('ZAI config missing: set ZAI_BASE_URL, ZAI_API_KEY, ZAI_CHAT_ID, ZAI_USER_ID, ZAI_TOKEN env vars (or provide .z-ai-config file)');
+      }
+      console.log('[ZAI] Successfully loaded from environment variables');
+    }
   }
   if (!zaiInstance || !zaiInstance.chat) {
-    // Fallback: try requiring with .default again (module reload edge case)
-    const ZAIFresh = require('z-ai-web-dev-sdk').default;
-    zaiInstance = await ZAIFresh.create();
+    throw new Error('ZAI instance is not properly initialized');
   }
   return zaiInstance;
 };
