@@ -704,15 +704,33 @@
 }
 
 .admin-dashboard-page .upload-question .option-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
 .admin-dashboard-page .upload-question .option-row {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fafbfc;
+}
+
+.admin-dashboard-page .upload-question .option-row > div:first-child {
+  display: flex;
   align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.admin-dashboard-page .upload-question .option-row .option-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .admin-dashboard-page .upload-question .option-index {
@@ -1731,13 +1749,12 @@ html[data-app-theme='dark'] .admin-dashboard-page .all-students .alert-success {
     height: 300px;
   }
 
-  .admin-dashboard-page .upload-question .option-row {
-    grid-template-columns: 34px minmax(0, 1fr);
+  .admin-dashboard-page .upload-question .option-row > div:first-child {
+    flex-wrap: wrap;
   }
 
   .admin-dashboard-page .upload-question .option-correct-toggle {
-    grid-column: 2;
-    justify-self: start;
+    flex-shrink: 0;
   }
 }
 
@@ -1957,19 +1974,17 @@ html[data-app-theme='dark'] .admin-dashboard-page .all-students .alert-success {
     align-items: flex-start;
   }
 
-  .admin-dashboard-page .upload-question .option-row {
-    grid-template-columns: 34px minmax(0, 1fr);
-    gap: 8px;
+  .admin-dashboard-page .upload-question .option-row > div:first-child {
+    flex-wrap: wrap;
   }
 
   .admin-dashboard-page .upload-question .option-correct-toggle {
-    grid-column: 2;
-    justify-self: start;
+    flex-shrink: 0;
   }
 
   .admin-dashboard-page .upload-question .option-row .btn,
   .admin-dashboard-page .upload-question .option-row button {
-    justify-self: start;
+    flex-shrink: 0;
   }
 
   .admin-dashboard-page .all-students .all-students-actions-group {
@@ -2055,8 +2070,9 @@ html[data-app-theme='dark'] .admin-dashboard-page .all-students .alert-success {
     text-align: left;
   }
 
-  .admin-dashboard-page .upload-question .option-row {
-    grid-template-columns: 1fr;
+  .admin-dashboard-page .upload-question .option-row > div:first-child {
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .admin-dashboard-page .upload-question .option-index {
@@ -2064,16 +2080,9 @@ html[data-app-theme='dark'] .admin-dashboard-page .all-students .alert-success {
     height: 30px;
   }
 
-  .admin-dashboard-page .upload-question .option-correct-toggle {
-    grid-column: auto;
-  }
-
-  .admin-dashboard-page .upload-question .option-row > * {
-    width: 100%;
-  }
-
-  .admin-dashboard-page .upload-question .option-row .option-index {
-    width: 30px;
+  .admin-dashboard-page .upload-question .option-input {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
   .admin-dashboard-page .manage-questions-filter-row,

@@ -1027,8 +1027,8 @@ const UploadQuestion = () => {
             </small>
             <div className="option-list">
               {options.map((opt, idx) => (
-                <div key={idx} className="option-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px', padding: '12px', marginBottom: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fafbfc' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div key={idx} className="option-row">
+                  <div>
                     <div className="option-index" style={{ minWidth: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{String.fromCharCode(65 + idx)}</div>
                     <input
                       type="text"
