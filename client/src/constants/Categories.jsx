@@ -423,10 +423,6 @@ export const CATEGORIES = {
     "Trauma & Stress Disorders (PTSD)"
   ],
 
-  "Standalone NGN": [],
-
-  "Unfolding NGN": [],
-
   "Pediatrics": [
     "Chronic Illness in Children",
     "Congenital Disorders",

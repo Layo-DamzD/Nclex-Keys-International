@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom';
 import { UserProvider } from './context/UserContext';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -81,7 +81,7 @@ function MaintenancePage() {
           lineHeight: 1.7,
           marginBottom: '32px',
         }}>
-          Our platform is currently undergoing scheduled maintenance to improve your experience. 
+          Our platform is currently undergoing scheduled maintenance to improve your experience.
           We apologize for any inconvenience caused.
         </p>
 
@@ -161,89 +161,108 @@ function MaintenancePage() {
   );
 }
 
-function App() {
-  const isMaintenance = MAINTENANCE_MODE;
-
-  if (isMaintenance) {
-    return (
-      <UserProvider>
-        <BrowserRouter>
-          <AppThemeProvider>
-            <MaintenancePage />
-          </AppThemeProvider>
-        </BrowserRouter>
-      </UserProvider>
-    );
-  }
-
+// Root layout with theme providers and global components
+function AppLayout() {
   return (
-    <UserProvider>
-      <BrowserRouter>
-        <AppThemeProvider>
-          <PwaInstallPrompt />
-          <CookieConsentBanner />
-          <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/brainiac" element={<Brainiac />} />
-          <Route path="/test-your-knowledge" element={<PublicKnowledgeTest />} />
-          <Route path="/login" element={<StudentLogin />} />
-          <Route path="/signup" element={<StudentSignup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-
-          {/* Student Protected Routes */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <StudentDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/test-session" element={
-            <ProtectedRoute>
-              <TestSession />
-            </ProtectedRoute>
-          } />
-          <Route path="/cat-session" element={
-            <ProtectedRoute>
-              <CatSession />
-            </ProtectedRoute>
-          } />
-          <Route path="/test-review/:resultId" element={
-            <ProtectedRoute>
-              <StudentTestReviewPage />
-            </ProtectedRoute>
-          } />
-
-          {/* Admin Routes – Secret Gateway */}
-          <Route path="/NCLEXkeys" element={<AdminSecret />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/signup" element={<AdminSignup />} />
-          <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
-          <Route path="/admin/forgot-access-code" element={<AdminForgotAccessCode />} />
-          <Route path="/admin/reset-password/:token" element={<AdminResetPassword />} />
-          <Route path="/admin/dashboard" element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          } />
-          <Route path="/admin/test-results/:resultId/review" element={
-            <AdminRoute>
-              <AdminTestReviewPage />
-            </AdminRoute>
-          } />
-          <Route path="/admin/review/:resultId" element={
-            <AdminRoute>
-              <AdminTestReviewPage />
-            </AdminRoute>
-          } />
-          </Routes>
-        </AppThemeProvider>
-      </BrowserRouter>
-    </UserProvider>
+    <AppThemeProvider>
+      <PwaInstallPrompt />
+      <CookieConsentBanner />
+      <Outlet />
+    </AppThemeProvider>
   );
 }
 
-export default App;
+// Maintenance mode router
+const maintenanceRouter = createBrowserRouter([
+  {
+    path: '*',
+    element: (
+      <UserProvider>
+        <AppThemeProvider>
+          <MaintenancePage />
+        </AppThemeProvider>
+      </UserProvider>
+    ),
+  },
+]);
 
+// Main application router
+const router = createBrowserRouter([
+  {
+    element: (
+      <UserProvider>
+        <AppLayout />
+      </UserProvider>
+    ),
+    children: [
+      // Public Routes
+      { path: '/', element: <Home /> },
+      { path: '/about', element: <About /> },
+      { path: '/contact', element: <Contact /> },
+      { path: '/brainiac', element: <Brainiac /> },
+      { path: '/test-your-knowledge', element: <PublicKnowledgeTest /> },
+      { path: '/login', element: <StudentLogin /> },
+      { path: '/signup', element: <StudentSignup /> },
+      { path: '/forgot-password', element: <ForgotPassword /> },
+      { path: '/reset-password/:token', element: <ResetPassword /> },
+
+      // Student Protected Routes
+      { path: '/dashboard', element: (
+        <ProtectedRoute>
+          <StudentDashboard />
+        </ProtectedRoute>
+      )},
+      { path: '/test-session', element: (
+        <ProtectedRoute>
+          <TestSession />
+        </ProtectedRoute>
+      )},
+      { path: '/cat-session', element: (
+        <ProtectedRoute>
+          <CatSession />
+        </ProtectedRoute>
+      )},
+      { path: '/test-review/:resultId', element: (
+        <ProtectedRoute>
+          <StudentTestReviewPage />
+        </ProtectedRoute>
+      )},
+
+      // Admin Routes - Secret Gateway
+      { path: '/NCLEXkeys', element: <AdminSecret /> },
+      { path: '/admin/login', element: <AdminLogin /> },
+      { path: '/admin/signup', element: <AdminSignup /> },
+      { path: '/admin/forgot-password', element: <AdminForgotPassword /> },
+      { path: '/admin/forgot-access-code', element: <AdminForgotAccessCode /> },
+      { path: '/admin/reset-password/:token', element: <AdminResetPassword /> },
+      { path: '/admin/dashboard', element: (
+        <AdminRoute>
+          <AdminDashboard />
+        </AdminRoute>
+      )},
+      { path: '/admin/test-results/:resultId/review', element: (
+        <AdminRoute>
+          <AdminTestReviewPage />
+        </AdminRoute>
+      )},
+      { path: '/admin/review/:resultId', element: (
+        <AdminRoute>
+          <AdminTestReviewPage />
+        </AdminRoute>
+      )},
+
+      // Catch-all 404
+      { path: '*', element: <Navigate to="/" replace /> },
+    ],
+  },
+]);
+
+function App() {
+  if (MAINTENANCE_MODE) {
+    return <RouterProvider router={maintenanceRouter} />;
+  }
+
+  return <RouterProvider router={router} />;
+}
+
+export default App;

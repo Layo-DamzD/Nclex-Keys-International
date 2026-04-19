@@ -502,7 +502,7 @@ const getSubcategoryCounts = async (req, res) => {
 // @access  Private
 const generateTest = async (req, res) => {
   try {
-    const { subcategories, selections, questionCount, timed, tutorMode, filterMode, clientNeedsSelections, includeTraditional, includeNextGen, difficulty } = req.body;
+    const { subcategories, selections, questionCount, timed, tutorMode, filterMode, clientNeedsSelections, includeTraditional, includeNextGen, difficulty, questionTypeFilter } = req.body;
     
     // Assessment mode: exactly 150 questions with at least 40 case studies
     if (req.body.testType === 'assessment') {
@@ -609,13 +609,21 @@ const generateTest = async (req, res) => {
       query = { type: 'case-study' };
     }
 
-    // Filter by question type (Traditional vs Next Gen)
+    // Filter by question type (Traditional vs Next Gen via isNextGen flag)
     if (includeTraditional === true && includeNextGen === false) {
       query.isNextGen = { $ne: true };
     } else if (includeTraditional === false && includeNextGen === true) {
       query.isNextGen = true;
     }
     // If both are true or both are false, don't filter by isNextGen
+
+    // Filter by question type format: Classic (non-case-study), NGN (case-study only), Mixed (both)
+    if (questionTypeFilter === 'classic') {
+      query.type = { $ne: 'case-study' };
+    } else if (questionTypeFilter === 'ngn') {
+      query.type = 'case-study';
+    }
+    // 'mixed' → no filter on type (default)
 
     // Filter by difficulty (e.g., for Assessment mode which uses 'hard')
     if (difficulty) {
