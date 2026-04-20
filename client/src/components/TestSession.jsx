@@ -398,10 +398,11 @@ const TestSession = () => {
       };
       const userArr = [...new Set(parseArr(userAnswer))];
       const correctArr = [...new Set(parseArr(correct))];
-      const wrongPicked = userArr.filter(c => !correctArr.includes(c));
-      if (wrongPicked.length > 0) return false;
-      if (userArr.length === correctArr.length && correctArr.length > 0) return true;
-      if (userArr.length > 0) return 'partial';
+      const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
+      const totalCorrect = correctArr.length || 1;
+      const earned = Math.max(0, userArr.length - wrongPicked) / totalCorrect;
+      if (earned >= 1) return true;
+      if (earned > 0) return 'partial';
       return false;
     }
     if (type === 'matrix') {
@@ -1155,27 +1156,16 @@ const TestSession = () => {
     // Normalize correct answer (handle both array and string formats)
     const correct = [...new Set(parseAnswerToArray(correctAnswer))];
 
-    // 1 answer = 1 point: every SATA question is worth exactly 1 point
-    // All correct + no wrong = 1 pt | Some correct + no wrong = 0.5 pt | Any wrong = 0 pt
+    // Proportional scoring with negative marking:
+    // Score = max(0, correctPicked - wrongPicked) / totalCorrect
+    // e.g., 4 correct out of 5 with 0 wrong = 4/5 = 0.8 pts
+    // e.g., 4 correct out of 5 with 1 wrong = 3/5 = 0.6 pts
     const totalMarks = 1;
+    const totalCorrect = correct.length || 1;
     const correctPicked = user.filter((choice) => correct.includes(choice)).length;
     const wrongPicked = user.filter((choice) => !correct.includes(choice)).length;
-    let earnedMarks = 0;
-    let isCorrect = false;
-
-    if (wrongPicked > 0) {
-      // Any wrong pick = 0 points
-      earnedMarks = 0;
-      isCorrect = false;
-    } else if (correctPicked === correct.length && correct.length > 0) {
-      // All correct options picked, none wrong = full point
-      earnedMarks = 1;
-      isCorrect = true;
-    } else if (correctPicked > 0) {
-      // Some correct, none wrong = half point
-      earnedMarks = 0.5;
-      isCorrect = 'partial';
-    }
+    const earnedMarks = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
+    const isCorrect = earnedMarks >= 1 ? true : (earnedMarks > 0 ? 'partial' : false);
 
     return {
       isCorrect,

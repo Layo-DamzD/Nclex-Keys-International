@@ -584,12 +584,13 @@ const CatSession = () => {
       const userArr = (Array.isArray(userAns) ? userAns : [userAns]).map(v => normalizeCATLetter(v)).filter(Boolean);
       const correctSet = new Set(correctArr.map(c => c.toUpperCase()));
       const userSet = new Set(userArr.map(c => c.toUpperCase()));
+      // Proportional scoring with negative marking
       const correctPicked = [...userSet].filter(c => correctSet.has(c)).length;
       const wrongPicked = [...userSet].filter(c => !correctSet.has(c)).length;
-      // 1 point per question: all correct=1, partial=0.5, any wrong=0
-      if (wrongPicked > 0) return false;
-      if (correctPicked === correctSet.size && correctSet.size > 0) return true;
-      if (correctPicked > 0) return 'partial';
+      const totalCorrect = correctSet.size || 1;
+      const earned = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
+      if (earned >= 1) return true;
+      if (earned > 0) return 'partial';
       return false;
     } else if (subQ.type === 'fill-blank') {
       const userAns = caseAnswers[subQ._id] || '';
@@ -668,12 +669,13 @@ const CatSession = () => {
       const userArr = (Array.isArray(userAns) ? userAns : [userAns]).map(v => normalizeCATLetter(v)).filter(Boolean);
       const correctSet = new Set(correctArr.map(c => c.toUpperCase()));
       const userSet = new Set(userArr.map(c => c.toUpperCase()));
+      // Proportional scoring with negative marking
       const correctPicked = [...userSet].filter(c => correctSet.has(c)).length;
       const wrongPicked = [...userSet].filter(c => !correctSet.has(c)).length;
-      // 1 point per question: all correct=true, partial=0.5, any wrong=false
-      if (wrongPicked > 0) wasCorrect = false;
-      else if (correctPicked === correctSet.size && correctSet.size > 0) wasCorrect = true;
-      else if (correctPicked > 0) wasCorrect = 'partial';
+      const totalCorrect = correctSet.size || 1;
+      const earned = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
+      if (earned >= 1) wasCorrect = true;
+      else if (earned > 0) wasCorrect = 'partial';
       else wasCorrect = false;
     } else if (question.type === 'fill-blank') {
       const userAns = subQ ? (caseAnswers[subQ._id] || '') : fillBlankAnswer;

@@ -200,22 +200,16 @@ const submitTest = async (req, res) => {
           return resolved || serverNormalizeToLetter(v);
         }).filter(Boolean) : parseToArray(userAnswer, true))];
         const correctArr = [...new Set(parseToArray(correctAnswer, true))];
-        // Every question is worth exactly 1 point
+        // Proportional scoring with negative marking:
+        // Score = max(0, correctPicked - wrongPicked) / totalCorrect
+        // e.g., 4 correct out of 5 with 0 wrong = 4/5 = 0.8 pts
+        // e.g., 4 correct out of 5 with 1 wrong = 3/5 = 0.6 pts
         const totalMarks = 1;
+        const totalCorrect = correctArr.length || 1;
         const correctPicked = userArr.filter(c => correctArr.includes(c)).length;
         const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
-        let earnedMarks = 0;
-        let isCorrect = false;
-        if (wrongPicked > 0) {
-          earnedMarks = 0;
-          isCorrect = false;
-        } else if (correctPicked === correctArr.length && correctArr.length > 0) {
-          earnedMarks = 1;
-          isCorrect = true;
-        } else if (correctPicked > 0) {
-          earnedMarks = 0.5;
-          isCorrect = 'partial';
-        }
+        const earnedMarks = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
+        const isCorrect = earnedMarks >= 1 ? true : (earnedMarks > 0 ? 'partial' : false);
         return { isCorrect, earnedMarks, totalMarks };
       }
 
@@ -1373,8 +1367,8 @@ const evaluateCATAnswer = (question, answer) => {
   const expected = question.correctAnswer;
   const opts = question.options || [];
 
-  // ── SATA: 1 point per question, partial credit, NO negative scoring ──
-  // All correct + no wrong = 1 pt | Some correct + no wrong = 0.5 pt | Any wrong = 0 pt
+  // ── SATA: Proportional scoring with negative marking ──
+  // Score = max(0, correctPicked - wrongPicked) / totalCorrect
   if (question.type === 'sata') {
     // Parse comma-separated ("A,C,E") and concatenated ("ACE") formats
     const parseToArray = (val) => {
@@ -1410,28 +1404,12 @@ const evaluateCATAnswer = (question, answer) => {
       else wrongPicked++;
     }
 
-    // Every question is worth exactly 1 point
+    // Proportional scoring with negative marking:
+    // Score = max(0, correctPicked - wrongPicked) / totalCorrect
     const totalMarks = 1;
-    let earnedMarks = 0;
-    let isCorrect = false;
-
-    if (wrongPicked > 0) {
-      // Any wrong pick = 0 points
-      earnedMarks = 0;
-      isCorrect = false;
-    } else if (correctPicked === correctSet.size && correctSet.size > 0) {
-      // All correct options picked, none wrong = full point
-      earnedMarks = 1;
-      isCorrect = true;
-    } else if (correctPicked > 0) {
-      // Some correct, none wrong = half point
-      earnedMarks = 0.5;
-      isCorrect = 'partial';
-    } else {
-      // Nothing picked = 0 points
-      earnedMarks = 0;
-      isCorrect = false;
-    }
+    const totalCorrect = correctSet.size || 1;
+    const earnedMarks = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
+    const isCorrect = earnedMarks >= 1 ? true : (earnedMarks > 0 ? 'partial' : false);
 
     return { isCorrect, earnedMarks, totalMarks };
   }
