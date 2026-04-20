@@ -496,7 +496,7 @@ const getSubcategoryCounts = async (req, res) => {
 // @access  Private
 const generateTest = async (req, res) => {
   try {
-    const { subcategories, selections, questionCount, timed, tutorMode, filterMode, clientNeedsSelections, includeTraditional, includeNextGen, difficulty, questionTypeFilter } = req.body;
+    const { subcategories, selections, questionCount, timed, tutorMode, filterMode, clientNeedsSelections, includeTraditional, includeNextGen, difficulty, questionTypeFilter, examMode } = req.body;
     
     // Assessment mode: exactly 150 questions with at least 40 case studies
     if (req.body.testType === 'assessment') {
@@ -611,23 +611,46 @@ const generateTest = async (req, res) => {
     }
     // If both are true or both are false, don't filter by isNextGen
 
-    // Filter by question type: sata, unfolding case study, standalone case study, all
-    if (questionTypeFilter === 'sata') {
-      query.type = 'sata';
-    } else if (questionTypeFilter === 'unfolding') {
-      // Unfolding = layered case studies (multiple questions per case)
-      query.type = 'case-study';
-      query.caseStudyType = 'layered';
-    } else if (questionTypeFilter === 'standalone') {
-      // Standalone = case studies with only 1 sub-question (bowtie/trend or layered with single Q)
-      query.type = 'case-study';
-      query.$expr = { $lte: [{ $size: { $ifNull: ['$questions', []] } }, 1] };
-    } else if (questionTypeFilter === 'classic') {
+    // ─── Exam mode filter: classic = non-case-study, ngn = case-study, mixed = no filter ───
+    if (examMode === 'classic') {
       query.type = { $ne: 'case-study' };
-    } else if (questionTypeFilter === 'ngn') {
+    } else if (examMode === 'ngn') {
       query.type = 'case-study';
     }
-    // 'all', 'mixed' → no filter on type (default)
+    // 'mixed' → no filter on type from exam mode
+
+    // ─── Question type filter (multi-select array): sata, unfolding, standalone ───
+    // When empty array → no filter (all types). When has items → filter by those types.
+    if (Array.isArray(questionTypeFilter) && questionTypeFilter.length > 0) {
+      const typeConditions = [];
+      if (questionTypeFilter.includes('sata')) {
+        typeConditions.push({ type: 'sata' });
+      }
+      if (questionTypeFilter.includes('unfolding')) {
+        // Unfolding = layered case studies (multiple questions per case)
+        typeConditions.push({ type: 'case-study', caseStudyType: 'layered', $expr: { $gt: [{ $size: { $ifNull: ['$questions', []] } }, 1] } });
+      }
+      if (questionTypeFilter.includes('standalone')) {
+        // Standalone = bowtie/trend or layered with single question (1 story = 1 question)
+        typeConditions.push({ $or: [
+          { type: 'case-study', $expr: { $lte: [{ $size: { $ifNull: ['$questions', []] } }, 1] } },
+          { type: 'case-study', caseStudyType: { $in: ['bowtie', 'trend'] } }
+        ]});
+      }
+      if (typeConditions.length > 0) {
+        // If exam mode already set a type constraint, we intersect with question type filter
+        // via $and to combine both filters
+        if (query.type) {
+          // exam mode already set query.type — need to merge
+          // e.g. classic + sata: type must NOT be case-study AND must be sata → just sata
+          // e.g. ngn + unfolding: type must be case-study AND unfolding case-study
+          query.$and = [{ ...query }];
+          query.$and.push({ $or: typeConditions });
+        } else {
+          query.$or = typeConditions;
+        }
+      }
+    }
 
     // Filter by difficulty (e.g., for Assessment mode which uses 'hard')
     if (difficulty) {

@@ -42,7 +42,8 @@ const TestCustomization = () => {
   const [timed, setTimed] = useState(true);
   const [tutorMode, setTutorMode] = useState(false);
   const [testType, setTestType] = useState('practice'); // 'practice', 'cat', 'assessment'
-  const [questionTypeFilter, setQuestionTypeFilter] = useState('all'); // 'all', 'sata', 'unfolding', 'standalone'
+  const [examMode, setExamMode] = useState('mixed'); // 'mixed', 'classic', 'ngn'
+  const [questionTypeFilter, setQuestionTypeFilter] = useState([]); // [] = all, or ['sata','unfolding','standalone'] multi-select
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
@@ -440,7 +441,7 @@ const TestCustomization = () => {
           tutorMode: effectiveTutorMode,
           statusFilters,
           testType,
-          ...(isPractice ? { questionTypeFilter } : {}),
+          ...(isPractice ? { examMode, questionTypeFilter } : {}),
           ...(isAssessment ? { difficulty: 'hard' } : {})
         }, {
           headers: { Authorization: `Bearer ${token}` }
@@ -463,7 +464,7 @@ const TestCustomization = () => {
           tutorMode: effectiveTutorMode,
           statusFilters,
           testType,
-          ...(isPractice ? { questionTypeFilter } : {}),
+          ...(isPractice ? { examMode, questionTypeFilter } : {}),
           ...(isAssessment ? { difficulty: 'hard' } : {})
         }, {
           headers: { Authorization: `Bearer ${token}` }
@@ -643,10 +644,10 @@ const TestCustomization = () => {
             {['mixed', 'classic', 'ngn'].map((type) => (
               <div
                 key={type}
-                className={`tc-radio-item tc-radio-item--horizontal ${questionTypeFilter === type ? 'tc-radio-item--active' : ''}`}
-                onClick={() => setQuestionTypeFilter(type)}
+                className={`tc-radio-item tc-radio-item--horizontal ${examMode === type ? 'tc-radio-item--active' : ''}`}
+                onClick={() => setExamMode(type)}
               >
-                {renderRadioCircle(questionTypeFilter === type)}
+                {renderRadioCircle(examMode === type)}
                 <span className="tc-radio-text">
                   {type === 'mixed' ? 'Mixed' : type === 'classic' ? 'Classic' : 'NGN'}
                 </span>
@@ -673,14 +674,28 @@ const TestCustomization = () => {
             </div>
           </div>
 
-          {/* QUESTION TYPES (horizontal scrollable pills) */}
+          {/* QUESTION TYPES (horizontal scrollable pills — multi-select) */}
           <div className="tc-section-title">QUESTION TYPES</div>
           <div className="tc-filter-pills">
             {questionTypePills.map((pill) => (
               <div
                 key={pill.key}
-                className={`tc-filter-pill ${questionTypeFilter === pill.key ? 'tc-filter-pill--active' : ''}`}
-                onClick={() => setQuestionTypeFilter(pill.key)}
+                className={`tc-filter-pill ${pill.key === 'all'
+                  ? questionTypeFilter.length === 0
+                  : questionTypeFilter.includes(pill.key)
+                  ? 'tc-filter-pill--active' : ''}`}
+                onClick={() => {
+                  if (pill.key === 'all') {
+                    setQuestionTypeFilter([]);
+                  } else {
+                    setQuestionTypeFilter((prev) => {
+                      const next = prev.includes(pill.key)
+                        ? prev.filter((k) => k !== pill.key)
+                        : [...prev, pill.key];
+                      return next;
+                    });
+                  }
+                }}
               >
                 {pill.label}
               </div>
@@ -1001,7 +1016,7 @@ const TestCustomization = () => {
             onClick={handleNextFromStep2}
             disabled={loading}
           >
-            {loading ? 'Generating...' : 'GENERATE TEST'}
+            {loading ? 'Loading...' : 'GENERATE TEST'}
           </button>
         </div>
       )}
@@ -1017,7 +1032,7 @@ const TestCustomization = () => {
             onClick={handleSubmit}
             disabled={loading}
           >
-            {loading ? 'Generating...' : 'GENERATE TEST'}
+            {loading ? 'Loading...' : 'GENERATE TEST'}
           </button>
         </div>
       )}
@@ -1027,7 +1042,7 @@ const TestCustomization = () => {
         <div className="tc-loading">
           <div className="tc-loading__spinner" />
           <span className="tc-loading__text">
-            {testType === 'cat' ? 'Starting CAT...' : 'Generating test...'}
+            {testType === 'cat' ? 'Starting CAT...' : 'Loading question pool...'}
           </span>
         </div>
       )}
