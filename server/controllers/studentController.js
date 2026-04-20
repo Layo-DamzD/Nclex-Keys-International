@@ -2375,13 +2375,28 @@ const getQuestionStatusCounts = async (req, res) => {
     const clientNeedNgnIds = [];
     const caseStudyQuestionIds = [];
 
+    // Per-type question ID buckets for type-filter pills
+    const sataQuestionIds = [];
+    const unfoldingQuestionIds = [];
+    const standaloneQuestionIds = [];
+
     for (const q of allQuestions) {
       const qId = String(q._id);
 
-      // Case-study type questions have their own separate counter
       if (q.type === 'case-study') {
         caseStudyQuestionIds.push(qId);
+        // Unfolding = layered with multiple sub-questions
+        if (q.caseStudyType === 'layered' && Array.isArray(q.questions) && q.questions.length > 1) {
+          unfoldingQuestionIds.push(qId);
+        } else {
+          // Standalone = bowtie/trend or layered with single question
+          standaloneQuestionIds.push(qId);
+        }
         continue;
+      }
+
+      if (q.type === 'sata') {
+        sataQuestionIds.push(qId);
       }
 
       const canonicalCat = matchCategory(q.category);
@@ -2437,6 +2452,21 @@ const getQuestionStatusCounts = async (req, res) => {
       caseStudies: {
         ...caseStudyCounts,
         total: caseStudyQuestionIds.length
+      },
+      // Per question type counts
+      byType: {
+        sata: {
+          ...computeCounts(sataQuestionIds),
+          total: sataQuestionIds.length
+        },
+        unfolding: {
+          ...computeCounts(unfoldingQuestionIds),
+          total: unfoldingQuestionIds.length
+        },
+        standalone: {
+          ...computeCounts(standaloneQuestionIds),
+          total: standaloneQuestionIds.length
+        }
       }
     });
   } catch (error) {

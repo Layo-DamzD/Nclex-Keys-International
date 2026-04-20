@@ -85,22 +85,17 @@ const TestCustomization = () => {
   const [subjectStatusCounts, setSubjectStatusCounts] = useState(null);
   const [clientNeedStatusCounts, setClientNeedStatusCounts] = useState(null);
   const [caseStudyTotalCount, setCaseStudyTotalCount] = useState(0);
+  const [typeCounts, setTypeCounts] = useState({ sata: { total: 0 }, unfolding: { total: 0 }, standalone: { total: 0 } });
 
   const navigate = useNavigate();
 
-  // ─── Existing handlers preserved ───
+  // ─── Toggle handlers (independent — both can be on) ───
   const handleTimedToggle = (checked) => {
     setTimed(checked);
-    if (checked) {
-      setTutorMode(false);
-    }
   };
 
   const handleTutorToggle = (checked) => {
     setTutorMode(checked);
-    if (checked) {
-      setTimed(false);
-    }
   };
 
   const getClientNeedCount = (clientNeed) => {
@@ -209,6 +204,13 @@ const TestCustomization = () => {
           }
           if (statusResponse.data?.caseStudies) {
             setCaseStudyTotalCount(statusResponse.data.caseStudies.total || 0);
+          }
+          if (statusResponse.data?.byType) {
+            setTypeCounts({
+              sata: statusResponse.data.byType.sata || { total: 0 },
+              unfolding: statusResponse.data.byType.unfolding || { total: 0 },
+              standalone: statusResponse.data.byType.standalone || { total: 0 },
+            });
           }
         } catch (statusErr) {
           console.error('Failed to load question status counts', statusErr);
@@ -529,19 +531,12 @@ const TestCustomization = () => {
     }
   };
 
-  // ─── Compute question type filter totals for pills ───
-  const unusedTotal = (activeStatusCounts.unused || 0) + (activeStatusCounts.unusedNgn || 0);
-  const incorrectTotal = (activeStatusCounts.incorrect || 0) + (activeStatusCounts.incorrectNgn || 0);
-  const markedTotal = (activeStatusCounts.marked || 0) + (activeStatusCounts.markedNgn || 0);
-  const correctTotal = (activeStatusCounts.correct || 0) + (activeStatusCounts.correctNgn || 0);
-  const omittedTotal = (activeStatusCounts.omitted || 0) + (activeStatusCounts.omittedNgn || 0);
-
   // ─── Question type filter pills ───
   const questionTypePills = [
     { key: 'all', label: `All (${totalQuestionBank})` },
-    { key: 'sata', label: `SATA (${unusedTotal})` },
-    { key: 'unfolding', label: `Unfolding Case Study (${caseStudyTotalCount})` },
-    { key: 'standalone', label: `Standalone Case Study (${unusedTotal})` },
+    { key: 'sata', label: `SATA (${typeCounts.sata.total || 0})` },
+    { key: 'unfolding', label: `Unfolding Case Study (${typeCounts.unfolding.total || 0})` },
+    { key: 'standalone', label: `Standalone Case Study (${typeCounts.standalone.total || 0})` },
   ];
 
   // ─── Active status filter for display ───
@@ -695,19 +690,18 @@ const TestCustomization = () => {
           {/* Status Filter */}
           <div className="tc-status-list">
             {[
-              { key: 'unused', label: 'Unused', count: unusedTotal, classic: activeStatusCounts.unused || 0, ngn: activeStatusCounts.unusedNgn || 0 },
-              { key: 'marked', label: 'Marked', count: markedTotal, classic: activeStatusCounts.marked || 0, ngn: activeStatusCounts.markedNgn || 0 },
-              { key: 'incorrect', label: 'Incorrect', count: incorrectTotal, classic: activeStatusCounts.incorrect || 0, ngn: activeStatusCounts.incorrectNgn || 0 },
-              { key: 'all', label: 'All', count: totalQuestionBank, classic: 0, ngn: 0 },
-              { key: 'correct', label: 'Correct On Reattempt', count: correctTotal, classic: activeStatusCounts.correct || 0, ngn: activeStatusCounts.correctNgn || 0 },
-              { key: 'omitted', label: 'Omitted', count: omittedTotal, classic: activeStatusCounts.omitted || 0, ngn: activeStatusCounts.omittedNgn || 0 },
+              { key: 'unused', label: 'Unused', count: activeStatusCounts.unused || 0 },
+              { key: 'marked', label: 'Marked', count: activeStatusCounts.marked || 0 },
+              { key: 'incorrect', label: 'Incorrect', count: activeStatusCounts.incorrect || 0 },
+              { key: 'all', label: 'All', count: totalQuestionBank },
+              { key: 'correct', label: 'Correct On Reattempt', count: activeStatusCounts.correct || 0 },
+              { key: 'omitted', label: 'Omitted', count: activeStatusCounts.omitted || 0 },
             ].map((status) => (
               <div
                 key={status.key}
                 className={`tc-radio-item ${statusFilters[status.key === 'all' ? 'unused' : status.key] ? 'tc-radio-item--active' : ''}`}
                 onClick={() => {
                   if (status.key === 'all') {
-                    // Toggle all on
                     setStatusFilters({ unused: true, incorrect: true, marked: true, omitted: true, correct: true });
                   } else {
                     setStatusFilters(prev => ({ ...prev, [status.key]: !prev[status.key] }));
@@ -716,11 +710,7 @@ const TestCustomization = () => {
               >
                 {renderRadioCircle(statusFilters[status.key === 'all' ? 'unused' : status.key])}
                 <span className="tc-radio-text">{status.label}</span>
-                <span className="tc-status-count">
-                  {status.key !== 'all' && status.classic > 0 && status.ngn > 0
-                    ? `${status.classic} Classic + ${status.ngn} NGN`
-                    : status.count}
-                </span>
+                <span className="tc-status-count">{status.count}</span>
               </div>
             ))}
           </div>
