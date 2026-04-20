@@ -42,7 +42,7 @@ const TestCustomization = () => {
   const [timed, setTimed] = useState(true);
   const [tutorMode, setTutorMode] = useState(false);
   const [testType, setTestType] = useState('practice'); // 'practice', 'cat', 'assessment'
-  const [questionTypeFilter, setQuestionTypeFilter] = useState('mixed');
+  const [questionTypeFilter, setQuestionTypeFilter] = useState('all'); // 'all', 'sata', 'unfolding', 'standalone'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
@@ -538,14 +538,10 @@ const TestCustomization = () => {
 
   // ─── Question type filter pills ───
   const questionTypePills = [
-    { key: 'all', label: `ALL (${totalQuestionBank})` },
+    { key: 'all', label: `All (${totalQuestionBank})` },
     { key: 'sata', label: `SATA (${unusedTotal})` },
-    { key: 'multipleChoice', label: `MC (${totalQuestionBank})` },
-    { key: 'ngn', label: `NGN (${caseStudyTotalCount})` },
-    { key: 'orderedResponse', label: `Ordered (${unusedTotal})` },
-    { key: 'fillInBlank', label: `Fill-in (${unusedTotal})` },
-    { key: 'hotspot', label: `Hotspot (${unusedTotal})` },
-    { key: 'dragDrop', label: `Drag & Drop (${unusedTotal})` },
+    { key: 'unfolding', label: `Unfolding Case Study (${caseStudyTotalCount})` },
+    { key: 'standalone', label: `Standalone Case Study (${unusedTotal})` },
   ];
 
   // ─── Active status filter for display ───
@@ -688,7 +684,8 @@ const TestCustomization = () => {
             {questionTypePills.map((pill) => (
               <div
                 key={pill.key}
-                className={`tc-filter-pill ${pill.key === 'all' ? 'tc-filter-pill--active' : ''}`}
+                className={`tc-filter-pill ${questionTypeFilter === pill.key ? 'tc-filter-pill--active' : ''}`}
+                onClick={() => setQuestionTypeFilter(pill.key)}
               >
                 {pill.label}
               </div>

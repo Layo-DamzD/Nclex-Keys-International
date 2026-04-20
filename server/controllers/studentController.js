@@ -611,13 +611,23 @@ const generateTest = async (req, res) => {
     }
     // If both are true or both are false, don't filter by isNextGen
 
-    // Filter by question type format: Classic (non-case-study), NGN (case-study only), Mixed (both)
-    if (questionTypeFilter === 'classic') {
+    // Filter by question type: sata, unfolding case study, standalone case study, all
+    if (questionTypeFilter === 'sata') {
+      query.type = 'sata';
+    } else if (questionTypeFilter === 'unfolding') {
+      // Unfolding = layered case studies (multiple questions per case)
+      query.type = 'case-study';
+      query.caseStudyType = 'layered';
+    } else if (questionTypeFilter === 'standalone') {
+      // Standalone = case studies with only 1 sub-question (bowtie/trend or layered with single Q)
+      query.type = 'case-study';
+      query.$expr = { $lte: [{ $size: { $ifNull: ['$questions', []] } }, 1] };
+    } else if (questionTypeFilter === 'classic') {
       query.type = { $ne: 'case-study' };
     } else if (questionTypeFilter === 'ngn') {
       query.type = 'case-study';
     }
-    // 'mixed' → no filter on type (default)
+    // 'all', 'mixed' → no filter on type (default)
 
     // Filter by difficulty (e.g., for Assessment mode which uses 'hard')
     if (difficulty) {
