@@ -1502,11 +1502,22 @@ const TestSession = () => {
           </div>
           <div className="d-flex align-items-center gap-2">
             {settings.timed && <div className="timer">Time left: {formatTime(timeLeft)}</div>}
-            <button type="button" className={`btn btn-${isPaused ? 'success' : 'warning'} btn-sm`} onClick={togglePause}>
-              {isPaused ? 'Resume' : 'Pause'}
-            </button>
+            {testType !== 'assessment' && (
+              <button type="button" className={`btn btn-${isPaused ? 'success' : 'warning'} btn-sm`} onClick={togglePause}>
+                {isPaused ? 'Resume' : 'Pause'}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Proctoring banner for assessment */}
+        {testType === 'assessment' && (
+          <div style={{ background: '#C62828', color: '#fff', textAlign: 'center', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <i className="fas fa-video" />
+            <span>Proctoring Active — Do not leave this window or switch tabs</span>
+            <i className="fas fa-circle" style={{ fontSize: '0.5rem', animation: 'pulse 1.5s infinite', color: '#ff5252' }} />
+          </div>
+        )}
 
         <div className="case-study-layout row">
           {/* Left panel – patient data */}
@@ -2103,11 +2114,22 @@ const TestSession = () => {
         </div>
         <div className="d-flex align-items-center gap-2">
           {settings.timed && <div className="timer">Time left: {formatTime(timeLeft)}</div>}
-          <button type="button" className={`btn btn-${isPaused ? 'success' : 'warning'} btn-sm`} onClick={togglePause}>
-            {isPaused ? 'Resume' : 'Pause'}
-          </button>
+          {testType !== 'assessment' && (
+            <button type="button" className={`btn btn-${isPaused ? 'success' : 'warning'} btn-sm`} onClick={togglePause}>
+              {isPaused ? 'Resume' : 'Pause'}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Proctoring banner for assessment */}
+      {testType === 'assessment' && (
+        <div style={{ background: '#C62828', color: '#fff', textAlign: 'center', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          <i className="fas fa-video" />
+          <span>Proctoring Active — Do not leave this window or switch tabs</span>
+          <i className="fas fa-circle" style={{ fontSize: '0.5rem', animation: 'pulse 1.5s infinite', color: '#ff5252' }} />
+        </div>
+      )}
 
       <div className="exam-inline-toolbar">
         <button type="button" className="exam-toolbar-btn" onClick={() => setShowCalculator(true)} disabled={isPaused}>

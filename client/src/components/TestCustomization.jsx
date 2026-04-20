@@ -391,8 +391,8 @@ const TestCustomization = () => {
 
     const isAssessment = testType === 'assessment';
     const isPractice = testType === 'practice';
-    const effectiveTutorMode = isAssessment ? true : tutorMode;
-    const effectiveTimed = isAssessment ? true : timed;
+    const effectiveTutorMode = false; // No tutoring for CAT or Assessment
+    const effectiveTimed = (isAssessment || testType === 'cat') ? true : timed;
 
     if (categoryTab === 'clientNeeds') {
       if (currentAvailable === 0) {
@@ -571,26 +571,36 @@ const TestCustomization = () => {
       {/* Q-BANK MODE */}
       <div className="tc-section-title">Q-BANK MODE</div>
       <div>
-        {/* Tutorial Toggle */}
-        <div className="tc-toggle-row">
-          <div className="tc-toggle-label" onClick={() => handleTutorToggle(!tutorMode)}>
-            <i className="fas fa-book-open" />
-            <span>Tutorial</span>
+        {/* Tutorial Toggle — only for practice mode */}
+        {testType === 'practice' && (
+          <div className="tc-toggle-row">
+            <div className="tc-toggle-label" onClick={() => handleTutorToggle(!tutorMode)}>
+              <i className="fas fa-book-open" />
+              <span>Tutorial</span>
+            </div>
+            <label className="tc-toggle">
+              <input type="checkbox" checked={tutorMode} onChange={() => handleTutorToggle(!tutorMode)} />
+              <span className="tc-toggle__slider" />
+            </label>
           </div>
-          <label className="tc-toggle">
-            <input type="checkbox" checked={tutorMode} onChange={() => handleTutorToggle(!tutorMode)} />
-            <span className="tc-toggle__slider" />
-          </label>
-        </div>
+        )}
 
-        {/* Timed Toggle */}
-        <div className="tc-toggle-row">
-          <div className="tc-toggle-label" onClick={() => handleTimedToggle(!timed)}>
+        {/* Timed Toggle — always available, forced on for CAT/assessment */}
+        <div className="tc-toggle-row" style={{ opacity: (testType === 'cat' || testType === 'assessment') ? 0.5 : 1 }}>
+          <div className="tc-toggle-label" onClick={() => {
+            if (testType === 'cat' || testType === 'assessment') return;
+            handleTimedToggle(!timed);
+          }}>
             <i className="fas fa-clock" />
-            <span>Timed</span>
+            <span>Timed{(testType === 'cat' || testType === 'assessment') ? ' (Required)' : ''}</span>
           </div>
           <label className="tc-toggle">
-            <input type="checkbox" checked={timed} onChange={() => handleTimedToggle(!timed)} />
+            <input
+              type="checkbox"
+              checked={testType === 'cat' || testType === 'assessment' ? true : timed}
+              disabled={testType === 'cat' || testType === 'assessment'}
+              onChange={() => handleTimedToggle(!timed)}
+            />
             <span className="tc-toggle__slider" />
           </label>
         </div>
@@ -624,7 +634,7 @@ const TestCustomization = () => {
       </div>
 
       {/* Tutorial Info Box */}
-      {tutorMode && (
+      {tutorMode && testType === 'practice' && (
         <div className="tc-info-box">
           <div className="tc-info-box__header">
             <i className="fas fa-file-alt" />
@@ -769,30 +779,45 @@ const TestCustomization = () => {
         </>
       )}
 
-      {/* Assessment info */}
+      {/* Assessment info + proctoring warning */}
       {testType === 'assessment' && (
-        <div className="tc-info-box" style={{ borderColor: '#FFE0B2' }}>
-          <div className="tc-info-box__header" style={{ background: 'var(--orange)' }}>
-            <i className="fas fa-clipboard-check" />
-            <span>Readiness Assessment</span>
+        <>
+          {/* Proctoring Warning */}
+          <div className="tc-info-box" style={{ borderColor: '#C62828' }}>
+            <div className="tc-info-box__header" style={{ background: '#C62828' }}>
+              <i className="fas fa-video" />
+              <span>Proctoring Enabled</span>
+            </div>
+            <div className="tc-info-box__body">
+              This assessment is proctored. Your screen, webcam, and browser activity are monitored throughout the exam. Leaving the test window, switching tabs, or using unauthorized materials will be flagged as a violation and may result in automatic termination of your exam. Ensure you are in a quiet, well-lit environment with no distractions before proceeding.
+            </div>
           </div>
-          <div className="tc-info-box__body">
-            Assessment mode uses real NCLEX CAT. The algorithm selects questions based on your ability, adjusting difficulty as you answer. Fixed at 150 questions with timed mode and tutor feedback.
+          {/* Assessment Info */}
+          <div className="tc-info-box" style={{ borderColor: '#FFE0B2' }}>
+            <div className="tc-info-box__header" style={{ background: 'var(--orange)' }}>
+              <i className="fas fa-clipboard-check" />
+              <span>Readiness Assessment</span>
+            </div>
+            <div className="tc-info-box__body">
+              Assessment mode uses real NCLEX CAT. The algorithm selects questions based on your ability, adjusting difficulty as you answer. Fixed at 150 questions with timed mode. Pause and tutorial features are disabled. The timer cannot be stopped once the assessment begins.
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* CAT info */}
       {testType === 'cat' && (
-        <div className="tc-info-box" style={{ borderColor: '#E1BEE7' }}>
-          <div className="tc-info-box__header" style={{ background: '#7B1FA2' }}>
-            <i className="fas fa-brain" />
-            <span>CAT Mode</span>
+        <>
+          <div className="tc-info-box" style={{ borderColor: '#E1BEE7' }}>
+            <div className="tc-info-box__header" style={{ background: '#7B1FA2' }}>
+              <i className="fas fa-brain" />
+              <span>CAT Mode</span>
+            </div>
+            <div className="tc-info-box__body">
+              CAT automatically selects questions based on your ability level. The test ends when the algorithm determines a pass/fail result with 95% confidence. No need to select categories or question count. Tutorial and pause features are disabled during CAT.
+            </div>
           </div>
-          <div className="tc-info-box__body">
-            CAT automatically selects questions based on your ability level. The test ends when the algorithm determines a pass/fail result with 95% confidence. No need to select categories or question count.
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
@@ -978,7 +1003,33 @@ const TestCustomization = () => {
       </div>
 
       {/* Bottom Action Buttons */}
-      {(step === 1 && testType !== 'cat') && (
+      {(step === 1 && testType === 'assessment') && (
+        <div className="tc-actions">
+          <button
+            className="tc-btn-next tc-btn-next--full tc-btn-generate"
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? 'Loading...' : 'START ASSESSMENT'}
+          </button>
+        </div>
+      )}
+
+      {(step === 1 && testType === 'cat') && (
+        <div className="tc-actions">
+          <button
+            className="tc-btn-next tc-btn-next--full tc-btn-generate"
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? 'Loading...' : 'START CAT'}
+          </button>
+        </div>
+      )}
+
+      {(step === 1 && testType === 'practice') && (
         <div className="tc-actions">
           <button
             className="tc-btn-next tc-btn-next--full"
@@ -1042,7 +1093,7 @@ const TestCustomization = () => {
         <div className="tc-loading">
           <div className="tc-loading__spinner" />
           <span className="tc-loading__text">
-            {testType === 'cat' ? 'Starting CAT...' : 'Loading question pool...'}
+            {testType === 'cat' ? 'Starting CAT...' : testType === 'assessment' ? 'Initializing proctoring...' : 'Loading question pool...'}
           </span>
         </div>
       )}

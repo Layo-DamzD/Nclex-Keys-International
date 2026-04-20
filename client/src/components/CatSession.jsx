@@ -1812,9 +1812,7 @@ const CatSession = () => {
             <div className="timer" style={{ fontWeight: 700, fontSize: '1.1rem' }}>
               <i className="fas fa-clock me-1"></i>{formatTime(timeLeft)}
             </div>
-            <button type="button" className={`btn btn-${isPaused ? 'success' : 'warning'} btn-sm`} onClick={togglePause} disabled={loading}>
-              {isPaused ? 'Resume' : 'Pause'}
-            </button>
+            {/* Pause button hidden — CAT does not allow pausing */}
             {isMarked && (
               <span style={{ color: '#fbbf24', fontSize: '1.1rem' }} title="Marked for review">
                 <i className="fas fa-flag"></i>
@@ -2025,9 +2023,7 @@ const CatSession = () => {
           <div className="timer" style={{ fontWeight: 700, fontSize: '1.1rem' }}>
             <i className="fas fa-clock me-1"></i>{formatTime(timeLeft)}
           </div>
-          <button type="button" className={`btn btn-${isPaused ? 'success' : 'warning'} btn-sm`} onClick={togglePause} disabled={loading}>
-            {isPaused ? 'Resume' : 'Pause'}
-          </button>
+          {/* Pause button hidden — CAT does not allow pausing */}
           {isMarked && (
             <span style={{ color: '#fbbf24', fontSize: '1.1rem' }} title="Marked for review">
               <i className="fas fa-flag"></i>
