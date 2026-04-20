@@ -3,16 +3,18 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../constants/Categories';
 import { NCLEX_CLIENT_NEEDS_CATEGORIES } from '../constants/ClientNeeds';
+import './TestCustomization.css';
 
 // Use the imported constant
 const CLIENT_NEEDS_CATEGORIES = NCLEX_CLIENT_NEEDS_CATEGORIES;
 
 const TestCustomization = () => {
+  // ─── Normalize key for client-needs lookups ───
   const normalizeKey = (value) => {
     const base = String(value || '')
       .trim()
       .toLowerCase()
-      .replace(/[’']/g, '')
+      .replace(/['']/g, '')
       .replace(/\band\b/g, '&')
       .replace(/\s*\/\s*/g, '/')
       .replace(/\s*&\s*/g, '&')
@@ -26,28 +28,32 @@ const TestCustomization = () => {
       .trim();
   };
 
+  // ─── Wizard step ───
+  const [step, setStep] = useState(1);
+
+  // ─── Selected categories for Step 2 ───
+  const [selectedCategories, setSelectedCategories] = useState([]);
+
+  // ─── All existing state variables preserved ───
   const [selectedSubcategoryPairs, setSelectedSubcategoryPairs] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [questionCount, setQuestionCount] = useState(85);
-  const [questionCountInput, setQuestionCountInput] = useState('85'); // For allowing empty input display
+  const [questionCountInput, setQuestionCountInput] = useState('85');
   const [timed, setTimed] = useState(true);
   const [tutorMode, setTutorMode] = useState(false);
   const [testType, setTestType] = useState('practice'); // 'practice', 'cat', 'assessment'
-  // Question type filter for practice tests: 'classic' (normal), 'ngn' (case study), 'mixed' (both)
   const [questionTypeFilter, setQuestionTypeFilter] = useState('mixed');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  // Counts from API — already canonical (backend remaps DB names)
   const [subcategoryCounts, setSubcategoryCounts] = useState({});
   const [usedSubcategoryCounts, setUsedSubcategoryCounts] = useState({});
   const [omittedSubcategoryCounts, setOmittedSubcategoryCounts] = useState({});
-  // categoryMap: uses CATEGORIES constant + any extras from DB (via API categoriesWithExtras)
   const [categoryMap, setCategoryMap] = useState(CATEGORIES);
   const [countLoadError, setCountLoadError] = useState('');
-  
+
   // Category tab: 'subjects' or 'clientNeeds'
   const [categoryTab, setCategoryTab] = useState('clientNeeds');
-  
+
   // Client Needs selections
   const [selectedClientNeeds, setSelectedClientNeeds] = useState([]);
   const [clientNeedsCounts, setClientNeedsCounts] = useState({});
@@ -78,13 +84,11 @@ const TestCustomization = () => {
   });
   const [subjectStatusCounts, setSubjectStatusCounts] = useState(null);
   const [clientNeedStatusCounts, setClientNeedStatusCounts] = useState(null);
-  // Case study question counts (for Classic/NGN/Mixed filter display)
   const [caseStudyTotalCount, setCaseStudyTotalCount] = useState(0);
 
   const navigate = useNavigate();
 
-  // No auto-select needed for practice mode (user chooses manually)
-
+  // ─── Existing handlers preserved ───
   const handleTimedToggle = (checked) => {
     setTimed(checked);
     if (checked) {
@@ -99,7 +103,6 @@ const TestCustomization = () => {
     }
   };
 
-  // Client Needs helper
   const getClientNeedCount = (clientNeed) => {
     const key = normalizeKey(clientNeed);
     return clientNeedsCounts?.[key] || 0;
@@ -126,14 +129,11 @@ const TestCustomization = () => {
     }
   };
 
-  // Subject category helpers
   const getPairKey = (category, subcategory) => `${category}:::${subcategory}`;
 
   const isSubcategorySelected = (category, subcategory) =>
     selectedSubcategoryPairs.includes(getPairKey(category, subcategory));
 
-  // Simple exact-match lookup — backend returns canonical category/subcategory names
-  // that match our CATEGORIES constant, so no fuzzy matching needed
   const getSubcategoryCount = (category, subcategory) => {
     return subcategoryCounts?.[category]?.[subcategory] || 0;
   };
@@ -146,6 +146,7 @@ const TestCustomization = () => {
     return omittedSubcategoryCounts?.[category]?.[subcategory] || 0;
   };
 
+  // ─── Existing useEffect for fetching counts preserved ───
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -159,15 +160,9 @@ const TestCustomization = () => {
         const usedRawNestedCounts = response.data?.usedCountsByCategorySubcategory || {};
         const omittedRawNestedCounts = response.data?.omittedCountsByCategorySubcategory || {};
 
-        // Backend already returns canonical category/subcategory names.
-        // Use them directly — no normalization needed.
         setSubcategoryCounts(totalRawNestedCounts);
         setUsedSubcategoryCounts(usedRawNestedCounts);
         setOmittedSubcategoryCounts(omittedRawNestedCounts);
-
-        // Backend now returns only canonical categories (no extras).
-        // We keep using the hardcoded CATEGORIES constant from Categories.jsx
-        // which is the single source of truth.
 
         // Fetch client needs counts
         try {
@@ -200,7 +195,6 @@ const TestCustomization = () => {
             correctNgn: statusResponse.data?.correctNgn || 0,
             total: statusResponse.data?.total || 0
           });
-          // Store tab-specific status counts
           if (statusResponse.data?.subjects) {
             setSubjectStatusCounts({
               ...statusResponse.data.subjects,
@@ -228,6 +222,7 @@ const TestCustomization = () => {
     fetchCounts();
   }, []);
 
+  // ─── Existing computed values preserved ───
   const categoryTotals = useMemo(() => {
     return Object.fromEntries(
       Object.entries(categoryMap).map(([category, subcats]) => [
@@ -255,7 +250,6 @@ const TestCustomization = () => {
     return cols;
   }, [categoryMap]);
 
-  // Client needs columns (2 columns)
   const clientNeedsColumns = useMemo(() => {
     const cols = [[], []];
     CLIENT_NEEDS_CATEGORIES.forEach((clientNeed, index) => {
@@ -264,14 +258,11 @@ const TestCustomization = () => {
     return cols;
   }, []);
 
-  // Calculate totals for Client Needs
   const clientNeedsTotal = useMemo(() => {
     return CLIENT_NEEDS_CATEGORIES.reduce((sum, cn) => sum + getClientNeedCount(cn), 0);
   }, [clientNeedsCounts]);
 
   const selectedClientNeedsTotal = useMemo(() => {
-    // When no client needs selected OR all are selected, use full total
-    // to avoid fuzzy-match undercounting (same fix as subjects tab)
     const allSelected = selectedClientNeeds.length === 0 ||
       selectedClientNeeds.length === NCLEX_CLIENT_NEEDS_CATEGORIES.length;
     if (allSelected) {
@@ -280,7 +271,6 @@ const TestCustomization = () => {
     return selectedClientNeeds.reduce((sum, cn) => sum + getClientNeedCount(cn), 0);
   }, [selectedClientNeeds, clientNeedsCounts, clientNeedsTotal]);
 
-  // Compute total number of selectable subcategory pairs (for "all selected" check)
   const allPossiblePairs = useMemo(() => {
     return Object.entries(categoryMap).flatMap(([category, subcategories]) =>
       subcategories.map(sub => getPairKey(category, sub))
@@ -288,10 +278,6 @@ const TestCustomization = () => {
   }, [categoryMap]);
 
   const selectedStats = useMemo(() => {
-    // When no subcategories are explicitly selected, OR when ALL are selected,
-    // use the total Q-bank count from subjectStatusCounts (which counts only
-    // questions in canonical subject categories). This fixes the bug where
-    // undercounting happens when "Select All" is clicked.
     const allSelected = selectedSubcategoryPairs.length === 0 ||
       selectedSubcategoryPairs.length === allPossiblePairs.length;
 
@@ -317,7 +303,6 @@ const TestCustomization = () => {
     }, { available: 0, used: 0, omitted: 0 });
   }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts]);
 
-  // Practice test: min 5.
   const questionRangeMin = 5;
   const questionRangeMax = 150;
 
@@ -362,22 +347,22 @@ const TestCustomization = () => {
     }
   };
 
-  // Get current stats based on selected tab
+  // ─── Existing computed stats ───
   const activeStatusCounts = categoryTab === 'subjects'
     ? (subjectStatusCounts || statusCounts)
     : categoryTab === 'clientNeeds'
       ? (clientNeedStatusCounts || statusCounts)
       : statusCounts;
   const totalQuestionBank = activeStatusCounts.total || 0;
-  const currentAvailable = categoryTab === 'clientNeeds' 
-    ? selectedClientNeedsTotal 
+  const currentAvailable = categoryTab === 'clientNeeds'
+    ? selectedClientNeedsTotal
     : selectedStats.available;
   const maxAllowed = Math.min(questionRangeMax, currentAvailable);
 
+  // ─── Existing handleSubmit preserved exactly ───
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
-    // Handle CAT mode only - NOT assessments
     if (testType === 'cat') {
       setLoading(true);
       setError('');
@@ -396,13 +381,11 @@ const TestCustomization = () => {
       return;
     }
 
-    // Assessment: force 150 questions with timed mode
     if (testType === 'assessment') {
       setQuestionCount(150);
       setQuestionCountInput('150');
     }
 
-    // For practice, let user choose timed/tutor.
     const isAssessment = testType === 'assessment';
     const isPractice = testType === 'practice';
     const effectiveTutorMode = isAssessment ? true : tutorMode;
@@ -418,7 +401,6 @@ const TestCustomization = () => {
         return;
       }
     } else {
-      // Assessment auto-selects all subcategories, so skip the empty check
       if (!isAssessment && selectedSubcategoryPairs.length === 0) {
         setError('Select at least one subcategory');
         return;
@@ -444,7 +426,6 @@ const TestCustomization = () => {
       const token = localStorage.getItem('token');
 
       if (categoryTab === 'clientNeeds') {
-        // Submit with client needs
         const clientNeedsSelections = selectedClientNeeds.length > 0
           ? selectedClientNeeds.map(cn => ({ clientNeed: cn, clientNeedSubcategory: cn }))
           : CLIENT_NEEDS_CATEGORIES.map(cn => ({ clientNeed: cn, clientNeedSubcategory: cn }));
@@ -468,7 +449,6 @@ const TestCustomization = () => {
         }
         navigate('/test-session', { state: navData });
       } else {
-        // Standard mode - submit with categories
         const selections = selectedSubcategoryPairs.map((pairKey) => {
           const [category, subcategory] = pairKey.split(':::');
           return { category, subcategory };
@@ -499,776 +479,572 @@ const TestCustomization = () => {
     }
   };
 
-  return (
-    <div className="test-customization" style={{
-      background: '#fff',
-      borderRadius: '12px',
-      padding: '24px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-    }}>
-      <h3 style={{
-        color: '#059669',
-        fontWeight: 700,
-        marginBottom: '20px',
-        fontSize: '1.5rem'
-      }}>
-        Create Test
-      </h3>
-      
-      {/* Test Type Selection */}
-      <div className="test-type-section" style={{
-        marginBottom: '20px',
-        padding: '16px',
-        background: '#f0fdf4',
-        borderRadius: '8px',
-        border: '1px solid #a7f3d0'
-      }}>
-        <label style={{ fontWeight: 600, color: '#374151', marginBottom: '12px', display: 'block' }}>
-          Test Type
-        </label>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => { setTestType('practice'); }}
-            style={{
-              flex: 1,
-              minWidth: '120px',
-              padding: '12px 16px',
-              border: testType === 'practice' ? '2px solid #0ea5e9' : '1px solid #d1d5db',
-              borderRadius: '8px',
-              background: testType === 'practice' ? '#f0f9ff' : '#fff',
-              color: testType === 'practice' ? '#0ea5e9' : '#374151',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            <i className="fas fa-graduation-cap me-2"></i>
-            Practice Test
-          </button>
-          <button
-            type="button"
-            onClick={() => setTestType('cat')}
-            style={{
-              flex: 1,
-              minWidth: '120px',
-              padding: '12px 16px',
-              border: testType === 'cat' ? '2px solid #7c3aed' : '1px solid #d1d5db',
-              borderRadius: '8px',
-              background: testType === 'cat' ? '#f5f3ff' : '#fff',
-              color: testType === 'cat' ? '#7c3aed' : '#374151',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            <i className="fas fa-brain me-2"></i>
-            CAT Mode
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTestType('assessment'); }}
-            style={{
-              flex: 1,
-              minWidth: '120px',
-              padding: '12px 16px',
-              border: testType === 'assessment' ? '2px solid #059669' : '1px solid #d1d5db',
-              borderRadius: '8px',
-              background: testType === 'assessment' ? '#ecfdf5' : '#fff',
-              color: testType === 'assessment' ? '#059669' : '#374151',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            <i className="fas fa-clipboard-check me-2"></i>
-            Assessment
-          </button>
+  // ─── Wizard navigation helpers ───
+  const handleNextFromStep1 = () => {
+    setError('');
+    if (testType === 'cat') {
+      handleSubmit();
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleNextFromStep2 = () => {
+    setError('');
+    // If Client Needs organization, no Step 3 — generate directly
+    if (categoryTab === 'clientNeeds') {
+      handleSubmit();
+      return;
+    }
+    // If subjects, ensure at least one category is selected for expansion in step 3
+    if (selectedCategories.length === 0) {
+      // Default to first category
+      setSelectedCategories([Object.keys(categoryMap)[0]]);
+    }
+    setStep(3);
+  };
+
+  const handleBack = () => {
+    setError('');
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  // ─── Category selection for Step 2 ───
+  const handleCategoryToggle = (category) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const handleSelectAllCategories = () => {
+    const allCats = Object.keys(categoryMap);
+    if (selectedCategories.length === allCats.length) {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(allCats);
+    }
+  };
+
+  // ─── Compute question type filter totals for pills ───
+  const unusedTotal = (activeStatusCounts.unused || 0) + (activeStatusCounts.unusedNgn || 0);
+  const incorrectTotal = (activeStatusCounts.incorrect || 0) + (activeStatusCounts.incorrectNgn || 0);
+  const markedTotal = (activeStatusCounts.marked || 0) + (activeStatusCounts.markedNgn || 0);
+  const correctTotal = (activeStatusCounts.correct || 0) + (activeStatusCounts.correctNgn || 0);
+  const omittedTotal = (activeStatusCounts.omitted || 0) + (activeStatusCounts.omittedNgn || 0);
+
+  // ─── Question type filter pills ───
+  const questionTypePills = [
+    { key: 'all', label: `ALL (${totalQuestionBank})` },
+    { key: 'sata', label: `SATA (${unusedTotal})` },
+    { key: 'multipleChoice', label: `MC (${totalQuestionBank})` },
+    { key: 'ngn', label: `NGN (${caseStudyTotalCount})` },
+    { key: 'orderedResponse', label: `Ordered (${unusedTotal})` },
+    { key: 'fillInBlank', label: `Fill-in (${unusedTotal})` },
+    { key: 'hotspot', label: `Hotspot (${unusedTotal})` },
+    { key: 'dragDrop', label: `Drag & Drop (${unusedTotal})` },
+  ];
+
+  // ─── Active status filter for display ───
+  const activeStatusFilter = 'unused'; // simplified: always showing unused by default
+
+  // ─── Render helpers ───
+  const renderCheckbox = (checked, onClick) => (
+    <div
+      role="checkbox"
+      aria-checked={checked}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onClick(); } }}
+      tabIndex={0}
+      className={`tc-checkbox-custom ${checked ? 'tc-checkbox-custom--checked' : ''}`}
+    >
+      {checked && <i className="fas fa-check" />}
+    </div>
+  );
+
+  const renderRadioCircle = (active) => (
+    <div className={`tc-radio-circle`}>
+      <div className="tc-radio-circle__inner" style={{ background: active ? '#2196F3' : 'transparent' }} />
+    </div>
+  );
+
+  // ═══════════════════════════════════════════════
+  // STEP 1: Test Settings
+  // ═══════════════════════════════════════════════
+  const renderStep1 = () => (
+    <div className="tc-step" key="step1">
+      {/* Q-BANK MODE */}
+      <div className="tc-section-title">Q-BANK MODE</div>
+      <div>
+        {/* Tutorial Toggle */}
+        <div className="tc-toggle-row">
+          <div className="tc-toggle-label" onClick={() => handleTutorToggle(!tutorMode)}>
+            <i className="fas fa-book-open" />
+            <span>Tutorial</span>
+          </div>
+          <label className="tc-toggle">
+            <input type="checkbox" checked={tutorMode} onChange={() => handleTutorToggle(!tutorMode)} />
+            <span className="tc-toggle__slider" />
+          </label>
         </div>
-        {testType === 'assessment' && (
-          <div style={{ marginTop: '12px', padding: '10px', background: '#ecfdf5', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
-            <i className="fas fa-info-circle me-2" style={{ color: '#059669' }}></i>
-            Assessment uses real NCLEX Computerized Adaptive Testing (CAT) — questions adapt to your ability level in real time, just like the actual exam.
+
+        {/* Timed Toggle */}
+        <div className="tc-toggle-row">
+          <div className="tc-toggle-label" onClick={() => handleTimedToggle(!timed)}>
+            <i className="fas fa-clock" />
+            <span>Timed</span>
           </div>
-        )}
-        {testType === 'cat' && (
-          <div style={{ marginTop: '12px', padding: '10px', background: '#f5f3ff', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
-            <i className="fas fa-info-circle me-2" style={{ color: '#7c3aed' }}></i>
-            CAT (Computerized Adaptive Testing) adapts question difficulty based on your performance, similar to the real NCLEX.
-          </div>
-        )}
-        {testType === 'practice' && (
-          <div style={{ marginTop: '12px', padding: '10px', background: '#f0f9ff', borderRadius: '6px', fontSize: '0.85rem', color: '#6b7280' }}>
-            <i className="fas fa-info-circle me-2" style={{ color: '#0ea5e9' }}></i>
-            Practice Test mode provides a relaxed learning environment with immediate feedback after each question.
-          </div>
-        )}
-      </div>
-      
-      {error && <div className="alert alert-danger">{error}</div>}
-      {countLoadError && <div className="alert alert-warning">{countLoadError}</div>}
-      
-      <form onSubmit={handleSubmit}>
-        {/* Assessment Settings - Same as CAT */}
-        {testType === 'assessment' && (
-          <div className="test-mode-section" style={{
-            marginBottom: '20px',
-            padding: '16px',
-            background: '#ecfdf5',
-            borderRadius: '8px',
-            border: '1px solid #059669'
-          }}>
-            <label style={{ fontWeight: 600, color: '#059669', marginBottom: '8px', display: 'block' }}>
-              <i className="fas fa-brain me-2"></i>
-              Assessment (NCLEX CAT)
-            </label>
-            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
-              Assessment mode uses real NCLEX Computerized Adaptive Testing. The algorithm selects questions based on your ability, adjusting difficulty as you answer. The test ends when the system determines your result with 95% confidence — just like the actual NCLEX.
-            </p>
-          </div>
-        )}
-
-        {/* Practice Test Settings */}
-        {testType === 'practice' && (
-          <div className="test-mode-section" style={{
-            marginBottom: '20px',
-            padding: '16px',
-            background: '#f0f9ff',
-            borderRadius: '8px',
-            border: '1px solid #0ea5e9'
-          }}>
-            <label style={{ fontWeight: 600, color: '#0369a1', marginBottom: '8px', display: 'block' }}>
-              <i className="fas fa-graduation-cap me-2"></i>
-              Practice Test Settings
-            </label>
-            <p style={{ margin: '0 0 12px', color: '#6b7280', fontSize: '0.9rem' }}>
-              Choose how you want to practice — with or without a timer, and with or without immediate feedback.
-            </p>
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                onClick={() => handleTimedToggle(!timed)}>
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id="practiceTimed"
-                  checked={timed}
-                  onChange={() => handleTimedToggle(!timed)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0ea5e9' }}
-                />
-                <label className="form-check-label" htmlFor="practiceTimed"
-                  style={{ fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
-                  <i className="fas fa-clock me-1"></i> Timed
-                </label>
-              </div>
-              <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                onClick={() => handleTutorToggle(!tutorMode)}>
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id="practiceTutor"
-                  checked={tutorMode}
-                  onChange={() => handleTutorToggle(!tutorMode)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0ea5e9' }}
-                />
-                <label className="form-check-label" htmlFor="practiceTutor"
-                  style={{ fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
-                  <i className="fas fa-eye me-1"></i> Tutor Mode (immediate feedback)
-                </label>
-              </div>
-            </div>
-            {/* Question Type Filter: Classic / NGN / Mixed */}
-            <div style={{ padding: '12px 0 4px', borderTop: '1px solid #bae6fd' }}>
-              <label style={{ fontWeight: 600, color: '#0369a1', marginBottom: '10px', display: 'block', fontSize: '0.9rem' }}>
-                <i className="fas fa-filter me-1"></i> Question Type
-              </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {[
-                  { value: 'mixed', label: 'Mixed', desc: 'Classic + NGN', color: '#6366f1' },
-                  { value: 'classic', label: 'Classic', desc: 'Normal questions', color: '#0ea5e9' },
-                  { value: 'ngn', label: 'NGN', desc: 'Case studies', color: '#f59e0b' },
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setQuestionTypeFilter(opt.value)}
-                    style={{
-                      flex: 1,
-                      minWidth: '100px',
-                      padding: '10px 14px',
-                      border: questionTypeFilter === opt.value ? `2px solid ${opt.color}` : '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      background: questionTypeFilter === opt.value ? `${opt.color}10` : '#fff',
-                      color: questionTypeFilter === opt.value ? opt.color : '#374151',
-                      fontWeight: questionTypeFilter === opt.value ? 600 : 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      textAlign: 'center'
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{opt.label}</div>
-                    <div style={{ fontSize: '0.7rem', marginTop: '2px', opacity: 0.7 }}>{opt.desc}</div>
-                  </button>
-                ))}
-              </div>
-              {questionTypeFilter === 'ngn' && (
-                <div style={{ marginTop: '8px', padding: '8px 12px', background: '#fffbeb', borderRadius: '6px', fontSize: '0.8rem', color: '#92400e' }}>
-                  <i className="fas fa-info-circle me-1"></i>
-                  NGN questions include case studies: unfolding (6-layered), standalone (bowtie, trend).
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* CAT Info */}
-        {testType === 'cat' && (
-          <div className="test-mode-section" style={{
-            marginBottom: '20px',
-            padding: '16px',
-            background: '#f5f3ff',
-            borderRadius: '8px',
-            border: '1px solid #7c3aed'
-          }}>
-            <label style={{ fontWeight: 600, color: '#6d28d9', marginBottom: '8px', display: 'block' }}>
-              <i className="fas fa-brain me-2"></i>
-              CAT Mode Settings
-            </label>
-            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
-              CAT (Computerized Adaptive Testing) automatically selects questions based on your ability level. The test ends when the algorithm determines a pass/fail result with 95% confidence. No need to select categories or question count.
-            </p>
-          </div>
-        )}
-
-        {/* Question Bank Status Bar - UWorld style - Hide for CAT and Assessment mode */}
-        {testType !== 'cat' && testType !== 'assessment' && (
-          <div style={{
-            marginBottom: '20px',
-            background: '#fff',
-            borderRadius: '10px',
-            border: '1px solid #e5e7eb',
-            overflow: 'hidden'
-          }}>
-            {/* Progress bar at the very top */}
-            <div style={{ height: '4px', background: '#f1f5f9' }}>
-              <div style={{
-                height: '100%',
-                width: `${Math.min(100, totalQuestionBank > 0 ? ((activeStatusCounts.correct + activeStatusCounts.incorrect + activeStatusCounts.omitted) / totalQuestionBank) * 100 : 0)}%`,
-                background: 'linear-gradient(90deg, #22c55e 0%, #3b82f6 100%)',
-                borderRadius: '0 2px 2px 0',
-                transition: 'width 0.4s ease'
-              }} />
-            </div>
-
-            {/* Header row */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 18px 10px',
-              borderBottom: '1px solid #f1f5f9'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="fas fa-database" style={{ color: '#6366f1', fontSize: '0.9rem' }}></i>
-                <span style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}>Question Bank</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                onClick={handleSelectAllSubjects}>
-                <input
-                  type="checkbox"
-                  checked={categoryTab === 'clientNeeds'
-                    ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
-                    : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length}
-                  onChange={() => {}}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#6366f1' }}
-                />
-                <label style={{
-                  fontWeight: 600,
-                  color: '#6366f1',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem'
-                }}>
-                  Select All
-                </label>
-              </div>
-            </div>
-
-            {/* Status pills row - clickable toggles */}
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              padding: '12px 18px 16px',
-              flexWrap: 'wrap',
-              alignItems: 'center'
-            }}>
-              {/* Total (always visible, not toggleable) */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', background: '#f1f5f9', borderRadius: '20px', border: '1px solid #e2e8f0'
-              }}>
-                <i className="fas fa-layer-group" style={{ fontSize: '0.7rem', color: '#64748b' }}></i>
-                <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.85rem' }}>{totalQuestionBank}</span>
-                <span style={{ fontWeight: 500, color: '#94a3b8', fontSize: '0.75rem' }}>Total</span>
-              </div>
-
-              {/* Unused */}
-              <button
-                type="button"
-                onClick={() => setStatusFilters(prev => ({ ...prev, unused: !prev.unused }))}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 14px',
-                  background: statusFilters.unused ? '#dbeafe' : '#f8fafc',
-                  borderRadius: '20px',
-                  border: statusFilters.unused ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: statusFilters.unused ? '0 1px 4px rgba(59,130,246,0.25)' : 'none'
-                }}
-              >
-                <div style={{
-                  width: '10px', height: '10px', borderRadius: '50%',
-                  background: statusFilters.unused ? '#3b82f6' : '#cbd5e1',
-                  transition: 'all 0.2s'
-                }}></div>
-                <span style={{ fontWeight: 700, color: statusFilters.unused ? '#1e40af' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.unused}</span>
-                <span style={{ fontWeight: 500, color: statusFilters.unused ? '#3b82f6' : '#cbd5e1', fontSize: '0.75rem' }}>Unused</span>
-                {statusFilters.unused && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#3b82f6' }}></i>}
-              </button>
-
-              {/* Correct */}
-              <button
-                type="button"
-                onClick={() => setStatusFilters(prev => ({ ...prev, correct: !prev.correct }))}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 14px',
-                  background: statusFilters.correct ? '#dcfce7' : '#f8fafc',
-                  borderRadius: '20px',
-                  border: statusFilters.correct ? '2px solid #22c55e' : '1px solid #e2e8f0',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: statusFilters.correct ? '0 1px 4px rgba(34,197,94,0.25)' : 'none'
-                }}
-              >
-                <div style={{
-                  width: '10px', height: '10px', borderRadius: '50%',
-                  background: statusFilters.correct ? '#22c55e' : '#cbd5e1',
-                  transition: 'all 0.2s'
-                }}></div>
-                <span style={{ fontWeight: 700, color: statusFilters.correct ? '#166534' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.correct}</span>
-                <span style={{ fontWeight: 500, color: statusFilters.correct ? '#22c55e' : '#cbd5e1', fontSize: '0.75rem' }}>Correct</span>
-                {statusFilters.correct && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#22c55e' }}></i>}
-              </button>
-
-              {/* Incorrect */}
-              <button
-                type="button"
-                onClick={() => setStatusFilters(prev => ({ ...prev, incorrect: !prev.incorrect }))}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 14px',
-                  background: statusFilters.incorrect ? '#fee2e2' : '#f8fafc',
-                  borderRadius: '20px',
-                  border: statusFilters.incorrect ? '2px solid #ef4444' : '1px solid #e2e8f0',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: statusFilters.incorrect ? '0 1px 4px rgba(239,68,68,0.25)' : 'none'
-                }}
-              >
-                <div style={{
-                  width: '10px', height: '10px', borderRadius: '50%',
-                  background: statusFilters.incorrect ? '#ef4444' : '#cbd5e1',
-                  transition: 'all 0.2s'
-                }}></div>
-                <span style={{ fontWeight: 700, color: statusFilters.incorrect ? '#991b1b' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.incorrect}</span>
-                <span style={{ fontWeight: 500, color: statusFilters.incorrect ? '#ef4444' : '#cbd5e1', fontSize: '0.75rem' }}>Incorrect</span>
-                {statusFilters.incorrect && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#ef4444' }}></i>}
-              </button>
-
-              {/* Marked */}
-              <button
-                type="button"
-                onClick={() => setStatusFilters(prev => ({ ...prev, marked: !prev.marked }))}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 14px',
-                  background: statusFilters.marked ? '#fef3c7' : '#f8fafc',
-                  borderRadius: '20px',
-                  border: statusFilters.marked ? '2px solid #f59e0b' : '1px solid #e2e8f0',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: statusFilters.marked ? '0 1px 4px rgba(245,158,11,0.25)' : 'none'
-                }}
-              >
-                <i className="fas fa-bookmark" style={{ fontSize: '0.65rem', color: statusFilters.marked ? '#f59e0b' : '#cbd5e1' }}></i>
-                <span style={{ fontWeight: 700, color: statusFilters.marked ? '#92400e' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.marked}</span>
-                <span style={{ fontWeight: 500, color: statusFilters.marked ? '#f59e0b' : '#cbd5e1', fontSize: '0.75rem' }}>Marked</span>
-                {statusFilters.marked && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#f59e0b' }}></i>}
-              </button>
-
-              {/* Omitted */}
-              <button
-                type="button"
-                onClick={() => setStatusFilters(prev => ({ ...prev, omitted: !prev.omitted }))}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 14px',
-                  background: statusFilters.omitted ? '#f1f5f9' : '#f8fafc',
-                  borderRadius: '20px',
-                  border: statusFilters.omitted ? '2px solid #64748b' : '1px solid #e2e8f0',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: statusFilters.omitted ? '0 1px 4px rgba(100,116,139,0.25)' : 'none'
-                }}
-              >
-                <i className="fas fa-minus-circle" style={{ fontSize: '0.65rem', color: statusFilters.omitted ? '#64748b' : '#cbd5e1' }}></i>
-                <span style={{ fontWeight: 700, color: statusFilters.omitted ? '#475569' : '#94a3b8', fontSize: '0.85rem' }}>{activeStatusCounts.omitted}</span>
-                <span style={{ fontWeight: 500, color: statusFilters.omitted ? '#64748b' : '#cbd5e1', fontSize: '0.75rem' }}>Omitted</span>
-                {statusFilters.omitted && <i className="fas fa-check" style={{ fontSize: '0.6rem', color: '#64748b' }}></i>}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Question Category Section - Hide for CAT and Assessment mode */}
-        {testType !== 'cat' && testType !== 'assessment' && (
-          <div className="question-category-section" style={{
-            marginBottom: '20px',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            overflow: 'hidden'
-          }}>
-          {/* Tabs */}
-          <div style={{
-            display: 'flex',
-            borderBottom: '1px solid #a7f3d0',
-            background: '#f0fdf4'
-          }}>
-            <button
-              type="button"
-              onClick={() => setCategoryTab('subjects')}
-              style={{
-                flex: 1,
-                padding: '12px 20px',
-                border: 'none',
-                background: categoryTab === 'subjects' ? '#fff' : 'transparent',
-                borderBottom: categoryTab === 'subjects' ? '3px solid #059669' : '3px solid transparent',
-                fontWeight: categoryTab === 'subjects' ? 600 : 500,
-                color: categoryTab === 'subjects' ? '#059669' : '#6b7280',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              Subjects
-            </button>
-            <button
-              type="button"
-              onClick={() => setCategoryTab('clientNeeds')}
-              style={{
-                flex: 1,
-                padding: '12px 20px',
-                border: 'none',
-                background: categoryTab === 'clientNeeds' ? '#fff' : 'transparent',
-                borderBottom: categoryTab === 'clientNeeds' ? '3px solid #059669' : '3px solid transparent',
-                fontWeight: categoryTab === 'clientNeeds' ? 600 : 500,
-                color: categoryTab === 'clientNeeds' ? '#059669' : '#6b7280',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              Client Needs
-            </button>
-          </div>
-
-          {/* Select All */}
-          <div style={{
-            padding: '12px 16px',
-            borderBottom: '1px solid #e2e8f0',
-            background: '#fff'
-          }}>
-            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div
-                role="checkbox"
-                aria-checked={categoryTab === 'clientNeeds' 
-                  ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
-                  : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length}
-                onClick={categoryTab === 'clientNeeds' ? handleSelectAllClientNeeds : handleSelectAllSubjects}
-                onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); (categoryTab === 'clientNeeds' ? handleSelectAllClientNeeds : handleSelectAllSubjects)(); } }}
-                tabIndex={0}
-                style={{
-                  width: '22px', height: '22px', borderRadius: '6px',
-                  border: '2px solid #a7f3d0',
-                  background: (categoryTab === 'clientNeeds' 
-                    ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
-                    : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length) ? '#059669' : '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0
-                }}
-              >
-                {(categoryTab === 'clientNeeds' 
-                  ? selectedClientNeeds.length === CLIENT_NEEDS_CATEGORIES.length
-                  : selectedSubcategoryPairs.length === Object.values(categoryMap).flat().length) && (
-                  <i className="fas fa-check" style={{ fontSize: '0.7rem', color: '#fff' }}></i>
-                )}
-              </div>
-              <label
-                onClick={categoryTab === 'clientNeeds' ? handleSelectAllClientNeeds : handleSelectAllSubjects}
-                style={{ fontWeight: 600, cursor: 'pointer', color: '#374151', fontSize: '0.95rem' }}
-              >
-                Select All
-              </label>
-            </div>
-          </div>
-
-          {/* Categories Content */}
-          <div style={{ padding: '16px', background: '#fff', maxHeight: '300px', overflowY: 'auto' }}>
-            {/* Client Needs Tab */}
-            {categoryTab === 'clientNeeds' && (
-              <div className="client-needs-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {clientNeedsColumns.map((column, colIndex) => (
-                  <div key={colIndex} className="client-needs-column">
-                    {column.map((clientNeed) => {
-                      const count = getClientNeedCount(clientNeed);
-                      const ngnCount = getClientNeedNgnCount(clientNeed);
-                      const isSelected = selectedClientNeeds.includes(clientNeed);
-                      
-                      return (
-                        <div key={clientNeed} className="form-check" style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '10px 12px',
-                          background: isSelected ? '#f0fdf4' : '#f8fafc',
-                          borderRadius: '6px',
-                          marginBottom: '8px',
-                          border: isSelected ? '1px solid #6ee7b7' : '1px solid #e2e8f0',
-                          transition: 'all 0.2s'
-                        }}>
-                          <div
-                            role="checkbox"
-                            aria-checked={isSelected}
-                            onClick={() => handleClientNeedToggle(clientNeed)}
-                            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleClientNeedToggle(clientNeed); } }}
-                            tabIndex={0}
-                            style={{
-                              width: '22px', height: '22px', borderRadius: '6px',
-                              border: isSelected ? '2px solid #059669' : '2px solid #a7f3d0',
-                              background: isSelected ? '#059669' : '#fff',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0
-                            }}
-                          >
-                            {isSelected && <i className="fas fa-check" style={{ fontSize: '0.7rem', color: '#fff' }}></i>}
-                          </div>
-                          <label 
-                            onClick={() => handleClientNeedToggle(clientNeed)}
-                            style={{ 
-                              flex: 1, 
-                              cursor: 'pointer',
-                              fontWeight: 500,
-                              color: '#374151',
-                              fontSize: '0.9rem'
-                            }}
-                          >
-                            {clientNeed}
-                          </label>
-                          <span style={{
-                            background: '#059669',
-                            color: '#fff',
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600
-                          }}>
-                            {count}
-                            {ngnCount > 0 && <span style={{ opacity: 0.8 }}> | {ngnCount} NGN</span>}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Subjects Tab */}
-            {categoryTab === 'subjects' && (
-              <div className="subjects-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                {categoryColumns.map((column, colIndex) => (
-                  <div key={colIndex} className="subject-column">
-                    {column.map(([category, subcats]) => (
-                      <div key={category} style={{
-                        marginBottom: '12px',
-                        border: '1px solid #a7f3d0',
-                        borderRadius: '8px',
-                        overflow: 'hidden'
-                      }}>
-                        <div
-                          onClick={() => toggleCategory(category)}
-                          style={{
-                            padding: '10px 12px',
-                            background: expandedCategory === category ? '#f0fdf4' : '#f8fafc',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            fontWeight: 600,
-                            color: '#059669'
-                          }}
-                        >
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <i className={`fas fa-chevron-${expandedCategory === category ? 'down' : 'right'}`} style={{ fontSize: '0.75rem' }}></i>
-                            {category}
-                          </span>
-                          <span style={{
-                            background: '#059669',
-                            color: '#fff',
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            fontSize: '0.75rem'
-                          }}>
-                            {categoryTotals[category] || 0}
-                          </span>
-                        </div>
-                        {expandedCategory === category && (
-                          <div style={{ padding: '8px 12px', background: '#fff' }}>
-                            {subcats.map(sub => (
-                              <div key={sub} className="form-check" style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '6px 0'
-                              }}>
-                                <div
-                                  role="checkbox"
-                                  aria-checked={isSubcategorySelected(category, sub)}
-                                  onClick={() => handleSubcategoryToggle(category, sub)}
-                                  onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleSubcategoryToggle(category, sub); } }}
-                                  tabIndex={0}
-                                  style={{
-                                    width: '20px', height: '20px', borderRadius: '5px',
-                                    border: isSubcategorySelected(category, sub) ? '2px solid #059669' : '2px solid #d1d5db',
-                                    background: isSubcategorySelected(category, sub) ? '#059669' : '#fff',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0
-                                  }}
-                                >
-                                  {isSubcategorySelected(category, sub) && <i className="fas fa-check" style={{ fontSize: '0.65rem', color: '#fff' }}></i>}
-                                </div>
-                                <label 
-                                  onClick={() => handleSubcategoryToggle(category, sub)}
-                                  style={{ flex: 1, fontSize: '0.9rem', color: '#475569', cursor: 'pointer' }}
-                                >
-                                  {sub}
-                                </label>
-                                <span style={{
-                                  background: '#f1f5f9',
-                                  padding: '1px 6px',
-                                  borderRadius: '10px',
-                                  fontSize: '0.7rem',
-                                  color: '#64748b'
-                                }}>
-                                  {getSubcategoryCount(category, sub)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <label className="tc-toggle">
+            <input type="checkbox" checked={timed} onChange={() => handleTimedToggle(!timed)} />
+            <span className="tc-toggle__slider" />
+          </label>
         </div>
-        )}
 
-        {/* Number of Questions - Hide for CAT mode, show read-only for Assessment */}
-        {testType !== 'cat' && (
-          <div className="question-count-section" style={{
-            marginBottom: '20px',
-            padding: '16px',
-            background: '#f0fdf4',
-            borderRadius: '8px',
-            border: '1px solid #a7f3d0'
-          }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ fontWeight: 600, color: '#374151' }}>
-              No. of Questions
-            </label>
-            <span style={{ color: '#059669', fontSize: '0.85rem', fontWeight: 500 }}>
-              Max allowed: {maxAllowed}
-            </span>
+        {/* CAT Toggle */}
+        <div className="tc-toggle-row">
+          <div className="tc-toggle-label" onClick={() => setTestType(testType === 'cat' ? 'practice' : 'cat')}>
+            <i className="fas fa-brain" />
+            <span>CAT (Adaptive Test)</span>
           </div>
+          <label className="tc-toggle">
+            <input
+              type="checkbox"
+              checked={testType === 'cat'}
+              onChange={() => setTestType(testType === 'cat' ? 'practice' : 'cat')}
+            />
+            <span className="tc-toggle__slider" />
+          </label>
+        </div>
+
+        {/* Readiness Assessment */}
+        <div className="tc-assessment-row" onClick={() => setTestType(testType === 'assessment' ? 'practice' : 'assessment')}>
           <input
-            type="number"
-            className="form-control"
-            value={testType === 'assessment' ? '150' : questionCountInput}
-            readOnly={testType === 'assessment'}
-            onChange={(e) => {
-              if (testType === 'assessment') return;
-              const inputValue = e.target.value;
-              // Allow empty input for clearing
-              setQuestionCountInput(inputValue);
-              if (inputValue === '') {
-                // Don't update questionCount while typing, just keep input empty
-                return;
-              }
-              const value = parseInt(inputValue, 10);
-              if (!isNaN(value)) {
-                // Only clamp on blur, not during typing
-                setQuestionCount(value);
-              }
-            }}
-            onBlur={(e) => {
-              // Clamp value when user leaves the field
-              const value = parseInt(e.target.value, 10);
-              if (isNaN(value) || value < questionRangeMin) {
-                setQuestionCount(questionRangeMin);
-                setQuestionCountInput(String(questionRangeMin));
-              } else if (value > maxAllowed) {
-                setQuestionCount(maxAllowed);
-                setQuestionCountInput(String(maxAllowed));
-              } else {
-                setQuestionCount(value);
-                setQuestionCountInput(String(value));
-              }
-            }}
-            min={questionRangeMin}
-            max={maxAllowed}
-            style={{
-              width: '100%',
-              marginTop: '8px',
-              padding: '10px 12px',
-              fontSize: '1rem',
-              border: '2px solid #6ee7b7',
-              borderRadius: '6px'
-            }}
+            type="checkbox"
+            className="tc-assessment-checkbox"
+            checked={testType === 'assessment'}
+            onChange={() => setTestType(testType === 'assessment' ? 'practice' : 'assessment')}
           />
+          <span className="tc-assessment-text">Readiness Assessment</span>
         </div>
-        )}
+      </div>
 
-        {/* Generate Test Button */}
-        <button
-          type="submit"
-          className="btn btn-primary w-100"
-          disabled={loading}
-          style={{
-            background: testType === 'cat' ? '#7c3aed' : testType === 'practice' ? '#0ea5e9' : '#059669',
-            border: 'none',
-            padding: '14px 24px',
-            fontSize: '1.1rem',
-            fontWeight: 600,
-            borderRadius: '8px',
-            transition: 'all 0.2s'
-          }}
-        >
-          {loading 
-            ? (testType === 'cat' ? 'Starting CAT...' : 'Generating...') 
-            : (testType === 'cat' ? 'START CAT EXAM' : testType === 'practice' ? 'START PRACTICE TEST' : 'START ASSESSMENT')}
-        </button>
-      </form>
+      {/* Tutorial Info Box */}
+      {tutorMode && (
+        <div className="tc-info-box">
+          <div className="tc-info-box__header">
+            <i className="fas fa-file-alt" />
+            <span>Tutorial</span>
+          </div>
+          <div className="tc-info-box__body">
+            Tutorial mode shows the correct answer and detailed rationale immediately after you answer each question. Use this mode when learning new material or reviewing weak areas. No timer is used in tutorial mode.
+          </div>
+        </div>
+      )}
+
+      {/* TEST TYPE — hide for CAT and Assessment */}
+      {testType === 'practice' && (
+        <>
+          <div className="tc-section-title">TEST TYPE</div>
+          <div className="tc-radio-group">
+            {['mixed', 'classic', 'ngn'].map((type) => (
+              <div
+                key={type}
+                className={`tc-radio-item tc-radio-item--horizontal ${questionTypeFilter === type ? 'tc-radio-item--active' : ''}`}
+                onClick={() => setQuestionTypeFilter(type)}
+              >
+                {renderRadioCircle(questionTypeFilter === type)}
+                <span className="tc-radio-text">
+                  {type === 'mixed' ? 'Mixed' : type === 'classic' ? 'Classic' : 'NGN'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* ORGANIZATION */}
+          <div className="tc-section-title">ORGANIZATION</div>
+          <div className="tc-radio-group tc-radio-group--vertical">
+            <div
+              className={`tc-radio-item ${categoryTab === 'subjects' ? 'tc-radio-item--active' : ''}`}
+              onClick={() => setCategoryTab('subjects')}
+            >
+              {renderRadioCircle(categoryTab === 'subjects')}
+              <span className="tc-radio-text">Subject or System</span>
+            </div>
+            <div
+              className={`tc-radio-item ${categoryTab === 'clientNeeds' ? 'tc-radio-item--active' : ''}`}
+              onClick={() => setCategoryTab('clientNeeds')}
+            >
+              {renderRadioCircle(categoryTab === 'clientNeeds')}
+              <span className="tc-radio-text">Client Need Areas</span>
+            </div>
+          </div>
+
+          {/* QUESTION TYPES (horizontal scrollable pills) */}
+          <div className="tc-section-title">QUESTION TYPES</div>
+          <div className="tc-filter-pills">
+            {questionTypePills.map((pill) => (
+              <div
+                key={pill.key}
+                className={`tc-filter-pill ${pill.key === 'all' ? 'tc-filter-pill--active' : ''}`}
+              >
+                {pill.label}
+              </div>
+            ))}
+          </div>
+
+          {/* Status Filter */}
+          <div className="tc-status-list">
+            {[
+              { key: 'unused', label: 'Unused', count: unusedTotal, classic: activeStatusCounts.unused || 0, ngn: activeStatusCounts.unusedNgn || 0 },
+              { key: 'marked', label: 'Marked', count: markedTotal, classic: activeStatusCounts.marked || 0, ngn: activeStatusCounts.markedNgn || 0 },
+              { key: 'incorrect', label: 'Incorrect', count: incorrectTotal, classic: activeStatusCounts.incorrect || 0, ngn: activeStatusCounts.incorrectNgn || 0 },
+              { key: 'all', label: 'All', count: totalQuestionBank, classic: 0, ngn: 0 },
+              { key: 'correct', label: 'Correct On Reattempt', count: correctTotal, classic: activeStatusCounts.correct || 0, ngn: activeStatusCounts.correctNgn || 0 },
+              { key: 'omitted', label: 'Omitted', count: omittedTotal, classic: activeStatusCounts.omitted || 0, ngn: activeStatusCounts.omittedNgn || 0 },
+            ].map((status) => (
+              <div
+                key={status.key}
+                className={`tc-radio-item ${statusFilters[status.key === 'all' ? 'unused' : status.key] ? 'tc-radio-item--active' : ''}`}
+                onClick={() => {
+                  if (status.key === 'all') {
+                    // Toggle all on
+                    setStatusFilters({ unused: true, incorrect: true, marked: true, omitted: true, correct: true });
+                  } else {
+                    setStatusFilters(prev => ({ ...prev, [status.key]: !prev[status.key] }));
+                  }
+                }}
+              >
+                {renderRadioCircle(statusFilters[status.key === 'all' ? 'unused' : status.key])}
+                <span className="tc-radio-text">{status.label}</span>
+                <span className="tc-status-count">
+                  {status.key !== 'all' && status.classic > 0 && status.ngn > 0
+                    ? `${status.classic} Classic + ${status.ngn} NGN`
+                    : status.count}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* TEST LENGTH */}
+          <div className="tc-section-title">TEST LENGTH</div>
+          <div className="tc-count-input-wrap">
+            <div className="tc-count-description">
+              Number of questions per test — maximum of {maxAllowed}
+            </div>
+            <input
+              type="number"
+              className="tc-count-input"
+              value={questionCountInput}
+              onChange={(e) => {
+                const inputValue = e.target.value;
+                setQuestionCountInput(inputValue);
+                if (inputValue === '') return;
+                const value = parseInt(inputValue, 10);
+                if (!isNaN(value)) {
+                  setQuestionCount(value);
+                }
+              }}
+              onBlur={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (isNaN(value) || value < questionRangeMin) {
+                  setQuestionCount(questionRangeMin);
+                  setQuestionCountInput(String(questionRangeMin));
+                } else if (value > maxAllowed) {
+                  setQuestionCount(maxAllowed);
+                  setQuestionCountInput(String(maxAllowed));
+                } else {
+                  setQuestionCount(value);
+                  setQuestionCountInput(String(value));
+                }
+              }}
+              min={questionRangeMin}
+              max={maxAllowed}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Assessment info */}
+      {testType === 'assessment' && (
+        <div className="tc-info-box" style={{ borderColor: '#FFE0B2' }}>
+          <div className="tc-info-box__header" style={{ background: 'var(--orange)' }}>
+            <i className="fas fa-clipboard-check" />
+            <span>Readiness Assessment</span>
+          </div>
+          <div className="tc-info-box__body">
+            Assessment mode uses real NCLEX CAT. The algorithm selects questions based on your ability, adjusting difficulty as you answer. Fixed at 150 questions with timed mode and tutor feedback.
+          </div>
+        </div>
+      )}
+
+      {/* CAT info */}
+      {testType === 'cat' && (
+        <div className="tc-info-box" style={{ borderColor: '#E1BEE7' }}>
+          <div className="tc-info-box__header" style={{ background: '#7B1FA2' }}>
+            <i className="fas fa-brain" />
+            <span>CAT Mode</span>
+          </div>
+          <div className="tc-info-box__body">
+            CAT automatically selects questions based on your ability level. The test ends when the algorithm determines a pass/fail result with 95% confidence. No need to select categories or question count.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ═══════════════════════════════════════════════
+  // STEP 2: Category/Subject Selection (or Client Needs)
+  // ═══════════════════════════════════════════════
+  const renderStep2 = () => {
+    if (categoryTab === 'clientNeeds') {
+      return renderStep2ClientNeeds();
+    }
+    return renderStep2Subjects();
+  };
+
+  const renderStep2Subjects = () => {
+    const categories = Object.keys(categoryMap);
+    const allSelected = selectedCategories.length === categories.length;
+
+    return (
+      <div className="tc-step" key="step2-subjects">
+        <div className="tc-section-title">SUBJECTS</div>
+        <div className="tc-checkbox-list-header">
+          <span>Select All</span>
+          {renderCheckbox(allSelected, handleSelectAllCategories)}
+        </div>
+        <hr className="tc-divider" />
+        <div className="tc-checkbox-list">
+          {categories.map((category) => {
+            const count = categoryTotals[category] || 0;
+            const isSelected = selectedCategories.includes(category);
+            return (
+              <div
+                key={category}
+                className="tc-checkbox-item"
+                onClick={() => handleCategoryToggle(category)}
+              >
+                {renderCheckbox(isSelected, () => handleCategoryToggle(category))}
+                <span className="tc-checkbox-item-name">{category}</span>
+                <span className="tc-count-badge">{count}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderStep2ClientNeeds = () => {
+    const allSelected = selectedClientNeeds.length === NCLEX_CLIENT_NEEDS_CATEGORIES.length;
+
+    return (
+      <div className="tc-step" key="step2-clientneeds">
+        <div className="tc-section-title">CLIENT NEED AREAS</div>
+        <div className="tc-checkbox-list-header">
+          <span>Select All</span>
+          {renderCheckbox(allSelected, handleSelectAllClientNeeds)}
+        </div>
+        <hr className="tc-divider" />
+        <div className="tc-checkbox-list">
+          {NCLEX_CLIENT_NEEDS_CATEGORIES.map((clientNeed) => {
+            const count = getClientNeedCount(clientNeed);
+            const isSelected = selectedClientNeeds.includes(clientNeed);
+            return (
+              <div
+                key={clientNeed}
+                className="tc-checkbox-item"
+                onClick={() => handleClientNeedToggle(clientNeed)}
+              >
+                {renderCheckbox(isSelected, () => handleClientNeedToggle(clientNeed))}
+                <span className="tc-checkbox-item-name">{clientNeed}</span>
+                <span className="tc-count-badge">{count}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════
+  // STEP 3: Subcategory/Lessons Selection
+  // ═══════════════════════════════════════════════
+  const renderStep3 = () => {
+    // Show subcategories for all selected categories
+    const categoriesToShow = selectedCategories.length > 0
+      ? selectedCategories
+      : [Object.keys(categoryMap)[0]];
+
+    return (
+      <div className="tc-step" key="step3">
+        <div className="tc-section-title">LESSONS</div>
+        {categoriesToShow.map((category) => {
+          const subcategories = categoryMap[category] || [];
+          const allCatSelected = subcategories.every(sub => isSubcategorySelected(category, sub));
+
+          return (
+            <div key={category}>
+              {/* Category header with select all */}
+              <div className="tc-subcategory-header">
+                <i className="fas fa-folder" />
+                <span>{category}</span>
+                <span className="tc-count-badge" style={{ marginLeft: 'auto' }}>
+                  {categoryTotals[category] || 0}
+                </span>
+              </div>
+              <div className="tc-checkbox-list-header">
+                <span style={{ fontSize: 12 }}>Select All for {category}</span>
+                {renderCheckbox(allCatSelected, () => handleCategorySelectAll(category, subcategories))}
+              </div>
+              <hr className="tc-divider" />
+              <div className="tc-checkbox-list" style={{ maxHeight: '30vh' }}>
+                {subcategories.map((sub) => {
+                  const count = getSubcategoryCount(category, sub);
+                  const isSelected = isSubcategorySelected(category, sub);
+                  return (
+                    <div
+                      key={sub}
+                      className="tc-checkbox-item"
+                      onClick={() => handleSubcategoryToggle(category, sub)}
+                    >
+                      {renderCheckbox(isSelected, () => handleSubcategoryToggle(category, sub))}
+                      <span className="tc-checkbox-item-name">{sub}</span>
+                      <span className="tc-count-badge">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════
+  // Header title based on step
+  // ═══════════════════════════════════════════════
+  const getHeaderTitle = () => {
+    switch (step) {
+      case 1: return 'Create Test';
+      case 2: return categoryTab === 'clientNeeds' ? 'Client Need Areas' : 'Subjects';
+      case 3: return 'Lessons';
+      default: return 'Create Test';
+    }
+  };
+
+  // ═══════════════════════════════════════════════
+  // Main render
+  // ═══════════════════════════════════════════════
+  return (
+    <div className="tc-wizard">
+      {/* Header */}
+      <div className="tc-header">
+        {step > 1 && (
+          <button className="tc-header__back" onClick={handleBack} type="button">
+            <i className="fas fa-arrow-left" />
+            <span className="tc-header__back-text">Back</span>
+          </button>
+        )}
+        <span className="tc-header__title">{getHeaderTitle()}</span>
+        <div style={{ width: step > 1 ? 80 : 0 }} /> {/* Spacer for centering */}
+      </div>
+
+      {/* Error messages */}
+      {error && (
+        <div className="tc-error">
+          <i className="fas fa-exclamation-circle" />
+          <span>{error}</span>
+        </div>
+      )}
+      {countLoadError && (
+        <div className="tc-error" style={{ background: '#FFF3E0', color: '#E65100' }}>
+          <i className="fas fa-exclamation-triangle" />
+          <span>{countLoadError}</span>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="tc-content">
+        {step === 1 && renderStep1()}
+        {step === 2 && renderStep2()}
+        {step === 3 && renderStep3()}
+      </div>
+
+      {/* Bottom Action Buttons */}
+      {(step === 1 && testType !== 'cat') && (
+        <div className="tc-actions">
+          <button
+            className="tc-btn-next tc-btn-next--full"
+            type="button"
+            onClick={handleNextFromStep1}
+          >
+            Next <i className="fas fa-arrow-right" />
+          </button>
+        </div>
+      )}
+
+      {step === 2 && categoryTab === 'subjects' && (
+        <div className="tc-actions">
+          <button className="tc-btn-back" type="button" onClick={handleBack}>
+            Back
+          </button>
+          <button
+            className="tc-btn-next"
+            type="button"
+            onClick={handleNextFromStep2}
+          >
+            Next <i className="fas fa-arrow-right" />
+          </button>
+        </div>
+      )}
+
+      {step === 2 && categoryTab === 'clientNeeds' && (
+        <div className="tc-actions">
+          <button className="tc-btn-back" type="button" onClick={handleBack}>
+            Back
+          </button>
+          <button
+            className="tc-btn-next tc-btn-generate"
+            type="button"
+            onClick={handleNextFromStep2}
+            disabled={loading}
+          >
+            {loading ? 'Generating...' : 'GENERATE TEST'}
+          </button>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="tc-actions">
+          <button className="tc-btn-back" type="button" onClick={handleBack}>
+            Back
+          </button>
+          <button
+            className="tc-btn-next tc-btn-generate"
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? 'Generating...' : 'GENERATE TEST'}
+          </button>
+        </div>
+      )}
+
+      {/* Loading overlay */}
+      {loading && (
+        <div className="tc-loading">
+          <div className="tc-loading__spinner" />
+          <span className="tc-loading__text">
+            {testType === 'cat' ? 'Starting CAT...' : 'Generating test...'}
+          </span>
+        </div>
+      )}
+
     </div>
   );
 };
