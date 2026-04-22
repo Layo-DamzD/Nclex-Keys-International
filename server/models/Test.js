@@ -7,6 +7,7 @@ const testSchema = new mongoose.Schema({
   questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
   duration: { type: Number, required: true }, // in minutes
   passingScore: { type: Number, default: 70 },
+  maxAttempts: { type: Number, default: 0 }, // 0 = unlimited
   assignmentType: { 
     type: String, 
     enum: ['all', 'individual'],

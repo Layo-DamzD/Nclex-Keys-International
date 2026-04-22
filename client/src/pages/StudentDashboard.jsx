@@ -23,6 +23,37 @@ import StudentNotificationPopup from '../components/StudentNotificationPopup';
 
 const MOBILE_BREAKPOINT = 992;
 
+// ── Server-side popup dismissal helper ──
+const dismissPopupServer = async (popupKey) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    await axios.post('/api/student/dismiss-popup', { popupKey }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  } catch (err) {
+    // Silent fail — localStorage is the primary guard
+  }
+};
+
+// Check if a popup was dismissed (server OR localStorage)
+const isPopupDismissed = (popupKey, userId) => {
+  // Check localStorage first (fast)
+  const lsKey = `popup-dismissed:${popupKey}`;
+  try {
+    if (localStorage.getItem(lsKey) === 'true') return true;
+  } catch {}
+  return false;
+};
+
+// Dismiss a popup in both localStorage AND server
+const dismissPopup = (popupKey) => {
+  try {
+    localStorage.setItem(`popup-dismissed:${popupKey}`, 'true');
+  } catch {}
+  dismissPopupServer(popupKey);
+};
+
 const StudentDashboard = () => {
   const { user, loading, refreshUser } = useUser(); // get user from context
   const location = useLocation();
@@ -242,14 +273,28 @@ const StudentDashboard = () => {
         const response = await axios.get('/api/student/available-tests', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const availableTests = Array.isArray(response.data) ? response.data : [];
+        const data = response.data;
+        const availableTests = Array.isArray(data.tests) ? data.tests : (Array.isArray(data) ? data : []);
         if (!mounted || availableTests.length === 0) return;
         setPreparedTestCount(availableTests.length);
-        // Only show alert if not previously dismissed this session
-        const dismissedKey = `prepared-test-alert-dismissed:${user?._id || 'anon'}`;
-        if (!sessionStorage.getItem(dismissedKey)) {
-          setShowPreparedTestAlert(true);
+        // Check BOTH server-side (user.dismissedPopups) AND localStorage
+        const popupKey = `prepared-test-alert:${user._id}`;
+        if (isPopupDismissed(popupKey, user._id)) return;
+        // Also check legacy key from old implementation
+        try {
+          if (localStorage.getItem(`prepared-test-alert-dismissed:${user._id}`) === 'true') {
+            // Migrate old key to new system
+            dismissPopup(popupKey);
+            return;
+          }
+        } catch {}
+        // Also check server-side dismissedPopups from user object
+        const serverDismissed = user?.dismissedPopups;
+        if (serverDismissed && typeof serverDismissed === 'object') {
+          // dismissedPopups comes as a plain object from JSON serialization of Map
+          if (serverDismissed[popupKey]) return;
         }
+        setShowPreparedTestAlert(true);
       } catch (error) {
         console.error('Failed to check prepared tests:', error);
       }
@@ -259,7 +304,7 @@ const StudentDashboard = () => {
     return () => {
       mounted = false;
     };
-  }, [loading, user?._id]);
+  }, [loading, user?._id, user?.dismissedPopups]);
 
   // Show welcome celebration only once per user (stored in database)
   useEffect(() => {
@@ -317,8 +362,8 @@ const StudentDashboard = () => {
           return;
         }
 
-        const deferredThisSessionKey = `student-public-test-later:${user._id}:${submittedAtIso}`;
-        if (sessionStorage.getItem(deferredThisSessionKey) === 'later') {
+        const deferredKey = `student-public-test-later:${user._id}:${submittedAtIso}`;
+        if (localStorage.getItem(deferredKey) === 'later') {
           setShowPublicTestPrompt(false);
           return;
         }
@@ -377,7 +422,7 @@ const StudentDashboard = () => {
       {showPreparedTestAlert && (
         <div className="student-notification-popup-overlay" role="dialog" aria-modal="true" aria-label="Prepared tests available">
           <div className="student-notification-popup-backdrop" onClick={() => {
-                  try { sessionStorage.setItem(`prepared-test-alert-dismissed:${user._id}`, 'true'); } catch {}
+                  dismissPopup(`prepared-test-alert:${user._id}`);
                   setShowPreparedTestAlert(false);
                 }} />
           <div className="student-notification-popup-card">
@@ -388,7 +433,7 @@ const StudentDashboard = () => {
                 <h3>Prepared test is ready</h3>
               </div>
               <button type="button" className="student-notification-popup-close" onClick={() => {
-                  try { sessionStorage.setItem(`prepared-test-alert-dismissed:${user._id}`, 'true'); } catch {}
+                  dismissPopup(`prepared-test-alert:${user._id}`);
                   setShowPreparedTestAlert(false);
                 }} aria-label="Close">
                 <i className="fas fa-times" />
@@ -399,13 +444,14 @@ const StudentDashboard = () => {
             </div>
             <div className="student-notification-popup-footer">
               <button type="button" className="btn btn-outline-secondary" onClick={() => {
-                  try { sessionStorage.setItem(`prepared-test-alert-dismissed:${user._id}`, 'true'); } catch {}
+                  dismissPopup(`prepared-test-alert:${user._id}`);
                   setShowPreparedTestAlert(false);
                 }}>Later</button>
               <button
                 type="button"
                 className="btn btn-primary"
                 onClick={() => {
+                  dismissPopup(`prepared-test-alert:${user._id}`);
                   setShowPreparedTestAlert(false);
                   handleSectionChange('prepared-tests');
                 }}
@@ -445,7 +491,7 @@ const StudentDashboard = () => {
             className="student-notification-popup-backdrop"
             onClick={() => {
               if (publicTestSubmittedAtIso) {
-                sessionStorage.setItem(`student-public-test-later:${user._id}:${publicTestSubmittedAtIso}`, 'later');
+                localStorage.setItem(`student-public-test-later:${user._id}:${publicTestSubmittedAtIso}`, 'later');
               }
               setShowPublicTestPrompt(false);
             }}
@@ -467,7 +513,7 @@ const StudentDashboard = () => {
                 className="btn btn-outline-secondary"
                 onClick={() => {
                   if (publicTestSubmittedAtIso) {
-                    sessionStorage.setItem(`student-public-test-later:${user._id}:${publicTestSubmittedAtIso}`, 'later');
+                    localStorage.setItem(`student-public-test-later:${user._id}:${publicTestSubmittedAtIso}`, 'later');
                   }
                   setShowPublicTestPrompt(false);
                 }}
@@ -489,7 +535,7 @@ const StudentDashboard = () => {
                     }
                   }
                   if (publicTestSubmittedAtIso) {
-                    sessionStorage.removeItem(`student-public-test-later:${user._id}:${publicTestSubmittedAtIso}`);
+                    localStorage.removeItem(`student-public-test-later:${user._id}:${publicTestSubmittedAtIso}`);
                   }
                   setShowPublicTestPrompt(false);
                   if (publicReviewResultId) {

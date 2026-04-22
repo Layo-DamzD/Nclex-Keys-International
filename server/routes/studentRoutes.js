@@ -36,7 +36,8 @@ const {
   sendExamSupportMessage,
   getClientNeedsCounts,
   getQuestionStatusCounts,
-  markWelcomeSeen
+  markWelcomeSeen,
+  dismissPopup
 } = require('../controllers/studentController');
 
 router.get('/dashboard/stats', protect, getDashboardStats);
@@ -74,5 +75,6 @@ router.post('/feedback', protect, submitStudentFeedback);
 router.get('/exam-support/messages', protect, getExamSupportMessages);
 router.post('/exam-support/messages', protect, sendExamSupportMessage);
 router.post('/mark-welcome-seen', protect, markWelcomeSeen);
+router.post('/dismiss-popup', protect, dismissPopup);
 
 module.exports = router;

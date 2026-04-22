@@ -16,7 +16,9 @@ const AvailableTests = () => {
         const response = await axios.get('/api/student/available-tests', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setTests(response.data);
+        // Backend returns { tests: [...], exhaustedCount: N }
+        const data = response.data;
+        setTests(Array.isArray(data.tests) ? data.tests : (Array.isArray(data) ? data : []));
       } catch (error) {
         console.error('Error fetching tests:', error);
       } finally {
@@ -121,19 +123,38 @@ const AvailableTests = () => {
               <span><i className="fas fa-question-circle me-1"></i>{test.questionCount} Questions</span>
               <span><i className="fas fa-clock me-1"></i>{test.duration} min</span>
               <span><i className="fas fa-trophy me-1"></i>Pass: {test.passingScore}%</span>
+              {test.maxAttempts > 0 && (
+                <span><i className="fas fa-redo me-1"></i>{test.attemptsUsed}/{test.maxAttempts} attempts</span>
+              )}
             </div>
-            <button
-              className="start-test-btn"
-              onClick={() => {
-                if (test.proctored) {
-                  setProctorWarningTest(test);
-                  return;
-                }
-                handleStartTest(test._id);
-              }}
-            >
-              <i className="fas fa-play me-1"></i>Start Test
-            </button>
+            {test.maxAttempts > 0 ? (
+              <button
+                className="start-test-btn"
+                onClick={() => {
+                  if (test.proctored) {
+                    setProctorWarningTest(test);
+                    return;
+                  }
+                  handleStartTest(test._id);
+                }}
+              >
+                <i className="fas fa-play me-1"></i>Start Test
+                <span style={{ marginLeft: '8px', fontSize: '0.8rem', opacity: 0.8 }}>({test.attemptsRemaining} of {test.maxAttempts} left)</span>
+              </button>
+            ) : (
+              <button
+                className="start-test-btn"
+                onClick={() => {
+                  if (test.proctored) {
+                    setProctorWarningTest(test);
+                    return;
+                  }
+                  handleStartTest(test._id);
+                }}
+              >
+                <i className="fas fa-play me-1"></i>Start Test
+              </button>
+            )}
           </div>
         ))
       )}

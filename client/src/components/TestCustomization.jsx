@@ -88,6 +88,20 @@ const TestCustomization = () => {
   const [caseStudyTotalCount, setCaseStudyTotalCount] = useState(0);
   const [typeCounts, setTypeCounts] = useState({ sata: { total: 0 }, unfolding: { total: 0 }, standalone: { total: 0 } });
 
+  // Dismissed info banners — persisted to localStorage
+  const [dismissedBanners, setDismissedBanners] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('nclex-dismissed-banners') || '{}');
+    } catch { return {}; }
+  });
+  const dismissBanner = (key) => {
+    setDismissedBanners(prev => {
+      const next = { ...prev, [key]: true };
+      localStorage.setItem('nclex-dismissed-banners', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const navigate = useNavigate();
 
   // ─── Toggle handlers (independent — both can be on) ───
@@ -782,16 +796,25 @@ const TestCustomization = () => {
       {/* Assessment info + proctoring warning */}
       {testType === 'assessment' && (
         <>
-          {/* Proctoring Warning */}
-          <div className="tc-info-box" style={{ borderColor: '#C62828' }}>
-            <div className="tc-info-box__header" style={{ background: '#C62828' }}>
-              <i className="fas fa-video" />
-              <span>Proctoring Enabled</span>
+          {/* Proctoring Warning — dismissible */}
+          {!dismissedBanners['assessment-proctoring'] && (
+            <div className="tc-info-box" style={{ borderColor: '#C62828', position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => dismissBanner('assessment-proctoring')}
+                style={{ position: 'absolute', top: 8, right: 12, background: 'none', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer', opacity: 0.7 }}
+              >
+                <i className="fas fa-times" />
+              </button>
+              <div className="tc-info-box__header" style={{ background: '#C62828' }}>
+                <i className="fas fa-video" />
+                <span>Proctoring Enabled</span>
+              </div>
+              <div className="tc-info-box__body">
+                This assessment is proctored. Your screen, webcam, and browser activity are monitored throughout the exam. Leaving the test window, switching tabs, or using unauthorized materials will be flagged as a violation and may result in automatic termination of your exam. Ensure you are in a quiet, well-lit environment with no distractions before proceeding.
+              </div>
             </div>
-            <div className="tc-info-box__body">
-              This assessment is proctored. Your screen, webcam, and browser activity are monitored throughout the exam. Leaving the test window, switching tabs, or using unauthorized materials will be flagged as a violation and may result in automatic termination of your exam. Ensure you are in a quiet, well-lit environment with no distractions before proceeding.
-            </div>
-          </div>
+          )}
           {/* Assessment Info */}
           <div className="tc-info-box" style={{ borderColor: '#FFE0B2' }}>
             <div className="tc-info-box__header" style={{ background: 'var(--orange)' }}>

@@ -27,6 +27,7 @@ const CreateTest = () => {
     assignmentType: userRole === 'superadmin' ? 'all' : 'individual', // 'all' or 'individual'
     assignedStudents: [],
     proctored: false,
+    maxAttempts: 0,
   });
 
   // Fetch students for individual assignment
@@ -193,6 +194,22 @@ const CreateTest = () => {
               required
             />
           </div>
+        </div>
+
+        <div className="upload-grid-two">
+          <div className="form-group">
+            <label className="form-label">Max Attempts (0 = unlimited)</label>
+            <input
+              type="number"
+              name="maxAttempts"
+              className="form-control"
+              min="0"
+              value={testData.maxAttempts}
+              onChange={handleTestDataChange}
+            />
+            <small className="text-muted">How many times students can take this test. Set to 0 for unlimited. Once exhausted, the test disappears from their Available Tests but results remain in history.</small>
+          </div>
+          <div className="form-group"></div>
         </div>
 
 

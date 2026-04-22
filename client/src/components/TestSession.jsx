@@ -1331,6 +1331,7 @@ const TestSession = () => {
       const token = localStorage.getItem('token');
       const submitResponse = await axios.post('/api/student/submit-test', {
         testName: settings?.testName || 'Custom Test',
+        testId: settings?.testId || null,
         answers: { ...answers, ...caseAnswers },
         results: allResults,
         totalQuestions: allResults.length,

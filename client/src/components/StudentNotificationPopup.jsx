@@ -33,7 +33,63 @@ const StudentNotificationPopup = ({
     const seen = getSeenIds();
     seen.add(String(id));
     localStorage.setItem(storageKey, JSON.stringify(Array.from(seen).slice(-200)));
+    // Also persist to server so it survives browser data clearing
+    try {
+      const token = localStorage.getItem('token');
+      if (token && userId) {
+        axios.post('/api/student/dismiss-popup', {
+          popupKey: `notification-seen:${userId}:${String(id)}`
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => {});
+      }
+    } catch {}
   };
+
+  // Ref to track server-side seen IDs loaded on mount
+  const serverSeenRef = useRef(new Set());
+
+  // On mount, fetch server-side dismissed notification IDs
+  useEffect(() => {
+    if (!enabled || !userId) return;
+    let mounted = true;
+    const fetchServerSeen = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        // We read the user object to get dismissedPopups
+        const response = await axios.get('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!mounted) return;
+        const serverDismissed = response?.data?.dismissedPopups;
+        if (serverDismissed && typeof serverDismissed === 'object') {
+          const prefix = `notification-seen:${userId}:`;
+          const serverIds = new Set();
+          for (const key of Object.keys(serverDismissed)) {
+            if (key.startsWith(prefix)) {
+              serverIds.add(key.slice(prefix.length));
+            }
+          }
+          serverSeenRef.current = serverIds;
+          // Merge server IDs into localStorage
+          const localSeen = getSeenIds();
+          let changed = false;
+          for (const id of serverIds) {
+            if (!localSeen.has(id)) {
+              localSeen.add(id);
+              changed = true;
+            }
+          }
+          if (changed) {
+            localStorage.setItem(storageKey, JSON.stringify(Array.from(localSeen).slice(-200)));
+          }
+        }
+      } catch {}
+    };
+    fetchServerSeen();
+    return () => { mounted = false; };
+  }, [enabled, userId, storageKey]);
 
   useEffect(() => {
     if (!enabled || !userId) return undefined;
@@ -50,6 +106,10 @@ const StudentNotificationPopup = ({
         });
 
         const seen = getSeenIds();
+        // Also include server-seen IDs
+        for (const id of serverSeenRef.current) {
+          seen.add(id);
+        }
         const notificationItems = (response.data || [])
           .filter((item) => item?.type === 'notification' || item?.isNotification === true)
           .map((item) => ({

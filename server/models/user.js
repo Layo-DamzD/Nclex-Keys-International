@@ -75,6 +75,12 @@ const userSchema = new mongoose.Schema({
   },
   // Track if user has seen the welcome celebration (persists across devices)
   hasSeenWelcome: { type: Boolean, default: false },
+  // Server-side popup dismissal tracking (persists across devices/browsers)
+  dismissedPopups: {
+    type: Map,
+    of: Number, // key → timestamp of dismissal
+    default: () => new Map()
+  },
   // Email verification for self-signup
   emailVerified: { type: Boolean, default: false },
   emailVerificationCode: { type: String },

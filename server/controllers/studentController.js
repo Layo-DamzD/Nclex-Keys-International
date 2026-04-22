@@ -1,3 +1,4 @@
+const { default: mongoose } = require('mongoose');
 const User = require('../models/user');
 const TestResult = require('../models/testResult');
 const Activity = require('../models/Activity');
@@ -16,7 +17,7 @@ const MAX_FCM_TOKENS_PER_STUDENT = 8;
 // @access  Private
 const submitTest = async (req, res) => {
   try {
-    const { testName, results, totalQuestions, timeTaken, passed, isCustomTest = false, proctoring = null } = req.body;
+    const { testName, results, totalQuestions, timeTaken, passed, isCustomTest = false, proctoring = null, testId = null } = req.body;
     const studentId = req.user.id;
 
     const user = await User.findById(studentId);
@@ -363,6 +364,7 @@ const submitTest = async (req, res) => {
     // Save test result with full answer details
     const testResult = new TestResult({
       student: studentId,
+      testId: testId ? mongoose.Types.ObjectId(testId) : undefined,
       testName,
       date: new Date(),
       score: Number(earnedScore.toFixed(2)),
@@ -720,18 +722,48 @@ const getAvailableTests = async (req, res) => {
         { assignmentType: 'all' },
         { assignmentType: 'individual', assignedStudents: studentId }
       ]
-    }).select('title description category questions duration passingScore assignmentType proctored');
-    const formatted = tests.map(test => ({
-      _id: test._id,
-      title: test.title,
-      description: test.description,
-      category: test.category,
-      questionCount: test.questions.length,
-      duration: test.duration,
-      passingScore: test.passingScore,
-      proctored: Boolean(test.proctored)
-    }));
-    res.json(formatted);
+    }).select('title description category questions duration passingScore assignmentType proctored maxAttempts');
+    
+    // Count attempts per test for this student
+    const TestResult = require('../models/testResult');
+    const attemptCounts = {};
+    if (tests.length > 0) {
+      const testIds = tests.map(t => t._id);
+      const results = await TestResult.aggregate([
+        { $match: { student: mongoose.Types.ObjectId(studentId), testId: { $in: testIds } } },
+        { $group: { _id: '$testId', count: { $sum: 1 } } }
+      ]);
+      for (const r of results) {
+        attemptCounts[String(r._id)] = r.count;
+      }
+    }
+    
+    const formatted = tests.map(test => {
+      const attemptsUsed = attemptCounts[String(test._id)] || 0;
+      const maxAttempts = test.maxAttempts || 0; // 0 = unlimited
+      const attemptsRemaining = maxAttempts > 0 ? Math.max(0, maxAttempts - attemptsUsed) : -1; // -1 = unlimited
+      const exhausted = maxAttempts > 0 && attemptsUsed >= maxAttempts;
+      
+      return {
+        _id: test._id,
+        title: test.title,
+        description: test.description,
+        category: test.category,
+        questionCount: test.questions.length,
+        duration: test.duration,
+        passingScore: test.passingScore,
+        proctored: Boolean(test.proctored),
+        maxAttempts,
+        attemptsUsed,
+        attemptsRemaining,
+        exhausted
+      };
+    });
+
+    // Filter OUT exhausted tests — they disappear from the list entirely.
+    // All previous results still remain in the student's history (Previous Tests).
+    const visible = formatted.filter(t => !t.exhausted);
+    res.json({ tests: visible });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -757,6 +789,21 @@ const getPreparedTest = async (req, res) => {
     if (!isAllowed) {
       return res.status(403).json({ message: 'You are not assigned to this test' });
     }
+
+    // Enforce max attempts — block if student has exhausted all attempts
+    const maxAttempts = test.maxAttempts || 0;
+    if (maxAttempts > 0) {
+      const attemptsUsed = await TestResult.countDocuments({
+        student: req.user.id,
+        testId: test._id
+      });
+      if (attemptsUsed >= maxAttempts) {
+        return res.status(403).json({
+          message: `You have used all ${maxAttempts} allowed attempts for this test. Results remain in your history.`
+        });
+      }
+    }
+
     res.json(test);
   } catch (error) {
     console.error(error);
@@ -1502,22 +1549,22 @@ const startCATSession = async (req, res) => {
       isDraft: { $ne: true }
     }).lean();
 
-    // Assign default medium-difficulty IRT params to case studies so the
-    // CAT engine can calculate Fisher information and include them in selection.
-    // These are reasonable defaults: discrimination = 0.8, difficulty = 0.0 (medium),
-    // guessing = 0 (no guessing for case studies), model = 2PL
-    const irtDefaults = {
-      irtDiscrimination: 0.8,
-      irtDifficulty: 0.0,
-      irtGuessing: 0,
-      irtModel: '2PL'
+    // Assign varied IRT params to case studies based on their difficulty field
+    // so the CAT engine can differentiate between easy/medium/hard case studies.
+    // This prevents all case studies from having identical Fisher Information.
+    const difficultyToIRT = {
+      easy:   { irtDiscrimination: 0.9, irtDifficulty: -0.8, irtGuessing: 0, irtModel: '2PL' },
+      medium: { irtDiscrimination: 1.0, irtDifficulty: 0.0,  irtGuessing: 0, irtModel: '2PL' },
+      hard:   { irtDiscrimination: 1.1, irtDifficulty: 0.8,  irtGuessing: 0, irtModel: '2PL' },
     };
+    const defaultIRT = difficultyToIRT.medium;
 
     // Deduplicate: remove any case-study already in allQuestions (e.g. one that was calibrated)
     const existingIds = new Set(allQuestions.map(q => String(q._id)));
     const freshCaseStudies = caseStudies.filter(cs => !existingIds.has(String(cs._id)));
     for (const cs of freshCaseStudies) {
-      Object.assign(cs, irtDefaults);
+      const irtParams = difficultyToIRT[cs.difficulty] || defaultIRT;
+      Object.assign(cs, irtParams);
       allQuestions.push(cs);
     }
     
@@ -1740,8 +1787,10 @@ const submitCATAnswer = async (req, res) => {
     const confidence = getConfidenceLevel(session.se);
     
     // Check if test should stop
-    if (engine.shouldStop(session.theta, session.se, session.administered.length, 
-                         session.responses, administeredItems)) {
+    const stopResult = engine.shouldStop(session.theta, session.se, session.administered.length, 
+                         session.responses, administeredItems);
+
+    if (stopResult.shouldStop) {
       
       const passed = (session.theta - 1.96 * session.se) > session.engine.passingStandard;
       
@@ -1794,6 +1843,7 @@ const submitCATAnswer = async (req, res) => {
       const testResult = new TestResult({
         student: studentId,
         testName,
+        testType: session.testType,
         date: new Date(),
         score: totalEarned,
         totalQuestions: totalQuestionsCount, // actual answer count (includes sub-questions)
@@ -2552,5 +2602,34 @@ module.exports = {
   sendExamSupportMessage,
   getClientNeedsCounts,
   getQuestionStatusCounts,
-  markWelcomeSeen
+  markWelcomeSeen,
+  dismissPopup
+};
+
+// @desc    Dismiss a popup notification (server-side persistence across devices)
+// @route   POST /api/student/dismiss-popup
+// @access  Private
+const dismissPopup = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { popupKey } = req.body;
+
+    if (!popupKey || typeof popupKey !== 'string') {
+      return res.status(400).json({ message: 'popupKey is required' });
+    }
+
+    // Sanitize key to only allow alphanumeric, hyphens, underscores, colons
+    if (!/^[a-zA-Z0-9_\-:]+$/.test(popupKey)) {
+      return res.status(400).json({ message: 'Invalid popupKey format' });
+    }
+
+    await User.findByIdAndUpdate(studentId, {
+      $set: { [`dismissedPopups.${popupKey}`]: Date.now() }
+    });
+
+    res.json({ message: 'Popup dismissed' });
+  } catch (error) {
+    console.error('Failed to dismiss popup:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };

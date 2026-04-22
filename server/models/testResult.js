@@ -35,7 +35,9 @@ const answerSchema = new mongoose.Schema({
 
 const testResultSchema = new mongoose.Schema({
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  testId: { type: mongoose.Schema.Types.ObjectId, ref: 'Test' },
   testName: String,
+  testType: String,
   date: { type: Date, default: Date.now },
   score: Number,
   totalQuestions: Number,
