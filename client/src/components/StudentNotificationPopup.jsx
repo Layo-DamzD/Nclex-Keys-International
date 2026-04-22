@@ -95,8 +95,10 @@ const StudentNotificationPopup = ({
     if (!enabled || !userId) return undefined;
 
     let mounted = true;
+    let allSeen = false;
 
     const fetchNotifications = async () => {
+      if (allSeen) return;
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
@@ -123,7 +125,13 @@ const StudentNotificationPopup = ({
         const incoming = notificationItems
           .filter((item) => item?.id && !seen.has(String(item.id)));
 
-        if (!mounted || incoming.length === 0) return;
+        if (incoming.length === 0) {
+          // No new notifications — stop polling to avoid unnecessary re-renders
+          allSeen = true;
+          return;
+        }
+
+        if (!mounted) return;
 
         setQueue((prev) => {
           const existingIds = new Set(prev.map((x) => String(x.id)));
@@ -143,9 +151,10 @@ const StudentNotificationPopup = ({
     };
 
     fetchNotifications();
-    const intervalId = window.setInterval(fetchNotifications, 4000);
-    const onFocus = () => fetchNotifications();
-    const onRealtimeRefresh = () => fetchNotifications();
+    // Poll every 30 seconds instead of 4 to reduce unnecessary API calls
+    const intervalId = window.setInterval(fetchNotifications, 30000);
+    const onFocus = () => { allSeen = false; fetchNotifications(); };
+    const onRealtimeRefresh = () => { allSeen = false; fetchNotifications(); };
     window.addEventListener('focus', onFocus);
     window.addEventListener('student-notification:refresh', onRealtimeRefresh);
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
@@ -262,8 +262,13 @@ const StudentDashboard = () => {
   }, [loading, user?._id]);
 
 
+  // Use a ref so the prepared-test check only fires ONCE per session mount
+  const preparedTestCheckedRef = useRef(false);
+
   useEffect(() => {
     if (loading || !user?._id) return;
+    if (preparedTestCheckedRef.current) return;
+    preparedTestCheckedRef.current = true;
 
     let mounted = true;
     const checkPreparedTests = async () => {
@@ -304,11 +309,14 @@ const StudentDashboard = () => {
     return () => {
       mounted = false;
     };
-  }, [loading, user?._id, user?.dismissedPopups]);
+  }, [loading, user?._id]);
 
   // Show welcome celebration only once per user (stored in database)
+  const welcomeCheckedRef = useRef(false);
   useEffect(() => {
     if (loading || !user?._id) return;
+    if (welcomeCheckedRef.current) return;
+    welcomeCheckedRef.current = true;
 
     // Check if user has already seen welcome (from database via login response)
     if (user.hasSeenWelcome) return;
