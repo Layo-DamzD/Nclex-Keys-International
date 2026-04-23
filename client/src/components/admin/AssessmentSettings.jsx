@@ -211,38 +211,94 @@ const AssessmentSettings = () => {
           </div>
 
           {config?.catEnabled && (
-            <div className="row" style={{ marginTop: '16px', padding: '16px', background: '#f1f5f9', borderRadius: '8px' }}>
-              <div className="col-md-4 mb-3">
-                <label className="form-label" style={{ fontWeight: 600 }}>Min Items</label>
-                <input type="number" className="form-control" min={15} max={150}
-                  value={config?.catMinItems ?? 85}
-                  onChange={e => handleChange('catMinItems', Number(e.target.value))} />
+            <div style={{ marginTop: '16px' }}>
+              {/* ── Core CAT parameters ── */}
+              <div className="row" style={{ padding: '16px', background: '#f1f5f9', borderRadius: '8px' }}>
+                <p style={{ fontWeight: 600, color: '#334155', marginBottom: '12px' }}>
+                  <i className="fas fa-cog" style={{ marginRight: '6px' }}></i>Core Parameters
+                </p>
+                <div className="col-md-4 mb-3">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Min Items</label>
+                  <input type="number" className="form-control" min={15} max={150}
+                    value={config?.catMinItems ?? 85}
+                    onChange={e => handleChange('catMinItems', Number(e.target.value))} />
+                  <small className="text-muted">Cannot stop before this (NCLEX: 85)</small>
+                </div>
+                <div className="col-md-4 mb-3">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Max Items</label>
+                  <input type="number" className="form-control" min={50} max={300}
+                    value={config?.catMaxItems ?? 150}
+                    onChange={e => handleChange('catMaxItems', Number(e.target.value))} />
+                  <small className="text-muted">Must stop at this (NCLEX: 150)</small>
+                </div>
+                <div className="col-md-4 mb-3">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Passing Standard (&#952;)</label>
+                  <input type="number" className="form-control" min={-3} max={3} step={0.1}
+                    value={config?.catPassingStandard ?? 0}
+                    onChange={e => handleChange('catPassingStandard', Number(e.target.value))} />
+                  <small className="text-muted">Ability threshold (0 = medium)</small>
+                </div>
+                <div className="col-md-4 mb-3">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Confidence Threshold</label>
+                  <input type="number" className="form-control" min={0.5} max={0.999} step={0.01}
+                    value={config?.catConfidenceLevel ?? 0.95}
+                    onChange={e => handleChange('catConfidenceLevel', Number(e.target.value))} />
+                  <small className="text-muted">Default: 0.95 (95% CI)</small>
+                </div>
               </div>
-              <div className="col-md-4 mb-3">
-                <label className="form-label" style={{ fontWeight: 600 }}>Max Items</label>
-                <input type="number" className="form-control" min={50} max={300}
-                  value={config?.catMaxItems ?? 150}
-                  onChange={e => handleChange('catMaxItems', Number(e.target.value))} />
+
+              {/* ── Theta adjustment ── */}
+              <div className="row mt-3" style={{ padding: '16px', background: '#fefce8', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                <p style={{ fontWeight: 600, color: '#92400e', marginBottom: '12px' }}>
+                  <i className="fas fa-sliders-h" style={{ marginRight: '6px' }}></i>Theta Adjustment
+                </p>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Initial Adjustment</label>
+                  <input type="number" className="form-control" min={0.05} max={1.0} step={0.05}
+                    value={config?.catInitialAdjustment ?? 0.3}
+                    onChange={e => handleChange('catInitialAdjustment', Number(e.target.value))} />
+                  <small className="text-muted">How much theta shifts early in the test (higher = faster adaptation)</small>
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Min Adjustment</label>
+                  <input type="number" className="form-control" min={0.01} max={0.5} step={0.01}
+                    value={config?.catMinAdjustment ?? 0.05}
+                    onChange={e => handleChange('catMinAdjustment', Number(e.target.value))} />
+                  <small className="text-muted">Minimum theta shift toward end of test (finer tuning)</small>
+                </div>
               </div>
-              <div className="col-md-4 mb-3">
-                <label className="form-label" style={{ fontWeight: 600 }}>Passing Standard (&#952;)</label>
-                <input type="number" className="form-control" min={-3} max={3} step={0.1}
-                  value={config?.catPassingStandard ?? 0}
-                  onChange={e => handleChange('catPassingStandard', Number(e.target.value))} />
-              </div>
-              <div className="col-md-4 mb-3">
-                <label className="form-label" style={{ fontWeight: 600 }}>Confidence Level</label>
-                <input type="number" className="form-control" min={0.5} max={0.999} step={0.01}
-                  value={config?.catConfidenceLevel ?? 0.95}
-                  onChange={e => handleChange('catConfidenceLevel', Number(e.target.value))} />
-                <small className="text-muted">Default: 0.95 (95% CI)</small>
-              </div>
-              <div className="col-md-4 mb-3">
-                <label className="form-label" style={{ fontWeight: 600 }}>Target SE</label>
-                <input type="number" className="form-control" min={0.01} max={0.5} step={0.01}
-                  value={config?.catTargetSE ?? 0.08}
-                  onChange={e => handleChange('catTargetSE', Number(e.target.value))} />
-                <small className="text-muted">Standard error target</small>
+
+              {/* ── Borderline & SE decay ── */}
+              <div className="row mt-3" style={{ padding: '16px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                <p style={{ fontWeight: 600, color: '#991b1b', marginBottom: '12px' }}>
+                  <i className="fas fa-exclamation-triangle" style={{ marginRight: '6px' }}></i>Borderline Candidate Behaviour
+                </p>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '12px' }}>
+                  When a candidate's theta is within the threshold of the passing standard,
+                  the engine slows adjustment and SE reduction — pushing the test toward
+                  the maximum number of questions (real NCLEX behaviour).
+                </p>
+                <div className="col-md-4 mb-3">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Borderline Threshold</label>
+                  <input type="number" className="form-control" min={0.05} max={1.0} step={0.05}
+                    value={config?.catBorderlineThreshold ?? 0.2}
+                    onChange={e => handleChange('catBorderlineThreshold', Number(e.target.value))} />
+                  <small className="text-muted">|theta &#8722; standard| &lt; this = borderline</small>
+                </div>
+                <div className="col-md-4 mb-3">
+                  <label className="form-label" style={{ fontWeight: 600 }}>SE Decay (Normal)</label>
+                  <input type="number" className="form-control" min={0.80} max={0.99} step={0.005}
+                    value={config?.catSeDecay ?? 0.95}
+                    onChange={e => handleChange('catSeDecay', Number(e.target.value))} />
+                  <small className="text-muted">SE multiplied by this per question</small>
+                </div>
+                <div className="col-md-4 mb-3">
+                  <label className="form-label" style={{ fontWeight: 600 }}>SE Decay (Borderline)</label>
+                  <input type="number" className="form-control" min={0.90} max={0.995} step={0.005}
+                    value={config?.catBorderlineSeDecay ?? 0.975}
+                    onChange={e => handleChange('catBorderlineSeDecay', Number(e.target.value))} />
+                  <small className="text-muted">Slower decay = more questions for borderline</small>
+                </div>
               </div>
             </div>
           )}

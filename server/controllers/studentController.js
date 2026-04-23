@@ -1576,36 +1576,54 @@ const startCATSession = async (req, res) => {
       });
     }
     
-    // Create CAT engine — reduced minItems for assessment mode
+    // ── Build engine config (defaults + AssessmentConfig overrides) ──
     const minItems = testType === 'assessment' ? 50 : 85;
-    const maxItems = 150; // 150 max for both assessment and CAT
-    
-    const engine = new CATEngine({
-      passingStandard: 0.0, // θ_cut
+    const maxItems = 150;
+
+    const engineConfig = {
+      passingStandard: 0.0,
       minItems,
       maxItems,
-      targetSE: 0.08
-    });
-    
+      confidenceThreshold: 0.95,
+      initialAdjustment: 0.3,
+      minAdjustment: 0.05,
+      seDecay: 0.95,
+      borderlineSeDecay: 0.975,
+      borderlineThreshold: 0.2,
+    };
+
+    // Load saved CAT settings from AssessmentConfig if available
+    try {
+      const AssessmentConfig = require('../models/AssessmentConfig');
+      const savedConfig = await AssessmentConfig.getConfig();
+      if (savedConfig) {
+        if (savedConfig.catPassingStandard != null) engineConfig.passingStandard = savedConfig.catPassingStandard;
+        if (savedConfig.catMinItems != null) engineConfig.minItems = savedConfig.catMinItems;
+        if (savedConfig.catMaxItems != null) engineConfig.maxItems = savedConfig.catMaxItems;
+        if (savedConfig.catConfidenceLevel != null) engineConfig.confidenceThreshold = savedConfig.catConfidenceLevel;
+        if (savedConfig.catInitialAdjustment != null) engineConfig.initialAdjustment = savedConfig.catInitialAdjustment;
+        if (savedConfig.catMinAdjustment != null) engineConfig.minAdjustment = savedConfig.catMinAdjustment;
+        if (savedConfig.catBorderlineThreshold != null) engineConfig.borderlineThreshold = savedConfig.catBorderlineThreshold;
+        if (savedConfig.catSeDecay != null) engineConfig.seDecay = savedConfig.catSeDecay;
+        if (savedConfig.catBorderlineSeDecay != null) engineConfig.borderlineSeDecay = savedConfig.catBorderlineSeDecay;
+      }
+    } catch (e) {
+      // AssessmentConfig model may not exist — use defaults
+    }
+
+    const engine = new CATEngine(engineConfig);
+
     // Build question pool: ensure at least 15 case studies are included
-    // Shuffle case studies and take up to 15 (or all if fewer)
     const shuffledCaseStudies = [...caseStudies].sort(() => Math.random() - 0.5);
     const caseStudyPool = shuffledCaseStudies.slice(0, Math.min(15, shuffledCaseStudies.length));
-    const caseStudyIds = new Set(caseStudyPool.map(q => q._id.toString()));
-    
-    // Fill remaining slots with regular questions, shuffled
-    const remainingSlots = Math.max(0, minItems - caseStudyPool.length);
-    const shuffledRegular = [...regularQuestions].sort(() => Math.random() - 0.5);
-    const regularPool = shuffledRegular.slice(0, remainingSlots);
-    
-    // Combined pool for CAT selection: all questions available
-    // Case studies are guaranteed in the pool; CAT engine picks by MFI
+
+    // Combined pool for CAT selection
     const questions = [...allQuestions];
-    
+
     // Get first item (start with medium difficulty)
-    const firstItem = await engine.selectNextItem(0, questions, []);
-    
-    // Create session record — CACHE the question pool so we don't query DB every time
+    const firstItem = engine.selectNextItem(0, questions, []);
+
+    // Create session — all state lives here, engine is stateless
     const session = {
       studentId,
       testType,
@@ -1615,27 +1633,20 @@ const startCATSession = async (req, res) => {
       earnedMarks: [],
       totalMarks: [],
       theta: 0,
-      se: Infinity,
+      se: 1.0,                  // spec: SE starts at 1.0
       answerDetails: [],
-      // Cache the entire question pool in memory for fast access
+      thetaHistory: [],         // track theta per question (for timeout + analytics)
       questionPool: questions,
-      engine: {
-        minItems,
-        maxItems,
-        targetSE: 0.08,
-        passingStandard: 0.0
-      }
+      engineConfig,
     };
-    
-    // Store session in cache/db
-    // For now, we'll use a simple in-memory store (in production, use Redis)
+
     catSessions.set(studentId, session);
-    
+
     res.json({
       question: firstItem,
       questionNumber: 1,
       theta: 0,
-      se: null
+      se: 1.0,
     });
     
   } catch (error) {
@@ -1744,55 +1755,42 @@ const submitCATAnswer = async (req, res) => {
       session.earnedMarks.push(evaluation.earnedMarks);
       session.totalMarks.push(evaluation.totalMarks);
     
-    // Reuse cached engine and administeredMap (set once on first answer)
-    if (!session.cachedEngine) {
-      session.cachedEngine = new CATEngine({
-        passingStandard: session.engine.passingStandard,
-        minItems: session.engine.minItems,
-        maxItems: session.engine.maxItems,
-        targetSE: session.engine.targetSE
-      });
-      session.cachedAdministeredMap = new Map(
-        questionPool.map((item) => [String(item._id), item])
-      );
-    }
-    const engine = session.cachedEngine;
-    
-    // Use CACHED question pool — no DB query needed (MAJOR speedup)
-    const allQuestions = questionPool;
-    
-    // Use cached administered items map
-    const administeredItems = session.administered
-      .map((id) => session.cachedAdministeredMap.get(String(id)))
-      .filter(Boolean);
-    
-    session.theta = engine.estimateAbilityEAP(
-      session.responses, 
-      administeredItems
+    // ── Create engine from session config (stateless — all state in session) ──
+    const engine = new CATEngine(session.engineConfig);
+
+    // ── Process response: update theta + SE ──
+    const isCorrect = evaluation.isCorrect === true;
+    const processResult = engine.processResponse(
+      session.theta, session.se, isCorrect,
+      session.administered.length,
+      question.type,
+      evaluation.earnedMarks || 0,
+      evaluation.totalMarks || 0
     );
-    
-    // Calculate standard error
-    session.se = engine.calculateStandardError(session.theta, administeredItems);
-    
-    // Calculate confidence level based on SE
-    // SE < 0.15 = Very High (95%+), SE < 0.30 = High (80%+), SE < 0.50 = Moderate (60%+), SE < 0.80 = Low, else Very Low
+    session.theta = processResult.theta;
+    session.se = processResult.se;
+
+    // Track theta history (for time-out evaluation + admin analytics)
+    if (!session.thetaHistory) session.thetaHistory = [];
+    session.thetaHistory.push(session.theta);
+
+    // ── Confidence display (confidence = 1 − SE per spec) ──
     const getConfidenceLevel = (se) => {
       if (!se || se === Infinity || se === -Infinity) return { level: 'Calculating...', percentage: 0 };
-      if (se < 0.15) return { level: 'Very High', percentage: 95 };
-      if (se < 0.30) return { level: 'High', percentage: 80 };
-      if (se < 0.50) return { level: 'Moderate', percentage: 60 };
-      if (se < 0.80) return { level: 'Low', percentage: 40 };
-      return { level: 'Very Low', percentage: 20 };
+      const pct = Math.max(0, Math.min(100, Math.round((1 - se) * 100)));
+      if (pct >= 95) return { level: 'Very High', percentage: pct };
+      if (pct >= 80) return { level: 'High', percentage: pct };
+      if (pct >= 60) return { level: 'Moderate', percentage: pct };
+      if (pct >= 40) return { level: 'Low', percentage: pct };
+      return { level: 'Very Low', percentage: pct };
     };
     const confidence = getConfidenceLevel(session.se);
-    
-    // Check if test should stop
-    const stopResult = engine.shouldStop(session.theta, session.se, session.administered.length, 
-                         session.responses, administeredItems);
+
+    // ── Check stopping rules ──
+    const stopResult = engine.shouldStop(session.theta, session.se, session.administered.length);
 
     if (stopResult.shouldStop) {
-      
-      const passed = (session.theta - 1.96 * session.se) > session.engine.passingStandard;
+      const passed = stopResult.passed;
       
       // Save test result
       const testName = session.testType === 'assessment' ? 'Assessment' : 'CAT Adaptive Test';
@@ -1869,10 +1867,10 @@ const submitCATAnswer = async (req, res) => {
       });
     }
     
-    // Select next question
-    const nextItem = await engine.selectNextItem(
-      session.theta, 
-      allQuestions, 
+    // Select next question based on current theta
+    const nextItem = engine.selectNextItem(
+      session.theta,
+      questionPool,
       session.administered
     );
     

@@ -20,6 +20,12 @@ const assessmentConfigSchema = new mongoose.Schema({
   catPassingStandard: { type: Number, default: 0.0, min: -3.0, max: 3.0 },
   catConfidenceLevel: { type: Number, default: 0.95, min: 0.5, max: 0.999 },
   catTargetSE: { type: Number, default: 0.08, min: 0.01, max: 0.5 },
+  // NCLEX-style adaptive tuning
+  catInitialAdjustment: { type: Number, default: 0.3, min: 0.05, max: 1.0 },
+  catMinAdjustment: { type: Number, default: 0.05, min: 0.01, max: 0.5 },
+  catBorderlineThreshold: { type: Number, default: 0.2, min: 0.05, max: 1.0 },
+  catSeDecay: { type: Number, default: 0.95, min: 0.80, max: 0.99 },
+  catBorderlineSeDecay: { type: Number, default: 0.975, min: 0.90, max: 0.995 },
 
   // Time & attempts
   assessmentDuration: { type: Number, default: 180, min: 10, max: 600 }, // minutes
