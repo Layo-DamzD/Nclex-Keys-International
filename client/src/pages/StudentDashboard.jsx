@@ -27,12 +27,16 @@ const MOBILE_BREAKPOINT = 992;
 const POPUP_LS_PREFIX = 'popup-dismissed:';
 const POPUP_SS_PREFIX = 'popup-session:';
 
-const isPopupDismissed = (popupKey) => {
-  // Check sessionStorage first (survives refresh, cleared on tab close)
+const isPopupDismissed = (popupKey, serverDismissedPopups) => {
+  // 1. Server-side (SOURCE OF TRUTH — survives device wipe, browser switch)
+  if (serverDismissedPopups && typeof serverDismissedPopups === 'object' && serverDismissedPopups[popupKey]) {
+    return true;
+  }
+  // 2. sessionStorage (survives refresh, cleared on tab close)
   try {
     if (sessionStorage.getItem(`${POPUP_SS_PREFIX}${popupKey}`) === 'true') return true;
   } catch {}
-  // Then localStorage (survives everything)
+  // 3. localStorage (survives everything including browser restart)
   try {
     if (localStorage.getItem(`${POPUP_LS_PREFIX}${popupKey}`) === 'true') return true;
   } catch {}
@@ -47,7 +51,7 @@ const dismissPopupServer = async (popupKey) => {
       headers: { Authorization: `Bearer ${token}` }
     });
   } catch (err) {
-    // Silent fail — local storage is the primary guard
+    // Silent fail — server persistence is best-effort
   }
 };
 
@@ -72,15 +76,7 @@ const StudentDashboard = () => {
   const [daysUntilExamCount, setDaysUntilExamCount] = useState(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showExamCelebration, setShowExamCelebration] = useState(false);
-  const [examCelebrationDismissed, setExamCelebrationDismissed] = useState(() => {
-    try {
-      // Check both sessionStorage and localStorage
-      const key = `exam-celebration-dismissed:${user?._id || 'anon'}`;
-      if (sessionStorage.getItem(`popup-session:${key}`) === 'true') return true;
-      if (localStorage.getItem(`popup-dismissed:${key}`) === 'true') return true;
-    } catch {}
-    return false;
-  });
+  const [examCelebrationDismissed, setExamCelebrationDismissed] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [notificationItems, setNotificationItems] = useState([]);
   const [showPreparedTestAlert, setShowPreparedTestAlert] = useState(false);
@@ -140,9 +136,6 @@ const StudentDashboard = () => {
       // Re-allow celebration popup if exam date changes to within 5 days
       // but only if it hasn't been explicitly dismissed this exam cycle
       setExamCelebrationDismissed(false);
-      const key = `exam-celebration-dismissed:${user?._id || 'anon'}`;
-      try { sessionStorage.removeItem(`popup-session:${key}`); } catch {}
-      try { localStorage.removeItem(`popup-dismissed:${key}`); } catch {}
     }
   }, [daysUntilExamCount, user?._id]);
 
@@ -150,8 +143,7 @@ const StudentDashboard = () => {
     setShowExamCelebration(false);
     setExamCelebrationDismissed(true);
     const key = `exam-celebration-dismissed:${user?._id || 'anon'}`;
-    try { sessionStorage.setItem(`popup-session:${key}`, 'true'); } catch {}
-    try { localStorage.setItem(`popup-dismissed:${key}`, 'true'); } catch {}
+    dismissPopup(key);
   }, [user?._id]);
 
   useEffect(() => {
@@ -275,6 +267,11 @@ const StudentDashboard = () => {
     if (preparedTestCheckedRef.current) return;
     preparedTestCheckedRef.current = true;
 
+    // PRIMARY CHECK: server-side dismissedPopups from user object
+    const serverDismissed = user?.dismissedPopups;
+    const popupKey = `prepared-test-alert:${user._id}`;
+    if (isPopupDismissed(popupKey, serverDismissed)) return;
+
     let mounted = true;
     const checkPreparedTests = async () => {
       try {
@@ -287,9 +284,6 @@ const StudentDashboard = () => {
         const availableTests = Array.isArray(data.tests) ? data.tests : (Array.isArray(data) ? data : []);
         if (!mounted || availableTests.length === 0) return;
         setPreparedTestCount(availableTests.length);
-        // Unified check: sessionStorage + localStorage + legacy key + server-side
-        const popupKey = `prepared-test-alert:${user._id}`;
-        if (isPopupDismissed(popupKey)) return;
         // Migrate legacy key from old implementation
         try {
           if (localStorage.getItem(`prepared-test-alert-dismissed:${user._id}`) === 'true') {
@@ -297,15 +291,8 @@ const StudentDashboard = () => {
             return;
           }
         } catch {}
-        // Also check server-side dismissedPopups from user object
-        const serverDismissed = user?.dismissedPopups;
-        if (serverDismissed && typeof serverDismissed === 'object') {
-          if (serverDismissed[popupKey]) {
-            // Migrate server dismissal to local storage too
-            dismissPopup(popupKey);
-            return;
-          }
-        }
+        // Re-check after async (server-side might have updated)
+        if (isPopupDismissed(popupKey, serverDismissed)) return;
         setShowPreparedTestAlert(true);
       } catch (error) {
         console.error('Failed to check prepared tests:', error);
@@ -316,7 +303,7 @@ const StudentDashboard = () => {
     return () => {
       mounted = false;
     };
-  }, [loading, user?._id]);
+  }, [loading, user?._id, user?.dismissedPopups]);
 
   // Show welcome celebration only once per user (stored in database)
   const welcomeCheckedRef = useRef(false);
@@ -325,19 +312,20 @@ const StudentDashboard = () => {
     if (welcomeCheckedRef.current) return;
     welcomeCheckedRef.current = true;
 
-    // Check local storage first (fast, survives refresh)
-    const welcomeKey = `welcome-seen:${user._id}`;
-    if (isPopupDismissed(welcomeKey)) return;
-
     // Check if user has already seen welcome (from database via login response)
     if (user.hasSeenWelcome) {
-      // Migrate DB flag to local storage for instant checks on future refreshes
+      const welcomeKey = `welcome-seen:${user._id}`;
       dismissPopup(welcomeKey);
       return;
     }
 
+    // Also check server-side dismissedPopups + localStorage
+    const welcomeKey = `welcome-seen:${user._id}`;
+    const serverDismissed = user?.dismissedPopups;
+    if (isPopupDismissed(welcomeKey, serverDismissed)) return;
+
     setShowWelcomeCelebration(true);
-  }, [loading, user?._id, user?.hasSeenWelcome]);
+  }, [loading, user?._id, user?.hasSeenWelcome, user?.dismissedPopups]);
 
   // Mark welcome as seen when user dismisses it
   const handleWelcomeClose = async () => {
@@ -361,6 +349,9 @@ const StudentDashboard = () => {
     if (loading || !user?._id) return;
     if (publicTestCheckedRef.current) return;
     publicTestCheckedRef.current = true;
+
+    // PRIMARY CHECK: server-side dismissedPopups
+    const serverDismissed = user?.dismissedPopups;
 
     let mounted = true;
     const loadPublicReviewStatus = async () => {
@@ -389,10 +380,10 @@ const StudentDashboard = () => {
           return;
         }
 
-        // Unified check: sessionStorage + localStorage
+        // Check dismissal: server-side first, then local
         const deferredKey = `public-test-later:${user._id}:${submittedAtIso}`;
-        if (isPopupDismissed(deferredKey)) return;
-        // Also check legacy key
+        if (isPopupDismissed(deferredKey, serverDismissed)) return;
+        // Migrate legacy key
         try {
           if (localStorage.getItem(`student-public-test-later:${user._id}:${submittedAtIso}`) === 'later') {
             dismissPopup(deferredKey);
@@ -410,7 +401,7 @@ const StudentDashboard = () => {
     return () => {
       mounted = false;
     };
-  }, [loading, user?._id]);
+  }, [loading, user?._id, user?.dismissedPopups]);
 
   if (loading) return <div>Loading dashboard...</div>;
 

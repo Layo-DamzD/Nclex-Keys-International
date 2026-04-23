@@ -9,7 +9,9 @@
  *   2. Must stop at maxItems (150)
  *   3. 95% CI entirely above passing standard → PASS (early stop)
  *   4. 95% CI entirely below passing standard → FAIL (early stop)
- *   5. Running ability percentage above high-threshold → PASS (early stop)
+ *   5. Running correct rate ≥ 87% after minItems → PASS (early stop)
+ *   6. Running correct rate ≤ 40% after minItems → FAIL (early stop)
+ *   7. Target SE reached with clear CI direction → early stop
  */
 class CATEngine {
   constructor(options = {}) {
@@ -20,9 +22,9 @@ class CATEngine {
     this.targetSE = options.targetSE || 0.08;
     this.initialTheta = options.initialTheta || 0.0;
     this.estimationMethod = options.estimationMethod || 'EAP';
-    // Percentage threshold for early pass — if running correct rate is above this
-    // after minItems, the student clearly passes
-    this.highAbilityThreshold = options.highAbilityThreshold || 0.87; // 87%
+    // Percentage thresholds for early stopping based on running correct rate
+    this.highAbilityThreshold = options.highAbilityThreshold || 0.87; // 87% → early PASS
+    this.lowAbilityThreshold = options.lowAbilityThreshold || 0.40;   // 40% → early FAIL
   }
 
   /**
@@ -216,9 +218,27 @@ class CATEngine {
       return { shouldStop: true, reason: 'ci_below_passing' };
     }
     
-    // Rule 5: Target SE reached AND CI direction is clear
+    // Rule 5: Running correct rate ≥ 87% after minItems → PASS (high confidence)
+    // A student consistently getting 87%+ correct is clearly above standard
+    if (administeredCount >= this.minItems && responses && responses.length > 0) {
+      const runningRate = this.getRunningCorrectRate(responses);
+      if (runningRate >= this.highAbilityThreshold) {
+        return { shouldStop: true, reason: 'high_correct_rate_pass' };
+      }
+    }
+    
+    // Rule 6: Running correct rate ≤ 40% after minItems → FAIL
+    // A student getting ≤40% correct is clearly below standard
+    if (administeredCount >= this.minItems && responses && responses.length > 0) {
+      const runningRate = this.getRunningCorrectRate(responses);
+      if (runningRate <= this.lowAbilityThreshold) {
+        return { shouldStop: true, reason: 'low_correct_rate_fail' };
+      }
+    }
+    
+    // Rule 7: Target SE reached AND CI direction is clear
     // This gives another path to early stopping when precision is sufficient
-    if (se <= this.targetSE && administeredCount >= this.minItems) {
+    if (se <= this.targetSE && administeredCount >= 95) {
       if (ciLow > this.passingStandard) {
         return { shouldStop: true, reason: 'se_reached_passing' };
       }

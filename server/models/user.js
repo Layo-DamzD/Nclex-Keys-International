@@ -94,6 +94,21 @@ userSchema.pre('save', async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
+// Ensure dismissedPopups Map always serializes to a plain object in JSON responses
+userSchema.set('toJSON', {
+  transform: function (doc, ret) {
+    if (ret.dismissedPopups && typeof ret.dismissedPopups === 'object') {
+      // Convert Mongoose Map to plain object if needed
+      if (!(ret.dismissedPopups instanceof Object) || ret.dismissedPopups.constructor !== Object) {
+        try { ret.dismissedPopups = Object.fromEntries(ret.dismissedPopups); } catch {}
+      }
+    }
+    delete ret.password;
+    delete ret.recoveryPinHash;
+    return ret;
+  }
+});
+
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
