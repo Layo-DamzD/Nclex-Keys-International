@@ -30,7 +30,8 @@ const AdminSidebar = ({
         { id: 'draft-questions', icon: 'save', label: 'Draft Questions' },
         { id: 'case-studies', icon: 'folder-open', label: 'Case Studies' },
         { id: 'create-test', icon: 'plus-circle', label: 'Create Test' },
-        { id: 'landing-page', icon: 'edit', label: 'Edit Landing Page' }
+        { id: 'landing-page', icon: 'edit', label: 'Edit Landing Page' },
+        { id: 'assessment-config', icon: 'sliders-h', label: 'Assessment Settings' }
       ]
     },
     {

@@ -21,6 +21,7 @@ import StudentFeedback from '../components/admin/StudentFeedback';
 import AdminApproval from '../components/admin/AdminApproval';
 import ExamSupportChat from '../components/admin/ExamSupportChat';
 import AdminSettings from '../components/admin/AdminSettings';
+import AssessmentSettings from '../components/admin/AssessmentSettings';
 
 import PwaInstallButton from '../components/PwaInstallButton';
 import { useAppTheme } from '../context/AppThemeContext';
@@ -353,6 +354,12 @@ const AdminDashboard = () => {
         {activeSection === 'landing-page' && userRole === 'superadmin' && (
           <div className="section active">
             <LandingPageStudio />
+          </div>
+        )}
+
+        {activeSection === 'assessment-config' && userRole === 'superadmin' && (
+          <div className="section active">
+            <AssessmentSettings />
           </div>
         )}
 

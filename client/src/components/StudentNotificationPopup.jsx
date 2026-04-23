@@ -19,21 +19,24 @@ const StudentNotificationPopup = ({
   const storageKey = useMemo(() => `${STORAGE_KEY_PREFIX}${userId || 'anonymous'}`, [userId]);
 
   const getSeenIds = () => {
+    const seen = new Set();
     try {
       const raw = localStorage.getItem(storageKey);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? new Set(parsed.map(String)) : new Set();
-    } catch {
-      return new Set();
-    }
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) parsed.forEach(id => seen.add(String(id)));
+      }
+    } catch {}
+    return seen;
   };
 
   const markSeen = (id) => {
     if (!id) return;
     const seen = getSeenIds();
     seen.add(String(id));
-    localStorage.setItem(storageKey, JSON.stringify(Array.from(seen).slice(-200)));
-    // Also persist to server so it survives browser data clearing
+    const arr = Array.from(seen).slice(-200);
+    try { localStorage.setItem(storageKey, JSON.stringify(arr)); } catch {}
+    // Also persist to server
     try {
       const token = localStorage.getItem('token');
       if (token && userId) {
@@ -49,7 +52,7 @@ const StudentNotificationPopup = ({
   // Ref to track server-side seen IDs loaded on mount
   const serverSeenRef = useRef(new Set());
 
-  // On mount, fetch server-side dismissed notification IDs
+  // On mount, fetch server-side dismissed notification IDs & merge into localStorage
   useEffect(() => {
     if (!enabled || !userId) return;
     let mounted = true;
@@ -57,7 +60,6 @@ const StudentNotificationPopup = ({
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        // We read the user object to get dismissedPopups
         const response = await axios.get('/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -82,7 +84,7 @@ const StudentNotificationPopup = ({
             }
           }
           if (changed) {
-            localStorage.setItem(storageKey, JSON.stringify(Array.from(localSeen).slice(-200)));
+            try { localStorage.setItem(storageKey, JSON.stringify(Array.from(localSeen).slice(-200))); } catch {}
           }
         }
       } catch {}
@@ -91,14 +93,13 @@ const StudentNotificationPopup = ({
     return () => { mounted = false; };
   }, [enabled, userId, storageKey]);
 
+  // Fetch notifications once on mount, then only on focus (no interval polling)
   useEffect(() => {
     if (!enabled || !userId) return undefined;
 
     let mounted = true;
-    let allSeen = false;
 
     const fetchNotifications = async () => {
-      if (allSeen) return;
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
@@ -125,12 +126,7 @@ const StudentNotificationPopup = ({
         const incoming = notificationItems
           .filter((item) => item?.id && !seen.has(String(item.id)));
 
-        if (incoming.length === 0) {
-          // No new notifications — stop polling to avoid unnecessary re-renders
-          allSeen = true;
-          return;
-        }
-
+        if (incoming.length === 0) return;
         if (!mounted) return;
 
         setQueue((prev) => {
@@ -151,16 +147,14 @@ const StudentNotificationPopup = ({
     };
 
     fetchNotifications();
-    // Poll every 30 seconds instead of 4 to reduce unnecessary API calls
-    const intervalId = window.setInterval(fetchNotifications, 30000);
-    const onFocus = () => { allSeen = false; fetchNotifications(); };
-    const onRealtimeRefresh = () => { allSeen = false; fetchNotifications(); };
+    // Only re-check on focus (tab switch) and explicit refresh events — NO interval
+    const onFocus = () => fetchNotifications();
+    const onRealtimeRefresh = () => fetchNotifications();
     window.addEventListener('focus', onFocus);
     window.addEventListener('student-notification:refresh', onRealtimeRefresh);
 
     return () => {
       mounted = false;
-      window.clearInterval(intervalId);
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('student-notification:refresh', onRealtimeRefresh);
     };

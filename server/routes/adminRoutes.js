@@ -55,6 +55,7 @@ const {
   getLandingPageConfig,
   saveLandingPageConfig
 } = require('../controllers/landingPageController');
+const AssessmentConfig = require('../models/AssessmentConfig');
 const multer = require('multer');
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -136,5 +137,37 @@ router.get('/settings', protect, adminOnly, getAdminSettings);
 router.put('/settings/profile', protect, adminOnly, updateAdminProfileSettings);
 router.put('/settings/password', protect, adminOnly, updateAdminPasswordSettings);
 router.delete('/settings/devices', protect, adminOnly, clearAdminDeviceSettings);
+
+// Assessment config routes (super admin only)
+router.get('/assessment-config', protect, superAdminOnly, async (req, res) => {
+  try {
+    const config = await AssessmentConfig.getConfig();
+    res.json(config);
+  } catch (error) {
+    console.error('Failed to get assessment config:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/assessment-config', protect, superAdminOnly, async (req, res) => {
+  try {
+    const config = await AssessmentConfig.updateConfig(req.body, req.user._id);
+    res.json(config);
+  } catch (error) {
+    console.error('Failed to update assessment config:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Student-facing endpoint: get assessment config (public read, no auth needed for settings)
+router.get('/assessment-config/public', async (req, res) => {
+  try {
+    const config = await AssessmentConfig.getConfig();
+    res.json(config);
+  } catch (error) {
+    console.error('Failed to get assessment config:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 module.exports = router;

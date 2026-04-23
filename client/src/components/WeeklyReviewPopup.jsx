@@ -1,42 +1,90 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
+
+// Unified popup dismissal helpers (shared across all popup components)
+const POPUP_LS_PREFIX = 'popup-dismissed:';
+const POPUP_SS_PREFIX = 'popup-session:';
+
+const isPopupDismissed = (popupKey) => {
+  // Check sessionStorage first (survives refresh, cleared on tab close)
+  try {
+    if (sessionStorage.getItem(`${POPUP_SS_PREFIX}${popupKey}`) === 'true') return true;
+  } catch {}
+  // Then localStorage (survives everything)
+  try {
+    if (localStorage.getItem(`${POPUP_LS_PREFIX}${popupKey}`) === 'true') return true;
+  } catch {}
+  return false;
+};
+
+const dismissPopup = (popupKey) => {
+  try { sessionStorage.setItem(`${POPUP_SS_PREFIX}${popupKey}`, 'true'); } catch {}
+  try { localStorage.setItem(`${POPUP_LS_PREFIX}${popupKey}`, 'true'); } catch {}
+};
 
 const WeeklyReviewPopup = ({ disabled = false }) => {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (disabled) {
-      setShow(false);
-      return;
-    }
-    checkWeeklyReview();
-  }, [disabled]);
+  const checkedRef = useRef(false);
 
   const authHeaders = () => {
     const token = localStorage.getItem('token');
     return { Authorization: `Bearer ${token}` };
   };
 
-  const checkWeeklyReview = async () => {
-    try {
-      const response = await axios.get('/api/student/check-weekly-review', {
-        headers: authHeaders()
-      });
-      setShow(Boolean(response.data?.needsReview));
-    } catch (err) {
-      console.error('Failed to check weekly review:', err);
+  useEffect(() => {
+    if (disabled) {
+      setShow(false);
+      return;
     }
-  };
+    // Guard: only check ONCE per component mount
+    if (checkedRef.current) return;
+    checkedRef.current = true;
+
+    const checkWeeklyReview = async () => {
+      try {
+        const response = await axios.get('/api/student/check-weekly-review', {
+          headers: authHeaders()
+        });
+
+        // Server says no review needed — respect that
+        if (!response.data?.needsReview) {
+          setShow(false);
+          return;
+        }
+
+        // Server says review needed — but check if already dismissed in this session or previously
+        // Use a date-based key so it can re-trigger next week
+        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        const popupKey = `weekly-review:${today}`;
+
+        if (isPopupDismissed(popupKey)) {
+          setShow(false);
+          return;
+        }
+
+        setShow(true);
+      } catch (err) {
+        console.error('Failed to check weekly review:', err);
+      }
+    };
+
+    checkWeeklyReview();
+  }, [disabled]);
 
   const dismissForWeek = async () => {
     setLoading(true);
     setError('');
     try {
+      // Dismiss locally first (immediate)
+      const today = new Date().toISOString().slice(0, 10);
+      dismissPopup(`weekly-review:${today}`);
+
+      // Also try server-side dismissal
       await axios.post('/api/student/mark-review-done', {}, {
         headers: authHeaders()
-      });
+      }).catch(() => {});
       setShow(false);
     } catch (err) {
       console.error('Failed to dismiss weekly review popup:', err);
@@ -47,6 +95,8 @@ const WeeklyReviewPopup = ({ disabled = false }) => {
   };
 
   const handleOpenPerformance = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    dismissPopup(`weekly-review:${today}`);
     setShow(false);
     window.dispatchEvent(new CustomEvent('student-dashboard:set-section', { detail: 'performance' }));
   };
