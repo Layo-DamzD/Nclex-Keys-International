@@ -1003,7 +1003,7 @@ const getTestHistory = async (req, res) => {
     const studentId = req.user.id;
     const tests = await TestResult.find({ student: studentId })
       .sort({ date: -1 })
-      .select('testName date score totalQuestions timeTaken percentage passed');
+      .select('testName date score totalQuestions timeTaken percentage passed status');
     res.json(tests);
   } catch (error) {
     console.error(error);
@@ -1502,101 +1502,163 @@ const startCATSession = async (req, res) => {
     const studentId = req.user.id;
     const testType = req.body?.testType || 'cat';
     
-    // Get all active questions with IRT parameters — cached in session for speed
-    const allQuestions = await Question.find({
-      irtDiscrimination: { $exists: true },
-      irtDifficulty: { $exists: true },
-      isDraft: { $ne: true }
-    }).lean();
-    
-    // Fetch case studies separately — they typically don't have IRT params
-    // but must still appear in CAT / assessment sessions
-    const caseStudies = await Question.find({
-      type: 'case-study',
-      isDraft: { $ne: true }
-    }).lean();
-
-    // Assign varied IRT params to case studies based on their difficulty field
-    // so the CAT engine can differentiate between easy/medium/hard case studies.
-    // This prevents all case studies from having identical Fisher Information.
-    const difficultyToIRT = {
-      easy:   { irtDiscrimination: 0.9, irtDifficulty: -0.8, irtGuessing: 0, irtModel: '2PL' },
-      medium: { irtDiscrimination: 1.0, irtDifficulty: 0.0,  irtGuessing: 0, irtModel: '2PL' },
-      hard:   { irtDiscrimination: 1.1, irtDifficulty: 0.8,  irtGuessing: 0, irtModel: '2PL' },
-    };
-    const defaultIRT = difficultyToIRT.medium;
-
-    // Deduplicate: remove any case-study already in allQuestions (e.g. one that was calibrated)
-    const existingIds = new Set(allQuestions.map(q => String(q._id)));
-    const freshCaseStudies = caseStudies.filter(cs => !existingIds.has(String(cs._id)));
-    for (const cs of freshCaseStudies) {
-      const irtParams = difficultyToIRT[cs.difficulty] || defaultIRT;
-      Object.assign(cs, irtParams);
-      allQuestions.push(cs);
-    }
-    
-    const regularQuestions = allQuestions.filter(q => q.type !== 'case-study');
-    
-    if (regularQuestions.length + caseStudies.length < 85) {
-      return res.status(400).json({
-        message: 'Insufficient calibrated questions for CAT. Need at least 85.'
-      });
-    }
-    
-    // ── Build engine config (defaults + AssessmentConfig overrides) ──
-    // NCLEX spec: both CAT and Assessment use min 85, max 150
-    const minItems = 85;
-    const maxItems = 150;
-
+    // ── Pure NCLEX hardcoded defaults (no configurable settings) ──
     const engineConfig = {
       passingStandard: 0.0,
-      minItems,
-      maxItems,
+      minItems: 85,
+      maxItems: 150,
       confidenceThreshold: 0.95,
       initialAdjustment: 0.3,
       minAdjustment: 0.05,
       seDecay: 0.95,
       borderlineSeDecay: 0.975,
       borderlineThreshold: 0.2,
+      partialScoring: true,
+      negativeScoring: true,
+      negativePenalty: 0.15,
+      partialThreshold: 0.6,
+      sataScoringMode: 'partial_negative',
+      clozePartialScoring: true,
     };
 
-    // Load saved CAT settings from AssessmentConfig if available
-    try {
-      const AssessmentConfig = require('../models/AssessmentConfig');
-      const savedConfig = await AssessmentConfig.getConfig();
-      if (savedConfig) {
-        if (savedConfig.catPassingStandard != null) engineConfig.passingStandard = savedConfig.catPassingStandard;
-        if (savedConfig.catMinItems != null) engineConfig.minItems = savedConfig.catMinItems;
-        if (savedConfig.catMaxItems != null) engineConfig.maxItems = savedConfig.catMaxItems;
-        if (savedConfig.catConfidenceLevel != null) engineConfig.confidenceThreshold = savedConfig.catConfidenceLevel;
-        if (savedConfig.catInitialAdjustment != null) engineConfig.initialAdjustment = savedConfig.catInitialAdjustment;
-        if (savedConfig.catMinAdjustment != null) engineConfig.minAdjustment = savedConfig.catMinAdjustment;
-        if (savedConfig.catBorderlineThreshold != null) engineConfig.borderlineThreshold = savedConfig.catBorderlineThreshold;
-        if (savedConfig.catSeDecay != null) engineConfig.seDecay = savedConfig.catSeDecay;
-        if (savedConfig.catBorderlineSeDecay != null) engineConfig.borderlineSeDecay = savedConfig.catBorderlineSeDecay;
-        // Scoring settings
-        if (savedConfig.catPartialScoring != null) engineConfig.partialScoring = savedConfig.catPartialScoring;
-        if (savedConfig.catNegativeScoring != null) engineConfig.negativeScoring = savedConfig.catNegativeScoring;
-        if (savedConfig.catNegativePenalty != null) engineConfig.negativePenalty = savedConfig.catNegativePenalty;
-        if (savedConfig.catPartialThreshold != null) engineConfig.partialThreshold = savedConfig.catPartialThreshold;
-        if (savedConfig.catSataScoringMode != null) engineConfig.sataScoringMode = savedConfig.catSataScoringMode;
-        if (savedConfig.catClozePartialScoring != null) engineConfig.clozePartialScoring = savedConfig.catClozePartialScoring;
+    // ── Build question pool ──
+    // For assessment: prioritise questions from student's weak areas
+    let questionPool = [];
+
+    if (testType === 'assessment') {
+      // Fetch all active calibrated questions
+      const allQuestions = await Question.find({
+        irtDiscrimination: { $exists: true },
+        irtDifficulty: { $exists: true },
+        isDraft: { $ne: true }
+      }).lean();
+
+      // Fetch case studies (assign IRT params)
+      const caseStudies = await Question.find({
+        type: 'case-study',
+        isDraft: { $ne: true }
+      }).lean();
+
+      const difficultyToIRT = {
+        easy:   { irtDiscrimination: 0.9, irtDifficulty: -0.8, irtGuessing: 0, irtModel: '2PL' },
+        medium: { irtDiscrimination: 1.0, irtDifficulty: 0.0,  irtGuessing: 0, irtModel: '2PL' },
+        hard:   { irtDiscrimination: 1.1, irtDifficulty: 0.8,  irtGuessing: 0, irtModel: '2PL' },
+      };
+      const existingIds = new Set(allQuestions.map(q => String(q._id)));
+      const freshCaseStudies = caseStudies.filter(cs => !existingIds.has(String(cs._id)));
+      for (const cs of freshCaseStudies) {
+        const irtParams = difficultyToIRT[cs.difficulty] || difficultyToIRT.medium;
+        Object.assign(cs, irtParams);
+        allQuestions.push(cs);
       }
-    } catch (e) {
-      // AssessmentConfig model may not exist — use defaults
+
+      // Determine weak areas from student's past test results
+      const pastResults = await TestResult.find({
+        student: studentId,
+        testType: { $in: ['practice', 'assessment', 'cat'] }
+      }).select('answers');
+
+      // Aggregate accuracy by category
+      const categoryStats = {};
+      pastResults.forEach(result => {
+        if (result.answers && Array.isArray(result.answers)) {
+          result.answers.forEach(answer => {
+            const cat = answer.category || answer.subcategory || 'Unknown';
+            if (!categoryStats[cat]) {
+              categoryStats[cat] = { total: 0, correct: 0 };
+            }
+            categoryStats[cat].total += 1;
+            if (answer.isCorrect === true) categoryStats[cat].correct += 1;
+          });
+        }
+      });
+
+      // Build weak categories (accuracy < 70%) and strong categories (>= 70%)
+      const weakCategories = new Set();
+      const strongCategories = new Set();
+      Object.entries(categoryStats).forEach(([category, stats]) => {
+        const accuracy = stats.total > 0 ? (stats.correct / stats.total) : 0.5;
+        if (accuracy < 0.7) weakCategories.add(category);
+        else strongCategories.add(category);
+      });
+
+      // Separate questions into weak and strong pools
+      const regularQuestions = allQuestions.filter(q => q.type !== 'case-study');
+      const caseStudyQuestions = allQuestions.filter(q => q.type === 'case-study');
+
+      const weakQuestions = regularQuestions.filter(q =>
+        weakCategories.has(q.category) || weakCategories.has(q.subcategory)
+      );
+      const strongQuestions = regularQuestions.filter(q =>
+        !weakCategories.has(q.category) && !weakCategories.has(q.subcategory)
+      );
+
+      // Prioritise weak areas: target ~70% from weak, ~30% from strong
+      // Need up to 150 questions total (maxItems), ensure at least 85 available
+      const targetWeak = Math.min(Math.ceil(150 * 0.7), weakQuestions.length);
+      const targetStrong = Math.min(Math.ceil(150 * 0.3), strongQuestions.length);
+
+      // Shuffle and select
+      const shuffledWeak = [...weakQuestions].sort(() => Math.random() - 0.5);
+      const shuffledStrong = [...strongQuestions].sort(() => Math.random() - 0.5);
+      const shuffledCaseStudies = [...caseStudyQuestions].sort(() => Math.random() - 0.5).slice(0, 15);
+
+      questionPool = [
+        ...shuffledWeak.slice(0, targetWeak),
+        ...shuffledStrong.slice(0, targetStrong),
+        ...shuffledCaseStudies
+      ];
+
+      // If weak areas had no data (new student), use all questions
+      if (weakCategories.size === 0) {
+        questionPool = [...allQuestions].sort(() => Math.random() - 0.5);
+      }
+
+      // Ensure we have enough questions
+      if (questionPool.length < 85) {
+        return res.status(400).json({
+          message: 'Insufficient questions for assessment. Need at least 85.'
+        });
+      }
+    } else {
+      // CAT mode: all calibrated questions
+      const allQuestions = await Question.find({
+        irtDiscrimination: { $exists: true },
+        irtDifficulty: { $exists: true },
+        isDraft: { $ne: true }
+      }).lean();
+
+      const caseStudies = await Question.find({
+        type: 'case-study',
+        isDraft: { $ne: true }
+      }).lean();
+
+      const difficultyToIRT = {
+        easy:   { irtDiscrimination: 0.9, irtDifficulty: -0.8, irtGuessing: 0, irtModel: '2PL' },
+        medium: { irtDiscrimination: 1.0, irtDifficulty: 0.0,  irtGuessing: 0, irtModel: '2PL' },
+        hard:   { irtDiscrimination: 1.1, irtDifficulty: 0.8,  irtGuessing: 0, irtModel: '2PL' },
+      };
+      const existingIds = new Set(allQuestions.map(q => String(q._id)));
+      const freshCaseStudies = caseStudies.filter(cs => !existingIds.has(String(cs._id)));
+      for (const cs of freshCaseStudies) {
+        const irtParams = difficultyToIRT[cs.difficulty] || difficultyToIRT.medium;
+        Object.assign(cs, irtParams);
+        allQuestions.push(cs);
+      }
+
+      questionPool = allQuestions;
+
+      if (questionPool.length < 85) {
+        return res.status(400).json({
+          message: 'Insufficient calibrated questions for CAT. Need at least 85.'
+        });
+      }
     }
 
     const engine = new CATEngine(engineConfig);
 
-    // Build question pool: ensure at least 15 case studies are included
-    const shuffledCaseStudies = [...caseStudies].sort(() => Math.random() - 0.5);
-    const caseStudyPool = shuffledCaseStudies.slice(0, Math.min(15, shuffledCaseStudies.length));
-
-    // Combined pool for CAT selection
-    const questions = [...allQuestions];
-
     // Get first item (start with medium difficulty)
-    const firstItem = engine.selectNextItem(0, questions, []);
+    const firstItem = engine.selectNextItem(0, questionPool, []);
 
     // Create session — all state lives here, engine is stateless
     const session = {
@@ -1608,14 +1670,30 @@ const startCATSession = async (req, res) => {
       earnedMarks: [],
       totalMarks: [],
       theta: 0,
-      se: 1.0,                  // spec: SE starts at 1.0
+      se: 1.0,
       answerDetails: [],
-      thetaHistory: [],         // track theta per question (for timeout + analytics)
-      questionPool: questions,
+      thetaHistory: [],
+      questionPool,
       engineConfig,
     };
 
     catSessions.set(studentId, session);
+
+    // Create an in-progress TestResult so the test appears in Previous Tests
+    const inProgressResult = new TestResult({
+      student: studentId,
+      testName: testType === 'assessment' ? 'NCLEX Readiness Assessment' : 'CAT Adaptive Test',
+      testType,
+      date: new Date(),
+      score: 0,
+      totalQuestions: 0,
+      percentage: 0,
+      passed: null,
+      status: 'in_progress',
+      theta: 0,
+      se: 1.0,
+    });
+    await inProgressResult.save();
 
     res.json({
       question: firstItem,
@@ -1636,7 +1714,7 @@ const startCATSession = async (req, res) => {
 const submitCATAnswer = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const { questionId, answer, subQuestionId, subQuestionAnswers } = req.body;
+    const { questionId, answer, subQuestionId, subQuestionAnswers, proctoring } = req.body;
     
     // Get session
     const session = catSessions.get(studentId);
@@ -1828,10 +1906,14 @@ const submitCATAnswer = async (req, res) => {
         theta: session.theta,
         se: session.se,
         confidence,
-        answers
+        answers,
+        proctoring: proctoring || null
       });
       
       await testResult.save();
+
+      // Delete any in-progress records for this student (created at session start)
+      await TestResult.deleteMany({ student: studentId, status: 'in_progress' });
       
       // Clear session
       catSessions.delete(studentId);

@@ -46,6 +46,7 @@ const testResultSchema = new mongoose.Schema({
   timeTaken: Number,
   percentage: Number,
   passed: Boolean,
+  status: { type: String, enum: ['completed', 'in_progress'], default: 'completed' },
   theta: Number,            // CAT ability estimate
   se: Number,               // CAT standard error
   confidence: {             // Confidence level derived from SE

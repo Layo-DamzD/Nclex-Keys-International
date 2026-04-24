@@ -309,6 +309,52 @@ const CatSession = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [isCatSubmitting, setIsCatSubmitting] = useState(false);
 
+  // ── Proctoring: tab-switch / visibility detection ──
+  const [proctorViolations, setProctorViolations] = useState(0);
+  const [proctorWarnings, setProctorWarnings] = useState([]);
+  const [showProctorWarning, setShowProctorWarning] = useState(false);
+  const MAX_VIOLATIONS = 5; // Auto-submit after 5 violations
+
+  useEffect(() => {
+    if (status === 'completed' || loading) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && status !== 'completed' && !isPaused) {
+        // User switched away from the test tab
+        setProctorViolations(prev => {
+          const newCount = prev + 1;
+          const warning = `Leaving the test window detected (Violation ${newCount}/${MAX_VIOLATIONS}). ${newCount >= MAX_VIOLATIONS ? 'Your test will be auto-submitted.' : 'Continuing to leave may result in automatic submission.'}`;
+          setProctorWarnings(prevWarnings => [...prevWarnings, { time: new Date().toLocaleTimeString(), message: warning }]);
+          setShowProctorWarning(true);
+          setTimeout(() => setShowProctorWarning(false), 4000);
+
+          // Auto-submit after MAX_VIOLATIONS
+          if (newCount >= MAX_VIOLATIONS) {
+            setTimeout(() => {
+              submitAnswerWithCurrent();
+            }, 2000);
+          }
+          return newCount;
+        });
+      }
+    };
+
+    const handleWindowBlur = (e) => {
+      // Also detect when window loses focus (e.g., switching apps)
+      if (status !== 'completed' && !isPaused && !document.hidden) {
+        // Only count if not already hidden (avoid double-counting with visibilitychange)
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, [status, loading, isPaused]);
+
   // Block copy/paste during exam
   useEffect(() => {
     const blockEvent = (event) => event.preventDefault();
@@ -555,7 +601,11 @@ const CatSession = () => {
         const userAnswer = getCurrentUserAnswer();
         const response = await axios.post('/api/student/cat/answer', {
           questionId: currentQuestion._id,
-          answer: userAnswer
+          answer: userAnswer,
+          proctoring: {
+            violations: proctorViolations,
+            warnings: proctorWarnings
+          }
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -1799,6 +1849,60 @@ const CatSession = () => {
             }}>Nclex Keys</div>
           ))}
         </div>
+
+        {/* Proctoring warning overlay */}
+        {showProctorWarning && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+            background: 'rgba(0,0,0,0.7)', zIndex: 10000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{
+              background: '#fff', borderRadius: '16px', padding: '32px 40px',
+              maxWidth: '480px', width: '90%', textAlign: 'center',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: proctorViolations >= MAX_VIOLATIONS ? '#dc2626' : '#fef3c7',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px'
+              }}>
+                <i className={`fas ${proctorViolations >= MAX_VIOLATIONS ? 'fa-ban' : 'fa-exclamation-triangle'}`}
+                  style={{ fontSize: '28px', color: proctorViolations >= MAX_VIOLATIONS ? '#fff' : '#d97706' }}></i>
+              </div>
+              <h4 style={{ color: '#1e293b', marginBottom: '8px' }}>
+                {proctorViolations >= MAX_VIOLATIONS ? 'Test Auto-Submitting' : 'Proctoring Violation Detected'}
+              </h4>
+              <p style={{ color: '#64748b', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                {proctorViolations >= MAX_VIOLATIONS
+                  ? 'You have exceeded the maximum number of violations. Your test is being submitted automatically.'
+                  : `Leaving the test window is not allowed. Violation ${proctorViolations} of ${MAX_VIOLATIONS}. After ${MAX_VIOLATIONS} violations, your test will be automatically submitted.`
+                }
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Proctoring status banner */}
+        <div style={{
+          background: '#C62828', color: '#fff', textAlign: 'center',
+          padding: '5px 12px', fontSize: '0.72rem', fontWeight: 600,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+        }}>
+          <i className="fas fa-video" />
+          <span>Proctoring Active</span>
+          {proctorViolations > 0 && (
+            <span style={{
+              background: 'rgba(255,255,255,0.2)', padding: '1px 8px',
+              borderRadius: '10px', marginLeft: '4px'
+            }}>
+              {proctorViolations}/{MAX_VIOLATIONS} violations
+            </span>
+          )}
+          <i className="fas fa-circle" style={{ fontSize: '0.4rem', animation: 'pulse 1.5s infinite', color: '#ff5252' }} />
+        </div>
+
         {/* Header */}
         <div className="test-header">
           <div className="d-flex align-items-center">
@@ -1836,19 +1940,6 @@ const CatSession = () => {
           <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
             <div style={{ width: `${progressPercent}%`, height: '100%', background: '#34d399', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
           </div>
-          {confidence && confidence.level && confidence.level !== 'Calculating...' && (
-            <span style={{
-              color: confidence.percentage >= 80 ? '#34d399' : confidence.percentage >= 60 ? '#fbbf24' : '#f87171',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              whiteSpace: 'nowrap'
-            }}>
-              Confidence: {confidence.level}
-            </span>
-          )}
-          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-            &theta;={formatTheta(theta)} SE={formatTheta(se)}
-          </span>
         </div>
 
         {/* Case study layout */}
@@ -2010,6 +2101,61 @@ const CatSession = () => {
           }}>Nclex Keys</div>
         ))}
       </div>
+
+      {/* Proctoring warning overlay */}
+      {showProctorWarning && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.7)', zIndex: 10000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'fadeIn 0.3s ease'
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '16px', padding: '32px 40px',
+            maxWidth: '480px', width: '90%', textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '50%',
+              background: proctorViolations >= MAX_VIOLATIONS ? '#dc2626' : '#fef3c7',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}>
+              <i className={`fas ${proctorViolations >= MAX_VIOLATIONS ? 'fa-ban' : 'fa-exclamation-triangle'}`}
+                style={{ fontSize: '28px', color: proctorViolations >= MAX_VIOLATIONS ? '#fff' : '#d97706' }}></i>
+            </div>
+            <h4 style={{ color: '#1e293b', marginBottom: '8px' }}>
+              {proctorViolations >= MAX_VIOLATIONS ? 'Test Auto-Submitting' : 'Proctoring Violation Detected'}
+            </h4>
+            <p style={{ color: '#64748b', fontSize: '0.95rem', lineHeight: 1.6 }}>
+              {proctorViolations >= MAX_VIOLATIONS
+                ? 'You have exceeded the maximum number of violations. Your test is being submitted automatically.'
+                : `Leaving the test window is not allowed. Violation ${proctorViolations} of ${MAX_VIOLATIONS}. After ${MAX_VIOLATIONS} violations, your test will be automatically submitted.`
+              }
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Proctoring status banner */}
+      <div style={{
+        background: '#C62828', color: '#fff', textAlign: 'center',
+        padding: '5px 12px', fontSize: '0.72rem', fontWeight: 600,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+      }}>
+        <i className="fas fa-video" />
+        <span>Proctoring Active</span>
+        {proctorViolations > 0 && (
+          <span style={{
+            background: 'rgba(255,255,255,0.2)', padding: '1px 8px',
+            borderRadius: '10px', marginLeft: '4px'
+          }}>
+            {proctorViolations}/{MAX_VIOLATIONS} violations
+          </span>
+        )}
+        <i className="fas fa-circle" style={{ fontSize: '0.4rem', animation: 'pulse 1.5s infinite', color: '#ff5252' }} />
+      </div>
+
       {/* Header */}
       <div className="test-header">
         <div className="d-flex align-items-center">
@@ -2047,19 +2193,6 @@ const CatSession = () => {
         <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{ width: `${progressPercent}%`, height: '100%', background: '#34d399', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
         </div>
-        {confidence && confidence.level && confidence.level !== 'Calculating...' && (
-          <span style={{
-            color: confidence.percentage >= 80 ? '#34d399' : confidence.percentage >= 60 ? '#fbbf24' : '#f87171',
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            whiteSpace: 'nowrap'
-          }}>
-            Confidence: {confidence.level}
-          </span>
-        )}
-        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-          &theta;={formatTheta(theta)} SE={formatTheta(se)}
-        </span>
       </div>
 
       {/* Toolbar */}
