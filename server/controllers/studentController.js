@@ -419,7 +419,7 @@ const getSubcategoryCounts = async (req, res) => {
     const customOmittedIds = user?.customTestOmittedQuestions || [];
 
     // Fetch all questions and remap to canonical categories/subcategories
-    // Include 'type' field so we can exclude case-study questions from subject counts
+    // Include 'type' field so we can count case-study (NGN) questions separately per subject
     const allQuestions = await Question.find({ isDraft: { $ne: true } }, '_id category subcategory type').lean();
     const usedQuestions = customUsedIds.length > 0
       ? await Question.find({ _id: { $in: customUsedIds }, isDraft: { $ne: true } }, '_id category subcategory type').lean()
@@ -429,18 +429,17 @@ const getSubcategoryCounts = async (req, res) => {
       : [];
 
     // Build counts using canonical category/subcategory mapping
-    // ONLY count questions that match canonical categories AND canonical subcategories
-    // EXCLUDE case-study type questions from subject counts (they have their own tab)
+    // Normal questions and NGN (case-study) are counted SEPARATELY per subject
     const buildCounts = (questions) => {
       const acc = {
         countsByCategorySubcategory: {},
         countsBySubcategory: {},
-        countsByCategory: {}
+        countsByCategory: {},
+        ngnCountsByCategorySubcategory: {},
+        ngnCountsBySubcategory: {},
+        ngnCountsByCategory: {}
       };
       questions.forEach((q) => {
-        // Exclude case-study type questions from subject category counters
-        if (q.type === 'case-study') return;
-
         const canonicalCat = matchCategory(q.category);
         const canonicalSub = matchSubcategory(canonicalCat, q.subcategory);
 
@@ -449,15 +448,29 @@ const getSubcategoryCounts = async (req, res) => {
         // Skip if subcategory is not in canonical list for this category
         if (!CATEGORIES[canonicalCat].includes(canonicalSub)) return;
 
-        acc.countsByCategorySubcategory[canonicalCat] = acc.countsByCategorySubcategory[canonicalCat] || {};
-        acc.countsByCategorySubcategory[canonicalCat][canonicalSub] =
-          (acc.countsByCategorySubcategory[canonicalCat][canonicalSub] || 0) + 1;
+        if (q.type === 'case-study') {
+          // Count case studies as NGN under their subject category
+          acc.ngnCountsByCategorySubcategory[canonicalCat] = acc.ngnCountsByCategorySubcategory[canonicalCat] || {};
+          acc.ngnCountsByCategorySubcategory[canonicalCat][canonicalSub] =
+            (acc.ngnCountsByCategorySubcategory[canonicalCat][canonicalSub] || 0) + 1;
 
-        acc.countsBySubcategory[canonicalSub] =
-          (acc.countsBySubcategory[canonicalSub] || 0) + 1;
+          acc.ngnCountsBySubcategory[canonicalSub] =
+            (acc.ngnCountsBySubcategory[canonicalSub] || 0) + 1;
 
-        acc.countsByCategory[canonicalCat] =
-          (acc.countsByCategory[canonicalCat] || 0) + 1;
+          acc.ngnCountsByCategory[canonicalCat] =
+            (acc.ngnCountsByCategory[canonicalCat] || 0) + 1;
+        } else {
+          // Normal questions
+          acc.countsByCategorySubcategory[canonicalCat] = acc.countsByCategorySubcategory[canonicalCat] || {};
+          acc.countsByCategorySubcategory[canonicalCat][canonicalSub] =
+            (acc.countsByCategorySubcategory[canonicalCat][canonicalSub] || 0) + 1;
+
+          acc.countsBySubcategory[canonicalSub] =
+            (acc.countsBySubcategory[canonicalSub] || 0) + 1;
+
+          acc.countsByCategory[canonicalCat] =
+            (acc.countsByCategory[canonicalCat] || 0) + 1;
+        }
       });
       return acc;
     };
@@ -484,6 +497,12 @@ const getSubcategoryCounts = async (req, res) => {
       countsByCategory: totalCounts.countsByCategory,
       usedCountsByCategory: usedCounts.countsByCategory,
       omittedCountsByCategory: omittedCounts.countsByCategory,
+      // NGN (case-study) counts per subject — separate from normal questions
+      ngnCountsByCategorySubcategory: totalCounts.ngnCountsByCategorySubcategory,
+      ngnCountsBySubcategory: totalCounts.ngnCountsBySubcategory,
+      ngnCountsByCategory: totalCounts.ngnCountsByCategory,
+      usedNgnCountsByCategorySubcategory: usedCounts.ngnCountsByCategorySubcategory,
+      usedNgnCountsByCategory: usedCounts.ngnCountsByCategory,
       // Send canonical categories structure so frontend uses the same list
       categoriesWithExtras: canonicalCategories
     });
@@ -2409,7 +2428,7 @@ const getClientNeedsCounts = async (req, res) => {
           { clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' } }
         ]
       },
-      'clientNeed clientNeedSubcategory isNextGen'
+      'clientNeed clientNeedSubcategory isNextGen type'
     ).lean();
 
     // Build counts keyed by normalised canonical client-need name.
@@ -2435,12 +2454,18 @@ const getClientNeedsCounts = async (req, res) => {
         if (canonical) matchedCNs.add(canonical);
       }
 
+      // Determine if this is an NGN question (case-study type)
+      const isNgn = q.type === 'case-study';
+
       // Count under each matched canonical category (normalised key)
       for (const cn of matchedCNs) {
         const key = normalizeClientNeedKey(cn);
-        countsByClientNeed[key] = (countsByClientNeed[key] || 0) + 1;
-        if (q.isNextGen) {
+        if (isNgn) {
+          // Case studies (NGN) counted separately
           ngnCountsByClientNeed[key] = (ngnCountsByClientNeed[key] || 0) + 1;
+        } else {
+          // Normal questions
+          countsByClientNeed[key] = (countsByClientNeed[key] || 0) + 1;
         }
       }
     }
@@ -2478,7 +2503,6 @@ const getQuestionStatusCounts = async (req, res) => {
     // Helper: compute status counts for a given list of question IDs
     const computeCounts = (questionIds) => {
       const counts = { unused: 0, correct: 0, incorrect: 0, marked: 0, omitted: 0 };
-      let ngnCounts = { unused: 0, correct: 0, incorrect: 0, marked: 0, omitted: 0 };
 
       for (const qId of questionIds) {
         if (markedSet.has(qId)) {
@@ -2496,12 +2520,12 @@ const getQuestionStatusCounts = async (req, res) => {
       return counts;
     };
 
-    // Partition questions into subjects (canonical categories) vs client needs vs case studies
-    const subjectQuestionIds = [];
-    const clientNeedQuestionIds = [];
-    const subjectNgnIds = [];
-    const clientNeedNgnIds = [];
-    const caseStudyQuestionIds = [];
+    // Partition questions into subjects (canonical categories) vs client needs vs case studies (NGN)
+    const subjectQuestionIds = [];       // Normal questions matching canonical subjects
+    const subjectNgnIds = [];             // Case studies (NGN) matching canonical subjects
+    const clientNeedQuestionIds = [];     // Normal questions matching client needs
+    const clientNeedNgnIds = [];          // Case studies (NGN) matching client needs
+    const caseStudyQuestionIds = [];      // All case studies
 
     // Per-type question ID buckets for type-filter pills
     const sataQuestionIds = [];
@@ -2510,8 +2534,9 @@ const getQuestionStatusCounts = async (req, res) => {
 
     for (const q of allQuestions) {
       const qId = String(q._id);
+      const isCaseStudy = q.type === 'case-study';
 
-      if (q.type === 'case-study') {
+      if (isCaseStudy) {
         caseStudyQuestionIds.push(qId);
         // Unfolding = layered with multiple sub-questions
         if (q.caseStudyType === 'layered' && Array.isArray(q.questions) && q.questions.length > 1) {
@@ -2520,6 +2545,22 @@ const getQuestionStatusCounts = async (req, res) => {
           // Standalone = bowtie/trend or layered with single question
           standaloneQuestionIds.push(qId);
         }
+
+        // Also count case studies under their subject/category as NGN
+        const canonicalCat = matchCategory(q.category);
+        const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
+        const isCanonicalSubject = canonicalCat && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub);
+
+        if (isCanonicalSubject) {
+          subjectNgnIds.push(qId);
+        }
+
+        // Also count case studies under client needs as NGN
+        const cnMatches = getClientNeedMatches(q);
+        if (cnMatches.size > 0) {
+          clientNeedNgnIds.push(qId);
+        }
+
         continue;
       }
 
@@ -2533,7 +2574,6 @@ const getQuestionStatusCounts = async (req, res) => {
 
       if (isCanonicalSubject) {
         subjectQuestionIds.push(qId);
-        if (q.isNextGen) subjectNgnIds.push(qId);
       }
 
       // Only count as "client need" if at least one clientNeed/clientNeedSubcategory
@@ -2541,7 +2581,6 @@ const getQuestionStatusCounts = async (req, res) => {
       const cnMatches = getClientNeedMatches(q);
       if (cnMatches.size > 0) {
         clientNeedQuestionIds.push(qId);
-        if (q.isNextGen) clientNeedNgnIds.push(qId);
       }
     }
 
@@ -2549,34 +2588,49 @@ const getQuestionStatusCounts = async (req, res) => {
     // That's fine — they show up in both tabs.
 
     const subjectCounts = computeCounts(subjectQuestionIds);
+    const subjectNgnCounts = computeCounts(subjectNgnIds);
     const clientNeedCounts = computeCounts(clientNeedQuestionIds);
+    const clientNeedNgnCounts = computeCounts(clientNeedNgnIds);
     const caseStudyCounts = computeCounts(caseStudyQuestionIds);
     const allCounts = computeCounts(allQuestions.map(q => String(q._id)));
+
+    // Compute overall NGN counts (all case studies combined)
+    const allNgnCounts = computeCounts(caseStudyQuestionIds);
 
     res.json({
       // Overall (kept for backward compat)
       unused: allCounts.unused,
-      unusedNgn: 0,
+      unusedNgn: allNgnCounts.unused,
       incorrect: allCounts.incorrect,
-      incorrectNgn: 0,
+      incorrectNgn: allNgnCounts.incorrect,
       marked: allCounts.marked,
-      markedNgn: 0,
+      markedNgn: allNgnCounts.marked,
       omitted: allCounts.omitted,
-      omittedNgn: 0,
+      omittedNgn: allNgnCounts.omitted,
       correct: allCounts.correct,
-      correctNgn: 0,
+      correctNgn: allNgnCounts.correct,
       total: allQuestions.length,
-      // Tab-specific: subjects (excluding case-study type questions)
+      // Tab-specific: subjects — normal questions only (NGN counted separately)
       subjects: {
         ...subjectCounts,
         total: subjectQuestionIds.length
       },
-      // Tab-specific: client needs (excluding case-study type questions)
+      // Tab-specific: subjects NGN (case studies under subjects)
+      subjectsNgn: {
+        ...subjectNgnCounts,
+        total: subjectNgnIds.length
+      },
+      // Tab-specific: client needs — normal questions only (NGN counted separately)
       clientNeeds: {
         ...clientNeedCounts,
         total: clientNeedQuestionIds.length
       },
-      // Tab-specific: case studies
+      // Tab-specific: client needs NGN (case studies under client needs)
+      clientNeedsNgn: {
+        ...clientNeedNgnCounts,
+        total: clientNeedNgnIds.length
+      },
+      // Tab-specific: case studies (all)
       caseStudies: {
         ...caseStudyCounts,
         total: caseStudyQuestionIds.length
