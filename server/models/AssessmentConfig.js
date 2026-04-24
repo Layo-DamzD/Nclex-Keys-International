@@ -4,23 +4,12 @@ const assessmentConfigSchema = new mongoose.Schema({
   // Singleton pattern — only one document, keyed by a fixed identifier
   key: { type: String, default: 'default', unique: true },
 
-  // Assessment structure
-  totalQuestions: { type: Number, default: 150, min: 10, max: 300 },
-  minCaseStudies: { type: Number, default: 40, min: 0, max: 200 },
-  passingScore: { type: Number, default: 70, min: 0, max: 100 },
-
-  // Proctoring settings
-  assessmentProctored: { type: Boolean, default: false },
-  caseStudyProctored: { type: Boolean, default: false },
-
-  // CAT engine settings (when CAT mode is enabled)
-  catEnabled: { type: Boolean, default: false },
+  // ── CAT Engine Settings (NCLEX-style adaptive testing) ──
   catMinItems: { type: Number, default: 85, min: 15, max: 150 },
   catMaxItems: { type: Number, default: 150, min: 50, max: 300 },
   catPassingStandard: { type: Number, default: 0.0, min: -3.0, max: 3.0 },
   catConfidenceLevel: { type: Number, default: 0.95, min: 0.5, max: 0.999 },
   catTargetSE: { type: Number, default: 0.08, min: 0.01, max: 0.5 },
-  // NCLEX-style adaptive tuning
   catInitialAdjustment: { type: Number, default: 0.3, min: 0.05, max: 1.0 },
   catMinAdjustment: { type: Number, default: 0.05, min: 0.01, max: 0.5 },
   catBorderlineThreshold: { type: Number, default: 0.2, min: 0.05, max: 1.0 },
@@ -35,11 +24,7 @@ const assessmentConfigSchema = new mongoose.Schema({
   catSataScoringMode: { type: String, enum: ['partial_negative', 'all_or_nothing', 'partial_only'], default: 'partial_negative' },
   catClozePartialScoring: { type: Boolean, default: true },      // Cloze-dropdown: score each blank individually
 
-  // Time & attempts
-  assessmentDuration: { type: Number, default: 180, min: 10, max: 600 }, // minutes
-  maxAttempts: { type: Number, default: 1, min: 0, max: 99 }, // 0 = unlimited
-
-  // Question type weights for random generation
+  // ── Question Type Toggles (included in CAT question pool) ──
   includeMultipleChoice: { type: Boolean, default: true },
   includeSATA: { type: Boolean, default: true },
   includeFillBlank: { type: Boolean, default: true },
