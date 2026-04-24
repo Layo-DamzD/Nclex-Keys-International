@@ -27,6 +27,14 @@ const assessmentConfigSchema = new mongoose.Schema({
   catSeDecay: { type: Number, default: 0.95, min: 0.80, max: 0.99 },
   catBorderlineSeDecay: { type: Number, default: 0.975, min: 0.90, max: 0.995 },
 
+  // CAT scoring settings
+  catPartialScoring: { type: Boolean, default: true },          // Enable partial credit for NGN types
+  catNegativeScoring: { type: Boolean, default: true },          // Penalise wrong answers with extra theta penalty
+  catNegativePenalty: { type: Number, default: 0.15, min: 0.01, max: 1.0 }, // Extra theta penalty for wrong answers
+  catPartialThreshold: { type: Number, default: 0.6, min: 0.1, max: 0.9 }, // Proportion threshold for positive theta shift
+  catSataScoringMode: { type: String, enum: ['partial_negative', 'all_or_nothing', 'partial_only'], default: 'partial_negative' },
+  catClozePartialScoring: { type: Boolean, default: true },      // Cloze-dropdown: score each blank individually
+
   // Time & attempts
   assessmentDuration: { type: Number, default: 180, min: 10, max: 600 }, // minutes
   maxAttempts: { type: Number, default: 1, min: 0, max: 99 }, // 0 = unlimited

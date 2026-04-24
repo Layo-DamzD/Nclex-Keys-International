@@ -43,6 +43,12 @@ class CATEngine {
 
     // ── Borderline candidate detection ──
     this.borderlineThreshold = options.borderlineThreshold || 0.2;
+
+    // ── Scoring settings (configurable via super-admin) ──
+    this.partialScoring = options.partialScoring !== false;         // default true
+    this.negativeScoring = options.negativeScoring !== false;       // default true
+    this.negativePenalty = options.negativePenalty || 0.15;         // extra theta penalty for wrong
+    this.partialThreshold = options.partialThreshold || 0.6;        // min proportion for positive shift
   }
 
   /* ────────────────────────────────────────────────────────────
@@ -167,23 +173,43 @@ class CATEngine {
       'cloze-dropdown',
       'highlight',
     ];
+    // SATA also supports partial scoring via earnedMarks/totalMarks
+    const partialTypes = this.partialScoring ? [...ngnTypes, 'sata'] : [];
+
     if (
-      ngnTypes.includes(questionType) &&
+      partialTypes.includes(questionType) &&
       totalMarks > 0 &&
       earnedMarks >= 0
     ) {
       const proportion = earnedMarks / totalMarks;
-      if (proportion >= 0.6) {
-        // Majority correct → partial positive theta adjustment
+      if (proportion >= this.partialThreshold) {
+        // Majority correct → partial positive theta adjustment (scaled by proportion)
         adjustment *= proportion;
         effectiveCorrect = true;
+      } else if (proportion > 0) {
+        // Some correct but below threshold → small positive shift OR negative
+        if (this.negativeScoring) {
+          // Wrong answers outweigh correct: negative theta shift with penalty
+          adjustment += this.negativePenalty;
+          effectiveCorrect = false;
+        } else {
+          // No negative: just count as wrong with normal adjustment
+          effectiveCorrect = false;
+        }
       } else {
+        // Fully wrong
         effectiveCorrect = false;
       }
     }
 
     // ── Update theta ──
     let newTheta = effectiveCorrect ? theta + adjustment : theta - adjustment;
+
+    // ── Extra negative penalty for fully wrong answers (all question types) ──
+    if (!effectiveCorrect && this.negativeScoring && !partialTypes.includes(questionType)) {
+      newTheta -= this.negativePenalty * 0.5; // half penalty for MCQ/fill-blank wrong
+    }
+
     newTheta = Math.max(-3, Math.min(3, newTheta));   // clamp to scale
 
     // ── Update SE (slower decay for borderline → more questions) ──

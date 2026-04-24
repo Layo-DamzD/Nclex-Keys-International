@@ -300,6 +300,96 @@ const AssessmentSettings = () => {
                   <small className="text-muted">Slower decay = more questions for borderline</small>
                 </div>
               </div>
+
+              {/* ── Scoring Settings ── */}
+              <div className="row mt-3" style={{ padding: '16px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                <p style={{ fontWeight: 600, color: '#166534', marginBottom: '12px' }}>
+                  <i className="fas fa-star-half-alt" style={{ marginRight: '6px' }}></i>Scoring System
+                </p>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '16px' }}>
+                  Control how answers are scored for CAT and Assessment. Partial scoring gives credit
+                  for partially correct NGN answers. Negative scoring adds extra theta penalty for wrong
+                  answers to improve ability estimation accuracy.
+                </p>
+
+                {/* Partial Scoring Toggle */}
+                <div className="form-check form-switch mb-3" style={{ padding: '10px 0' }}>
+                  <input className="form-check-input" type="checkbox" role="switch" id="catPartialScoring"
+                    style={{ width: '3em', height: '1.5em', cursor: 'pointer' }}
+                    checked={config?.catPartialScoring ?? true}
+                    onChange={() => handleToggle('catPartialScoring')} />
+                  <label className="form-check-label" htmlFor="catPartialScoring" style={{ marginLeft: '8px', fontWeight: 600, cursor: 'pointer' }}>
+                    Partial Scoring
+                  </label>
+                  <div style={{ marginLeft: '42px', fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>
+                    Give partial credit for NGN types (case study, drag-drop, cloze, matrix, hotspot, bowtie, highlight) and SATA.
+                    When a student gets some answers correct but not all, theta shifts proportionally instead of a full negative.
+                  </div>
+                </div>
+
+                {/* Negative Scoring Toggle */}
+                <div className="form-check form-switch mb-3" style={{ padding: '10px 0' }}>
+                  <input className="form-check-input" type="checkbox" role="switch" id="catNegativeScoring"
+                    style={{ width: '3em', height: '1.5em', cursor: 'pointer' }}
+                    checked={config?.catNegativeScoring ?? true}
+                    onChange={() => handleToggle('catNegativeScoring')} />
+                  <label className="form-check-label" htmlFor="catNegativeScoring" style={{ marginLeft: '8px', fontWeight: 600, cursor: 'pointer' }}>
+                    Negative Scoring
+                  </label>
+                  <div style={{ marginLeft: '42px', fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>
+                    Apply extra theta penalty for wrong answers. Wrong MCQ/fill-blank answers get half penalty;
+                    NGN and SATA wrong answers get full penalty. Helps distinguish between guessing and knowledge gaps.
+                  </div>
+                </div>
+
+                <div className="row">
+                  <div className="col-md-4 mb-3">
+                    <label className="form-label" style={{ fontWeight: 600 }}>Negative Penalty</label>
+                    <input type="number" className="form-control" min={0.01} max={1.0} step={0.01}
+                      value={config?.catNegativePenalty ?? 0.15}
+                      onChange={e => handleChange('catNegativePenalty', Number(e.target.value))} />
+                    <small className="text-muted">Extra theta deduction for wrong answers (0.15 default)</small>
+                  </div>
+                  <div className="col-md-4 mb-3">
+                    <label className="form-label" style={{ fontWeight: 600 }}>Partial Threshold</label>
+                    <input type="number" className="form-control" min={0.1} max={0.9} step={0.05}
+                      value={config?.catPartialThreshold ?? 0.6}
+                      onChange={e => handleChange('catPartialThreshold', Number(e.target.value))} />
+                    <small className="text-muted">Min proportion for positive theta shift (0.6 = 60%)</small>
+                  </div>
+                  <div className="col-md-4 mb-3">
+                    <label className="form-label" style={{ fontWeight: 600 }}>SATA Scoring Mode</label>
+                    <select className="form-select"
+                      value={config?.catSataScoringMode ?? 'partial_negative'}
+                      onChange={e => handleChange('catSataScoringMode', e.target.value)}>
+                      <option value="partial_negative">Partial + Negative</option>
+                      <option value="partial_only">Partial Only</option>
+                      <option value="all_or_nothing">All or Nothing</option>
+                    </select>
+                    <small className="text-muted">
+                      {config?.catSataScoringMode === 'partial_negative' && 'Correct picks minus wrong picks, divided by total correct'}
+                      {config?.catSataScoringMode === 'partial_only' && 'Score = correct picks / total correct (no penalty for wrong)'}
+                      {config?.catSataScoringMode === 'all_or_nothing' && 'Must pick ALL correct options and NO wrong ones for credit'}
+                      {!config?.catSataScoringMode && 'Correct picks minus wrong picks, divided by total correct'}
+                    </small>
+                  </div>
+                </div>
+
+                {/* Cloze Partial Scoring */}
+                <div className="form-check form-switch mb-2" style={{ padding: '10px 0' }}>
+                  <input className="form-check-input" type="checkbox" role="switch" id="catClozePartialScoring"
+                    style={{ width: '3em', height: '1.5em', cursor: 'pointer' }}
+                    checked={config?.catClozePartialScoring ?? true}
+                    onChange={() => handleToggle('catClozePartialScoring')} />
+                  <label className="form-check-label" htmlFor="catClozePartialScoring" style={{ marginLeft: '8px', fontWeight: 600, cursor: 'pointer' }}>
+                    Cloze-Dropdown Partial Scoring
+                  </label>
+                  <div style={{ marginLeft: '42px', fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>
+                    Score each blank in cloze-dropdown questions individually. Correct blanks earn credit,
+                    wrong blanks deduct credit (max(0, correct - wrong) / total). When off, all blanks must be correct.
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

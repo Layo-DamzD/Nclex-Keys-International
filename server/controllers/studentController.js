@@ -1442,13 +1442,14 @@ const resolveCATToLetter = (val, options) => {
   return upper.length === 1 && /[A-Z]/.test(upper) ? upper : null;
 };
 
-const evaluateCATAnswer = (question, answer) => {
+const evaluateCATAnswer = (question, answer, scoringConfig = {}) => {
   if (!question) return { isCorrect: false, earnedMarks: 0, totalMarks: 1 };
   const expected = question.correctAnswer;
   const opts = question.options || [];
+  const sataMode = scoringConfig.sataScoringMode || 'partial_negative';
+  const clozePartial = scoringConfig.clozePartialScoring !== false;
 
-  // ── SATA: Proportional scoring with negative marking ──
-  // Score = max(0, correctPicked - wrongPicked) / totalCorrect
+  // ── SATA: Scoring respects configured mode ──
   if (question.type === 'sata') {
     // Parse comma-separated ("A,C,E") and concatenated ("ACE") formats
     const parseToArray = (val) => {
@@ -1484,13 +1485,22 @@ const evaluateCATAnswer = (question, answer) => {
       else wrongPicked++;
     }
 
-    // Proportional scoring with negative marking:
-    // Score = max(0, correctPicked - wrongPicked) / totalCorrect
     const totalMarks = 1;
     const totalCorrect = correctSet.size || 1;
-    const earnedMarks = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
-    const isCorrect = earnedMarks >= 1 ? true : (earnedMarks > 0 ? 'partial' : false);
+    let earnedMarks;
 
+    if (sataMode === 'all_or_nothing') {
+      // Must pick ALL correct and NO wrong
+      earnedMarks = (correctPicked === totalCorrect && wrongPicked === 0) ? 1 : 0;
+    } else if (sataMode === 'partial_only') {
+      // Score = correctPicked / totalCorrect (no penalty for wrong)
+      earnedMarks = correctPicked / totalCorrect;
+    } else {
+      // partial_negative (default): max(0, correct - wrong) / totalCorrect
+      earnedMarks = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
+    }
+
+    const isCorrect = earnedMarks >= 1 ? true : (earnedMarks > 0 ? 'partial' : false);
     return { isCorrect, earnedMarks, totalMarks };
   }
 
@@ -1505,7 +1515,25 @@ const evaluateCATAnswer = (question, answer) => {
   }
 
   // ── Object answers (cloze, bowtie, etc.) ──
+  // Cloze-dropdown: partial scoring when enabled (score each blank individually)
   if (typeof expected === 'object' || typeof answer === 'object') {
+    if (question.type === 'cloze-dropdown' && clozePartial && expected && typeof expected === 'object' && answer && typeof answer === 'object') {
+      const keys = Object.keys(expected);
+      if (keys.length > 0) {
+        let correct = 0;
+        let wrong = 0;
+        for (const key of keys) {
+          const exp = String(expected[key] || '').trim().toLowerCase();
+          const usr = String(answer[key] || '').trim().toLowerCase();
+          if (exp === usr) correct++;
+          else if (usr !== '') wrong++;
+        }
+        // Partial + negative: max(0, correct - wrong) / total
+        const earnedMarks = Math.max(0, correct - wrong) / keys.length;
+        const isCorrect = earnedMarks >= 1 ? true : (earnedMarks > 0 ? 'partial' : false);
+        return { isCorrect, earnedMarks, totalMarks: 1 };
+      }
+    }
     const match = JSON.stringify(expected) === JSON.stringify(answer);
     return { isCorrect: match, earnedMarks: match ? 1 : 0, totalMarks: 1 };
   }
@@ -1523,8 +1551,8 @@ const evaluateCATAnswer = (question, answer) => {
 };
 
 // Backward-compatible alias (returns boolean for CAT engine IRT)
-const isCATAnswerCorrect = (question, answer) => {
-  return evaluateCATAnswer(question, answer).isCorrect === true;
+const isCATAnswerCorrect = (question, answer, scoringConfig) => {
+  return evaluateCATAnswer(question, answer, scoringConfig).isCorrect === true;
 };
 
 // @desc    Start a CAT session
@@ -1607,6 +1635,13 @@ const startCATSession = async (req, res) => {
         if (savedConfig.catBorderlineThreshold != null) engineConfig.borderlineThreshold = savedConfig.catBorderlineThreshold;
         if (savedConfig.catSeDecay != null) engineConfig.seDecay = savedConfig.catSeDecay;
         if (savedConfig.catBorderlineSeDecay != null) engineConfig.borderlineSeDecay = savedConfig.catBorderlineSeDecay;
+        // Scoring settings
+        if (savedConfig.catPartialScoring != null) engineConfig.partialScoring = savedConfig.catPartialScoring;
+        if (savedConfig.catNegativeScoring != null) engineConfig.negativeScoring = savedConfig.catNegativeScoring;
+        if (savedConfig.catNegativePenalty != null) engineConfig.negativePenalty = savedConfig.catNegativePenalty;
+        if (savedConfig.catPartialThreshold != null) engineConfig.partialThreshold = savedConfig.catPartialThreshold;
+        if (savedConfig.catSataScoringMode != null) engineConfig.sataScoringMode = savedConfig.catSataScoringMode;
+        if (savedConfig.catClozePartialScoring != null) engineConfig.clozePartialScoring = savedConfig.catClozePartialScoring;
       }
     } catch (e) {
       // AssessmentConfig model may not exist — use defaults
@@ -1690,7 +1725,7 @@ const submitCATAnswer = async (req, res) => {
           for (const subAnswer of subQuestionAnswers) {
             const subQ = question.questions.find(sq => String(sq._id) === String(subAnswer.subQuestionId));
             if (subQ) {
-              const subEval = evaluateCATAnswer(subQ, subAnswer.answer);
+              const subEval = evaluateCATAnswer(subQ, subAnswer.answer, session.engineConfig);
               batchEvaluations.push({
                 ...subEval,
                 subQuestionId: subAnswer.subQuestionId,
@@ -1734,7 +1769,7 @@ const submitCATAnswer = async (req, res) => {
           });
         }
       } else {
-        evaluation = evaluateCATAnswer(effectiveQuestion, effectiveAnswer);
+        evaluation = evaluateCATAnswer(effectiveQuestion, effectiveAnswer, session.engineConfig);
         if (!session.answerDetails) session.answerDetails = [];
         session.answerDetails.push({
           questionId,
