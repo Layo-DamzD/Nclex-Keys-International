@@ -380,7 +380,8 @@ const TestCustomization = () => {
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
 
-    if (testType === 'cat') {
+    // CAT and Assessment both use the adaptive CAT engine (NCLEX spec: 85–150 questions, theta-based decisions)
+    if (testType === 'cat' || testType === 'assessment') {
       setLoading(true);
       setError('');
       try {
@@ -391,22 +392,16 @@ const TestCustomization = () => {
         const navData = { ...response.data, testType };
         navigate('/cat-session', { state: navData });
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to start CAT session. Make sure there are enough calibrated questions.');
+        setError(err.response?.data?.message || 'Failed to start session. Make sure there are enough calibrated questions.');
       } finally {
         setLoading(false);
       }
       return;
     }
 
-    if (testType === 'assessment') {
-      setQuestionCount(150);
-      setQuestionCountInput('150');
-    }
-
-    const isAssessment = testType === 'assessment';
     const isPractice = testType === 'practice';
-    const effectiveTutorMode = false; // No tutoring for CAT or Assessment
-    const effectiveTimed = (isAssessment || testType === 'cat') ? true : timed;
+    const effectiveTutorMode = false; // No tutoring for assessments
+    const effectiveTimed = timed;
 
     if (categoryTab === 'clientNeeds') {
       if (currentAvailable === 0) {
@@ -418,7 +413,7 @@ const TestCustomization = () => {
         return;
       }
     } else {
-      if (!isAssessment && selectedSubcategoryPairs.length === 0) {
+      if (selectedSubcategoryPairs.length === 0) {
         setError('Select at least one subcategory');
         return;
       }
@@ -455,15 +450,11 @@ const TestCustomization = () => {
           tutorMode: effectiveTutorMode,
           statusFilters,
           testType,
-          ...(isPractice ? { examMode, questionTypeFilter } : {}),
-          ...(isAssessment ? { difficulty: 'hard' } : {})
+          ...(isPractice ? { examMode, questionTypeFilter } : {})
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const navData = { ...response.data, testType };
-        if (isAssessment) {
-          navData.settings = { ...navData.settings, testName: 'Assessment' };
-        }
         navigate('/test-session', { state: navData });
       } else {
         const selections = selectedSubcategoryPairs.map((pairKey) => {
@@ -478,15 +469,11 @@ const TestCustomization = () => {
           tutorMode: effectiveTutorMode,
           statusFilters,
           testType,
-          ...(isPractice ? { examMode, questionTypeFilter } : {}),
-          ...(isAssessment ? { difficulty: 'hard' } : {})
+          ...(isPractice ? { examMode, questionTypeFilter } : {})
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const navData = { ...response.data, testType };
-        if (isAssessment) {
-          navData.settings = { ...navData.settings, testName: 'Assessment' };
-        }
         navigate('/test-session', { state: navData });
       }
     } catch (err) {
@@ -499,7 +486,7 @@ const TestCustomization = () => {
   // ─── Wizard navigation helpers ───
   const handleNextFromStep1 = () => {
     setError('');
-    if (testType === 'cat') {
+    if (testType === 'cat' || testType === 'assessment') {
       handleSubmit();
       return;
     }

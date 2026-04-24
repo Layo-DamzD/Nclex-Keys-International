@@ -1577,7 +1577,8 @@ const startCATSession = async (req, res) => {
     }
     
     // ── Build engine config (defaults + AssessmentConfig overrides) ──
-    const minItems = testType === 'assessment' ? 50 : 85;
+    // NCLEX spec: both CAT and Assessment use min 85, max 150
+    const minItems = 85;
     const maxItems = 150;
 
     const engineConfig = {

@@ -781,7 +781,8 @@ const CatSession = () => {
   };
 
   const handleExitSession = () => {
-    const shouldExit = window.confirm('Exit this CAT session? Your progress will be lost.');
+    const label = testType === 'assessment' ? 'assessment' : 'CAT';
+    const shouldExit = window.confirm(`Exit this ${label} session? Your progress will be lost.`);
     if (shouldExit) {
       localStorage.removeItem('nclex-cat-session-state');
       navigate('/dashboard');
@@ -1210,7 +1211,7 @@ const CatSession = () => {
       }}>
         <div style={{ textAlign: 'center', color: '#fff' }}>
           <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem' }}></i>
-          <p style={{ marginTop: '12px', fontSize: '1.1rem' }}>Loading CAT session...</p>
+          <p style={{ marginTop: '12px', fontSize: '1.1rem' }}>Loading {testType === 'assessment' ? 'Assessment' : 'CAT'} session...</p>
         </div>
       </div>
     );
