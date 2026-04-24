@@ -310,8 +310,8 @@ const TestCustomization = () => {
   const clientNeedsTotal = useMemo(() => {
     const normalTotal = CLIENT_NEEDS_CATEGORIES.reduce((sum, cn) => sum + getClientNeedCount(cn), 0);
     const ngnTotal = CLIENT_NEEDS_CATEGORIES.reduce((sum, cn) => sum + getClientNeedNgnCount(cn), 0);
-    return normalTotal + ngnTotal;
-  }, [clientNeedsCounts, clientNeedsNgnCounts]);
+    return (showNormalCount ? normalTotal : 0) + (showNgnCount ? ngnTotal : 0);
+  }, [clientNeedsCounts, clientNeedsNgnCounts, showNormalCount, showNgnCount]);
 
   const selectedClientNeedsTotal = useMemo(() => {
     const allSelected = selectedClientNeeds.length === 0 ||
@@ -319,8 +319,12 @@ const TestCustomization = () => {
     if (allSelected) {
       return clientNeedsTotal;
     }
-    return selectedClientNeeds.reduce((sum, cn) => sum + getClientNeedCount(cn) + getClientNeedNgnCount(cn), 0);
-  }, [selectedClientNeeds, clientNeedsCounts, clientNeedsNgnCounts, clientNeedsTotal]);
+    return selectedClientNeeds.reduce((sum, cn) => {
+      const normal = showNormalCount ? getClientNeedCount(cn) : 0;
+      const ngn = showNgnCount ? getClientNeedNgnCount(cn) : 0;
+      return sum + normal + ngn;
+    }, 0);
+  }, [selectedClientNeeds, clientNeedsCounts, clientNeedsNgnCounts, clientNeedsTotal, showNormalCount, showNgnCount]);
 
   const allPossiblePairs = useMemo(() => {
     return Object.entries(categoryMap).flatMap(([category, subcategories]) =>
@@ -334,7 +338,8 @@ const TestCustomization = () => {
 
     if (allSelected) {
       return {
-        available: (subjectStatusCounts?.total || statusCounts.total || 0) + (subjectNgnStatusCounts?.total || 0),
+        available: (showNormalCount ? (subjectStatusCounts?.total || statusCounts.total || 0) : 0) +
+                  (showNgnCount ? (subjectNgnStatusCounts?.total || 0) : 0),
         used: 0,
         omitted: 0,
       };
@@ -342,18 +347,18 @@ const TestCustomization = () => {
 
     return selectedSubcategoryPairs.reduce((totals, pairKey) => {
       const [category, subcategory] = pairKey.split(':::');
-      const available = getSubcategoryCount(category, subcategory);
-      const ngnAvailable = getNgnSubcategoryCount(category, subcategory);
+      const normalAvailable = showNormalCount ? getSubcategoryCount(category, subcategory) : 0;
+      const ngnAvailable = showNgnCount ? getNgnSubcategoryCount(category, subcategory) : 0;
       const used = getUsedSubcategoryCount(category, subcategory);
       const omitted = getOmittedSubcategoryCount(category, subcategory);
 
       return {
-        available: totals.available + available + ngnAvailable,
+        available: totals.available + normalAvailable + ngnAvailable,
         used: totals.used + used,
         omitted: totals.omitted + omitted,
       };
     }, { available: 0, used: 0, omitted: 0 });
-  }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, ngnSubcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts, subjectStatusCounts, subjectNgnStatusCounts]);
+  }, [selectedSubcategoryPairs, allPossiblePairs, subcategoryCounts, ngnSubcategoryCounts, usedSubcategoryCounts, omittedSubcategoryCounts, categoryMap, statusCounts, subjectStatusCounts, subjectNgnStatusCounts, showNormalCount, showNgnCount]);
 
   const questionRangeMin = 5;
   const questionRangeMax = 150;
@@ -410,8 +415,15 @@ const TestCustomization = () => {
     : categoryTab === 'clientNeeds'
       ? clientNeedNgnStatusCounts
       : null;
+
+  // Dynamic display based on examMode:
+  // classic = only normal, ngn = only case studies, mixed = both
+  const showNormalCount = examMode !== 'ngn';
+  const showNgnCount = examMode !== 'classic';
   const totalNgnBank = activeNgnStatusCounts?.total || 0;
-  const totalQuestionBank = (activeStatusCounts.total || 0) + totalNgnBank;
+  const normalBankTotal = activeStatusCounts.total || 0;
+  const totalQuestionBank = (showNormalCount ? normalBankTotal : 0) + (showNgnCount ? totalNgnBank : 0);
+
   const currentAvailable = categoryTab === 'clientNeeds'
     ? selectedClientNeedsTotal
     : selectedStats.available;
@@ -757,12 +769,12 @@ const TestCustomization = () => {
           {/* Status Filter */}
           <div className="tc-status-list">
             {[
-              { key: 'unused', label: 'Unused', count: activeStatusCounts.unused || 0, ngnCount: activeNgnStatusCounts?.unused || 0 },
-              { key: 'marked', label: 'Marked', count: activeStatusCounts.marked || 0, ngnCount: activeNgnStatusCounts?.marked || 0 },
-              { key: 'incorrect', label: 'Incorrect', count: activeStatusCounts.incorrect || 0, ngnCount: activeNgnStatusCounts?.incorrect || 0 },
-              { key: 'all', label: 'All', count: totalQuestionBank, ngnCount: totalNgnBank },
-              { key: 'correct', label: 'Correct On Reattempt', count: activeStatusCounts.correct || 0, ngnCount: activeNgnStatusCounts?.correct || 0 },
-              { key: 'omitted', label: 'Omitted', count: activeStatusCounts.omitted || 0, ngnCount: activeNgnStatusCounts?.omitted || 0 },
+              { key: 'unused', label: 'Unused', count: showNormalCount ? (activeStatusCounts.unused || 0) : 0, ngnCount: showNgnCount ? (activeNgnStatusCounts?.unused || 0) : 0 },
+              { key: 'marked', label: 'Marked', count: showNormalCount ? (activeStatusCounts.marked || 0) : 0, ngnCount: showNgnCount ? (activeNgnStatusCounts?.marked || 0) : 0 },
+              { key: 'incorrect', label: 'Incorrect', count: showNormalCount ? (activeStatusCounts.incorrect || 0) : 0, ngnCount: showNgnCount ? (activeNgnStatusCounts?.incorrect || 0) : 0 },
+              { key: 'all', label: 'All', count: totalQuestionBank, ngnCount: showNgnCount ? totalNgnBank : 0 },
+              { key: 'correct', label: 'Correct On Reattempt', count: showNormalCount ? (activeStatusCounts.correct || 0) : 0, ngnCount: showNgnCount ? (activeNgnStatusCounts?.correct || 0) : 0 },
+              { key: 'omitted', label: 'Omitted', count: showNormalCount ? (activeStatusCounts.omitted || 0) : 0, ngnCount: showNgnCount ? (activeNgnStatusCounts?.omitted || 0) : 0 },
             ].map((status) => (
               <div
                 key={status.key}
@@ -904,8 +916,8 @@ const TestCustomization = () => {
         <hr className="tc-divider" />
         <div className="tc-checkbox-list">
           {categories.map((category) => {
-            const count = categoryTotals[category] || 0;
-            const ngnCount = getNgnCategoryCount(category);
+            const count = showNormalCount ? (categoryTotals[category] || 0) : 0;
+            const ngnCount = showNgnCount ? getNgnCategoryCount(category) : 0;
             const isSelected = selectedCategories.includes(category);
             return (
               <div
@@ -916,12 +928,12 @@ const TestCustomization = () => {
                 {renderCheckbox(isSelected, () => handleCategoryToggle(category))}
                 <span className="tc-checkbox-item-name">{category}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {ngnCount > 0 && (
+                  {showNgnCount && ngnCount > 0 && (
                     <span className="tc-count-badge" style={{ background: '#E8F5E9', color: '#2E7D32', fontSize: 11, fontWeight: 600 }}>
                       {ngnCount} NGN
                     </span>
                   )}
-                  <span className="tc-count-badge">{count}</span>
+                  {showNormalCount && <span className="tc-count-badge">{count}</span>}
                 </div>
               </div>
             );
@@ -944,8 +956,8 @@ const TestCustomization = () => {
         <hr className="tc-divider" />
         <div className="tc-checkbox-list">
           {NCLEX_CLIENT_NEEDS_CATEGORIES.map((clientNeed) => {
-            const count = getClientNeedCount(clientNeed);
-            const ngnCount = getClientNeedNgnCount(clientNeed);
+            const count = showNormalCount ? getClientNeedCount(clientNeed) : 0;
+            const ngnCount = showNgnCount ? getClientNeedNgnCount(clientNeed) : 0;
             const isSelected = selectedClientNeeds.includes(clientNeed);
             return (
               <div
@@ -956,12 +968,12 @@ const TestCustomization = () => {
                 {renderCheckbox(isSelected, () => handleClientNeedToggle(clientNeed))}
                 <span className="tc-checkbox-item-name">{clientNeed}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {ngnCount > 0 && (
+                  {showNgnCount && ngnCount > 0 && (
                     <span className="tc-count-badge" style={{ background: '#E8F5E9', color: '#2E7D32', fontSize: 11, fontWeight: 600 }}>
                       {ngnCount} NGN
                     </span>
                   )}
-                  <span className="tc-count-badge">{count}</span>
+                  {showNormalCount && <span className="tc-count-badge">{count}</span>}
                 </div>
               </div>
             );
@@ -986,7 +998,7 @@ const TestCustomization = () => {
         {categoriesToShow.map((category) => {
           const subcategories = categoryMap[category] || [];
           const allCatSelected = subcategories.every(sub => isSubcategorySelected(category, sub));
-          const catNgnCount = getNgnCategoryCount(category);
+          const catNgnCount = showNgnCount ? getNgnCategoryCount(category) : 0;
 
           return (
             <div key={category}>
@@ -995,14 +1007,16 @@ const TestCustomization = () => {
                 <i className="fas fa-folder" />
                 <span>{category}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-                  {catNgnCount > 0 && (
+                  {showNgnCount && catNgnCount > 0 && (
                     <span className="tc-count-badge" style={{ background: '#E8F5E9', color: '#2E7D32', fontSize: 11, fontWeight: 600 }}>
                       {catNgnCount} NGN
                     </span>
                   )}
-                  <span className="tc-count-badge">
-                    {categoryTotals[category] || 0}
-                  </span>
+                  {showNormalCount && (
+                    <span className="tc-count-badge">
+                      {categoryTotals[category] || 0}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="tc-checkbox-list-header">
@@ -1012,8 +1026,8 @@ const TestCustomization = () => {
               <hr className="tc-divider" />
               <div className="tc-checkbox-list" style={{ maxHeight: '30vh' }}>
                 {subcategories.map((sub) => {
-                  const count = getSubcategoryCount(category, sub);
-                  const ngnCount = getNgnSubcategoryCount(category, sub);
+                  const count = showNormalCount ? getSubcategoryCount(category, sub) : 0;
+                  const ngnCount = showNgnCount ? getNgnSubcategoryCount(category, sub) : 0;
                   const isSelected = isSubcategorySelected(category, sub);
                   return (
                     <div
@@ -1024,12 +1038,12 @@ const TestCustomization = () => {
                       {renderCheckbox(isSelected, () => handleSubcategoryToggle(category, sub))}
                       <span className="tc-checkbox-item-name">{sub}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {ngnCount > 0 && (
+                        {showNgnCount && ngnCount > 0 && (
                           <span className="tc-count-badge" style={{ background: '#E8F5E9', color: '#2E7D32', fontSize: 11, fontWeight: 600 }}>
                             {ngnCount} NGN
                           </span>
                         )}
-                        <span className="tc-count-badge">{count}</span>
+                        {showNormalCount && <span className="tc-count-badge">{count}</span>}
                       </div>
                     </div>
                   );

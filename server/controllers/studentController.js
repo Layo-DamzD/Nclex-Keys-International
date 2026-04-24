@@ -591,10 +591,10 @@ const generateTest = async (req, res) => {
         typeConditions.push({ type: 'case-study', caseStudyType: 'layered', $expr: { $gt: [{ $size: { $ifNull: ['$questions', []] } }, 1] } });
       }
       if (questionTypeFilter.includes('standalone')) {
-        // Standalone = bowtie/trend or layered with single question (1 story = 1 question)
+        // Standalone = bowtie, trend, matrix, or layered with single question (1 story = 1 question)
         typeConditions.push({ $or: [
           { type: 'case-study', $expr: { $lte: [{ $size: { $ifNull: ['$questions', []] } }, 1] } },
-          { type: 'case-study', caseStudyType: { $in: ['bowtie', 'trend'] } }
+          { type: 'case-study', caseStudyType: { $in: ['bowtie', 'trend', 'matrix'] } }
         ]});
       }
       if (typeConditions.length > 0) {

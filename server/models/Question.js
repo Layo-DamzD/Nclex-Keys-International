@@ -111,7 +111,7 @@ const questionSchema = new mongoose.Schema({
 
   // Case-study-specific fields
   caseStudyId: { type: mongoose.Schema.Types.ObjectId, ref: 'CaseStudy' },
-  caseStudyType: { type: String, enum: ['layered', 'bowtie', 'trend'] },
+  caseStudyType: { type: String, enum: ['layered', 'bowtie', 'trend', 'matrix'] },
   scenario: String,
   sections: [caseStudySectionSchema],
   questions: [caseStudyQuestionSchema],

@@ -12,7 +12,7 @@ const normalizeCaseStudyQuestions = (questions, category, subcategory) =>
 // so tests know whether it's layered, bowtie, or trend
 const CASE_STUDY_TYPE_MAP = {
   '6-question': 'layered',
-  'matrix': 'layered',
+  'matrix': 'matrix',
   'bowtie': 'bowtie',
   'trend': 'trend',
 };
