@@ -271,6 +271,11 @@ const TestCustomization = () => {
     fetchCounts();
   }, []);
 
+  // ─── Dynamic display flags based on examMode ───
+  // Must be defined BEFORE useMemo hooks that depend on them
+  const showNormalCount = examMode !== 'ngn';
+  const showNgnCount = examMode !== 'classic';
+
   // ─── Existing computed values preserved ───
   const categoryTotals = useMemo(() => {
     return Object.fromEntries(
@@ -416,10 +421,7 @@ const TestCustomization = () => {
       ? clientNeedNgnStatusCounts
       : null;
 
-  // Dynamic display based on examMode:
-  // classic = only normal, ngn = only case studies, mixed = both
-  const showNormalCount = examMode !== 'ngn';
-  const showNgnCount = examMode !== 'classic';
+  // Total question bank respecting examMode (showNormalCount/showNgnCount defined above)
   const totalNgnBank = activeNgnStatusCounts?.total || 0;
   const normalBankTotal = activeStatusCounts.total || 0;
   const totalQuestionBank = (showNormalCount ? normalBankTotal : 0) + (showNgnCount ? totalNgnBank : 0);
