@@ -6,6 +6,7 @@ const PreviousTests = () => {
   const navigate = useNavigate();
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [resumingId, setResumingId] = useState(null);
 
   useEffect(() => {
     const fetchTests = async () => {
@@ -29,6 +30,85 @@ const PreviousTests = () => {
 
   const handleViewReview = (testId) => {
     navigate(`/test-review/${testId}`);
+  };
+
+  const handleResume = async (test) => {
+    const testType = (test.testType || '').toLowerCase();
+    setResumingId(test._id);
+
+    try {
+      const token = localStorage.getItem('token');
+
+      if (testType === 'cat' || testType === 'assessment') {
+        // CAT/Assessment: call resume endpoint to restore from DB
+        const response = await axios.post('/api/student/cat/resume', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data.resumed && response.data.question) {
+          navigate('/cat-session', {
+            state: {
+              ...response.data,
+              testType: response.data.testType || testType,
+            }
+          });
+        } else {
+          alert('Could not resume session. It may have expired.');
+        }
+      } else {
+        // Practice/custom test: navigate to /test-session — localStorage will handle restore
+        const saved = localStorage.getItem('nclex-test-session-state');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.savedAt && (Date.now() - parsed.savedAt) < 24 * 60 * 60 * 1000) {
+            navigate('/test-session', { state: {} }); // no state → triggers localStorage restore
+          } else {
+            alert('This test session has expired (older than 24 hours).');
+            localStorage.removeItem('nclex-test-session-state');
+          }
+        } else {
+          // Check if there's a saved CAT state instead
+          const catSaved = localStorage.getItem('nclex-cat-session-state');
+          if (catSaved) {
+            navigate('/cat-session', { state: {} });
+          } else {
+            alert('No saved test session found. The test data may have been cleared.');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Resume error:', error);
+      const msg = error.response?.data?.message || 'Failed to resume test.';
+      alert(msg);
+    } finally {
+      setResumingId(null);
+    }
+  };
+
+  const handleAbandon = async (testId) => {
+    if (!window.confirm('Are you sure you want to abandon this test? It cannot be resumed after this.')) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const testType = (tests.find(t => t._id === testId)?.testType || '').toLowerCase();
+
+      if (testType === 'cat' || testType === 'assessment') {
+        // Clean up CAT session from server
+        await axios.post('/api/student/cat/abandon', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+
+      // Remove localStorage state
+      localStorage.removeItem('nclex-test-session-state');
+      localStorage.removeItem('nclex-cat-session-state');
+
+      // Remove from local list
+      setTests(prev => prev.filter(t => t._id !== testId));
+    } catch (error) {
+      console.error('Abandon error:', error);
+    }
   };
 
   const formatTime = (minutes) => {
@@ -67,35 +147,71 @@ const PreviousTests = () => {
                 <tr>
                   <th>Test Name</th>
                   <th>Date Started</th>
+                  <th>Type</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {inProgressTests.map((test) => (
-                  <tr key={test._id} style={{ background: '#fffbeb' }}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <i className="fas fa-hourglass-half" style={{ color: '#d97706' }}></i>
-                        {test.testName}
-                      </div>
-                    </td>
-                    <td>{formatDate(test.date)}</td>
-                    <td>
-                      <span className="badge" style={{ background: '#fef3c7', color: '#92400e', fontWeight: 600 }}>
-                        In Progress
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-sm btn-warning me-2"
-                        onClick={() => navigate('/create-test')}
-                      >
-                        Resume
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {inProgressTests.map((test) => {
+                  const testType = (test.testType || '').toLowerCase();
+                  const typeLabel = testType === 'assessment' ? 'Assessment'
+                    : testType === 'cat' ? 'CAT'
+                    : 'Practice';
+
+                  return (
+                    <tr key={test._id} style={{ background: '#fffbeb' }}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <i className="fas fa-hourglass-half" style={{ color: '#d97706' }}></i>
+                          {test.testName}
+                        </div>
+                      </td>
+                      <td>{formatDate(test.date)}</td>
+                      <td>
+                        <span className="badge" style={{
+                          background: testType === 'assessment' ? '#E1BEE7' : testType === 'cat' ? '#E8EAF6' : '#E3F2FD',
+                          color: testType === 'assessment' ? '#6A1B9A' : testType === 'cat' ? '#283593' : '#1565C0',
+                          fontWeight: 500,
+                          fontSize: '0.75rem'
+                        }}>
+                          {typeLabel}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge" style={{ background: '#fef3c7', color: '#92400e', fontWeight: 600 }}>
+                          In Progress
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-warning me-2"
+                          disabled={resumingId === test._id}
+                          onClick={() => handleResume(test)}
+                        >
+                          {resumingId === test._id ? (
+                            <>
+                              <i className="fas fa-spinner fa-spin" style={{ marginRight: '4px' }}></i>
+                              Resuming...
+                            </>
+                          ) : (
+                            <>
+                              <i className="fas fa-play" style={{ marginRight: '4px' }}></i>
+                              Resume
+                            </>
+                          )}
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleAbandon(test._id)}
+                          title="Abandon this test"
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

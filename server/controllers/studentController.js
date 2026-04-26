@@ -1,6 +1,7 @@
 const { default: mongoose } = require('mongoose');
 const User = require('../models/user');
 const TestResult = require('../models/testResult');
+const CatSession = require('../models/CatSession');
 const Activity = require('../models/Activity');
 const Test = require('../models/Test');
 const Question = require('../models/Question');
@@ -1513,6 +1514,253 @@ const isCATAnswerCorrect = (question, answer, scoringConfig) => {
   return evaluateCATAnswer(question, answer, scoringConfig).isCorrect === true;
 };
 
+// ── Helper: get weak categories for a student (for assessment pool building) ──
+const getWeakCategories = async (studentId) => {
+  const pastResults = await TestResult.find({
+    student: studentId,
+    testType: { $in: ['practice', 'assessment', 'cat'] },
+    status: 'completed'
+  }).select('answers');
+
+  const categoryStats = {};
+  pastResults.forEach(result => {
+    if (result.answers && Array.isArray(result.answers)) {
+      result.answers.forEach(answer => {
+        const cat = answer.category || answer.subcategory || 'Unknown';
+        if (!categoryStats[cat]) categoryStats[cat] = { total: 0, correct: 0 };
+        categoryStats[cat].total += 1;
+        if (answer.isCorrect === true) categoryStats[cat].correct += 1;
+      });
+    }
+  });
+
+  const weak = new Set();
+  Object.entries(categoryStats).forEach(([category, stats]) => {
+    const accuracy = stats.total > 0 ? (stats.correct / stats.total) : 0.5;
+    if (accuracy < 0.7) weak.add(category);
+  });
+  return weak;
+};
+
+// ── Helper: get strong categories for a student ──
+const getStrongCategories = async (studentId) => {
+  const pastResults = await TestResult.find({
+    student: studentId,
+    testType: { $in: ['practice', 'assessment', 'cat'] },
+    status: 'completed'
+  }).select('answers');
+
+  const categoryStats = {};
+  pastResults.forEach(result => {
+    if (result.answers && Array.isArray(result.answers)) {
+      result.answers.forEach(answer => {
+        const cat = answer.category || answer.subcategory || 'Unknown';
+        if (!categoryStats[cat]) categoryStats[cat] = { total: 0, correct: 0 };
+        categoryStats[cat].total += 1;
+        if (answer.isCorrect === true) categoryStats[cat].correct += 1;
+      });
+    }
+  });
+
+  const strong = new Set();
+  Object.entries(categoryStats).forEach(([category, stats]) => {
+    const accuracy = stats.total > 0 ? (stats.correct / stats.total) : 0.5;
+    if (accuracy >= 0.7) strong.add(category);
+  });
+  return strong;
+};
+
+// ── Helper: save CAT session to DB (fire-and-forget) ──
+const saveCatSessionToDB = async (session) => {
+  if (!session._dbId) return;
+  try {
+    await CatSession.findByIdAndUpdate(session._dbId, {
+      administered: session.administered,
+      responses: session.responses,
+      earnedMarks: session.earnedMarks,
+      totalMarks: session.totalMarks,
+      theta: session.theta,
+      se: session.se,
+      thetaHistory: session.thetaHistory,
+      answerDetails: session.answerDetails,
+      currentQuestionId: session.currentQuestionId || null,
+      questionNumber: session.administered.length + 1,
+      lastActivityAt: new Date(),
+    });
+  } catch (err) {
+    console.error('Failed to save CAT session to DB:', err.message);
+  }
+};
+
+// @desc    Check for existing in-progress CAT session
+// @route   GET /api/student/cat/session
+// @access  Private
+const getCatSessionStatus = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const dbSession = await CatSession.findOne({ student: studentId })
+      .sort({ createdAt: -1 })
+      .select('testType questionNumber theta se createdAt startTime lastActivityAt')
+      .lean();
+
+    if (!dbSession) {
+      return res.json({ hasSession: false });
+    }
+
+    res.json({
+      hasSession: true,
+      testType: dbSession.testType,
+      questionNumber: dbSession.questionNumber,
+      theta: dbSession.theta,
+      se: dbSession.se,
+      sessionId: dbSession._id,
+      createdAt: dbSession.createdAt,
+      startTime: dbSession.startTime,
+      lastActivityAt: dbSession.lastActivityAt,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Resume an in-progress CAT session
+// @route   POST /api/student/cat/resume
+// @access  Private
+const resumeCATSession = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    // Find the existing session
+    const dbSession = await CatSession.findOne({ student: studentId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!dbSession) {
+      return res.status(404).json({ message: 'No in-progress CAT session found.' });
+    }
+
+    // Check if already in memory (server hasn't restarted)
+    const existingMemorySession = catSessions.get(studentId);
+    if (existingMemorySession) {
+      // Already in memory — just return the current question
+      const engine = new CATEngine(existingMemorySession.engineConfig);
+      const currentQ = existingMemorySession.currentQuestionId
+        ? existingMemorySession.questionPool.find(q => String(q._id) === String(existingMemorySession.currentQuestionId))
+        : null;
+
+      if (currentQ) {
+        const getConfidenceLevel = (se) => {
+          if (!se || se === Infinity || se === -Infinity) return { level: 'Calculating...', percentage: 0 };
+          const pct = Math.max(0, Math.min(100, Math.round((1 - se) * 100)));
+          if (pct >= 95) return { level: 'Very High', percentage: pct };
+          if (pct >= 80) return { level: 'High', percentage: pct };
+          if (pct >= 60) return { level: 'Moderate', percentage: pct };
+          if (pct >= 40) return { level: 'Low', percentage: pct };
+          return { level: 'Very Low', percentage: pct };
+        };
+        const confidence = getConfidenceLevel(existingMemorySession.se);
+
+        return res.json({
+          resumed: true,
+          question: currentQ,
+          questionNumber: existingMemorySession.administered.length + 1,
+          theta: existingMemorySession.theta,
+          se: existingMemorySession.se,
+          confidence,
+          testType: existingMemorySession.testType,
+        });
+      }
+    }
+
+    // ── Reconstruct session from DB ──
+    // Rebuild question pool from stored IDs
+    const poolQuestions = await Question.find({
+      _id: { $in: dbSession.questionPoolIds },
+      isDraft: { $ne: true }
+    }).lean();
+
+    // For case studies, ensure IRT params are set
+    const difficultyToIRT = {
+      easy:   { irtDiscrimination: 0.9, irtDifficulty: -0.8, irtGuessing: 0, irtModel: '2PL' },
+      medium: { irtDiscrimination: 1.0, irtDifficulty: 0.0,  irtGuessing: 0, irtModel: '2PL' },
+      hard:   { irtDiscrimination: 1.1, irtDifficulty: 0.8,  irtGuessing: 0, irtModel: '2PL' },
+    };
+    for (const q of poolQuestions) {
+      if (q.type === 'case-study' && !q.irtDiscrimination) {
+        const irtParams = difficultyToIRT[q.difficulty] || difficultyToIRT.medium;
+        Object.assign(q, irtParams);
+      }
+    }
+
+    const engine = new CATEngine(dbSession.engineConfig);
+
+    // Find the current question (the last one shown)
+    let currentQuestion = null;
+    if (dbSession.currentQuestionId) {
+      currentQuestion = poolQuestions.find(q => String(q._id) === String(dbSession.currentQuestionId));
+    }
+    // If current question not in pool (edge case), select a new one
+    if (!currentQuestion && dbSession.administered.length > 0) {
+      currentQuestion = engine.selectNextItem(
+        dbSession.theta,
+        poolQuestions,
+        dbSession.administered
+      );
+    }
+    // If no questions administered yet, pick the first one
+    if (!currentQuestion) {
+      currentQuestion = engine.selectNextItem(0, poolQuestions, []);
+    }
+
+    // Reconstruct the in-memory session
+    const session = {
+      studentId,
+      testType: dbSession.testType,
+      startTime: new Date(dbSession.startTime),
+      administered: dbSession.administered || [],
+      responses: dbSession.responses || [],
+      earnedMarks: dbSession.earnedMarks || [],
+      totalMarks: dbSession.totalMarks || [],
+      theta: dbSession.theta || 0,
+      se: dbSession.se || 1.0,
+      answerDetails: dbSession.answerDetails || [],
+      thetaHistory: dbSession.thetaHistory || [],
+      questionPool: poolQuestions,
+      engineConfig: dbSession.engineConfig,
+      currentQuestionId: currentQuestion._id,
+      _dbId: dbSession._id,
+    };
+
+    catSessions.set(studentId, session);
+
+    const getConfidenceLevel = (se) => {
+      if (!se || se === Infinity || se === -Infinity) return { level: 'Calculating...', percentage: 0 };
+      const pct = Math.max(0, Math.min(100, Math.round((1 - se) * 100)));
+      if (pct >= 95) return { level: 'Very High', percentage: pct };
+      if (pct >= 80) return { level: 'High', percentage: pct };
+      if (pct >= 60) return { level: 'Moderate', percentage: pct };
+      if (pct >= 40) return { level: 'Low', percentage: pct };
+      return { level: 'Very Low', percentage: pct };
+    };
+    const confidence = getConfidenceLevel(session.se);
+
+    res.json({
+      resumed: true,
+      question: currentQuestion,
+      questionNumber: session.administered.length + 1,
+      theta: session.theta,
+      se: session.se,
+      confidence,
+      testType: session.testType,
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Start a CAT session
 // @route   POST /api/student/cat/start
 // @access  Private
@@ -1520,6 +1768,21 @@ const startCATSession = async (req, res) => {
   try {
     const studentId = req.user.id;
     const testType = req.body?.testType || 'cat';
+
+    // ── Check for existing in-progress CAT session (resume support) ──
+    const existingSession = await CatSession.findOne({ student: studentId }).sort({ createdAt: -1 }).lean();
+    if (existingSession) {
+      return res.json({
+        hasExistingSession: true,
+        message: 'You have an active CAT session in progress.',
+        testType: existingSession.testType,
+        questionNumber: existingSession.questionNumber,
+        sessionId: existingSession._id
+      });
+    }
+
+    // Clean up any orphaned in_progress TestResults
+    await TestResult.deleteMany({ student: studentId, status: 'in_progress' });
     
     // ── Pure NCLEX hardcoded defaults (no configurable settings) ──
     const engineConfig = {
@@ -1698,6 +1961,30 @@ const startCATSession = async (req, res) => {
 
     catSessions.set(studentId, session);
 
+    // ── Persist session to MongoDB for resume support ──
+    const dbSession = new CatSession({
+      student: studentId,
+      testType,
+      startTime: session.startTime,
+      administered: [],
+      responses: [],
+      earnedMarks: [],
+      totalMarks: [],
+      theta: 0,
+      se: 1.0,
+      thetaHistory: [],
+      answerDetails: [],
+      questionPoolIds: questionPool.map(q => q._id),
+      engineConfig,
+      currentQuestionId: firstItem._id,
+      questionNumber: 1,
+      weakCategories: testType === 'assessment' ? [...(await getWeakCategories(studentId))] : [],
+      strongCategories: testType === 'assessment' ? [...(await getStrongCategories(studentId))] : [],
+      lastActivityAt: new Date(),
+    });
+    await dbSession.save();
+    session._dbId = dbSession._id; // attach DB ref for updates
+
     // Create an in-progress TestResult so the test appears in Previous Tests
     const inProgressResult = new TestResult({
       student: studentId,
@@ -1735,10 +2022,51 @@ const submitCATAnswer = async (req, res) => {
     const studentId = req.user.id;
     const { questionId, answer, subQuestionId, subQuestionAnswers, proctoring } = req.body;
     
-    // Get session
-    const session = catSessions.get(studentId);
+    // Get session — try in-memory first, fall back to DB (server restart resilience)
+    let session = catSessions.get(studentId);
     if (!session) {
-      return res.status(404).json({ message: 'CAT session not found' });
+      // Try to restore from DB
+      const dbSession = await CatSession.findOne({ student: studentId }).sort({ createdAt: -1 }).lean();
+      if (dbSession) {
+        // Reconstruct in-memory session from DB (same logic as resume)
+        const poolQuestions = await Question.find({
+          _id: { $in: dbSession.questionPoolIds },
+          isDraft: { $ne: true }
+        }).lean();
+        const difficultyToIRT = {
+          easy:   { irtDiscrimination: 0.9, irtDifficulty: -0.8, irtGuessing: 0, irtModel: '2PL' },
+          medium: { irtDiscrimination: 1.0, irtDifficulty: 0.0,  irtGuessing: 0, irtModel: '2PL' },
+          hard:   { irtDiscrimination: 1.1, irtDifficulty: 0.8,  irtGuessing: 0, irtModel: '2PL' },
+        };
+        for (const q of poolQuestions) {
+          if (q.type === 'case-study' && !q.irtDiscrimination) {
+            const irtParams = difficultyToIRT[q.difficulty] || difficultyToIRT.medium;
+            Object.assign(q, irtParams);
+          }
+        }
+        session = {
+          studentId,
+          testType: dbSession.testType,
+          startTime: new Date(dbSession.startTime),
+          administered: dbSession.administered || [],
+          responses: dbSession.responses || [],
+          earnedMarks: dbSession.earnedMarks || [],
+          totalMarks: dbSession.totalMarks || [],
+          theta: dbSession.theta || 0,
+          se: dbSession.se || 1.0,
+          answerDetails: dbSession.answerDetails || [],
+          thetaHistory: dbSession.thetaHistory || [],
+          questionPool: poolQuestions,
+          engineConfig: dbSession.engineConfig,
+          currentQuestionId: dbSession.currentQuestionId || null,
+          _dbId: dbSession._id,
+        };
+        catSessions.set(studentId, session);
+      }
+    }
+
+    if (!session) {
+      return res.status(404).json({ message: 'CAT session not found. It may have expired.' });
     }
     
     // Use CACHED question pool instead of querying DB every time (MAJOR speedup)
@@ -1933,6 +2261,9 @@ const submitCATAnswer = async (req, res) => {
 
       // Delete any in-progress records for this student (created at session start)
       await TestResult.deleteMany({ student: studentId, status: 'in_progress' });
+
+      // ── Clean up DB session ──
+      await CatSession.deleteMany({ student: studentId });
       
       // Clear session
       catSessions.delete(studentId);
@@ -1950,8 +2281,14 @@ const submitCATAnswer = async (req, res) => {
       session.administered
     );
     
+    // Track current question ID in session
+    session.currentQuestionId = nextItem._id;
+
     // Update session
     catSessions.set(studentId, session);
+    
+    // ── Persist session to DB (fire-and-forget — don't block response) ──
+    saveCatSessionToDB(session);
     
     res.json({
       question: nextItem,
@@ -1970,6 +2307,29 @@ const submitCATAnswer = async (req, res) => {
 
 // Simple in-memory session store (use Redis in production)
 const catSessions = new Map();
+
+// @desc    Abandon an in-progress CAT session
+// @route   POST /api/student/cat/abandon
+// @access  Private
+const abandonCATSession = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    // Clear in-memory session
+    catSessions.delete(studentId);
+
+    // Clean up DB session
+    await CatSession.deleteMany({ student: studentId });
+
+    // Remove in-progress TestResult
+    await TestResult.deleteMany({ student: studentId, status: 'in_progress' });
+
+    res.json({ message: 'Session abandoned successfully.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
 // @desc    Check if student needs weekly review
 // @route   GET /api/student/check-weekly-review
@@ -2702,6 +3062,9 @@ module.exports = {
   getAssignedTests,
   startCATSession,
   submitCATAnswer,
+  resumeCATSession,
+  getCatSessionStatus,
+  abandonCATSession,
   checkWeeklyReview, 
   markReviewDone,
   getPublicTestReviewStatus,

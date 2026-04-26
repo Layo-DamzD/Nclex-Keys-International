@@ -444,6 +444,47 @@ const TestCustomization = () => {
         const response = await axios.post('/api/student/cat/start', { testType }, {
           headers: { Authorization: `Bearer ${token}` }
         });
+
+        // Check if there's an existing session — offer to resume instead
+        if (response.data.hasExistingSession) {
+          const resume = window.confirm(
+            `You have an active ${response.data.testType === 'assessment' ? 'Assessment' : 'CAT'} session (Question ${response.data.questionNumber}). Do you want to resume it? Click "Cancel" to abandon the old session and start fresh.`
+          );
+          if (resume) {
+            // Resume existing session
+            try {
+              const resumeResponse = await axios.post('/api/student/cat/resume', {}, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (resumeResponse.data.resumed && resumeResponse.data.question) {
+                navigate('/cat-session', {
+                  state: { ...resumeResponse.data, testType: resumeResponse.data.testType || testType }
+                });
+              } else {
+                setError('Could not resume session.');
+              }
+            } catch (resumeErr) {
+              setError(resumeErr.response?.data?.message || 'Failed to resume session.');
+            }
+          } else {
+            // Abandon old session and start fresh
+            try {
+              await axios.post('/api/student/cat/abandon', {}, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              // Retry starting new session
+              const retryResponse = await axios.post('/api/student/cat/start', { testType }, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              const navData = { ...retryResponse.data, testType };
+              navigate('/cat-session', { state: navData });
+            } catch (retryErr) {
+              setError(retryErr.response?.data?.message || 'Failed to start session.');
+            }
+          }
+          return;
+        }
+
         const navData = { ...response.data, testType };
         navigate('/cat-session', { state: navData });
       } catch (err) {

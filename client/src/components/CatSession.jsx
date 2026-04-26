@@ -243,11 +243,19 @@ const CatSession = () => {
   const navigate = useNavigate();
   const initialData = location.state || {};
 
+  // Distinguish: new test (has question), resumed from server (has resumed flag), or need to restore
+  const isNewTest = !!(initialData.question);
+  const isServerResumed = !!(initialData.resumed && initialData.question);
+
   // --- Pause/Resume Persistence: check localStorage for saved CAT state ---
   const [restoredState, setRestoredState] = useState(() => {
-    // If a new test is being started (location.state has a question), don't restore
-    if (initialData.question) {
+    // If a new test is being started (location.state has a question), don't restore from localStorage
+    if (isNewTest) {
       localStorage.removeItem('nclex-cat-session-state');
+      return null;
+    }
+    // If resumed from server, don't use localStorage — use server data
+    if (isServerResumed) {
       return null;
     }
     try {
@@ -308,6 +316,45 @@ const CatSession = () => {
   const [markedQuestions, setMarkedQuestions] = useState(restoredState?.markedQuestions || []);
   const [isPaused, setIsPaused] = useState(false);
   const [isCatSubmitting, setIsCatSubmitting] = useState(false);
+  const [serverResuming, setServerResuming] = useState(false);
+
+  // ── Auto-resume from server if no state is available ──
+  // This handles: navigating to /cat-session directly (e.g., bookmark, refresh without localStorage)
+  useEffect(() => {
+    if (currentQuestion || restoredState || isServerResumed) return; // already have data
+    if (serverResuming) return; // already trying
+
+    setServerResuming(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setServerResuming(false);
+      return;
+    }
+
+    axios.post('/api/student/cat/resume', {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(response => {
+      if (response.data.resumed && response.data.question) {
+        setCurrentQuestion(response.data.question);
+        setQuestionNumber(response.data.questionNumber);
+        setTheta(response.data.theta);
+        setSe(response.data.se);
+        if (response.data.confidence) setConfidence(response.data.confidence);
+        setStatus('continue');
+        setTimeLeft(85); // reset timer for the new question
+        // Clear any stale localStorage
+        localStorage.removeItem('nclex-cat-session-state');
+      } else {
+        // No session found — redirect to create-test
+        navigate('/create-test', { replace: true });
+      }
+    }).catch(() => {
+      // No session or error — redirect
+      navigate('/create-test', { replace: true });
+    }).finally(() => {
+      setServerResuming(false);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Proctoring: tab-switch / visibility detection ──
   const [proctorViolations, setProctorViolations] = useState(0);

@@ -27,6 +27,9 @@ const {
   getAssignedTests,
   startCATSession,
   submitCATAnswer,
+  resumeCATSession,
+  getCatSessionStatus,
+  abandonCATSession,
   checkWeeklyReview,
   markReviewDone,
   getPublicTestReviewStatus,
@@ -67,6 +70,9 @@ router.post('/change-password', protect, changePassword);
 router.get('/assigned-tests', protect, getAssignedTests);
 router.post('/cat/start', protect, startCATSession);
 router.post('/cat/answer', protect, submitCATAnswer);
+router.post('/cat/resume', protect, resumeCATSession);
+router.post('/cat/abandon', protect, abandonCATSession);
+router.get('/cat/session', protect, getCatSessionStatus);
 router.get('/check-weekly-review', protect, checkWeeklyReview);
 router.post('/mark-review-done', protect, markReviewDone);
 router.get('/public-test-review-status', protect, getPublicTestReviewStatus);
