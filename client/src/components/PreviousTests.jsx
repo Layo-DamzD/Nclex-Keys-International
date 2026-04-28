@@ -39,6 +39,12 @@ const PreviousTests = () => {
     try {
       const token = localStorage.getItem('token');
 
+      if (test.status === 'exited') {
+        // Exited tests → go directly to review page
+        navigate(`/test-review/${test._id}`);
+        return;
+      }
+
       if (testType === 'cat' || testType === 'assessment') {
         // CAT/Assessment: call resume endpoint to restore from DB
         const response = await axios.post('/api/student/cat/resume', {}, {
@@ -56,7 +62,32 @@ const PreviousTests = () => {
           alert('Could not resume session. It may have expired.');
         }
       } else {
-        // Practice/custom test: navigate to /test-session — localStorage will handle restore
+        // Practice/custom test: try server-side resume first, fallback to localStorage
+        try {
+          const response = await axios.get(`/api/student/resume-test/${test._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          if (response.data?.testSessionData) {
+            // Server has the session data — navigate with a flag to trigger server restore
+            navigate('/test-session', {
+              state: {
+                serverTestId: response.data.testResultId,
+                serverResumeData: response.data.testSessionData,
+              }
+            });
+            return;
+          }
+        } catch (serverErr) {
+          // Server resume failed (410 = expired), fall through
+          if (serverErr.response?.status === 410 && serverErr.response?.data?.testResultId) {
+            navigate(`/test-review/${serverErr.response.data.testResultId}`);
+            return;
+          }
+          console.warn('Server resume failed, trying localStorage:', serverErr);
+        }
+
+        // Fallback: check localStorage
         const saved = localStorage.getItem('nclex-test-session-state');
         if (saved) {
           const parsed = JSON.parse(saved);
@@ -91,7 +122,8 @@ const PreviousTests = () => {
     }
     try {
       const token = localStorage.getItem('token');
-      const testType = (tests.find(t => t._id === testId)?.testType || '').toLowerCase();
+      const test = tests.find(t => t._id === testId);
+      const testType = (test?.testType || '').toLowerCase();
 
       if (testType === 'cat' || testType === 'assessment') {
         // Clean up CAT session from server
@@ -127,9 +159,22 @@ const PreviousTests = () => {
 
   if (loading) return <div>Loading...</div>;
 
-  // Separate in-progress and completed tests
+  // Separate in-progress, exited, and completed tests
   const inProgressTests = tests.filter(t => t.status === 'in_progress');
-  const completedTests = tests.filter(t => t.status !== 'in_progress');
+  const exitedTests = tests.filter(t => t.status === 'exited');
+  const completedTests = tests.filter(t => t.status === 'completed');
+
+  const getTypeLabel = (testType) => {
+    if (testType === 'assessment') return 'Assessment';
+    if (testType === 'cat') return 'CAT';
+    return 'Practice';
+  };
+
+  const getTypeBadgeStyle = (testType) => {
+    if (testType === 'assessment') return { background: '#E1BEE7', color: '#6A1B9A' };
+    if (testType === 'cat') return { background: '#E8EAF6', color: '#283593' };
+    return { background: '#E3F2FD', color: '#1565C0' };
+  };
 
   return (
     <div className="previous-tests">
@@ -153,78 +198,134 @@ const PreviousTests = () => {
                 </tr>
               </thead>
               <tbody>
-                {inProgressTests.map((test) => {
-                  const testType = (test.testType || '').toLowerCase();
-                  const typeLabel = testType === 'assessment' ? 'Assessment'
-                    : testType === 'cat' ? 'CAT'
-                    : 'Practice';
-
-                  return (
-                    <tr key={test._id} style={{ background: '#fffbeb' }}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <i className="fas fa-hourglass-half" style={{ color: '#d97706' }}></i>
-                          {test.testName}
-                        </div>
-                      </td>
-                      <td>{formatDate(test.date)}</td>
-                      <td>
-                        <span className="badge" style={{
-                          background: testType === 'assessment' ? '#E1BEE7' : testType === 'cat' ? '#E8EAF6' : '#E3F2FD',
-                          color: testType === 'assessment' ? '#6A1B9A' : testType === 'cat' ? '#283593' : '#1565C0',
-                          fontWeight: 500,
-                          fontSize: '0.75rem'
-                        }}>
-                          {typeLabel}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="badge" style={{ background: '#fef3c7', color: '#92400e', fontWeight: 600 }}>
-                          In Progress
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-sm btn-warning me-2"
-                          disabled={resumingId === test._id}
-                          onClick={() => handleResume(test)}
-                        >
-                          {resumingId === test._id ? (
-                            <>
-                              <i className="fas fa-spinner fa-spin" style={{ marginRight: '4px' }}></i>
-                              Resuming...
-                            </>
-                          ) : (
-                            <>
-                              <i className="fas fa-play" style={{ marginRight: '4px' }}></i>
-                              Resume
-                            </>
-                          )}
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleAbandon(test._id)}
-                          title="Abandon this test"
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {inProgressTests.map((test) => (
+                  <tr key={test._id} style={{ background: '#fffbeb' }}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fas fa-hourglass-half" style={{ color: '#d97706' }}></i>
+                        {test.testName}
+                      </div>
+                    </td>
+                    <td>{formatDate(test.date)}</td>
+                    <td>
+                      <span className="badge" style={{
+                        ...getTypeBadgeStyle(test.testType),
+                        fontWeight: 500,
+                        fontSize: '0.75rem'
+                      }}>
+                        {getTypeLabel(test.testType)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge" style={{ background: '#fef3c7', color: '#92400e', fontWeight: 600 }}>
+                        In Progress
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-warning me-2"
+                        disabled={resumingId === test._id}
+                        onClick={() => handleResume(test)}
+                      >
+                        {resumingId === test._id ? (
+                          <>
+                            <i className="fas fa-spinner fa-spin" style={{ marginRight: '4px' }}></i>
+                            Resuming...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-play" style={{ marginRight: '4px' }}></i>
+                            Resume
+                          </>
+                        )}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleAbandon(test._id)}
+                        title="Abandon this test"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </>
       )}
 
-      {completedTests.length === 0 && inProgressTests.length === 0 ? (
+      {exitedTests.length > 0 && (
+        <>
+          <h6 style={{ color: '#6366f1', marginBottom: '12px', marginTop: '20px' }}>
+            <i className="fas fa-arrow-right-from-bracket" style={{ marginRight: '6px' }}></i>
+            Exited Early ({exitedTests.length})
+          </h6>
+          <div className="test-table table-responsive" style={{ marginBottom: '24px' }}>
+            <table className="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Test Name</th>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Score</th>
+                  <th>Percentage</th>
+                  <th>Time Taken</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {exitedTests.map((test) => (
+                  <tr key={test._id} style={{ background: '#eef2ff' }}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fas fa-arrow-right-from-bracket" style={{ color: '#6366f1' }}></i>
+                        {test.testName}
+                      </div>
+                    </td>
+                    <td>{formatDate(test.date)}</td>
+                    <td>
+                      <span className="badge" style={{
+                        ...getTypeBadgeStyle(test.testType),
+                        fontWeight: 500,
+                        fontSize: '0.75rem'
+                      }}>
+                        {getTypeLabel(test.testType)}
+                      </span>
+                    </td>
+                    <td>{test.score ?? '-'}/{test.totalQuestions ?? '-'}</td>
+                    <td>
+                      {test.percentage != null ? (
+                        <span className={`badge ${test.percentage >= 70 ? 'bg-success' : 'bg-warning text-dark'}`}>
+                          {test.percentage}%
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td>{formatTime(test.timeTaken)}</td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => handleResume(test)}
+                      >
+                        <i className="fas fa-eye" style={{ marginRight: '4px' }}></i>
+                        Resume
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {completedTests.length === 0 && inProgressTests.length === 0 && exitedTests.length === 0 ? (
         <p className="text-muted">No tests taken yet.</p>
       ) : (
         <>
           {completedTests.length > 0 && (
             <>
-              {inProgressTests.length > 0 && (
+              {(inProgressTests.length > 0 || exitedTests.length > 0) && (
                 <h6 style={{ color: '#64748b', marginBottom: '12px', marginTop: '20px' }}>
                   <i className="fas fa-check-circle" style={{ marginRight: '6px' }}></i>
                   Completed ({completedTests.length})

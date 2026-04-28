@@ -877,11 +877,25 @@ const CatSession = () => {
     if (result?._id) navigate(`/test-review/${result._id}`);
   };
 
-  const handleExitSession = () => {
+  const handleExitSession = async () => {
     const label = testType === 'assessment' ? 'assessment' : 'CAT';
-    const shouldExit = window.confirm(`Exit this ${label} session? Your progress will be lost.`);
+    const shouldExit = window.confirm(`Exit this ${label} session? Your progress will be saved and you can review your answers.`);
     if (shouldExit) {
       localStorage.removeItem('nclex-cat-session-state');
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post('/api/student/cat/exit', {}, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data?.testResultId) {
+          navigate(`/test-review/${response.data.testResultId}`);
+          return;
+        }
+      } catch (err) {
+        console.warn('CAT exit API failed:', err);
+      }
+      setLoading(false);
       navigate('/dashboard');
     }
   };

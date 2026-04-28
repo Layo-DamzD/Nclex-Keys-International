@@ -15,9 +15,20 @@ const isStudentSubscriptionExpired = (user) => {
 const protect = async (req, res, next) => {
   let token;
 
+  // Try Authorization header first
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
       token = req.headers.authorization.split(' ')[1];
+    } catch (e) { /* continue to query token fallback */ }
+  }
+
+  // Fallback: query param token (for sendBeacon, WebSocket, etc.)
+  if (!token && req.query.token) {
+    token = req.query.token;
+  }
+
+  if (token) {
+    try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = await User.findById(decoded.id).select('-password');
 

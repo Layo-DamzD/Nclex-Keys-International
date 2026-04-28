@@ -279,13 +279,26 @@ const TestSession = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // --- Pause/Resume Persistence: check localStorage for saved state ---
+  // Server-side test result ID for persistence
+  const [serverTestId, setServerTestId] = useState(location.state?.serverTestId || null);
+  // Track if we've already created a server record for this test
+  const serverCreatedRef = useRef(!!location.state?.serverTestId);
+
+  // --- Pause/Resume Persistence: check localStorage or server for saved state ---
   const [restoredState, setRestoredState] = useState(() => {
-    // If a new test is being started (location.state has questions), don't restore
+    // Priority 1: New test started (location.state has questions) — don't restore
     if (location.state?.questions?.length > 0) {
       localStorage.removeItem('nclex-test-session-state');
       return null;
     }
+    // Priority 2: Server resume data from PreviousTests page
+    if (location.state?.serverResumeData) {
+      const sd = location.state.serverResumeData;
+      if (sd.questions?.length > 0) {
+        return sd;
+      }
+    }
+    // Priority 3: localStorage fallback
     try {
       const saved = localStorage.getItem('nclex-test-session-state');
       if (saved) {
@@ -584,6 +597,117 @@ const TestSession = () => {
     }
   }, [submitted]);
 
+  // --- Server-side auto-save: persist test progress to server ---
+  const saveProgressToServer = useRef(async () => {
+    if (submitted || questions.length === 0) return;
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const payload = {
+        questions,
+        settings,
+        currentIndex,
+        answers,
+        caseAnswers,
+        caseIndex,
+        timeLeft,
+        questionTimeSpent,
+        markedQuestions,
+        activeCaseTabByQuestion,
+        tutorRevealed,
+        dragSourceItems,
+        dragAnswerItems,
+        caseDragSourceItems,
+        caseDragAnswerItems,
+        chatMessages,
+        dashboardReturnPath,
+      };
+      if (serverTestId) {
+        payload.testResultId = serverTestId;
+      }
+      const res = await axios.post('/api/student/save-test-progress', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.testResultId && !serverTestId) {
+        setServerTestId(res.data.testResultId);
+      }
+    } catch (err) {
+      // Silent fail — don't disrupt the test
+      console.warn('Auto-save to server failed:', err?.response?.data?.message || err.message);
+    }
+  });
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    if (submitted || questions.length === 0) return;
+    const interval = setInterval(() => {
+      saveProgressToServer.current();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [submitted, questions.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save on beforeunload (browser close/tab quit)
+  useEffect(() => {
+    if (submitted || questions.length === 0) return;
+    const handleBeforeUnload = (e) => {
+      // Use sendBeacon for reliable delivery during page unload
+      try {
+        const token = localStorage.getItem('token');
+        const payload = {
+          questions,
+          settings,
+          currentIndex,
+          answers,
+          caseAnswers,
+          caseIndex,
+          timeLeft,
+          questionTimeSpent,
+          markedQuestions,
+          activeCaseTabByQuestion,
+          tutorRevealed,
+          chatMessages,
+          dashboardReturnPath,
+        };
+        if (serverTestId) payload.testResultId = serverTestId;
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        navigator.sendBeacon(
+          `/api/student/save-test-progress?token=${encodeURIComponent(token)}`,
+          blob
+        );
+      } catch (err) {
+        console.warn('sendBeacon save failed:', err);
+      }
+      // Also save to localStorage as fallback
+      const stateToSave = {
+        questions, settings, testType,
+        currentIndex, answers, timeLeft,
+        questionTimeSpent, markedQuestions,
+        caseIndex, caseAnswers,
+        activeCaseTabByQuestion, tutorRevealed,
+        dragSourceItems, dragAnswerItems,
+        caseDragSourceItems, caseDragAnswerItems,
+        chatMessages,
+        savedAt: Date.now(),
+        dashboardReturnPath
+      };
+      try {
+        localStorage.setItem('nclex-test-session-state', JSON.stringify(stateToSave));
+      } catch (e) { /* ignore */ }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [submitted, questions, currentIndex, answers, caseAnswers, timeLeft, // eslint-disable-line react-hooks/exhaustive-deps
+      questionTimeSpent, markedQuestions, caseIndex, activeCaseTabByQuestion,
+      tutorRevealed, dragSourceItems, dragAnswerItems, caseDragSourceItems,
+      caseDragAnswerItems, chatMessages, settings, testType, dashboardReturnPath]);
+
+  // --- Server-side auto-save on pause ---
+  useEffect(() => {
+    if (isPaused && !submitted && questions.length > 0) {
+      saveProgressToServer.current();
+    }
+  }, [isPaused, submitted, questions.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Initialize drag for non‑case drag-drop - Two box system
   useEffect(() => {
     const q = questions[currentIndex];
@@ -781,10 +905,33 @@ const TestSession = () => {
     }
   };
 
-  const handleExitSession = () => {
-    const shouldExit = window.confirm('Exit this test session and return to dashboard?');
+  const handleExitSession = async () => {
+    const shouldExit = window.confirm('Exit this test session? Your remaining questions will be marked as omitted and you can review your answers.');
     if (shouldExit) {
+      // Try to save progress first (in case exit-test fails)
+      try {
+        await saveProgressToServer.current();
+      } catch (e) { /* ignore */ }
+
       localStorage.removeItem('nclex-test-session-state');
+
+      // If we have a server test ID, call the exit endpoint to finalize
+      if (serverTestId) {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.post(`/api/student/exit-test/${serverTestId}`, {}, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (response.data?.testResultId) {
+            navigate(`/test-review/${response.data.testResultId}`);
+            return;
+          }
+        } catch (err) {
+          console.warn('Exit test API failed:', err);
+          // Fall through to dashboard if the exit fails
+        }
+      }
+
       navigate(dashboardReturnPath);
     }
   };
@@ -1339,6 +1486,7 @@ const TestSession = () => {
         passed: (earnedTotal / possibleTotal) >= 0.7,
         isCustomTest: !settings?.fromPreparedTest,
         proctoring: null,
+        inProgressResultId: serverTestId || null, // Link to existing in_progress record
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });

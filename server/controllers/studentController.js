@@ -18,8 +18,21 @@ const MAX_FCM_TOKENS_PER_STUDENT = 8;
 // @access  Private
 const submitTest = async (req, res) => {
   try {
-    const { testName, results, totalQuestions, timeTaken, passed, isCustomTest = false, proctoring = null, testId = null } = req.body;
+    const { testName, results, totalQuestions, timeTaken, passed, isCustomTest = false, proctoring = null, testId = null, inProgressResultId = null } = req.body;
     const studentId = req.user.id;
+
+    // If an in_progress TestResult was provided, update it instead of creating a new one
+    if (inProgressResultId) {
+      const existingResult = await TestResult.findOne({
+        _id: inProgressResultId,
+        student: studentId,
+        status: 'in_progress',
+      });
+      if (existingResult) {
+        // Will update this record at the end instead of creating new
+        req._existingInProgressResult = existingResult;
+      }
+    }
 
     const user = await User.findById(studentId);
     if (!Array.isArray(user.customTestUsedQuestions)) {
@@ -363,23 +376,42 @@ const submitTest = async (req, res) => {
     const actualAnswerCount = enrichedAnswers.length;
 
     // Save test result with full answer details
-    const testResult = new TestResult({
-      student: studentId,
-      testId: testId ? mongoose.Types.ObjectId(testId) : undefined,
-      testName,
-      date: new Date(),
-      score: Number(earnedScore.toFixed(2)),
-      totalQuestions: actualAnswerCount, // actual answer count, not top-level question count
-      totalPoints: Math.round(possibleScore),
-      earnedPoints: Number(earnedScore.toFixed(2)),
-      timeTaken,
-      percentage: computedPercentage,
-      passed: typeof passed === 'boolean' ? passed : computedPercentage >= 70,
-      answers: enrichedAnswers,
-      proctoring
-    });
-
-    await testResult.save();
+    let testResult;
+    if (req._existingInProgressResult) {
+      // Update the existing in_progress record
+      testResult = req._existingInProgressResult;
+      testResult.testId = testId ? mongoose.Types.ObjectId(testId) : undefined;
+      testResult.testName = testName;
+      testResult.score = Number(earnedScore.toFixed(2));
+      testResult.totalQuestions = actualAnswerCount;
+      testResult.totalPoints = Math.round(possibleScore);
+      testResult.earnedPoints = Number(earnedScore.toFixed(2));
+      testResult.timeTaken = timeTaken;
+      testResult.percentage = computedPercentage;
+      testResult.passed = typeof passed === 'boolean' ? passed : computedPercentage >= 70;
+      testResult.answers = enrichedAnswers;
+      testResult.proctoring = proctoring;
+      testResult.status = 'completed';
+      testResult.testSessionData = undefined; // Clear session data
+      await testResult.save();
+    } else {
+      testResult = new TestResult({
+        student: studentId,
+        testId: testId ? mongoose.Types.ObjectId(testId) : undefined,
+        testName,
+        date: new Date(),
+        score: Number(earnedScore.toFixed(2)),
+        totalQuestions: actualAnswerCount,
+        totalPoints: Math.round(possibleScore),
+        earnedPoints: Number(earnedScore.toFixed(2)),
+        timeTaken,
+        percentage: computedPercentage,
+        passed: typeof passed === 'boolean' ? passed : computedPercentage >= 70,
+        answers: enrichedAnswers,
+        proctoring
+      });
+      await testResult.save();
+    }
 
     // Create activity entry
     const activity = new Activity({
@@ -1023,7 +1055,7 @@ const getTestHistory = async (req, res) => {
     const studentId = req.user.id;
     const tests = await TestResult.find({ student: studentId })
       .sort({ date: -1 })
-      .select('testName date score totalQuestions timeTaken percentage passed status');
+      .select('testName date score totalQuestions timeTaken percentage passed status testType');
     res.json(tests);
   } catch (error) {
     console.error(error);
@@ -3075,7 +3107,11 @@ module.exports = {
   getClientNeedsCounts,
   getQuestionStatusCounts,
   markWelcomeSeen,
-  dismissPopup
+  dismissPopup,
+  saveTestProgress,
+  resumeTestSession,
+  exitTestSession,
+  exitCATSession,
 };
 
 // @desc    Dismiss a popup notification (server-side persistence across devices)
@@ -3103,5 +3139,573 @@ const dismissPopup = async (req, res) => {
   } catch (error) {
     console.error('Failed to dismiss popup:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST RESUME / PERSISTENCY ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// @desc    Save test progress (create or update in_progress TestResult)
+// @route   POST /api/student/save-test-progress
+// @access  Private
+const saveTestProgress = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const {
+      testResultId,    // ID of the existing in_progress TestResult (if updating)
+      testName,
+      testType,
+      testId,
+      questions,
+      settings,
+      currentIndex,
+      answers,
+      caseAnswers,
+      caseIndex,
+      timeLeft,
+      questionTimeSpent,
+      markedQuestions,
+      activeCaseTabByQuestion,
+      tutorRevealed,
+      dragSourceItems,
+      dragAnswerItems,
+      caseDragSourceItems,
+      caseDragAnswerItems,
+      chatMessages,
+      dashboardReturnPath,
+      examMode,
+      filterMode,
+      clientNeedsSelections,
+      selections,
+    } = req.body;
+
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({ message: 'No questions provided' });
+    }
+
+    const sessionData = {
+      questions,
+      settings,
+      currentIndex: currentIndex || 0,
+      answers: answers || {},
+      caseAnswers: caseAnswers || {},
+      caseIndex: caseIndex || 0,
+      timeLeft: timeLeft ?? null,
+      questionTimeSpent: questionTimeSpent || {},
+      markedQuestions: markedQuestions || {},
+      activeCaseTabByQuestion: activeCaseTabByQuestion || {},
+      tutorRevealed: tutorRevealed || {},
+      dragSourceItems: dragSourceItems || [],
+      dragAnswerItems: dragAnswerItems || [],
+      caseDragSourceItems: caseDragSourceItems || {},
+      caseDragAnswerItems: caseDragAnswerItems || {},
+      chatMessages: chatMessages || [],
+      dashboardReturnPath: dashboardReturnPath || '/dashboard',
+      savedAt: Date.now(),
+      examMode: examMode || null,
+      filterMode: filterMode || null,
+      clientNeedsSelections: clientNeedsSelections || null,
+      selections: selections || null,
+    };
+
+    if (testResultId) {
+      // Update existing in_progress record
+      const result = await TestResult.findOneAndUpdate(
+        { _id: testResultId, student: studentId, status: 'in_progress' },
+        {
+          $set: {
+            testName: testName || settings?.testName || 'Custom Test',
+            testType: testType || settings?.testType || 'practice',
+            testId: testId || settings?.testId || null,
+            testSessionData: sessionData,
+          }
+        },
+        { new: true }
+      );
+      if (!result) {
+        return res.status(404).json({ message: 'In-progress test not found or already completed' });
+      }
+      return res.json({ testResultId: result._id });
+    } else {
+      // Create new in_progress record
+      // Clean up any existing in_progress results for this student (only for practice/custom tests)
+      await TestResult.deleteMany({ student: studentId, status: 'in_progress', testType: { $nin: ['cat', 'assessment'] } });
+
+      const result = new TestResult({
+        student: studentId,
+        testName: testName || settings?.testName || 'Custom Test',
+        testType: testType || settings?.testType || 'practice',
+        testId: testId || settings?.testId || null,
+        date: new Date(),
+        score: 0,
+        totalQuestions: questions.length,
+        percentage: 0,
+        passed: null,
+        status: 'in_progress',
+        testSessionData: sessionData,
+      });
+      await result.save();
+      return res.json({ testResultId: result._id });
+    }
+  } catch (error) {
+    console.error('Save test progress error:', error);
+    res.status(500).json({ message: 'Server error saving progress' });
+  }
+};
+
+// @desc    Resume an in_progress test session
+// @route   GET /api/student/resume-test/:id
+// @access  Private
+const resumeTestSession = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const testResult = await TestResult.findOne({
+      _id: req.params.id,
+      student: studentId,
+      status: 'in_progress',
+    });
+
+    if (!testResult) {
+      return res.status(404).json({ message: 'No in-progress test found' });
+    }
+
+    if (!testResult.testSessionData?.questions?.length) {
+      return res.status(400).json({ message: 'Test session data is corrupted or missing' });
+    }
+
+    // Check if saved within 48 hours
+    const savedAt = testResult.testSessionData.savedAt || testResult.date.getTime();
+    if (Date.now() - savedAt > 48 * 60 * 60 * 1000) {
+      // Expired — mark as exited so it appears in review
+      testResult.status = 'exited';
+      await testResult.save();
+      return res.status(410).json({ message: 'Test session has expired (older than 48 hours)', testResultId: testResult._id });
+    }
+
+    res.json({
+      testResultId: testResult._id,
+      testSessionData: testResult.testSessionData,
+    });
+  } catch (error) {
+    console.error('Resume test error:', error);
+    res.status(500).json({ message: 'Server error resuming test' });
+  }
+};
+
+// @desc    Exit a test intentionally (finalize with omitted remaining questions)
+// @route   POST /api/student/exit-test/:id
+// @access  Private
+const exitTestSession = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const testResult = await TestResult.findOne({
+      _id: req.params.id,
+      student: studentId,
+      status: 'in_progress',
+    });
+
+    if (!testResult) {
+      return res.status(404).json({ message: 'No in-progress test found' });
+    }
+
+    const sessionData = testResult.testSessionData;
+    const questions = sessionData?.questions || [];
+    const answers = sessionData?.answers || {};
+    const caseAnswers = sessionData?.caseAnswers || {};
+    const settings = sessionData?.settings || {};
+
+    // Build full answer results (same logic as submitTest frontend)
+    const allResults = [];
+
+    // Server-side answer normalization helper
+    const serverNormalizeToLetter = (answer) => {
+      if (answer === null || answer === undefined) return '';
+      const str = String(answer).trim().toUpperCase();
+      if (/^[A-Z]$/.test(str)) return str;
+      const numMatch = str.match(/^(\d+)$/);
+      if (numMatch) {
+        const num = parseInt(numMatch[1], 10);
+        if (num >= 1 && num <= 26) return String.fromCharCode(64 + num);
+      }
+      const optionMatch = str.match(/OPTION\s*(\d+)/i);
+      if (optionMatch) {
+        const num = parseInt(optionMatch[1], 10);
+        if (num >= 1 && num <= 26) return String.fromCharCode(64 + num);
+      }
+      return str;
+    };
+
+    const isFillBlankCorrect = (userAnswer, correctAnswer) => {
+      if (!userAnswer || !correctAnswer) return false;
+      const acceptable = String(correctAnswer).split(';').map(a => a.trim().toLowerCase());
+      return acceptable.includes(String(userAnswer).trim().toLowerCase());
+    };
+
+    const isDragDropCorrect = (userAnswer, correctAnswer) => {
+      if (!userAnswer || !correctAnswer) return false;
+      const normalize = (val) => {
+        if (!val) return [];
+        return String(val).split('|').map(v => v.trim()).filter(Boolean).sort();
+      };
+      const user = normalize(userAnswer);
+      const correct = normalize(correctAnswer);
+      return user.length === correct.length && user.every((v, i) => v === correct[i]);
+    };
+
+    questions.forEach(q => {
+      if (q.type === 'case-study') {
+        (q.questions || []).forEach(subQ => {
+          const userAnswer = caseAnswers[subQ._id];
+          let isCorrect = null; // null = omitted/unanswered
+
+          if (userAnswer !== undefined && userAnswer !== null && userAnswer !== '' &&
+              !(Array.isArray(userAnswer) && userAnswer.length === 0) &&
+              !(typeof userAnswer === 'object' && !Array.isArray(userAnswer) && Object.keys(userAnswer).length === 0)) {
+            // User answered this question — evaluate it
+            if (subQ.type === 'multiple-choice') {
+              isCorrect = serverNormalizeToLetter(userAnswer) === serverNormalizeToLetter(subQ.correctAnswer) && serverNormalizeToLetter(userAnswer) !== '';
+            } else if (subQ.type === 'sata') {
+              const parseArr = (v) => {
+                if (Array.isArray(v)) return v.map(x => serverNormalizeToLetter(x)).filter(Boolean);
+                const s = String(v);
+                if (s.includes(',')) return s.split(',').map(x => serverNormalizeToLetter(x.trim())).filter(Boolean);
+                if (/^[A-Za-z]+$/.test(s)) return s.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+                return [serverNormalizeToLetter(v)].filter(Boolean);
+              };
+              const userArr = [...new Set(parseArr(userAnswer))];
+              const correctArr = [...new Set(parseArr(subQ.correctAnswer))];
+              const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
+              const totalCorrect = correctArr.length || 1;
+              const earned = Math.max(0, userArr.length - wrongPicked) / totalCorrect;
+              if (earned >= 1) isCorrect = true;
+              else if (earned > 0) isCorrect = 'partial';
+              else isCorrect = false;
+            } else if (subQ.type === 'fill-blank') {
+              isCorrect = isFillBlankCorrect(userAnswer, subQ.correctAnswer);
+            } else if (subQ.type === 'drag-drop') {
+              isCorrect = isDragDropCorrect(userAnswer, subQ.correctAnswer);
+            } else if (subQ.type === 'highlight') {
+              isCorrect = String(userAnswer).trim() === String(subQ.correctAnswer).trim();
+            } else if (subQ.type === 'hotspot') {
+              isCorrect = String(userAnswer).trim() === String(subQ.correctAnswer).trim();
+            } else if (subQ.type === 'bowtie') {
+              isCorrect = String(userAnswer).trim() === String(subQ.correctAnswer).trim();
+            } else if (subQ.type === 'cloze-dropdown') {
+              try {
+                isCorrect = JSON.stringify(userAnswer) === JSON.stringify(subQ.correctAnswer);
+              } catch { isCorrect = false; }
+            } else if (subQ.type === 'matrix') {
+              // Matrix scoring
+              if (Array.isArray(userAnswer) && subQ.matrixRows?.length) {
+                let totalCorrect = 0;
+                let totalCells = 0;
+                for (let i = 0; i < subQ.matrixRows.length; i++) {
+                  const row = subQ.matrixRows[i];
+                  let correctCols = Array.isArray(row.correctColumns) && row.correctColumns.length > 0
+                    ? row.correctColumns : (row.correctColumn !== undefined ? [row.correctColumn] : []);
+                  totalCells += correctCols.length;
+                  const userCols = Array.isArray(userAnswer[i]) ? userAnswer[i] : (userAnswer[i] !== undefined ? [userAnswer[i]] : []);
+                  totalCorrect += userCols.filter(c => correctCols.includes(c)).length;
+                }
+                if (totalCorrect === totalCells && totalCells > 0) isCorrect = true;
+                else if (totalCorrect > 0) isCorrect = 'partial';
+                else isCorrect = false;
+              } else {
+                isCorrect = false;
+              }
+            }
+          }
+
+          const earnedMarks = isCorrect === true ? 1 : (isCorrect === 'partial' ? 0.5 : 0);
+          const totalMarks = 1;
+
+          allResults.push({
+            questionId: subQ._id,
+            parentCaseStudyId: q._id,
+            parentCaseStudyType: q.caseStudyType || 'layered',
+            userAnswer,
+            isCorrect,
+            earnedMarks,
+            totalMarks,
+            correctAnswer: subQ.correctAnswer,
+            questionText: subQ.questionText,
+            questionImageUrl: subQ.questionImageUrl,
+            options: subQ.options,
+            type: subQ.type,
+            rationale: subQ.rationale,
+            rationaleImageUrl: subQ.rationaleImageUrl,
+            scenario: q.scenario,
+            sections: q.sections || [],
+            highlightStart: subQ.highlightStart,
+            highlightEnd: subQ.highlightEnd,
+            category: subQ.category || q.category,
+            subcategory: subQ.subcategory || q.subcategory,
+            matrixColumns: subQ.matrixColumns,
+            matrixRows: subQ.matrixRows,
+            hotspotImageUrl: subQ.hotspotImageUrl,
+            hotspotTargets: subQ.hotspotTargets,
+            clozeTemplate: subQ.clozeTemplate,
+            clozeBlanks: subQ.clozeBlanks,
+            timeSpentSeconds: sessionData.questionTimeSpent?.[subQ._id] || 0,
+          });
+        });
+      } else {
+        const userAnswer = answers[q._id];
+        let isCorrect = null; // null = omitted/unanswered
+
+        if (userAnswer !== undefined && userAnswer !== null && userAnswer !== '' &&
+            !(Array.isArray(userAnswer) && userAnswer.length === 0) &&
+            !(typeof userAnswer === 'object' && !Array.isArray(userAnswer) && Object.keys(userAnswer).length === 0)) {
+          if (q.type === 'multiple-choice') {
+            isCorrect = serverNormalizeToLetter(userAnswer) === serverNormalizeToLetter(q.correctAnswer) && serverNormalizeToLetter(userAnswer) !== '';
+          } else if (q.type === 'sata') {
+            const parseArr = (v) => {
+              if (Array.isArray(v)) return v.map(x => serverNormalizeToLetter(x)).filter(Boolean);
+              const s = String(v);
+              if (s.includes(',')) return s.split(',').map(x => serverNormalizeToLetter(x.trim())).filter(Boolean);
+              if (/^[A-Za-z]+$/.test(s)) return s.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+              return [serverNormalizeToLetter(v)].filter(Boolean);
+            };
+            const userArr = [...new Set(parseArr(userAnswer))];
+            const correctArr = [...new Set(parseArr(q.correctAnswer))];
+            const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
+            const totalCorrect = correctArr.length || 1;
+            const earned = Math.max(0, userArr.length - wrongPicked) / totalCorrect;
+            if (earned >= 1) isCorrect = true;
+            else if (earned > 0) isCorrect = 'partial';
+            else isCorrect = false;
+          } else if (q.type === 'fill-blank') {
+            isCorrect = isFillBlankCorrect(userAnswer, q.correctAnswer);
+          } else if (q.type === 'drag-drop') {
+            isCorrect = isDragDropCorrect(userAnswer, q.correctAnswer);
+          } else if (q.type === 'highlight') {
+            isCorrect = String(userAnswer).trim() === String(q.correctAnswer).trim();
+          } else if (q.type === 'hotspot') {
+            isCorrect = String(userAnswer).trim() === String(q.correctAnswer).trim();
+          } else if (q.type === 'bowtie') {
+            isCorrect = String(userAnswer).trim() === String(q.correctAnswer).trim();
+          } else if (q.type === 'cloze-dropdown') {
+            try {
+              isCorrect = JSON.stringify(userAnswer) === JSON.stringify(q.correctAnswer);
+            } catch { isCorrect = false; }
+          } else if (q.type === 'matrix') {
+            if (Array.isArray(userAnswer) && q.matrixRows?.length) {
+              let totalCorrect = 0;
+              let totalCells = 0;
+              for (let i = 0; i < q.matrixRows.length; i++) {
+                const row = q.matrixRows[i];
+                let correctCols = Array.isArray(row.correctColumns) && row.correctColumns.length > 0
+                  ? row.correctColumns : (row.correctColumn !== undefined ? [row.correctColumn] : []);
+                totalCells += correctCols.length;
+                const userCols = Array.isArray(userAnswer[i]) ? userAnswer[i] : (userAnswer[i] !== undefined ? [userAnswer[i]] : []);
+                totalCorrect += userCols.filter(c => correctCols.includes(c)).length;
+              }
+              if (totalCorrect === totalCells && totalCells > 0) isCorrect = true;
+              else if (totalCorrect > 0) isCorrect = 'partial';
+              else isCorrect = false;
+            } else {
+              isCorrect = false;
+            }
+          }
+        }
+
+        const earnedMarks = isCorrect === true ? 1 : (isCorrect === 'partial' ? 0.5 : 0);
+        const totalMarks = 1;
+
+        allResults.push({
+          questionId: q._id,
+          userAnswer,
+          isCorrect,
+          earnedMarks,
+          totalMarks,
+          correctAnswer: q.correctAnswer,
+          questionText: q.questionText,
+          questionImageUrl: q.questionImageUrl,
+          options: q.options,
+          type: q.type,
+          rationale: q.rationale,
+          rationaleImageUrl: q.rationaleImageUrl,
+          highlightStart: q.highlightStart,
+          highlightEnd: q.highlightEnd,
+          category: q.category,
+          subcategory: q.subcategory,
+          matrixColumns: q.matrixColumns,
+          matrixRows: q.matrixRows,
+          hotspotImageUrl: q.hotspotImageUrl,
+          hotspotTargets: q.hotspotTargets,
+          clozeTemplate: q.clozeTemplate,
+          clozeBlanks: q.clozeBlanks,
+          timeSpentSeconds: sessionData.questionTimeSpent?.[q._id] || 0,
+        });
+      }
+    });
+
+    // Calculate score from answered questions only
+    const answeredResults = allResults.filter(r => r.isCorrect !== null);
+    const omittedResults = allResults.filter(r => r.isCorrect === null);
+    const earnedTotal = allResults.reduce((sum, r) => sum + Number(r.earnedMarks ?? 0), 0);
+    const possibleTotal = allResults.reduce((sum, r) => sum + Number(r.totalMarks ?? 1), 0) || 1;
+
+    // Calculate time taken
+    const timeLeft = sessionData.timeLeft;
+    let timeTaken = 0;
+    if (settings.timed && timeLeft != null) {
+      timeTaken = (settings.totalQuestions * 85 - timeLeft) / 60;
+    }
+
+    // Update user tracking (seen questions, custom test tracking)
+    const user = await User.findById(studentId);
+    if (user) {
+      if (!Array.isArray(user.customTestUsedQuestions)) user.customTestUsedQuestions = [];
+      if (!Array.isArray(user.customTestOmittedQuestions)) user.customTestOmittedQuestions = [];
+
+      for (const result of allResults) {
+        const trackingId = result.parentCaseStudyId || String(result.questionId);
+        if (!user.seenQuestions) user.seenQuestions = [];
+        if (!user.seenQuestions.some(id => String(id) === String(trackingId))) {
+          user.seenQuestions.push(trackingId);
+        }
+
+        // Track custom test questions
+        const isCustomTest = !settings?.fromPreparedTest;
+        if (isCustomTest) {
+          if (!user.customTestUsedQuestions.some(id => String(id) === String(trackingId))) {
+            user.customTestUsedQuestions.push(trackingId);
+          }
+          if (result.isCorrect === null) {
+            if (!user.customTestOmittedQuestions.some(id => String(id) === String(trackingId))) {
+              user.customTestOmittedQuestions.push(trackingId);
+            }
+          }
+        }
+      }
+      await user.save();
+    }
+
+    // Update the TestResult
+    testResult.status = 'exited';
+    testResult.answers = allResults;
+    testResult.totalQuestions = allResults.length;
+    testResult.score = answeredResults.filter(r => r.isCorrect === true).length;
+    testResult.totalPoints = possibleTotal;
+    testResult.earnedPoints = earnedTotal;
+    testResult.percentage = Math.round((earnedTotal / possibleTotal) * 100);
+    testResult.passed = (earnedTotal / possibleTotal) >= 0.7;
+    testResult.timeTaken = timeTaken;
+    // Clear session data to free up space (answers array now has everything needed for review)
+    testResult.testSessionData = undefined;
+
+    await testResult.save();
+
+    res.json({
+      testResultId: testResult._id,
+      score: testResult.score,
+      totalQuestions: testResult.totalQuestions,
+      percentage: testResult.percentage,
+      omitted: omittedResults.length,
+      answered: answeredResults.length,
+    });
+  } catch (error) {
+    console.error('Exit test error:', error);
+    res.status(500).json({ message: 'Server error exiting test' });
+  }
+};
+
+// @desc    Exit a CAT/Assessment session intentionally (finalize with review)
+// @route   POST /api/student/cat/exit
+// @access  Private
+const exitCATSession = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    // Get CAT session from DB
+    const catSession = await CatSession.findOne({ student: studentId }).sort({ createdAt: -1 }).lean();
+    if (!catSession) {
+      return res.status(404).json({ message: 'No active CAT session found' });
+    }
+
+    // Get the in_progress TestResult for this CAT
+    const inProgressResult = await TestResult.findOne({
+      student: studentId,
+      status: 'in_progress',
+      testType: { $in: ['cat', 'assessment'] },
+    }).sort({ date: -1 });
+
+    if (inProgressResult && catSession.answerDetails?.length > 0) {
+      // Build answers array from CAT session data
+      const answers = [];
+      let earnedTotal = 0;
+      let possibleTotal = 0;
+
+      for (let i = 0; i < catSession.administered.length; i++) {
+        const qId = catSession.administered[i];
+        const detail = catSession.answerDetails[i];
+        if (!detail) continue;
+
+        answers.push({
+          questionId: qId,
+          userAnswer: detail.userAnswer,
+          isCorrect: detail.isCorrect,
+          earnedMarks: catSession.earnedMarks?.[i] ?? (detail.isCorrect === true ? 1 : 0),
+          totalMarks: catSession.totalMarks?.[i] ?? 1,
+          correctAnswer: detail.correctAnswer,
+          questionText: detail.questionText || '',
+          type: detail.questionType || '',
+          scenario: detail.scenario || '',
+        });
+
+        earnedTotal += Number(catSession.earnedMarks?.[i] ?? (detail.isCorrect === true ? 1 : 0));
+        possibleTotal += Number(catSession.totalMarks?.[i] ?? 1);
+      }
+
+      const timeTaken = catSession.startTime
+        ? Math.round((Date.now() - new Date(catSession.startTime).getTime()) / 60000)
+        : 0;
+
+      inProgressResult.status = 'exited';
+      inProgressResult.answers = answers;
+      inProgressResult.totalQuestions = catSession.administered.length;
+      inProgressResult.score = answers.filter(a => a.isCorrect === true).length;
+      inProgressResult.totalPoints = possibleTotal;
+      inProgressResult.earnedPoints = earnedTotal;
+      inProgressResult.percentage = possibleTotal > 0 ? Math.round((earnedTotal / possibleTotal) * 100) : 0;
+      inProgressResult.passed = null; // CAT doesn't have a simple pass/fail
+      inProgressResult.timeTaken = timeTaken;
+      inProgressResult.theta = catSession.theta;
+      inProgressResult.se = catSession.se;
+
+      await inProgressResult.save();
+
+      // Clean up CAT session
+      catSessions.delete(studentId);
+      await CatSession.deleteMany({ student: studentId });
+
+      res.json({
+        testResultId: inProgressResult._id,
+        questionsAnswered: catSession.administered.length,
+      });
+    } else {
+      // No answers yet — just clean up
+      if (inProgressResult) {
+        inProgressResult.status = 'exited';
+        inProgressResult.totalQuestions = 0;
+        inProgressResult.score = 0;
+        inProgressResult.percentage = 0;
+        inProgressResult.passed = null;
+        await inProgressResult.save();
+      }
+
+      catSessions.delete(studentId);
+      await CatSession.deleteMany({ student: studentId });
+
+      res.json({
+        testResultId: inProgressResult?._id,
+        questionsAnswered: 0,
+      });
+    }
+  } catch (error) {
+    console.error('Exit CAT session error:', error);
+    res.status(500).json({ message: 'Server error exiting CAT session' });
   }
 };

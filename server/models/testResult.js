@@ -46,7 +46,7 @@ const testResultSchema = new mongoose.Schema({
   timeTaken: Number,
   percentage: Number,
   passed: Boolean,
-  status: { type: String, enum: ['completed', 'in_progress'], default: 'completed' },
+  status: { type: String, enum: ['completed', 'in_progress', 'exited'], default: 'completed' },
   theta: Number,            // CAT ability estimate
   se: Number,               // CAT standard error
   confidence: {             // Confidence level derived from SE
@@ -55,6 +55,32 @@ const testResultSchema = new mongoose.Schema({
   },
   answers: [answerSchema],
   proctoring: mongoose.Schema.Types.Mixed,
-});
+
+  // Full session snapshot for in_progress tests (enables resume)
+  testSessionData: {
+    questions: mongoose.Schema.Types.Mixed,  // Full question objects array
+    settings: mongoose.Schema.Types.Mixed,   // { timed, tutorMode, totalQuestions, testName, testId, ... }
+    currentIndex: Number,
+    answers: mongoose.Schema.Types.Mixed,    // { questionId: userAnswer }
+    caseAnswers: mongoose.Schema.Types.Mixed, // { subQuestionId: answer }
+    caseIndex: Number,
+    timeLeft: Number,
+    questionTimeSpent: mongoose.Schema.Types.Mixed, // { questionId: seconds }
+    markedQuestions: mongoose.Schema.Types.Mixed,   // { questionId: true }
+    activeCaseTabByQuestion: mongoose.Schema.Types.Mixed,
+    tutorRevealed: mongoose.Schema.Types.Mixed,
+    dragSourceItems: mongoose.Schema.Types.Mixed,
+    dragAnswerItems: mongoose.Schema.Types.Mixed,
+    caseDragSourceItems: mongoose.Schema.Types.Mixed,
+    caseDragAnswerItems: mongoose.Schema.Types.Mixed,
+    chatMessages: mongoose.Schema.Types.Mixed,
+    dashboardReturnPath: String,
+    savedAt: Number,              // Timestamp when last saved
+    examMode: String,             // 'classic', 'ngn', 'mixed'
+    filterMode: String,           // 'clientNeeds', 'categories'
+    clientNeedsSelections: mongoose.Schema.Types.Mixed,
+    selections: mongoose.Schema.Types.Mixed,
+  },
+}, { minimize: false });
 
 module.exports = mongoose.model('TestResult', testResultSchema);

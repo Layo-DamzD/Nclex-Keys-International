@@ -40,7 +40,11 @@ const {
   getClientNeedsCounts,
   getQuestionStatusCounts,
   markWelcomeSeen,
-  dismissPopup
+  dismissPopup,
+  saveTestProgress,
+  resumeTestSession,
+  exitTestSession,
+  exitCATSession,
 } = require('../controllers/studentController');
 
 router.get('/dashboard/stats', protect, getDashboardStats);
@@ -82,5 +86,9 @@ router.get('/exam-support/messages', protect, getExamSupportMessages);
 router.post('/exam-support/messages', protect, sendExamSupportMessage);
 router.post('/mark-welcome-seen', protect, markWelcomeSeen);
 router.post('/dismiss-popup', protect, dismissPopup);
+router.post('/save-test-progress', protect, saveTestProgress);
+router.get('/resume-test/:id', protect, resumeTestSession);
+router.post('/exit-test/:id', protect, exitTestSession);
+router.post('/cat/exit', protect, exitCATSession);
 
 module.exports = router;
