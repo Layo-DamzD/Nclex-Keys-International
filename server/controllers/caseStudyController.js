@@ -40,7 +40,7 @@ const getCaseStudies = async (req, res) => {
   try {
     const caseStudies = await CaseStudy.find()
       .sort({ createdAt: -1 })
-      .select('title type category subcategory createdAt isActive linkedQuestionId');
+      .select('title type category subcategory createdAt isActive linkedQuestionId scenario questions');
 
     // Backfill: fix any linked questions missing caseStudyType
     // This runs silently in the background to repair existing data

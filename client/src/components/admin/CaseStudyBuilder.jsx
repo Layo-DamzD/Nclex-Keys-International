@@ -709,7 +709,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                       <div style={{ display: 'flex', gap: '16px', color: '#64748b', fontSize: '14px', marginBottom: '8px' }}>
                         <span><i className="fas fa-folder" style={{ marginRight: '6px' }}></i>{cs.category || 'No category'}</span>
                         <span><i className="fas fa-tag" style={{ marginRight: '6px' }}></i>{cs.subcategory || 'No subcategory'}</span>
-                        <span><i className="fas fa-question-circle" style={{ marginRight: '6px' }}></i>{cs.questions?.length || 0} questions</span>
+                        <span><i className="fas fa-question-circle" style={{ marginRight: '6px' }}></i>{cs.questions?.length || 0} items</span>
                       </div>
                       <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>
                         {cs.scenario ? cs.scenario.substring(0, 150) + (cs.scenario.length > 150 ? '...' : '') : 'No scenario provided'}
