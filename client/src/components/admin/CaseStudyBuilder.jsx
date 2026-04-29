@@ -593,7 +593,8 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
       setError('Please select a section and sub section');
       return;
     }
-    if (!caseStudy.scenario) {
+    // Scenario (patient data) is not required for trend type
+    if (caseStudy.type !== 'trend' && !caseStudy.scenario) {
       setError('Please enter a scenario');
       return;
     }
@@ -960,7 +961,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Scenario / Initial Presentation</label>
+              <label className="form-label">Scenario / Initial Presentation {caseStudy.type === 'trend' && <span className="text-muted" style={{ fontWeight: 400 }}>(Optional for Trend)</span>}</label>
               <textarea
                 name="scenario"
                 className="form-control"
@@ -968,7 +969,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                 value={caseStudy.scenario}
                 onChange={handleCaseStudyChange}
                 placeholder="Describe the patient, initial presentation, and setting..."
-                required
+                required={caseStudy.type !== 'trend'}
               />
             </div>
 
@@ -984,8 +985,8 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
               </label>
             </div>
 
-            <button type="button" className="btn btn-primary" onClick={() => setActiveTab('sections')}>
-              Next: Patient Data Sections
+            <button type="button" className="btn btn-primary" onClick={() => setActiveTab(caseStudy.type === 'trend' ? 'questions' : 'sections')}>
+              Next: {caseStudy.type === 'trend' ? 'Questions' : 'Patient Data Sections'}
             </button>
           </div>
         )}

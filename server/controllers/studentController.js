@@ -624,11 +624,8 @@ const generateTest = async (req, res) => {
         typeConditions.push({ type: 'case-study', caseStudyType: 'layered', $expr: { $gt: [{ $size: { $ifNull: ['$questions', []] } }, 1] } });
       }
       if (questionTypeFilter.includes('standalone')) {
-        // Standalone = bowtie, trend, matrix, or layered with single question (1 story = 1 question)
-        typeConditions.push({ $or: [
-          { type: 'case-study', $expr: { $lte: [{ $size: { $ifNull: ['$questions', []] } }, 1] } },
-          { type: 'case-study', caseStudyType: { $in: ['bowtie', 'trend', 'matrix'] } }
-        ]});
+        // Standalone = only trend and bowtie (single-question case studies)
+        typeConditions.push({ type: 'case-study', caseStudyType: { $in: ['bowtie', 'trend'] } });
       }
       if (typeConditions.length > 0) {
         // If exam mode already set a type constraint, we intersect with question type filter
@@ -2930,11 +2927,11 @@ const getQuestionStatusCounts = async (req, res) => {
 
       if (isCaseStudy) {
         caseStudyQuestionIds.push(qId);
-        // Unfolding = layered with multiple sub-questions
+        // Unfolding = layered with multiple sub-questions (6-question case study)
         if (q.caseStudyType === 'layered' && Array.isArray(q.questions) && q.questions.length > 1) {
           unfoldingQuestionIds.push(qId);
-        } else {
-          // Standalone = bowtie/trend or layered with single question
+        } else if (q.caseStudyType === 'trend' || q.caseStudyType === 'bowtie') {
+          // Standalone = only trend and bowtie (single-question case studies)
           standaloneQuestionIds.push(qId);
         }
 

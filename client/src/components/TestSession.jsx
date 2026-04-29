@@ -598,12 +598,16 @@ const TestSession = () => {
   }, [submitted]);
 
   // --- Server-side auto-save: persist test progress to server ---
-  const saveProgressToServer = useRef(async () => {
+  // Use a ref to hold the latest function to avoid stale closures in intervals
+  const saveProgressToServer = useRef(null);
+  saveProgressToServer.current = async () => {
     if (submitted || questions.length === 0) return;
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
       const payload = {
+        testName: settings?.testName || testType === 'cat' ? 'CAT Session' : testType === 'assessment' ? 'Readiness Assessment' : 'Custom Test',
+        testType: testType || settings?.testType || 'practice',
         questions,
         settings,
         currentIndex,
@@ -635,11 +639,16 @@ const TestSession = () => {
       // Silent fail — don't disrupt the test
       console.warn('Auto-save to server failed:', err?.response?.data?.message || err.message);
     }
-  });
+  };
 
-  // Auto-save every 30 seconds
+  // Immediate save on mount + auto-save every 30 seconds
   useEffect(() => {
     if (submitted || questions.length === 0) return;
+    // Save immediately when test session starts so it shows in Previous Tests right away
+    if (!serverCreatedRef.current) {
+      saveProgressToServer.current();
+      serverCreatedRef.current = true;
+    }
     const interval = setInterval(() => {
       saveProgressToServer.current();
     }, 30000);
@@ -654,6 +663,8 @@ const TestSession = () => {
       try {
         const token = localStorage.getItem('token');
         const payload = {
+          testName: settings?.testName || testType === 'cat' ? 'CAT Session' : testType === 'assessment' ? 'Readiness Assessment' : 'Custom Test',
+          testType: testType || settings?.testType || 'practice',
           questions,
           settings,
           currentIndex,

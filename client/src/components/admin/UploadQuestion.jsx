@@ -935,6 +935,7 @@ const UploadQuestion = () => {
           </div>
         </div>
 
+        {type !== 'cloze-dropdown' && (
         <div className="form-group">
           <label className="form-label">Question Text</label>
           <textarea
@@ -946,6 +947,7 @@ const UploadQuestion = () => {
             required={type !== 'hotspot'}
           />
         </div>
+        )}
 
         <div className="form-group">
           <label className="form-label">
