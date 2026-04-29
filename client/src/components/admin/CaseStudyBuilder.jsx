@@ -237,6 +237,9 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
     ],
     rationale: '',
     difficulty: 'medium',
+    bowtieCondition: ['', '', '', ''],
+    bowtieActions: ['', '', '', ''],
+    bowtieParameters: ['', '', '', ''],
   });
 
   useEffect(() => {
@@ -505,6 +508,16 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
       if (clozeBlanks.length === 0) { alert('Please add at least one blank'); return; }
       currentQuestion.clozeTemplate = clozeTemplate;
       currentQuestion.clozeBlanks = clozeBlanks;
+    } else if (currentQuestion.type === 'bowtie') {
+      const conditions = (currentQuestion.bowtieCondition || []).filter(Boolean);
+      const actions = (currentQuestion.bowtieActions || []).filter(Boolean);
+      const parameters = (currentQuestion.bowtieParameters || []).filter(Boolean);
+      if (conditions.length < 1) { alert('Please add at least 1 condition'); return; }
+      if (actions.length < 2) { alert('Please add at least 2 actions'); return; }
+      if (parameters.length < 2) { alert('Please add at least 2 parameters'); return; }
+      if (!currentQuestion.correctAnswer?.condition) { alert('Please select a correct condition'); return; }
+      if (!currentQuestion.correctAnswer?.actionLeft || !currentQuestion.correctAnswer?.actionRight) { alert('Please select both correct actions'); return; }
+      if (!currentQuestion.correctAnswer?.parameterLeft || !currentQuestion.correctAnswer?.parameterRight) { alert('Please select both correct parameters'); return; }
     }
 
     const normalizedQuestion = {
@@ -1489,7 +1502,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                   <div className="row g-3">
                     <div className="col-md-4">
                       <label className="form-label">Potential Conditions</label>
-                      {currentQuestion.bowtieCondition.map((opt, idx) => (
+                      {(currentQuestion.bowtieCondition || []).map((opt, idx) => (
                         <input
                           key={`condition-${idx}`}
                           type="text"
@@ -1506,7 +1519,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">Actions to Take</label>
-                      {currentQuestion.bowtieActions.map((opt, idx) => (
+                      {(currentQuestion.bowtieActions || []).map((opt, idx) => (
                         <input
                           key={`action-${idx}`}
                           type="text"
@@ -1523,7 +1536,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">Parameters to Monitor</label>
-                      {currentQuestion.bowtieParameters.map((opt, idx) => (
+                      {(currentQuestion.bowtieParameters || []).map((opt, idx) => (
                         <input
                           key={`parameter-${idx}`}
                           type="text"
@@ -1551,29 +1564,29 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                         })}
                       >
                         <option value="">Select correct condition</option>
-                        {currentQuestion.bowtieCondition.filter(Boolean).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                        {(currentQuestion.bowtieCondition || []).filter(Boolean).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">Correct Actions (2)</label>
                       <select className="form-control mb-2" value={currentQuestion.correctAnswer?.actionLeft || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), actionLeft: e.target.value })}>
                         <option value="">Action slot 1</option>
-                        {currentQuestion.bowtieActions.filter(Boolean).map((opt) => <option key={`left-${opt}`} value={opt}>{opt}</option>)}
+                        {(currentQuestion.bowtieActions || []).filter(Boolean).map((opt) => <option key={`left-${opt}`} value={opt}>{opt}</option>)}
                       </select>
                       <select className="form-control" value={currentQuestion.correctAnswer?.actionRight || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), actionRight: e.target.value })}>
                         <option value="">Action slot 2</option>
-                        {currentQuestion.bowtieActions.filter(Boolean).map((opt) => <option key={`right-${opt}`} value={opt}>{opt}</option>)}
+                        {(currentQuestion.bowtieActions || []).filter(Boolean).map((opt) => <option key={`right-${opt}`} value={opt}>{opt}</option>)}
                       </select>
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">Correct Parameters (2)</label>
                       <select className="form-control mb-2" value={currentQuestion.correctAnswer?.parameterLeft || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), parameterLeft: e.target.value })}>
                         <option value="">Parameter slot 1</option>
-                        {currentQuestion.bowtieParameters.filter(Boolean).map((opt) => <option key={`pl-${opt}`} value={opt}>{opt}</option>)}
+                        {(currentQuestion.bowtieParameters || []).filter(Boolean).map((opt) => <option key={`pl-${opt}`} value={opt}>{opt}</option>)}
                       </select>
                       <select className="form-control" value={currentQuestion.correctAnswer?.parameterRight || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), parameterRight: e.target.value })}>
                         <option value="">Parameter slot 2</option>
-                        {currentQuestion.bowtieParameters.filter(Boolean).map((opt) => <option key={`pr-${opt}`} value={opt}>{opt}</option>)}
+                        {(currentQuestion.bowtieParameters || []).filter(Boolean).map((opt) => <option key={`pr-${opt}`} value={opt}>{opt}</option>)}
                       </select>
                     </div>
                   </div>
