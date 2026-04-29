@@ -43,9 +43,9 @@ const UploadQuestion = () => {
   const [dragDropItems, setDragDropItems] = useState(['', '', '', '']);
   const [matrixColumns, setMatrixColumns] = useState(['Column 1', 'Column 2', 'Column 3']);
   const [matrixRows, setMatrixRows] = useState([
-    { rowText: '', correctColumns: [0] },
-    { rowText: '', correctColumns: [0] },
-    { rowText: '', correctColumns: [0] },
+    { rowLabel: '', rowText: '', correctColumns: [0] },
+    { rowLabel: '', rowText: '', correctColumns: [0] },
+    { rowLabel: '', rowText: '', correctColumns: [0] },
   ]);
   const [hotspotImageUrl, setHotspotImageUrl] = useState('');
   const [hotspotTargets, setHotspotTargets] = useState([
@@ -86,9 +86,9 @@ const UploadQuestion = () => {
     setMatrixColumns(editingQuestion.matrixColumns || ['Column 1', 'Column 2', 'Column 3']);
     setMatrixRows(
       editingQuestion.matrixRows || [
-        { rowText: '', correctColumns: [0] },
-        { rowText: '', correctColumns: [0] },
-        { rowText: '', correctColumns: [0] },
+        { rowLabel: '', rowText: '', correctColumns: [0] },
+        { rowLabel: '', rowText: '', correctColumns: [0] },
+        { rowLabel: '', rowText: '', correctColumns: [0] },
       ],
     );
     setHotspotImageUrl(editingQuestion.hotspotImageUrl || '');
@@ -218,7 +218,7 @@ const UploadQuestion = () => {
     setHighlightCorrectWords(d.highlightCorrectWords || []);
     setDragDropItems(d.dragDropItems || ['', '', '', '']);
     setMatrixColumns(d.matrixColumns || ['Column 1', 'Column 2', 'Column 3']);
-    setMatrixRows(d.matrixRows || [{ rowText: '', correctColumns: [0] }, { rowText: '', correctColumns: [0] }, { rowText: '', correctColumns: [0] }]);
+    setMatrixRows(d.matrixRows || [{ rowLabel: '', rowText: '', correctColumns: [0] }, { rowLabel: '', rowText: '', correctColumns: [0] }, { rowLabel: '', rowText: '', correctColumns: [0] }]);
     setHotspotImageUrl(d.hotspotImageUrl || '');
     setHotspotTargets(d.hotspotTargets || [{ id: 'A', label: 'Target A', x: 50, y: 50, radius: 6 }]);
     setClozeTemplate(d.clozeTemplate || '');
@@ -361,9 +361,9 @@ const UploadQuestion = () => {
     setDragDropItems(['', '', '', '']);
     setMatrixColumns(['Column 1', 'Column 2', 'Column 3']);
     setMatrixRows([
-      { rowText: '', correctColumns: [0] },
-      { rowText: '', correctColumns: [0] },
-      { rowText: '', correctColumns: [0] },
+      { rowLabel: '', rowText: '', correctColumns: [0] },
+      { rowLabel: '', rowText: '', correctColumns: [0] },
+      { rowLabel: '', rowText: '', correctColumns: [0] },
     ]);
     setHotspotImageUrl('');
     setHotspotTargets([{ id: 'A', label: 'Target A', x: 50, y: 50, radius: 6 }]);
@@ -464,6 +464,7 @@ const UploadQuestion = () => {
     }
 
     const cleanedRows = matrixRows.map((row) => ({
+      rowLabel: (row.rowLabel || '').trim(),
       rowText: (row.rowText || '').trim(),
       correctColumns: Array.isArray(row.correctColumns) ? row.correctColumns : (row.correctColumn !== undefined ? [Number(row.correctColumn)] : []),
     }));
@@ -1389,7 +1390,18 @@ const UploadQuestion = () => {
               <label className="form-label" style={{ fontSize: '0.85rem' }}>Rows (select correct column for each row)</label>
               {matrixRows.map((row, rowIdx) => (
                 <div key={rowIdx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 600, color: '#64748b', minWidth: '20px' }}>{rowIdx + 1}.</span>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    style={{ width: '100px', fontWeight: 600, color: '#475569', textAlign: 'center' }}
+                    value={row.rowLabel || `Row ${rowIdx + 1}`}
+                    onChange={(e) => {
+                      const next = [...matrixRows];
+                      next[rowIdx] = { ...next[rowIdx], rowLabel: e.target.value };
+                      setMatrixRows(next);
+                    }}
+                    placeholder={`Row ${rowIdx + 1}`}
+                  />
                   <input
                     type="text"
                     className="form-control form-control-sm"
@@ -1439,7 +1451,7 @@ const UploadQuestion = () => {
                 </div>
               ))}
               <button type="button" className="btn btn-sm btn-outline-primary mt-2" onClick={() => {
-                setMatrixRows((prev) => [...prev, { rowText: '', correctColumns: [0] }]);
+                setMatrixRows((prev) => [...prev, { rowLabel: '', rowText: '', correctColumns: [0] }]);
               }}>+ Add Row</button>
             </div>
 
@@ -1460,7 +1472,7 @@ const UploadQuestion = () => {
                     <tbody>
                       {matrixRows.map((row, rIdx) => (
                         <tr key={rIdx}>
-                          <td style={{ padding: '6px 10px', border: '1px solid #e2e8f0', fontWeight: 500 }}>{row.rowText || `Row ${rIdx + 1}`}</td>
+                          <td style={{ padding: '6px 10px', border: '1px solid #e2e8f0', fontWeight: 500 }}>{row.rowLabel ? <span style={{ color: '#0369a1', fontWeight: 600 }}>{row.rowLabel}</span> : ''} {row.rowText || ''}</td>
                           {matrixColumns.map((_, cIdx) => (
                             <td key={cIdx} style={{
                               padding: '6px 10px',

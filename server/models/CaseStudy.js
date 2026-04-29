@@ -30,6 +30,7 @@ const caseStudySchema = new mongoose.Schema({
     highlightEnd: Number,
     matrixColumns: [String],
     matrixRows: [{
+      rowLabel: String,
       rowText: String,
       correctColumn: Number,
       correctColumns: [Number],

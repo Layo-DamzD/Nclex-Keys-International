@@ -232,8 +232,8 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
     visibleSectionIds: [],
     matrixColumns: ['Column 1', 'Column 2', 'Column 3'],
     matrixRows: [
-      { rowText: '', correctColumns: [0] },
-      { rowText: '', correctColumns: [0] },
+      { rowLabel: '', rowText: '', correctColumns: [0] },
+      { rowLabel: '', rowText: '', correctColumns: [0] },
     ],
     rationale: '',
     difficulty: 'medium',
@@ -1622,7 +1622,18 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                     <label className="form-label" style={{ fontSize: '0.85rem' }}>Rows (each row is one matching task)</label>
                     {(currentQuestion.matrixRows || []).map((row, rowIdx) => (
                       <div key={rowIdx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontWeight: 600, color: '#64748b', minWidth: '20px' }}>{rowIdx + 1}.</span>
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          style={{ width: '100px', fontWeight: 600, color: '#475569', textAlign: 'center' }}
+                          value={row.rowLabel || `Row ${rowIdx + 1}`}
+                          onChange={(e) => {
+                            const next = [...(currentQuestion.matrixRows || [])];
+                            next[rowIdx] = { ...next[rowIdx], rowLabel: e.target.value };
+                            handleQuestionChange('matrixRows', next);
+                          }}
+                          placeholder={`Row ${rowIdx + 1}`}
+                        />
                         <input
                           type="text"
                           className="form-control form-control-sm"
@@ -1675,7 +1686,7 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                       </div>
                     ))}
                     <button type="button" className="btn btn-sm btn-outline-primary mt-2" onClick={() => {
-                      const next = [...(currentQuestion.matrixRows || []), { rowText: '', correctColumns: [0] }];
+                      const next = [...(currentQuestion.matrixRows || []), { rowLabel: '', rowText: '', correctColumns: [0] }];
                       handleQuestionChange('matrixRows', next);
                     }}>+ Add Row</button>
                   </div>
@@ -1697,7 +1708,9 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
                           <tbody>
                             {(currentQuestion.matrixRows || []).map((row, rIdx) => (
                               <tr key={rIdx}>
-                                <td style={{ padding: '6px 10px', border: '1px solid #e2e8f0', fontWeight: 500 }}>{row.rowText || `Row ${rIdx + 1}`}</td>
+                                <td style={{ padding: '6px 10px', border: '1px solid #e2e8f0', fontWeight: 500 }}>
+                                  {row.rowLabel ? <span style={{ color: '#0369a1', fontWeight: 600 }}>{row.rowLabel}</span> : ''} {row.rowText || ''}
+                                </td>
                                 {(currentQuestion.matrixColumns || []).map((_, cIdx) => (
                                   <td key={cIdx} style={{
                                     padding: '6px 10px',
