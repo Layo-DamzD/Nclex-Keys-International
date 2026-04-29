@@ -1714,6 +1714,17 @@ const TestSession = () => {
           {/* Right panel – current question */}
           <div className="col-md-7 question-panel">
             <div className="question-container">
+              {(currentQ.caseStudyType === 'layered') && (
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  background: '#eff6ff', color: '#2563eb', fontSize: '0.8rem', fontWeight: 700,
+                  padding: '4px 12px', borderRadius: '20px', marginBottom: '10px',
+                  border: '1px solid #bfdbfe',
+                }}>
+                  <i className="fas fa-layer-group" style={{ fontSize: '0.75rem' }}></i>
+                  Item {caseIndex + 1} of {currentQ.questions.length}
+                </div>
+              )}
               <p className="question-text">{subQ.questionText}</p>
               {subQ.questionImageUrl && (
                 <div className="mb-3">
