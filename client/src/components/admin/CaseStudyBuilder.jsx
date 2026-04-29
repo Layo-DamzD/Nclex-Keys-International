@@ -1497,94 +1497,78 @@ const CaseStudyBuilder = ({ editId: propEditId }) => {
 
               {/* BOWTIE */}
               {currentQuestion.type === 'bowtie' && (
-                <div className="form-group">
-                  <label className="form-label">Bowtie Choices</label>
+                <div className="form-group" style={{ background: '#f0f9ff', padding: '16px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                  <label className="form-label" style={{ fontWeight: 700, color: '#0369a1', marginBottom: '12px', display: 'block' }}>
+                    Bowtie Configuration
+                  </label>
                   <div className="row g-3">
+                    {/* Conditions */}
                     <div className="col-md-4">
-                      <label className="form-label">Potential Conditions</label>
+                      <label className="form-label" style={{ fontSize: '0.85rem' }}>Potential Conditions</label>
                       {(currentQuestion.bowtieCondition || []).map((opt, idx) => (
-                        <input
-                          key={`condition-${idx}`}
-                          type="text"
-                          className="form-control mb-2"
-                          value={opt}
-                          onChange={(e) => {
-                            const next = [...currentQuestion.bowtieCondition];
-                            next[idx] = e.target.value;
-                            handleQuestionChange('bowtieCondition', next);
-                          }}
-                          placeholder={`Condition option ${idx + 1}`}
-                        />
+                        <div key={`condition-${idx}`} style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                          <input type="text" className="form-control form-control-sm" value={opt} placeholder={`Condition ${idx + 1}`} onChange={(e) => { const next = [...(currentQuestion.bowtieCondition || [])]; next[idx] = e.target.value; handleQuestionChange('bowtieCondition', next); }} />
+                          {(currentQuestion.bowtieCondition || []).length > 1 && (
+                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => { const next = (currentQuestion.bowtieCondition || []).filter((_, i) => i !== idx); handleQuestionChange('bowtieCondition', next); }}>✕</button>
+                          )}
+                        </div>
                       ))}
+                      <button type="button" className="btn btn-sm btn-outline-primary mt-1" onClick={() => handleQuestionChange('bowtieCondition', [...(currentQuestion.bowtieCondition || []), ''])}>+ Add Condition</button>
                     </div>
+                    {/* Actions */}
                     <div className="col-md-4">
-                      <label className="form-label">Actions to Take</label>
+                      <label className="form-label" style={{ fontSize: '0.85rem' }}>Actions to Take</label>
                       {(currentQuestion.bowtieActions || []).map((opt, idx) => (
-                        <input
-                          key={`action-${idx}`}
-                          type="text"
-                          className="form-control mb-2"
-                          value={opt}
-                          onChange={(e) => {
-                            const next = [...currentQuestion.bowtieActions];
-                            next[idx] = e.target.value;
-                            handleQuestionChange('bowtieActions', next);
-                          }}
-                          placeholder={`Action option ${idx + 1}`}
-                        />
+                        <div key={`action-${idx}`} style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                          <input type="text" className="form-control form-control-sm" value={opt} placeholder={`Action ${idx + 1}`} onChange={(e) => { const next = [...(currentQuestion.bowtieActions || [])]; next[idx] = e.target.value; handleQuestionChange('bowtieActions', next); }} />
+                          {(currentQuestion.bowtieActions || []).length > 2 && (
+                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => { const next = (currentQuestion.bowtieActions || []).filter((_, i) => i !== idx); handleQuestionChange('bowtieActions', next); }}>✕</button>
+                          )}
+                        </div>
                       ))}
+                      <button type="button" className="btn btn-sm btn-outline-primary mt-1" onClick={() => handleQuestionChange('bowtieActions', [...(currentQuestion.bowtieActions || []), ''])}>+ Add Action</button>
                     </div>
+                    {/* Parameters */}
                     <div className="col-md-4">
-                      <label className="form-label">Parameters to Monitor</label>
+                      <label className="form-label" style={{ fontSize: '0.85rem' }}>Parameters to Monitor</label>
                       {(currentQuestion.bowtieParameters || []).map((opt, idx) => (
-                        <input
-                          key={`parameter-${idx}`}
-                          type="text"
-                          className="form-control mb-2"
-                          value={opt}
-                          onChange={(e) => {
-                            const next = [...currentQuestion.bowtieParameters];
-                            next[idx] = e.target.value;
-                            handleQuestionChange('bowtieParameters', next);
-                          }}
-                          placeholder={`Parameter option ${idx + 1}`}
-                        />
+                        <div key={`parameter-${idx}`} style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                          <input type="text" className="form-control form-control-sm" value={opt} placeholder={`Parameter ${idx + 1}`} onChange={(e) => { const next = [...(currentQuestion.bowtieParameters || [])]; next[idx] = e.target.value; handleQuestionChange('bowtieParameters', next); }} />
+                          {(currentQuestion.bowtieParameters || []).length > 2 && (
+                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => { const next = (currentQuestion.bowtieParameters || []).filter((_, i) => i !== idx); handleQuestionChange('bowtieParameters', next); }}>✕</button>
+                          )}
+                        </div>
                       ))}
+                      <button type="button" className="btn btn-sm btn-outline-primary mt-1" onClick={() => handleQuestionChange('bowtieParameters', [...(currentQuestion.bowtieParameters || []), ''])}>+ Add Parameter</button>
                     </div>
                   </div>
-                  <div className="row g-3 mt-1">
+                  {/* Correct Answers */}
+                  <div className="row g-3 mt-2" style={{ borderTop: '1px dashed #bae6fd', paddingTop: '12px' }}>
                     <div className="col-md-4">
-                      <label className="form-label">Correct Condition</label>
-                      <select
-                        className="form-control"
-                        value={currentQuestion.correctAnswer?.condition || ''}
-                        onChange={(e) => handleQuestionChange('correctAnswer', {
-                          ...(currentQuestion.correctAnswer || {}),
-                          condition: e.target.value
-                        })}
-                      >
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Correct Condition</label>
+                      <select className="form-control form-control-sm" value={currentQuestion.correctAnswer?.condition || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), condition: e.target.value })}>
                         <option value="">Select correct condition</option>
                         {(currentQuestion.bowtieCondition || []).filter(Boolean).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
                     </div>
                     <div className="col-md-4">
-                      <label className="form-label">Correct Actions (2)</label>
-                      <select className="form-control mb-2" value={currentQuestion.correctAnswer?.actionLeft || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), actionLeft: e.target.value })}>
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Correct Actions (pick 2)</label>
+                      <select className="form-control form-control-sm mb-2" value={currentQuestion.correctAnswer?.actionLeft || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), actionLeft: e.target.value })}>
                         <option value="">Action slot 1</option>
                         {(currentQuestion.bowtieActions || []).filter(Boolean).map((opt) => <option key={`left-${opt}`} value={opt}>{opt}</option>)}
                       </select>
-                      <select className="form-control" value={currentQuestion.correctAnswer?.actionRight || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), actionRight: e.target.value })}>
+                      <select className="form-control form-control-sm" value={currentQuestion.correctAnswer?.actionRight || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), actionRight: e.target.value })}>
                         <option value="">Action slot 2</option>
                         {(currentQuestion.bowtieActions || []).filter(Boolean).map((opt) => <option key={`right-${opt}`} value={opt}>{opt}</option>)}
                       </select>
                     </div>
                     <div className="col-md-4">
-                      <label className="form-label">Correct Parameters (2)</label>
-                      <select className="form-control mb-2" value={currentQuestion.correctAnswer?.parameterLeft || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), parameterLeft: e.target.value })}>
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Correct Parameters (pick 2)</label>
+                      <select className="form-control form-control-sm mb-2" value={currentQuestion.correctAnswer?.parameterLeft || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), parameterLeft: e.target.value })}>
                         <option value="">Parameter slot 1</option>
                         {(currentQuestion.bowtieParameters || []).filter(Boolean).map((opt) => <option key={`pl-${opt}`} value={opt}>{opt}</option>)}
                       </select>
-                      <select className="form-control" value={currentQuestion.correctAnswer?.parameterRight || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), parameterRight: e.target.value })}>
+                      <select className="form-control form-control-sm" value={currentQuestion.correctAnswer?.parameterRight || ''} onChange={(e) => handleQuestionChange('correctAnswer', { ...(currentQuestion.correctAnswer || {}), parameterRight: e.target.value })}>
                         <option value="">Parameter slot 2</option>
                         {(currentQuestion.bowtieParameters || []).filter(Boolean).map((opt) => <option key={`pr-${opt}`} value={opt}>{opt}</option>)}
                       </select>

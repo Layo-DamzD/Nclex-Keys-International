@@ -3065,6 +3065,33 @@ const markWelcomeSeen = async (req, res) => {
   }
 };
 
+// @desc    Dismiss a popup notification (server-side persistence across devices)
+// @route   POST /api/student/dismiss-popup
+// @access  Private
+const dismissPopup = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { popupKey } = req.body;
+
+    if (!popupKey || typeof popupKey !== 'string') {
+      return res.status(400).json({ message: 'popupKey is required' });
+    }
+
+    if (!/^[a-zA-Z0-9_\-:]+$/.test(popupKey)) {
+      return res.status(400).json({ message: 'Invalid popupKey format' });
+    }
+
+    await User.findByIdAndUpdate(studentId, {
+      $set: { [`dismissedPopups.${popupKey}`]: Date.now() }
+    });
+
+    res.json({ message: 'Popup dismissed' });
+  } catch (error) {
+    console.error('Failed to dismiss popup:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getRecentTests,
@@ -3109,34 +3136,6 @@ module.exports = {
   resumeTestSession,
   exitTestSession,
   exitCATSession,
-};
-
-// @desc    Dismiss a popup notification (server-side persistence across devices)
-// @route   POST /api/student/dismiss-popup
-// @access  Private
-const dismissPopup = async (req, res) => {
-  try {
-    const studentId = req.user.id;
-    const { popupKey } = req.body;
-
-    if (!popupKey || typeof popupKey !== 'string') {
-      return res.status(400).json({ message: 'popupKey is required' });
-    }
-
-    // Sanitize key to only allow alphanumeric, hyphens, underscores, colons
-    if (!/^[a-zA-Z0-9_\-:]+$/.test(popupKey)) {
-      return res.status(400).json({ message: 'Invalid popupKey format' });
-    }
-
-    await User.findByIdAndUpdate(studentId, {
-      $set: { [`dismissedPopups.${popupKey}`]: Date.now() }
-    });
-
-    res.json({ message: 'Popup dismissed' });
-  } catch (error) {
-    console.error('Failed to dismiss popup:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
