@@ -906,6 +906,7 @@ const createAdminTest = async (req, res) => {
       questions = [],
       duration,
       passingScore = 70,
+      maxAttempts = 0,
       assignmentType = 'individual',
       assignedStudents = [],
       proctored = false
@@ -978,6 +979,7 @@ const createAdminTest = async (req, res) => {
       questions,
       duration: Number(duration),
       passingScore: Number(passingScore),
+      maxAttempts: Number(maxAttempts),
       assignmentType,
       assignedStudents: assignmentType === 'individual' ? studentsForAssignment : [],
       createdBy: req.user._id,

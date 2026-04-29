@@ -261,16 +261,18 @@ const StudentDashboard = () => {
 
   // Use a ref so the prepared-test check only fires ONCE per session mount
   const preparedTestCheckedRef = useRef(false);
+  const preparedTestPopupKeyRef = useRef('');
+
+  const dismissPreparedTestPopup = () => {
+    const key = preparedTestPopupKeyRef.current;
+    if (key) dismissPopup(key);
+    setShowPreparedTestAlert(false);
+  };
 
   useEffect(() => {
     if (loading || !user?._id) return;
     if (preparedTestCheckedRef.current) return;
     preparedTestCheckedRef.current = true;
-
-    // PRIMARY CHECK: server-side dismissedPopups from user object
-    const serverDismissed = user?.dismissedPopups;
-    const popupKey = `prepared-test-alert:${user._id}`;
-    if (isPopupDismissed(popupKey, serverDismissed)) return;
 
     let mounted = true;
     const checkPreparedTests = async () => {
@@ -284,15 +286,22 @@ const StudentDashboard = () => {
         const availableTests = Array.isArray(data.tests) ? data.tests : (Array.isArray(data) ? data : []);
         if (!mounted || availableTests.length === 0) return;
         setPreparedTestCount(availableTests.length);
-        // Migrate legacy key from old implementation
-        try {
-          if (localStorage.getItem(`prepared-test-alert-dismissed:${user._id}`) === 'true') {
-            dismissPopup(popupKey);
-            return;
-          }
-        } catch {}
-        // Re-check after async (server-side might have updated)
+
+        // Build a popup key based on the latest test creation date
+        // This way the popup re-appears when admin creates new tests
+        const latestTestDate = availableTests
+          .map(t => new Date(t.createdAt).getTime())
+          .sort((a, b) => b - a)[0];
+        const popupKey = `prepared-test-alert:${user._id}:${latestTestDate}`;
+        preparedTestPopupKeyRef.current = popupKey;
+
+        // Check if already dismissed for this specific batch of tests
+        const serverDismissed = user?.dismissedPopups;
         if (isPopupDismissed(popupKey, serverDismissed)) return;
+
+        // Also check localStorage as fallback
+        if (localStorage.getItem(POPUP_LS_PREFIX + popupKey)) return;
+
         setShowPreparedTestAlert(true);
       } catch (error) {
         console.error('Failed to check prepared tests:', error);
@@ -445,7 +454,7 @@ const StudentDashboard = () => {
       {showPreparedTestAlert && (
         <div className="student-notification-popup-overlay" role="dialog" aria-modal="true" aria-label="Prepared tests available">
           <div className="student-notification-popup-backdrop" onClick={() => {
-                  dismissPopup(`prepared-test-alert:${user._id}`);
+                  dismissPreparedTestPopup();
                   setShowPreparedTestAlert(false);
                 }} />
           <div className="student-notification-popup-card">
@@ -456,7 +465,7 @@ const StudentDashboard = () => {
                 <h3>Prepared test is ready</h3>
               </div>
               <button type="button" className="student-notification-popup-close" onClick={() => {
-                  dismissPopup(`prepared-test-alert:${user._id}`);
+                  dismissPreparedTestPopup();
                   setShowPreparedTestAlert(false);
                 }} aria-label="Close">
                 <i className="fas fa-times" />
@@ -467,14 +476,14 @@ const StudentDashboard = () => {
             </div>
             <div className="student-notification-popup-footer">
               <button type="button" className="btn btn-outline-secondary" onClick={() => {
-                  dismissPopup(`prepared-test-alert:${user._id}`);
+                  dismissPreparedTestPopup();
                   setShowPreparedTestAlert(false);
                 }}>Later</button>
               <button
                 type="button"
                 className="btn btn-primary"
                 onClick={() => {
-                  dismissPopup(`prepared-test-alert:${user._id}`);
+                  dismissPreparedTestPopup();
                   setShowPreparedTestAlert(false);
                   handleSectionChange('prepared-tests');
                 }}

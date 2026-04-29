@@ -710,7 +710,7 @@ const getAvailableTests = async (req, res) => {
         { assignmentType: 'all' },
         { assignmentType: 'individual', assignedStudents: studentId }
       ]
-    }).select('title description category questions duration passingScore assignmentType proctored maxAttempts');
+    }).select('title description category questions duration passingScore assignmentType proctored maxAttempts createdAt');
     
     // Count attempts per test for this student
     const TestResult = require('../models/testResult');
@@ -744,7 +744,8 @@ const getAvailableTests = async (req, res) => {
         maxAttempts,
         attemptsUsed,
         attemptsRemaining,
-        exhausted
+        exhausted,
+        createdAt: test.createdAt
       };
     });
 
@@ -2880,7 +2881,7 @@ const getQuestionStatusCounts = async (req, res) => {
     // Get all questions with fields needed to determine which "tab" they belong to
     const allQuestions = await Question.find(
       { isDraft: { $ne: true } },
-      '_id category subcategory clientNeed clientNeedSubcategory isNextGen type'
+      '_id category subcategory clientNeed clientNeedSubcategory isNextGen type caseStudyType questions'
     ).lean();
 
     // Get status sets from user document
