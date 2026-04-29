@@ -1804,67 +1804,109 @@ const TestSession = () => {
                 </div>
               )}
 
-              {subQ.type === 'bowtie' && (
-                <div className="bowtie-runtime">
-                  <div className="row g-3 align-items-center mb-4">
-                    <div className="col-12 col-md-4">
-                      <select
-                        className="form-control"
-                        value={caseAnswers[subQId]?.actionLeft || ''}
-                        disabled={isPaused}
-                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), actionLeft: e.target.value })}
-                      >
-                        <option value="">Action to Take</option>
-                        {(subQ.bowtieActions || []).filter(Boolean).map((opt) => <option key={`al-${opt}`} value={opt}>{opt}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-12 col-md-4">
-                      <select
-                        className="form-control"
-                        value={caseAnswers[subQId]?.condition || ''}
-                        disabled={isPaused}
-                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), condition: e.target.value })}
-                      >
-                        <option value="">Potential Condition</option>
-                        {(subQ.bowtieCondition || []).filter(Boolean).map((opt) => <option key={`c-${opt}`} value={opt}>{opt}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-12 col-md-4">
-                      <select
-                        className="form-control"
-                        value={caseAnswers[subQId]?.parameterLeft || ''}
-                        disabled={isPaused}
-                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), parameterLeft: e.target.value })}
-                      >
-                        <option value="">Parameter to Monitor</option>
-                        {(subQ.bowtieParameters || []).filter(Boolean).map((opt) => <option key={`pl-${opt}`} value={opt}>{opt}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-12 col-md-4">
-                      <select
-                        className="form-control"
-                        value={caseAnswers[subQId]?.actionRight || ''}
-                        disabled={isPaused}
-                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), actionRight: e.target.value })}
-                      >
-                        <option value="">Action to Take</option>
-                        {(subQ.bowtieActions || []).filter(Boolean).map((opt) => <option key={`ar-${opt}`} value={opt}>{opt}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-12 col-md-4 offset-md-4">
-                      <select
-                        className="form-control"
-                        value={caseAnswers[subQId]?.parameterRight || ''}
-                        disabled={isPaused}
-                        onChange={(e) => handleCaseAnswer(subQId, { ...(caseAnswers[subQId] || {}), parameterRight: e.target.value })}
-                      >
-                        <option value="">Parameter to Monitor</option>
-                        {(subQ.bowtieParameters || []).filter(Boolean).map((opt) => <option key={`pr-${opt}`} value={opt}>{opt}</option>)}
-                      </select>
+              {subQ.type === 'bowtie' && (() => {
+                const currentBowtie = caseAnswers[subQId] || {};
+                const updateField = (field, value) => {
+                  handleCaseAnswer(subQId, { ...currentBowtie, [field]: value });
+                };
+                return (
+                  <div className="bowtie-container">
+                    <div className="bowtie-diagram">
+                      {/* Top row - Actions */}
+                      <div className="bowtie-row bowtie-top">
+                        <div className="bowtie-cell bowtie-action">
+                          <label className="bowtie-label">Action to Take</label>
+                          <select
+                            className="form-control"
+                            value={currentBowtie.actionLeft || ''}
+                            disabled={isPaused}
+                            onChange={(e) => updateField('actionLeft', e.target.value)}
+                          >
+                            <option value="">Select Action</option>
+                            {(subQ.bowtieActions || []).filter(Boolean).map((opt) => (
+                              <option key={`al-${opt}`} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="bowtie-cell bowtie-action">
+                          <label className="bowtie-label">Action to Take</label>
+                          <select
+                            className="form-control"
+                            value={currentBowtie.actionRight || ''}
+                            disabled={isPaused}
+                            onChange={(e) => updateField('actionRight', e.target.value)}
+                          >
+                            <option value="">Select Action</option>
+                            {(subQ.bowtieActions || []).filter(Boolean).map((opt) => (
+                              <option key={`ar-${opt}`} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="bowtie-connector">
+                        <div className="bowtie-line bowtie-line-left"></div>
+                        <div className="bowtie-line bowtie-line-right"></div>
+                      </div>
+
+                      {/* Center - Condition */}
+                      <div className="bowtie-center">
+                        <div className="bowtie-condition-box">
+                          <label className="bowtie-label-center">Potential Condition</label>
+                          <select
+                            className="form-control"
+                            value={currentBowtie.condition || ''}
+                            disabled={isPaused}
+                            onChange={(e) => updateField('condition', e.target.value)}
+                          >
+                            <option value="">Select Condition</option>
+                            {(subQ.bowtieCondition || []).filter(Boolean).map((opt) => (
+                              <option key={`c-${opt}`} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="bowtie-connector bowtie-connector-bottom">
+                        <div className="bowtie-line bowtie-line-left"></div>
+                        <div className="bowtie-line bowtie-line-right"></div>
+                      </div>
+
+                      {/* Bottom row - Parameters */}
+                      <div className="bowtie-row bowtie-bottom">
+                        <div className="bowtie-cell bowtie-parameter">
+                          <label className="bowtie-label">Parameter to Monitor</label>
+                          <select
+                            className="form-control"
+                            value={currentBowtie.parameterLeft || ''}
+                            disabled={isPaused}
+                            onChange={(e) => updateField('parameterLeft', e.target.value)}
+                          >
+                            <option value="">Select Parameter</option>
+                            {(subQ.bowtieParameters || []).filter(Boolean).map((opt) => (
+                              <option key={`pl-${opt}`} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="bowtie-cell bowtie-parameter">
+                          <label className="bowtie-label">Parameter to Monitor</label>
+                          <select
+                            className="form-control"
+                            value={currentBowtie.parameterRight || ''}
+                            disabled={isPaused}
+                            onChange={(e) => updateField('parameterRight', e.target.value)}
+                          >
+                            <option value="">Select Parameter</option>
+                            {(subQ.bowtieParameters || []).filter(Boolean).map((opt) => (
+                              <option key={`pr-${opt}`} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {subQ.type === 'fill-blank' && (
                 <div className="fill-blank-container">

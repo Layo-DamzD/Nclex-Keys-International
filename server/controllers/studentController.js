@@ -3387,7 +3387,9 @@ const exitTestSession = async (req, res) => {
             } else if (subQ.type === 'hotspot') {
               isCorrect = String(userAnswer).trim() === String(subQ.correctAnswer).trim();
             } else if (subQ.type === 'bowtie') {
-              isCorrect = String(userAnswer).trim() === String(subQ.correctAnswer).trim();
+              // Bowtie answer is an object with 5 keys — compare each key individually
+              const bowtieKeys = ['condition', 'actionLeft', 'actionRight', 'parameterLeft', 'parameterRight'];
+              isCorrect = bowtieKeys.every(key => String(userAnswer?.[key] || '').trim() === String(subQ.correctAnswer?.[key] || '').trim());
             } else if (subQ.type === 'cloze-dropdown') {
               try {
                 isCorrect = JSON.stringify(userAnswer) === JSON.stringify(subQ.correctAnswer);
@@ -3481,7 +3483,9 @@ const exitTestSession = async (req, res) => {
           } else if (q.type === 'hotspot') {
             isCorrect = String(userAnswer).trim() === String(q.correctAnswer).trim();
           } else if (q.type === 'bowtie') {
-            isCorrect = String(userAnswer).trim() === String(q.correctAnswer).trim();
+            // Bowtie answer is an object with 5 keys — compare each key individually
+            const bowtieKeys = ['condition', 'actionLeft', 'actionRight', 'parameterLeft', 'parameterRight'];
+            isCorrect = bowtieKeys.every(key => String(userAnswer?.[key] || '').trim() === String(q.correctAnswer?.[key] || '').trim());
           } else if (q.type === 'cloze-dropdown') {
             try {
               isCorrect = JSON.stringify(userAnswer) === JSON.stringify(q.correctAnswer);
