@@ -4,7 +4,7 @@ const caseStudySchema = new mongoose.Schema({
   title: { type: String, required: true },
   category: { type: String, required: true },
   subcategory: { type: String, required: true },
-  scenario: { type: String, required: true }, // The patient scenario
+  scenario: { type: String, required: false }, // The patient scenario (optional for trend/bowtie)
   type: { 
     type: String, 
     enum: ['6-question', 'bowtie', 'trend', 'matrix'],

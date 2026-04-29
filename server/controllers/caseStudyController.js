@@ -88,8 +88,12 @@ const getCaseStudy = async (req, res) => {
 const createCaseStudy = async (req, res) => {
   try {
     const payload = { ...req.body };
-    if (!payload.title || !payload.scenario || !payload.category || !payload.subcategory) {
-      return res.status(400).json({ message: 'Title, scenario, category, and subcategory are required' });
+    if (!payload.title || !payload.category || !payload.subcategory) {
+      return res.status(400).json({ message: 'Title, category, and subcategory are required' });
+    }
+    // Scenario is required for 6-question and matrix, optional for trend and bowtie
+    if (!['trend', 'bowtie'].includes(payload.type) && !payload.scenario) {
+      return res.status(400).json({ message: 'Scenario is required for this case study type' });
     }
     if (!payload.type || !['6-question', 'bowtie', 'trend', 'matrix'].includes(payload.type)) {
       return res.status(400).json({ message: 'Valid case study type is required (6-question, bowtie, trend, or matrix)' });
