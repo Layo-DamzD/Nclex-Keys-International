@@ -12,6 +12,8 @@ const {
   createQuestion,
   updateQuestion,
   bulkImportQuestions,
+  importFromUrl,
+  checkDuplicate,
   getStudents,
   createAdminTest,
   createStudentByAdmin,
@@ -75,6 +77,8 @@ router.get('/questions/recent', protect, adminOnly, getRecentQuestions);
 router.get('/questions', protect, adminOnly, getQuestions);
 router.get('/questions/:id', protect, adminOnly, getQuestionById);
 router.post('/questions/bulk-delete', protect, adminOnly, bulkDeleteQuestions);
+router.post('/questions/import-url', protect, adminOnly, importFromUrl);
+router.post('/questions/check-duplicate', protect, adminOnly, checkDuplicate);
 router.delete('/questions/:id', protect, adminOnly, deleteQuestion);
 router.post('/questions', protect, adminOnly, createQuestion);
 router.put('/questions/:id', protect, adminOnly, updateQuestion);

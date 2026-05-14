@@ -894,6 +894,294 @@ const bulkImportQuestions = async (req, res) => {
   }
 };
 
+// @desc    Import questions from a URL
+// @route   POST /api/admin/questions/import-url
+// @access  Private (admin only)
+const importFromUrl = async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || !String(url).trim()) {
+      return res.status(400).json({ message: 'URL is required' });
+    }
+    
+    const validUrl = String(url).trim();
+    
+    // Validate URL format
+    try {
+      new URL(validUrl);
+    } catch {
+      return res.status(400).json({ message: 'Invalid URL format' });
+    }
+    
+    // Fetch the URL content
+    let html = '';
+    let pageTitle = '';
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      
+      const response = await fetch(validUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        },
+      });
+      
+      clearTimeout(timeout);
+      
+      if (!response.ok) {
+        return res.status(400).json({ message: `Failed to fetch URL: ${response.status} ${response.statusText}` });
+      }
+      
+      html = await response.text();
+    } catch (fetchError) {
+      if (fetchError.name === 'AbortError') {
+        return res.status(400).json({ message: 'URL fetch timed out (15s). The page may be too large or blocking requests.' });
+      }
+      return res.status(400).json({ message: `Could not fetch URL: ${fetchError.message}. Some websites block automated requests.` });
+    }
+    
+    // Extract text content from HTML (simple approach - remove tags)
+    const extractText = (htmlStr) => {
+      // Remove script and style tags with content
+      let text = htmlStr.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+      text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+      text = text.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
+      // Convert some block elements to newlines
+      text = text.replace(/<\/?(p|div|br|h[1-6]|li|tr)[^>]*>/gi, '\n');
+      // Remove remaining tags
+      text = text.replace(/<[^>]+>/g, '');
+      // Decode HTML entities
+      text = text.replace(/&nbsp;/g, ' ');
+      text = text.replace(/&amp;/g, '&');
+      text = text.replace(/&lt;/g, '<');
+      text = text.replace(/&gt;/g, '>');
+      text = text.replace(/&quot;/g, '"');
+      text = text.replace(/&#39;/g, "'");
+      text = text.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(Number(num)));
+      // Clean up whitespace
+      text = text.replace(/[ \t]+/g, ' ');
+      text = text.replace(/\n\s*\n/g, '\n\n');
+      return text.trim();
+    };
+    
+    // Extract page title
+    const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
+    pageTitle = titleMatch ? extractText(titleMatch[1]) : '';
+    
+    const textContent = extractText(html);
+    
+    // Parse questions from text using multiple strategies
+    const parsedQuestions = [];
+    
+    // Strategy 1: Numbered questions (1. 2. 3. etc)
+    const numberedPattern = /(?:^|\n)\s*(\d+)\s*[.)]\s*(.+?)(?=\n\s*\d+\s*[.)]|\n\s*(?:Answer|Correct|Explanation|Rationale|The correct|$))/gims;
+    let match;
+    while ((match = numberedPattern.exec(textContent)) !== null) {
+      const questionBlock = match[2].trim();
+      if (questionBlock.length < 15) continue; // skip too short
+      
+      // Try to extract options from the question block
+      const optionPattern = /([A-D])\s*[\).]\s*(.+?)(?=\n\s*[A-D]\s*[\).]|\n\s*(?:Answer|Correct|Explanation|$))/gim;
+      const extractedOptions = [];
+      let optMatch;
+      const optionText = questionBlock;
+      while ((optMatch = optionPattern.exec(optionText)) !== null) {
+        extractedOptions.push(optMatch[2].trim());
+      }
+      
+      // Try to find answer
+      const answerMatch = questionBlock.match(/(?:correct answer|answer)[\s:]*([A-D])/i);
+      const correctLetter = answerMatch ? answerMatch[1].toUpperCase() : '';
+      
+      parsedQuestions.push({
+        questionText: questionBlock.split(/\n[A-D]\s*[\).]/i)[0].trim(),
+        options: extractedOptions.length >= 2 ? extractedOptions : [],
+        correctAnswer: correctLetter,
+        source: pageTitle || validUrl,
+        sourceUrl: validUrl,
+      });
+    }
+    
+    // Strategy 2: Questions ending with "?" 
+    if (parsedQuestions.length === 0) {
+      const questionLines = textContent.split(/\n/).filter(line => line.includes('?') && line.trim().length > 20);
+      for (const line of questionLines) {
+        const trimmed = line.trim();
+        // Look for options nearby (next few lines)
+        const lineIdx = textContent.indexOf(trimmed);
+        const nearbyText = textContent.substring(lineIdx, lineIdx + 500);
+        
+        const optionPattern = /([A-D])\s*[\).]\s*(.+?)(?=\n|$)/gim;
+        const extractedOptions = [];
+        let optMatch;
+        while ((optMatch = optionPattern.exec(nearbyText)) !== null) {
+          extractedOptions.push(optMatch[2].trim());
+        }
+        
+        const answerMatch = nearbyText.match(/(?:correct answer|answer)[\s:]*([A-D])/i);
+        
+        parsedQuestions.push({
+          questionText: trimmed.split(/[A-D]\s*[\).]/i)[0].trim(),
+          options: extractedOptions.length >= 2 ? extractedOptions : [],
+          correctAnswer: answerMatch ? answerMatch[1].toUpperCase() : '',
+          source: pageTitle || validUrl,
+          sourceUrl: validUrl,
+        });
+      }
+    }
+    
+    // Strategy 3: If still nothing, return raw text as a single draft block
+    if (parsedQuestions.length === 0) {
+      // Return the raw text content for manual review
+      const sentences = textContent.split(/\n\n+/).filter(s => s.trim().length > 20).slice(0, 20);
+      
+      return res.json({
+        success: true,
+        source: pageTitle || validUrl,
+        sourceUrl: validUrl,
+        questions: sentences.map(s => ({
+          questionText: s.trim(),
+          options: [],
+          correctAnswer: '',
+          source: pageTitle || validUrl,
+          sourceUrl: validUrl,
+          needsEditing: true,
+        })),
+        rawText: textContent.substring(0, 5000),
+        message: `Could not auto-parse questions from this page. ${sentences.length} text blocks extracted for manual review.`,
+      });
+    }
+    
+    // Save each parsed question as a draft
+    const savedDrafts = [];
+    const errors = [];
+    
+    for (let i = 0; i < parsedQuestions.length; i++) {
+      const q = parsedQuestions[i];
+      try {
+        const question = new Question({
+          type: 'multiple-choice',
+          category: 'Uncategorized',
+          subcategory: 'General',
+          questionText: q.questionText,
+          options: q.options.length >= 2 ? q.options : ['', '', '', ''],
+          correctAnswer: q.correctAnswer || '',
+          difficulty: 'medium',
+          isDraft: true,
+          source: q.source,
+        });
+        const saved = await question.save();
+        savedDrafts.push(saved._id);
+      } catch (saveErr) {
+        errors.push(`Question ${i + 1}: ${saveErr.message}`);
+      }
+    }
+    
+    res.json({
+      success: true,
+      source: pageTitle || validUrl,
+      sourceUrl: validUrl,
+      questions: parsedQuestions,
+      savedDrafts,
+      savedCount: savedDrafts.length,
+      errors: errors.length,
+      errorDetails: errors,
+      message: `Found ${parsedQuestions.length} questions from "${pageTitle || validUrl}". ${savedDrafts.length} saved as drafts.`,
+    });
+  } catch (error) {
+    console.error('URL Import Error:', error);
+    res.status(500).json({ message: 'Server error during URL import' });
+  }
+};
+
+// @desc    Check for duplicate questions
+// @route   POST /api/admin/questions/check-duplicate
+// @access  Private (admin only)
+const checkDuplicate = async (req, res) => {
+  try {
+    const { questionText, excludeId } = req.body;
+    
+    if (!questionText || !String(questionText).trim()) {
+      return res.status(400).json({ message: 'Question text is required' });
+    }
+    
+    const searchText = String(questionText).trim();
+    
+    // Simple similarity: check for questions with overlapping words
+    const normalizeText = (text) => {
+      return String(text || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 2); // skip very short words
+    };
+    
+    const searchWords = normalizeText(searchText);
+    
+    if (searchWords.length === 0) {
+      return res.json({ isDuplicate: false, matches: [] });
+    }
+    
+    // Find questions with any matching words (broad search)
+    const wordRegexes = searchWords.slice(0, 10).map(w => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'));
+    
+    const orConditions = wordRegexes.map(regex => ({ questionText: { $regex: regex } }));
+    
+    let query = Question.find({
+      $and: orConditions,
+      isDraft: false, // Only compare against published questions
+    }).select('_id questionText type category subcategory difficulty').lean();
+    
+    if (excludeId) {
+      query = query.where('_id').ne(String(excludeId));
+    }
+    
+    const candidates = await query.limit(50);
+    
+    // Calculate Jaccard similarity for each candidate
+    const matches = candidates.map(candidate => {
+      const candidateWords = normalizeText(candidate.questionText);
+      const searchSet = new Set(searchWords);
+      const candidateSet = new Set(candidateWords);
+      
+      const intersection = new Set([...searchSet].filter(w => candidateSet.has(w)));
+      const union = new Set([...searchSet, ...candidateSet]);
+      
+      const similarity = union.size > 0 ? intersection.size / union.size : 0;
+      
+      return {
+        _id: candidate._id,
+        questionText: candidate.questionText,
+        type: candidate.type,
+        category: candidate.category,
+        subcategory: candidate.subcategory,
+        difficulty: candidate.difficulty,
+        similarity: Math.round(similarity * 100),
+      };
+    }).filter(m => m.similarity >= 50) // 50% threshold for reporting
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 5); // Top 5 matches
+    
+    const isDuplicate = matches.length > 0 && matches[0].similarity >= 80;
+    
+    res.json({
+      isDuplicate,
+      matches,
+      message: isDuplicate 
+        ? `Possible duplicate found (${matches[0].similarity}% similar to existing question)`
+        : matches.length > 0
+          ? `Found ${matches.length} similar questions (below 80% threshold)`
+          : 'No similar questions found',
+    });
+  } catch (error) {
+    console.error('Duplicate Check Error:', error);
+    res.status(500).json({ message: 'Server error during duplicate check' });
+  }
+};
+
 // @desc    Create a prepared test assigned to all or individual students
 // @route   POST /api/admin/tests
 // @access  Private (admin/superadmin)
@@ -2413,6 +2701,8 @@ module.exports = {
   updateQuestion,
   createQuestion,
   bulkImportQuestions,
+  importFromUrl,
+  checkDuplicate,
   getStudents,
   createStudentByAdmin,
   createAdminTest,

@@ -63,6 +63,17 @@ const UploadQuestion = () => {
   const [bulkStatus, setBulkStatus] = useState('');
   const [assetUploading, setAssetUploading] = useState('');
 
+  // URL Import states
+  const [importUrl, setImportUrl] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
+  const [importResults, setImportResults] = useState(null);
+
+  // Duplicate detection states
+  const [duplicateWarning, setDuplicateWarning] = useState('');
+  const [duplicateMatches, setDuplicateMatches] = useState([]);
+  const [duplicateChecking, setDuplicateChecking] = useState(false);
+
   useEffect(() => {
     if (!editingQuestion) return;
 
@@ -450,6 +461,90 @@ const UploadQuestion = () => {
       setBulkLoading(false);
     }
   };
+
+  // ── URL Import Handler ──
+  const handleUrlImport = async () => {
+    if (!importUrl || !importUrl.trim()) {
+      setImportStatus('Please enter a URL');
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(importUrl.trim());
+    } catch {
+      setImportStatus('Please enter a valid URL (e.g., https://...)');
+      return;
+    }
+
+    setImportLoading(true);
+    setImportStatus('Fetching content from URL...');
+    setImportResults(null);
+
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.post('/api/admin/questions/import-url', { url: importUrl.trim() }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      setImportResults(response.data);
+      const saved = response.data.savedCount || 0;
+      const found = response.data.questions?.length || 0;
+      setImportStatus(`Found ${found} questions, saved ${saved} as drafts. ${response.data.message || ''}`);
+      setImportUrl('');
+    } catch (err) {
+      setImportStatus(`Import failed: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  // ── Duplicate Check Handler ──
+  const handleDuplicateCheck = async () => {
+    if (!questionText || questionText.trim().length < 10) {
+      setDuplicateWarning('');
+      setDuplicateMatches([]);
+      return;
+    }
+
+    setDuplicateChecking(true);
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const excludeId = editingQuestion?._id || null;
+      const response = await axios.post('/api/admin/questions/check-duplicate', 
+        { questionText: questionText.trim(), excludeId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.isDuplicate) {
+        setDuplicateWarning(response.data.message);
+        setDuplicateMatches(response.data.matches || []);
+      } else {
+        setDuplicateWarning('');
+        setDuplicateMatches([]);
+      }
+    } catch (err) {
+      console.error('Duplicate check failed:', err);
+    } finally {
+      setDuplicateChecking(false);
+    }
+  };
+
+  // Debounced duplicate check on question text change
+  useEffect(() => {
+    if (editingQuestion) return; // Don't check while editing
+    if (!questionText || questionText.trim().length < 20) {
+      setDuplicateWarning('');
+      setDuplicateMatches([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      handleDuplicateCheck();
+    }, 1500); // Check after 1.5s of typing
+
+    return () => clearTimeout(timer);
+  }, [questionText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buildMatrixQuestionData = (questionData) => {
     if (matrixColumns.length < 2) {
@@ -856,6 +951,75 @@ const UploadQuestion = () => {
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
+
+      {/* Duplicate Warning */}
+      {duplicateWarning && (
+        <div style={{
+          padding: '14px 18px',
+          background: '#fef2f2',
+          border: '1px solid #fca5a5',
+          borderRadius: '10px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'start',
+          gap: '10px',
+        }}>
+          <i className="fas fa-exclamation-triangle" style={{ color: '#dc2626', marginTop: '3px' }}></i>
+          <div style={{ flex: 1 }}>
+            <strong style={{ color: '#991b1b' }}>Possible Duplicate Detected!</strong>
+            <p style={{ margin: '4px 0 0', color: '#991b1b', fontSize: '0.9rem' }}>{duplicateWarning}</p>
+            {duplicateMatches.length > 0 && (
+              <div style={{ marginTop: '10px' }}>
+                {duplicateMatches.slice(0, 3).map((m, idx) => (
+                  <div key={m._id} style={{
+                    padding: '8px 10px',
+                    background: '#fff',
+                    border: '1px solid #fecaca',
+                    borderRadius: '6px',
+                    marginBottom: idx < 2 ? '6px' : 0,
+                    fontSize: '0.85rem',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#64748b' }}>{m.questionText?.substring(0, 100)}...</span>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: m.similarity >= 80 ? '#fecaca' : '#fef3c7',
+                        color: m.similarity >= 80 ? '#991b1b' : '#92400e',
+                        fontWeight: 600,
+                        marginLeft: '8px',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {m.similarity}% match
+                      </span>
+                    </div>
+                    <div style={{ marginTop: '4px', color: '#94a3b8', fontSize: '0.8rem' }}>
+                      {m.category} &gt; {m.subcategory} | {m.type} | {m.difficulty}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => { setDuplicateWarning(''); setDuplicateMatches([]); }}
+              style={{
+                marginTop: '8px',
+                background: '#fff',
+                color: '#991b1b',
+                border: '1px solid #fca5a5',
+                borderRadius: '6px',
+                padding: '4px 12px',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="form-card upload-form-card" noValidate>
         <div className="form-group">
@@ -1883,6 +2047,80 @@ const UploadQuestion = () => {
           <button type="button" className="btn btn-secondary" onClick={() => navigate('/admin/dashboard?section=questions')}>View All Questions</button>
         </div>
       </form>
+
+      {/* ── URL Import Section ── */}
+      <div className="form-card" style={{ marginTop: '24px' }}>
+        <h2 className="bulk-import-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <i className="fas fa-link" style={{ color: '#6366f1' }}></i>
+          Import Questions from URL
+        </h2>
+        <p className="bulk-import-help">
+          Paste a URL from any website (ChatGPT, nursing forums, study sites, etc.) to automatically extract questions and save them as drafts for editing.
+        </p>
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            className="form-control"
+            value={importUrl}
+            onChange={(e) => setImportUrl(e.target.value)}
+            placeholder="Paste URL here (e.g., https://chat.openai.com/share/...)"
+            style={{ flex: 1, minWidth: '250px' }}
+            disabled={importLoading}
+          />
+          <button
+            className="btn btn-primary"
+            onClick={handleUrlImport}
+            disabled={importLoading || !importUrl.trim()}
+            type="button"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+          >
+            {importLoading ? (
+              <><i className="fas fa-spinner fa-spin"></i> Fetching...</>
+            ) : (
+              <><i className="fas fa-download"></i> Fetch & Import</>
+            )}
+          </button>
+        </div>
+        {importStatus && (
+          <div className={`bulk-import-status ${importStatus.includes('saved') || importStatus.includes('Found') ? 'success' : 'error'}`}>
+            {importStatus}
+          </div>
+        )}
+        {importResults && importResults.questions?.length > 0 && (
+          <div style={{ marginTop: '16px', maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
+            <div style={{ padding: '12px', fontWeight: 600, borderBottom: '1px solid #e2e8f0', background: '#f1f5f9', position: 'sticky', top: 0 }}>
+              <i className="fas fa-list-check" style={{ color: '#6366f1', marginRight: '6px' }}></i>
+              Extracted Questions ({importResults.questions.length})
+            </div>
+            {importResults.questions.map((q, idx) => (
+              <div key={idx} style={{ padding: '10px 12px', borderBottom: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '8px' }}>
+                  <span>
+                    <strong>Q{idx + 1}:</strong> {q.questionText?.substring(0, 150)}
+                    {q.questionText?.length > 150 ? '...' : ''}
+                  </span>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    background: q.needsEditing ? '#fef3c7' : '#dcfce7',
+                    color: q.needsEditing ? '#92400e' : '#166534',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {q.needsEditing ? 'Needs Editing' : 'Draft Saved'}
+                  </span>
+                </div>
+                {q.options?.length > 0 && (
+                  <div style={{ marginTop: '4px', color: '#64748b', fontSize: '0.85rem' }}>
+                    Options: {q.options.length} found
+                    {q.correctAnswer ? ` | Answer: ${q.correctAnswer}` : ''}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="form-card bulk-import-card">
         <h2 className="bulk-import-title">Bulk Import Questions</h2>
