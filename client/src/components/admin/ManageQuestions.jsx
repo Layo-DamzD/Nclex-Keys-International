@@ -22,6 +22,8 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(-1);
   const [deleteModal, setDeleteModal] = useState({ open: false, questionId: null, bulk: false, count: 0 });
+  const [duplicateScan, setDuplicateScan] = useState({ scanning: false, results: null, error: null });
+  const [individualScanId, setIndividualScanId] = useState(null);
 
   const categories = ['__uncategorized__', '', ...Object.keys(CATEGORIES).filter((cat) => cat !== 'Standalone NGN' && cat !== 'Unfolding NGN')];
   const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
@@ -221,6 +223,68 @@ const ManageQuestions = ({ onSectionChange }) => {
     setDeleteModal({ open: true, questionId: null, bulk: true, count: selectedQuestionIds.length });
   };
 
+  const handleScanDuplicates = async () => {
+    if (!questions.length) return;
+    setDuplicateScan({ scanning: true, results: null, error: null });
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const duplicateResults = [];
+
+      for (const q of questions) {
+        try {
+          const response = await axios.post('/api/admin/questions/check-duplicate',
+            { questionText: q.questionText, excludeId: q._id },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (response.data.isDuplicate && response.data.matches.length > 0) {
+            duplicateResults.push({
+              question: q,
+              matches: response.data.matches,
+              topSimilarity: response.data.matches[0].similarity,
+            });
+          }
+        } catch (err) {
+          // Skip individual errors, continue scanning
+          console.warn(`Duplicate check failed for question ${q._id}:`, err);
+        }
+      }
+
+      setDuplicateScan({ scanning: false, results: duplicateResults, error: null });
+    } catch (error) {
+      setDuplicateScan({ scanning: false, results: null, error: 'Failed to scan for duplicates' });
+    }
+  };
+
+  const handleCheckSingleDuplicate = async (question) => {
+    setIndividualScanId(question._id);
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.post('/api/admin/questions/check-duplicate',
+        { questionText: question.questionText, excludeId: question._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.isDuplicate && response.data.matches.length > 0) {
+        setDuplicateScan(prev => ({
+          ...prev,
+          results: [
+            ...(prev.results || []),
+            { question, matches: response.data.matches, topSimilarity: response.data.matches[0].similarity }
+          ]
+        }));
+        alert(`Duplicate found! ${response.data.message}\n\nTop match (${response.data.matches[0].similarity}%): ${response.data.matches[0].questionText.substring(0, 100)}...`);
+      } else if (response.data.matches.length > 0) {
+        alert(response.data.message);
+      } else {
+        alert('No similar questions found.');
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to check duplicate');
+    } finally {
+      setIndividualScanId(null);
+    }
+  };
+
   const getTypeLabel = (type) => {
     const labels = {
       'multiple-choice': 'MC',
@@ -347,6 +411,15 @@ const ManageQuestions = ({ onSectionChange }) => {
           >
             Delete Selected ({selectedQuestionIds.length})
           </button>
+          <button
+            type="button"
+            className="btn btn-outline-warning"
+            disabled={duplicateScan.scanning || questions.length === 0}
+            onClick={handleScanDuplicates}
+          >
+            <i className="fas fa-copy me-1"></i>
+            {duplicateScan.scanning ? 'Scanning...' : 'Scan Duplicates'}
+          </button>
         </div>
       </div>
 
@@ -381,6 +454,70 @@ const ManageQuestions = ({ onSectionChange }) => {
             Clear Filter
           </button>
         </div>
+      )}
+
+      {duplicateScan.results && duplicateScan.results.length > 0 && (
+        <div style={{
+          background: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '16px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h6 style={{ margin: 0, color: '#92400e', fontWeight: 700 }}>
+              <i className="fas fa-exclamation-triangle me-2" style={{ color: '#f59e0b' }}></i>
+              Found {duplicateScan.results.length} Potential Duplicate(s)
+            </h6>
+            <button className="btn btn-sm btn-outline-secondary" onClick={() => setDuplicateScan({ scanning: false, results: null, error: null })} type="button">
+              Dismiss
+            </button>
+          </div>
+          {duplicateScan.results.map((result, idx) => (
+            <div key={result.question._id} style={{
+              background: '#fff',
+              border: '1px solid #fde68a',
+              borderRadius: '6px',
+              padding: '12px',
+              marginBottom: idx < duplicateScan.results.length - 1 ? '8px' : 0,
+              fontSize: '0.85rem',
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '6px', color: '#78350f' }}>
+                Q: {result.question.questionText.substring(0, 80)}{result.question.questionText.length > 80 ? '...' : ''}
+                <span className="badge badge-danger ms-2">{result.topSimilarity}% match</span>
+              </div>
+              {result.matches.map((match, mIdx) => (
+                <div key={match._id} style={{ paddingLeft: '16px', marginBottom: '4px', color: '#92400e' }}>
+                  <span style={{ fontWeight: 500 }}>Match ({match.similarity}%):</span> {match.questionText.substring(0, 100)}...
+                  <span style={{ marginLeft: '8px', color: '#64748b' }}>[{match.type} - {match.category}]</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {duplicateScan.results && duplicateScan.results.length === 0 && !duplicateScan.scanning && (
+        <div style={{
+          background: '#d1fae5',
+          border: '1px solid #10b981',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          color: '#065f46',
+          fontWeight: 500,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <i className="fas fa-check-circle"></i>
+          No duplicates found among the {questions.length} visible question(s).
+          <button className="btn btn-sm btn-outline-secondary ms-auto" onClick={() => setDuplicateScan({ scanning: false, results: null, error: null })} type="button">Dismiss</button>
+        </div>
+      )}
+
+      {duplicateScan.error && (
+        <div className="alert alert-warning">{duplicateScan.error}</div>
       )}
 
       {fetchError && <div className="alert alert-danger">{fetchError}</div>}
@@ -493,6 +630,16 @@ const ManageQuestions = ({ onSectionChange }) => {
                   {getSuccessRate(q)}
                 </td>
                 <td className="mq-actions-cell">
+                  <button
+                    className="btn btn-sm btn-outline-info"
+                    style={{ marginRight: '4px', fontSize: '0.75rem', padding: '2px 6px' }}
+                    onClick={() => handleCheckSingleDuplicate(q)}
+                    disabled={individualScanId === q._id || duplicateScan.scanning}
+                    title="Check for duplicates"
+                    type="button"
+                  >
+                    {individualScanId === q._id ? '...' : <i className="fas fa-copy"></i>}
+                  </button>
                   <button
                     className="btn btn-sm btn-secondary"
                     style={{ marginRight: '8px' }}

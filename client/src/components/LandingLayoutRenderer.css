@@ -18,6 +18,7 @@
   margin: 0 auto;
   border: 1px solid #dbe3ee;
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.07);
+  overflow: visible !important;
 }
 
 .landing-layout-canvas {
@@ -56,10 +57,10 @@
   width: 100%;
   height: 100%;
   white-space: pre-wrap;
-  line-height: 1.5;
+  line-height: 1.65;
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 12px 16px;
   box-sizing: border-box;
 }
 
@@ -144,12 +145,12 @@
   border: 1px solid #e2e8f0;
   border-top: 4px solid #2563eb;
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
-  padding: 20px 18px;
+  padding: 24px 22px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow: hidden;
+  gap: 14px;
+  overflow: visible;
 }
 
 .landing-block-card-icon {
@@ -164,26 +165,26 @@
 
 .landing-block-card-image {
   width: 100%;
-  height: 110px;
+  height: 130px;
   object-fit: cover;
   border-radius: 12px;
   flex-shrink: 0;
 }
 
 .landing-block-card h4 {
-  margin: 4px 0 0;
-  font-size: 1.05rem;
+  margin: 6px 0 2px;
+  font-size: 1.1rem;
   color: #0f172a;
   font-weight: 800;
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
   flex-shrink: 0;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .landing-card-subtitle {
-  margin: 0;
+  margin: 2px 0 0;
   font-size: 0.86rem;
   color: #64748b;
   font-weight: 600;
@@ -191,14 +192,14 @@
   overflow: visible;
   text-overflow: unset;
   flex-shrink: 0;
-  line-height: 1.45;
+  line-height: 1.6;
 }
 
 .landing-card-body {
-  margin: 4px 0 0;
-  font-size: 0.85rem;
+  margin: 6px 0 0;
+  font-size: 0.9rem;
   color: #334155;
-  line-height: 1.6;
+  line-height: 1.7;
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
