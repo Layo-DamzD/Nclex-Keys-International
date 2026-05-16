@@ -22,8 +22,9 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(-1);
   const [deleteModal, setDeleteModal] = useState({ open: false, questionId: null, bulk: false, count: 0 });
-  const [duplicateScan, setDuplicateScan] = useState({ scanning: false, results: null, error: null });
+  const [duplicateScan, setDuplicateScan] = useState({ scanning: false, results: null, error: null, actionLoading: null });
   const [individualScanId, setIndividualScanId] = useState(null);
+  const [mergeModal, setMergeModal] = useState({ open: false, original: null, match: null, fullOriginal: null, fullMatch: null, loading: false });
 
   const categories = ['__uncategorized__', '', ...Object.keys(CATEGORIES).filter((cat) => cat !== 'Standalone NGN' && cat !== 'Unfolding NGN')];
   const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
@@ -272,16 +273,143 @@ const ManageQuestions = ({ onSectionChange }) => {
             { question, matches: response.data.matches, topSimilarity: response.data.matches[0].similarity }
           ]
         }));
-        alert(`Duplicate found! ${response.data.message}\n\nTop match (${response.data.matches[0].similarity}%): ${response.data.matches[0].questionText.substring(0, 100)}...`);
-      } else if (response.data.matches.length > 0) {
-        alert(response.data.message);
       } else {
-        alert('No similar questions found.');
+        alert(response.data.message || 'No similar questions found.');
       }
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to check duplicate');
     } finally {
       setIndividualScanId(null);
+    }
+  };
+
+  // ─── Duplicate Action Handlers ───
+
+  const handleDeleteDuplicateQuestion = async (questionId, resultIndex) => {
+    const actionKey = `del-dup-${questionId}`;
+    setDuplicateScan(prev => ({ ...prev, actionLoading: actionKey }));
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      await axios.delete(`/api/admin/questions/${questionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Remove the result from the list
+      setDuplicateScan(prev => ({
+        ...prev,
+        results: (prev.results || []).filter((_, i) => i !== resultIndex),
+      }));
+      fetchQuestions();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to delete duplicate');
+    } finally {
+      setDuplicateScan(prev => ({ ...prev, actionLoading: null }));
+    }
+  };
+
+  const handleDeleteOriginalQuestion = async (questionId, resultIndex) => {
+    const actionKey = `del-orig-${questionId}`;
+    setDuplicateScan(prev => ({ ...prev, actionLoading: actionKey }));
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      await axios.delete(`/api/admin/questions/${questionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDuplicateScan(prev => ({
+        ...prev,
+        results: (prev.results || []).filter((_, i) => i !== resultIndex),
+      }));
+      fetchQuestions();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to delete original');
+    } finally {
+      setDuplicateScan(prev => ({ ...prev, actionLoading: null }));
+    }
+  };
+
+  const handleDismissDuplicate = (resultIndex) => {
+    setDuplicateScan(prev => ({
+      ...prev,
+      results: (prev.results || []).filter((_, i) => i !== resultIndex),
+    }));
+  };
+
+  const handleDeleteAllDuplicates = async () => {
+    if (!duplicateScan.results?.length) return;
+    if (!window.confirm(`Delete all ${duplicateScan.results.length} duplicate match(es)? This keeps the originals and removes the matched questions.`)) return;
+    setDuplicateScan(prev => ({ ...prev, actionLoading: 'bulk-del-dups' }));
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const idsToDelete = duplicateScan.results.flatMap(r => r.matches.map(m => m._id));
+      if (idsToDelete.length === 0) {
+        alert('No duplicate match IDs found to delete.');
+        return;
+      }
+      await axios.post('/api/admin/questions/bulk-delete',
+        { ids: idsToDelete },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setDuplicateScan(prev => ({ ...prev, results: null }));
+      fetchQuestions();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to bulk delete duplicates');
+    } finally {
+      setDuplicateScan(prev => ({ ...prev, actionLoading: null }));
+    }
+  };
+
+  const handleOpenMergeModal = async (original, match) => {
+    setMergeModal({ open: true, original, match, fullOriginal: null, fullMatch: null, loading: true });
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const [origFull, matchFull] = await Promise.all([
+        fetchFullQuestion(original._id),
+        fetchFullQuestion(match._id),
+      ]);
+      setMergeModal(prev => ({ ...prev, fullOriginal: origFull, fullMatch: matchFull, loading: false }));
+    } catch (error) {
+      alert('Failed to load full question details for merge preview.');
+      setMergeModal({ open: false, original: null, match: null, fullOriginal: null, fullMatch: null, loading: false });
+    }
+  };
+
+  const handleMergeKeepOriginal = async () => {
+    if (!mergeModal.match?._id) return;
+    setMergeModal(prev => ({ ...prev, loading: true }));
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      await axios.delete(`/api/admin/questions/${mergeModal.match._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Remove from results
+      setDuplicateScan(prev => ({
+        ...prev,
+        results: (prev.results || []).filter(r => r.question._id !== mergeModal.original._id),
+      }));
+      setMergeModal({ open: false, original: null, match: null, fullOriginal: null, fullMatch: null, loading: false });
+      fetchQuestions();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to delete duplicate during merge');
+      setMergeModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleMergeKeepMatch = async () => {
+    if (!mergeModal.original?._id) return;
+    setMergeModal(prev => ({ ...prev, loading: true }));
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      await axios.delete(`/api/admin/questions/${mergeModal.original._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDuplicateScan(prev => ({
+        ...prev,
+        results: (prev.results || []).filter(r => r.question._id !== mergeModal.original._id),
+      }));
+      setMergeModal({ open: false, original: null, match: null, fullOriginal: null, fullMatch: null, loading: false });
+      fetchQuestions();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to delete original during merge');
+      setMergeModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -458,38 +586,131 @@ const ManageQuestions = ({ onSectionChange }) => {
 
       {duplicateScan.results && duplicateScan.results.length > 0 && (
         <div style={{
-          background: '#fef3c7',
-          border: '1px solid #f59e0b',
-          borderRadius: '8px',
-          padding: '16px',
+          background: '#fffbeb',
+          border: '2px solid #f59e0b',
+          borderRadius: '12px',
+          padding: '20px',
           marginBottom: '16px',
+          boxShadow: '0 4px 16px rgba(245, 158, 11, 0.12)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <h6 style={{ margin: 0, color: '#92400e', fontWeight: 700 }}>
-              <i className="fas fa-exclamation-triangle me-2" style={{ color: '#f59e0b' }}></i>
+          {/* Header row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
+            <h6 style={{ margin: 0, color: '#92400e', fontWeight: 700, fontSize: '1rem' }}>
+              <i className="fas fa-clone me-2" style={{ color: '#f59e0b' }}></i>
               Found {duplicateScan.results.length} Potential Duplicate(s)
             </h6>
-            <button className="btn btn-sm btn-outline-secondary" onClick={() => setDuplicateScan({ scanning: false, results: null, error: null })} type="button">
-              Dismiss
-            </button>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-sm btn-danger"
+                disabled={duplicateScan.actionLoading === 'bulk-del-dups'}
+                onClick={handleDeleteAllDuplicates}
+                title="Delete all matched duplicates (keeps originals)"
+                type="button"
+              >
+                {duplicateScan.actionLoading === 'bulk-del-dups' ? 'Deleting...' : 'Delete All Duplicates'}
+              </button>
+              <button className="btn btn-sm btn-outline-secondary" onClick={() => setDuplicateScan({ scanning: false, results: null, error: null, actionLoading: null })} type="button">
+                Clear All
+              </button>
+            </div>
           </div>
+          <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#a16207' }}>
+            Review each pair below. You can delete the duplicate, delete the original, merge them, or dismiss false positives.
+          </p>
+
+          {/* Duplicate result cards */}
           {duplicateScan.results.map((result, idx) => (
             <div key={result.question._id} style={{
               background: '#fff',
               border: '1px solid #fde68a',
-              borderRadius: '6px',
-              padding: '12px',
-              marginBottom: idx < duplicateScan.results.length - 1 ? '8px' : 0,
+              borderRadius: '10px',
+              padding: '16px',
+              marginBottom: idx < duplicateScan.results.length - 1 ? '12px' : 0,
               fontSize: '0.85rem',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
             }}>
-              <div style={{ fontWeight: 600, marginBottom: '6px', color: '#78350f' }}>
-                Q: {result.question.questionText.substring(0, 80)}{result.question.questionText.length > 80 ? '...' : ''}
-                <span className="badge badge-danger ms-2">{result.topSimilarity}% match</span>
+              {/* Original question row */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'flex-start' }}>
+                <div style={{
+                  minWidth: '40px', height: '40px', borderRadius: '8px', background: '#dbeafe',
+                  color: '#1e40af', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: '0.75rem', flexShrink: 0,
+                }}>ORIG</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '2px', lineHeight: 1.45 }}>
+                    {result.question.questionText.length > 120 ? result.question.questionText.substring(0, 120) + '...' : result.question.questionText}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    <span className="badge" style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.7rem' }}>{result.question.type || 'N/A'}</span>
+                    <span className="badge" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem' }}>{result.question.category || 'N/A'}</span>
+                    <span className="badge" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem' }}>ID: {result.question._id?.substring(0, 8)}</span>
+                  </div>
+                </div>
               </div>
+
+              {/* Match rows */}
               {result.matches.map((match, mIdx) => (
-                <div key={match._id} style={{ paddingLeft: '16px', marginBottom: '4px', color: '#92400e' }}>
-                  <span style={{ fontWeight: 500 }}>Match ({match.similarity}%):</span> {match.questionText.substring(0, 100)}...
-                  <span style={{ marginLeft: '8px', color: '#64748b' }}>[{match.type} - {match.category}]</span>
+                <div key={match._id} style={{
+                  display: 'flex', gap: '10px', alignItems: 'flex-start',
+                  marginLeft: '10px', paddingLeft: '12px',
+                  borderLeft: '3px solid #f59e0b',
+                  padding: '10px 0',
+                }}>
+                  <div style={{
+                    minWidth: '40px', height: '40px', borderRadius: '8px', background: '#fef3c7',
+                    color: '#92400e', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: '0.7rem', flexShrink: 0,
+                  }}>{match.similarity}%</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, color: '#475569', marginBottom: '2px', lineHeight: 1.45 }}>
+                      {match.questionText.length > 120 ? match.questionText.substring(0, 120) + '...' : match.questionText}
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                      <span className="badge" style={{ background: '#fef3c7', color: '#92400e', fontSize: '0.7rem' }}>{match.type || 'N/A'}</span>
+                      <span className="badge" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem' }}>{match.category || 'N/A'}</span>
+                      <span className="badge" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem' }}>ID: {match._id?.substring(0, 8)}</span>
+                    </div>
+
+                    {/* Action buttons for this match */}
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        className="btn btn-sm"
+                        style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.78rem', padding: '4px 10px' }}
+                        disabled={duplicateScan.actionLoading === `del-dup-${match._id}`}
+                        onClick={() => handleDeleteDuplicateQuestion(match._id, idx)}
+                        title="Delete this matched question (keep the original)"
+                        type="button"
+                      >
+                        {duplicateScan.actionLoading === `del-dup-${match._id}` ? '...' : <><i className="fas fa-trash-alt me-1"></i>Delete Duplicate</>}
+                      </button>
+                      <button
+                        className="btn btn-sm"
+                        style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.78rem', padding: '4px 10px' }}
+                        disabled={duplicateScan.actionLoading === `del-orig-${result.question._id}`}
+                        onClick={() => handleDeleteOriginalQuestion(result.question._id, idx)}
+                        title="Delete the original question (keep this match)"
+                        type="button"
+                      >
+                        {duplicateScan.actionLoading === `del-orig-${result.question._id}` ? '...' : <><i className="fas fa-exchange-alt me-1"></i>Keep Match Instead</>}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        style={{ borderRadius: '6px', fontSize: '0.78rem', padding: '4px 10px' }}
+                        onClick={() => handleOpenMergeModal(result.question, match)}
+                        title="Compare both questions side-by-side"
+                        type="button"
+                      >
+                        <i className="fas fa-columns me-1"></i>Compare & Merge
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-success"
+                        style={{ borderRadius: '6px', fontSize: '0.78rem', padding: '4px 10px' }}
+                        onClick={() => handleDismissDuplicate(idx)}
+                        title="Not a duplicate, remove from results"
+                        type="button"
+                      >
+                        <i className="fas fa-check me-1"></i>Keep Both
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -794,6 +1015,142 @@ const ManageQuestions = ({ onSectionChange }) => {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Merge / Compare Modal */}
+      {mergeModal.open && (
+        <div className="modal fade show d-block" tabIndex="-1" role="dialog" aria-modal="true" style={{ background: 'rgba(2,6,23,0.6)' }}>
+          <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div className="modal-content" style={{ borderRadius: '16px', border: 'none', overflow: 'hidden' }}>
+              <div className="modal-header" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', borderBottom: 'none' }}>
+                <h5 className="modal-title" style={{ fontWeight: 700, color: '#78350f' }}>
+                  <i className="fas fa-columns me-2"></i>Compare & Merge Duplicates
+                </h5>
+                <button type="button" className="btn-close" aria-label="Close" onClick={() => setMergeModal({ open: false, original: null, match: null, fullOriginal: null, fullMatch: null, loading: false })} />
+              </div>
+              <div className="modal-body" style={{ padding: 0 }}>
+                {mergeModal.loading ? (
+                  <div className="text-center py-5">
+                    <div className="spinner-border text-warning" role="status"><span className="visually-hidden">Loading...</span></div>
+                    <p className="mt-2 text-muted">Loading full question details...</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+                    {/* Original Column */}
+                    <div style={{ padding: '20px', borderRight: '2px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                        <span style={{ background: '#dbeafe', color: '#1e40af', padding: '3px 10px', borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem' }}>ORIGINAL</span>
+                        <span style={{ color: '#64748b', fontSize: '0.78rem' }}>ID: {mergeModal.original?._id?.substring(0, 12)}</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem' }}>
+                        <p style={{ fontWeight: 600, color: '#1e293b', marginBottom: '8px' }}>
+                          <strong>Question:</strong> {cleanQuestionPrefix(mergeModal.fullOriginal?.questionText || mergeModal.original?.questionText || '')}
+                        </p>
+                        <p style={{ marginBottom: '4px' }}><strong>Type:</strong> <span className="badge bg-primary">{mergeModal.fullOriginal?.type || mergeModal.original?.type || 'N/A'}</span></p>
+                        <p style={{ marginBottom: '4px' }}><strong>Category:</strong> {mergeModal.fullOriginal?.category || 'N/A'} / {mergeModal.fullOriginal?.subcategory || 'N/A'}</p>
+                        <p style={{ marginBottom: '4px' }}><strong>Difficulty:</strong> <span className="badge bg-secondary">{mergeModal.fullOriginal?.difficulty || 'N/A'}</span></p>
+                        {Array.isArray(mergeModal.fullOriginal?.options) && mergeModal.fullOriginal.options.length > 0 && (
+                          <div style={{ marginTop: '8px' }}>
+                            <strong>Options:</strong>
+                            <ol type="A" style={{ paddingLeft: '20px', marginTop: '4px' }}>
+                              {mergeModal.fullOriginal.options.map((opt, i) => (
+                                <li key={i} style={{
+                                  marginBottom: '3px',
+                                  fontWeight: mergeModal.fullOriginal.correctAnswer === String.fromCharCode(65 + i) ? 700 : 400,
+                                  color: mergeModal.fullOriginal.correctAnswer === String.fromCharCode(65 + i) ? '#059669' : '#475569',
+                                }}>
+                                  {opt} {mergeModal.fullOriginal.correctAnswer === String.fromCharCode(65 + i) && <i className="fas fa-check ms-1" style={{ color: '#059669' }}></i>}
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+                        <p style={{ marginTop: '8px' }}><strong>Answer:</strong> {formatAnswerForPreview(mergeModal.fullOriginal)}</p>
+                        <p style={{ whiteSpace: 'pre-line', marginTop: '8px' }}><strong>Rationale:</strong> {mergeModal.fullOriginal?.rationale || 'N/A'}</p>
+                        {mergeModal.fullOriginal?.timesUsed !== undefined && (
+                          <p style={{ marginTop: '8px', color: '#64748b', fontSize: '0.82rem' }}>
+                            <i className="fas fa-chart-bar me-1"></i>Used {mergeModal.fullOriginal.timesUsed} time(s) &middot; {getSuccessRate(mergeModal.fullOriginal)} success rate
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Match Column */}
+                    <div style={{ padding: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                        <span style={{ background: '#fef3c7', color: '#92400e', padding: '3px 10px', borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem' }}>MATCH</span>
+                        <span style={{ color: '#64748b', fontSize: '0.78rem' }}>ID: {mergeModal.match?._id?.substring(0, 12)}</span>
+                        <span className="badge bg-warning text-dark" style={{ fontSize: '0.7rem' }}>{mergeModal.match?.similarity}% similar</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem' }}>
+                        <p style={{ fontWeight: 600, color: '#1e293b', marginBottom: '8px' }}>
+                          <strong>Question:</strong> {cleanQuestionPrefix(mergeModal.fullMatch?.questionText || mergeModal.match?.questionText || '')}
+                        </p>
+                        <p style={{ marginBottom: '4px' }}><strong>Type:</strong> <span className="badge bg-primary">{mergeModal.fullMatch?.type || mergeModal.match?.type || 'N/A'}</span></p>
+                        <p style={{ marginBottom: '4px' }}><strong>Category:</strong> {mergeModal.fullMatch?.category || mergeModal.match?.category || 'N/A'} / {mergeModal.fullMatch?.subcategory || mergeModal.match?.subcategory || 'N/A'}</p>
+                        <p style={{ marginBottom: '4px' }}><strong>Difficulty:</strong> <span className="badge bg-secondary">{mergeModal.fullMatch?.difficulty || mergeModal.match?.difficulty || 'N/A'}</span></p>
+                        {Array.isArray(mergeModal.fullMatch?.options) && mergeModal.fullMatch.options.length > 0 && (
+                          <div style={{ marginTop: '8px' }}>
+                            <strong>Options:</strong>
+                            <ol type="A" style={{ paddingLeft: '20px', marginTop: '4px' }}>
+                              {mergeModal.fullMatch.options.map((opt, i) => (
+                                <li key={i} style={{
+                                  marginBottom: '3px',
+                                  fontWeight: mergeModal.fullMatch.correctAnswer === String.fromCharCode(65 + i) ? 700 : 400,
+                                  color: mergeModal.fullMatch.correctAnswer === String.fromCharCode(65 + i) ? '#059669' : '#475569',
+                                }}>
+                                  {opt} {mergeModal.fullMatch.correctAnswer === String.fromCharCode(65 + i) && <i className="fas fa-check ms-1" style={{ color: '#059669' }}></i>}
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+                        <p style={{ marginTop: '8px' }}><strong>Answer:</strong> {formatAnswerForPreview(mergeModal.fullMatch)}</p>
+                        <p style={{ whiteSpace: 'pre-line', marginTop: '8px' }}><strong>Rationale:</strong> {mergeModal.fullMatch?.rationale || 'N/A'}</p>
+                        {mergeModal.fullMatch?.timesUsed !== undefined && (
+                          <p style={{ marginTop: '8px', color: '#64748b', fontSize: '0.82rem' }}>
+                            <i className="fas fa-chart-bar me-1"></i>Used {mergeModal.fullMatch.timesUsed} time(s) &middot; {getSuccessRate(mergeModal.fullMatch)} success rate
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setMergeModal({ open: false, original: null, match: null, fullOriginal: null, fullMatch: null, loading: false })}
+                >
+                  Cancel
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, padding: '8px 16px' }}
+                    disabled={mergeModal.loading}
+                    onClick={handleMergeKeepOriginal}
+                    title="Keep the original question and delete this match"
+                  >
+                    <i className="fas fa-check me-1"></i>Keep Original
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, padding: '8px 16px' }}
+                    disabled={mergeModal.loading}
+                    onClick={handleMergeKeepMatch}
+                    title="Keep the matched question and delete the original"
+                  >
+                    <i className="fas fa-exchange-alt me-1"></i>Keep Match
+                  </button>
+                </div>
               </div>
             </div>
           </div>
