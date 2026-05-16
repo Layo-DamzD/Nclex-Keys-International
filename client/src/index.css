@@ -371,6 +371,80 @@ hr {
     box-shadow: 0 5px 15px rgba(111, 66, 193, 0.3);
 }
 
+/* ─── Brainiac page styles ─── */
+.brainiac-section-title {
+    font-size: 2.4rem;
+    line-height: 1.35;
+    padding-top: 1rem;
+    color: #1e293b;
+    font-weight: 800;
+}
+
+.brainiac-section-subtitle {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: #64748b;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.brainiac-tutor-card {
+    border: none !important;
+    border-radius: 18px !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    overflow: hidden;
+}
+
+.brainiac-tutor-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.13);
+}
+
+.brainiac-tutor-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.brainiac-tutor-role {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 12px;
+}
+
+.brainiac-tutor-bio {
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: #475569;
+    white-space: normal;
+    overflow: visible;
+}
+
+.brainiac-tutor-img {
+    transition: transform 0.3s ease;
+}
+
+.brainiac-tutor-card:hover .brainiac-tutor-img {
+    transform: scale(1.03);
+}
+
+.brainiac-card-body {
+    padding: 28px 20px !important;
+}
+
+/* Brainiac page layout */
+.brainiac-page {
+    min-height: 100vh;
+}
+
+.brainiac-page-main {
+    padding-bottom: 40px;
+}
+
 /* Signup page moonwalk-to-field animation (replaceable avatar-ready) */
 .signup-email-stage {
     position: relative;

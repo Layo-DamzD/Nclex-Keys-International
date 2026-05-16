@@ -36,6 +36,11 @@
   padding: 2em;
 }
 
+/* Brainiac tutor cards: override global card padding */
+.brainiac-tutor-card {
+  padding: 0 !important;
+}
+
 .read-the-docs {
   color: #888;
 }
