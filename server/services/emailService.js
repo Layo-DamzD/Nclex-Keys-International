@@ -814,6 +814,100 @@ const sendChatEscalationEmail = async ({
   }
 };
 
+// Email notification when study materials are created or updated
+const sendStudyMaterialUpdateEmail = async ({
+  to,
+  name,
+  materialTitle,
+  materialDescription = '',
+  materialCategory = 'Study Guide',
+  action = 'added', // 'added' or 'updated'
+}) => {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'not_configured' };
+  }
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    return { sent: false, reason: 'transporter_unavailable' };
+  }
+
+  const displayName = name || 'there';
+  const actionText = action === 'added' ? 'New Study Material Available' : 'Study Material Updated';
+  const subject = `NCLEX KEYS International - ${actionText}: ${materialTitle}`;
+  const baseUrl = getClientBaseUrl();
+  const loginUrl = `${baseUrl}/login`;
+
+  const text = [
+    `Hello ${displayName},`,
+    '',
+    `Great news! A study material has been ${action} on NCLEX KEYS International.`,
+    '',
+    `Title: ${materialTitle}`,
+    `Category: ${materialCategory}`,
+    materialDescription ? `Description: ${materialDescription}` : '',
+    '',
+    'Log in to your account to access this material and start studying right away.',
+    loginUrl,
+    '',
+    'Keep up the great work!',
+    '',
+    'Best regards,',
+    'The NCLEX KEYS International Team'
+  ].filter(Boolean).join('\n');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:600px;margin:0 auto;padding:24px;">
+      <div style="background:linear-gradient(135deg,#059669,#10b981);padding:20px 24px;border-radius:12px 12px 0 0;margin:-24px -24px 20px;">
+        <h2 style="margin:0;color:#ffffff;font-size:18px;">${action === 'added' ? '&#x1F4DA; New Study Material Available!' : '&#x1F504; Study Material Updated!'}</h2>
+      </div>
+      <p>Hello ${displayName},</p>
+      <p>Great news! A study material has been <strong>${action}</strong> on NCLEX KEYS International.</p>
+      <table cellpadding="10" cellspacing="0" style="width:100%;border-collapse:collapse;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:16px 0;">
+        <tr>
+          <td style="font-weight:700;width:140px;border-bottom:1px solid #e5e7eb;color:#475569;">Title</td>
+          <td style="border-bottom:1px solid #e5e7eb;">${materialTitle}</td>
+        </tr>
+        <tr>
+          <td style="font-weight:700;border-bottom:1px solid #e5e7eb;color:#475569;">Category</td>
+          <td style="border-bottom:1px solid #e5e7eb;">${materialCategory}</td>
+        </tr>
+        ${materialDescription ? `<tr>
+          <td style="font-weight:700;color:#475569;">Description</td>
+          <td>${materialDescription}</td>
+        </tr>` : ''}
+      </table>
+      <p style="margin:20px 0;">
+        <a href="${loginUrl}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">
+          Log In to Access Material
+        </a>
+      </p>
+      <p style="color:#6b7280;">If the button does not work, go to: ${loginUrl}</p>
+      <p style="margin-top:20px;color:#374151;">Keep up the great work with your NCLEX preparation!</p>
+      <p style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;color:#94a3b8;font-size:0.8rem;">
+        Best regards,<br>The NCLEX KEYS International Team
+      </p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: 'send_failed',
+      error: error?.message || 'Unknown email error'
+    };
+  }
+};
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
@@ -827,4 +921,5 @@ module.exports = {
   sendStudentOtpEmail,
   sendTestAssignmentEmail,
   sendChatEscalationEmail,
+  sendStudyMaterialUpdateEmail,
 };

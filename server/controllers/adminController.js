@@ -9,7 +9,7 @@ const Activity = require('../models/Activity');
 const ExamSupportMessage = require('../models/ExamSupportMessage');
 const Image = require('../models/Image');
 const { sendPushNotificationMulticast } = require('../services/firebaseAdmin');
-const { sendStudentWelcomeEmail, sendTestAssignmentEmail } = require('../services/emailService');
+const { sendStudentWelcomeEmail, sendTestAssignmentEmail, sendStudyMaterialUpdateEmail } = require('../services/emailService');
 const fs = require('fs');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
@@ -1838,9 +1838,126 @@ const getStudyMaterials = async (req, res) => {
 // @desc    Create a new study material
 // @route   POST /api/admin/content/materials
 // @access  Private (admin only)
+// Helper: Notify all active students when a study material is created or updated.
+// Sends in-app activity notification, FCM push notification, and email (all fire-and-forget).
+const notifyStudentsMaterialUpdate = async ({ materialTitle, materialDescription, materialCategory, action }) => {
+  try {
+    const activeStudents = await User.find({
+      role: 'student',
+      status: { $ne: 'inactive' }
+    }).select('_id name email fcmTokens');
+
+    if (!activeStudents.length) return;
+
+    const now = new Date();
+    const notificationTitle = action === 'added'
+      ? 'New Study Material Available'
+      : 'Study Material Updated';
+    const notificationMessage = `"${materialTitle}" has been ${action}. Log in to check it out!`;
+
+    // 1. In-app activity notifications
+    const activityDocs = activeStudents.map((student) => ({
+      student: student._id,
+      type: 'notification',
+      text: notificationTitle,
+      detail: notificationMessage,
+      description: `${materialTitle} (${materialCategory})`,
+      metadata: {
+        message: notificationMessage,
+        materialTitle,
+        materialCategory,
+        action,
+        sentAt: now.toISOString(),
+        isNotification: true
+      },
+      createdAt: now
+    }));
+
+    try {
+      await Activity.insertMany(activityDocs);
+    } catch (insertErr) {
+      // Fallback for older Activity schema enum definitions
+      const fallbackDocs = activeStudents.map((student) => ({
+        student: student._id,
+        type: 'achievement',
+        text: notificationTitle,
+        detail: notificationMessage,
+        description: `${materialTitle} (${materialCategory})`,
+        metadata: {
+          message: notificationMessage,
+          materialTitle,
+          materialCategory,
+          action,
+          sentAt: now.toISOString(),
+          isNotification: true
+        },
+        createdAt: now
+      }));
+      await Activity.insertMany(fallbackDocs);
+      console.warn('Material notification insert used fallback activity type:', insertErr.message);
+    }
+
+    // 2. FCM push notifications
+    const pushTokens = [
+      ...new Set(
+        activeStudents.flatMap((s) =>
+          Array.isArray(s.fcmTokens) ? s.fcmTokens.map((t) => String(t || '').trim()) : []
+        ).filter(Boolean)
+      )
+    ];
+
+    if (pushTokens.length > 0) {
+      const pushDelivery = await sendPushNotificationMulticast({
+        tokens: pushTokens,
+        title: notificationTitle,
+        body: notificationMessage,
+        data: {
+          type: 'study_material_update',
+          action,
+          materialTitle,
+          materialCategory,
+          sentAt: now.toISOString()
+        }
+      });
+
+      // Clean up invalid FCM tokens
+      if (pushDelivery.invalidTokens?.length) {
+        await User.updateMany(
+          { fcmTokens: { $in: pushDelivery.invalidTokens } },
+          { $pull: { fcmTokens: { $in: pushDelivery.invalidTokens } } }
+        );
+      }
+    }
+
+    // 3. Email notifications (fire-and-forget, one per student)
+    const emailPromises = activeStudents.map((student) =>
+      sendStudyMaterialUpdateEmail({
+        to: student.email,
+        name: student.name,
+        materialTitle,
+        materialDescription: materialDescription || '',
+        materialCategory: materialCategory || 'Study Guide',
+        action
+      }).catch((err) => {
+        console.error(`Failed to send material update email to ${student.email}:`, err.message);
+      })
+    );
+
+    // Don't block the response — let emails send in the background
+    Promise.all(emailPromises).then((results) => {
+    const sentCount = results.filter((r) => r && r.sent).length;
+    console.log(`Material update email results: ${sentCount}/${activeStudents.length} sent`);
+    });
+
+    console.log(`Study material notification sent to ${activeStudents.length} students: ${materialTitle} (${action})`);
+  } catch (err) {
+    console.error('Error in notifyStudentsMaterialUpdate:', err.message);
+  }
+};
+
 const createStudyMaterial = async (req, res) => {
   try {
-    const { title, description, category, fileUrl, fileType, backupUrl } = req.body;
+    const { title, description, category, fileUrl, fileType, backupUrl, notifyStudents } = req.body;
     const normalizedType = String(fileType || '').trim().toLowerCase();
     if (normalizedType && normalizedType !== 'pdf') {
       return res.status(400).json({ message: 'Only PDF materials are allowed' });
@@ -1857,6 +1974,17 @@ const createStudyMaterial = async (req, res) => {
     });
 
     await material.save();
+
+    // Notify students in the background if requested
+    if (notifyStudents) {
+      notifyStudentsMaterialUpdate({
+        materialTitle: title,
+        materialDescription: description,
+        materialCategory: category,
+        action: 'added'
+      });
+    }
+
     res.status(201).json(material);
   } catch (error) {
     console.error(error);
@@ -1869,11 +1997,15 @@ const createStudyMaterial = async (req, res) => {
 // @access  Private (admin only)
 const updateStudyMaterial = async (req, res) => {
   try {
+    const { notifyStudents } = req.body;
     const normalizedType = String(req.body?.fileType || '').trim().toLowerCase();
     if (normalizedType && normalizedType !== 'pdf') {
       return res.status(400).json({ message: 'Only PDF materials are allowed' });
     }
     const updates = { ...req.body, fileType: 'pdf' };
+    // Remove notifyStudents from the DB update payload
+    delete updates.notifyStudents;
+
     const material = await StudyMaterial.findByIdAndUpdate(
       req.params.id,
       updates,
@@ -1882,6 +2014,17 @@ const updateStudyMaterial = async (req, res) => {
     if (!material) {
       return res.status(404).json({ message: 'Material not found' });
     }
+
+    // Notify students in the background if requested
+    if (notifyStudents) {
+      notifyStudentsMaterialUpdate({
+        materialTitle: material.title,
+        materialDescription: material.description,
+        materialCategory: material.category,
+        action: 'updated'
+      });
+    }
+
     res.json(material);
   } catch (error) {
     console.error(error);

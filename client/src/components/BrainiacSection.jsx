@@ -44,15 +44,15 @@ const BrainiacSection = ({
         className={`brainiac-editor-selectable ${editorMode && selectedHeader ? 'selected' : ''}`}
         onClick={editorMode ? onSelectHeader : undefined}
       >
-        <h1 className="text-center mb-4">{header.title}</h1>
-        <p className="text-center lead mb-5">{header.subtitle}</p>
+        <h1 className="brainiac-section-title text-center mb-3">{header.title}</h1>
+        <p className="brainiac-section-subtitle text-center mb-5">{header.subtitle}</p>
       </div>
 
-      <div className="row">
+      <div className="row g-4">
         {tutors.map((tutor, index) => (
-          <div className="col-md-4 mb-4" key={tutor.id || index}>
+          <div className="col-12 col-md-6 col-lg-4 mb-3" key={tutor.id || index}>
             <div
-              className={`card brainiac-editor-selectable ${editorMode && selectedTutorIndex === index ? 'selected' : ''}`}
+              className={`card brainiac-tutor-card brainiac-editor-selectable ${editorMode && selectedTutorIndex === index ? 'selected' : ''}`}
               onClick={editorMode ? () => onSelectTutor?.(index) : undefined}
             >
               <div className="card-body text-center">
@@ -65,10 +65,11 @@ const BrainiacSection = ({
                     data-fallback-index="0"
                     onError={handleImageFallback}
                     loading={index === 0 ? 'eager' : 'lazy'}
+                    className="brainiac-tutor-img"
                     style={{
                       width: '100%',
-                      maxWidth: tutor.imageDisplayMode === 'circle' ? 90 : 260,
-                      height: tutor.imageDisplayMode === 'circle' ? 90 : 'auto',
+                      maxWidth: tutor.imageDisplayMode === 'circle' ? 120 : 260,
+                      height: tutor.imageDisplayMode === 'circle' ? 120 : 'auto',
                       borderRadius: tutor.imageDisplayMode === 'circle' ? '50%' : 12,
                       objectFit: 'cover',
                       marginBottom: 16
@@ -77,9 +78,9 @@ const BrainiacSection = ({
                 ) : (
                   <i className={`fas ${tutor.iconClass || 'fa-user'} fa-4x mb-3 ${tutor.colorClass || 'text-primary'}`}></i>
                 )}
-                <h5>{tutor.name}</h5>
-                <p className="text-muted">{tutor.role}</p>
-                <p>{tutor.bio}</p>
+                <h5 className="brainiac-tutor-name">{tutor.name}</h5>
+                <p className="brainiac-tutor-role text-muted">{tutor.role}</p>
+                <p className="brainiac-tutor-bio">{tutor.bio}</p>
               </div>
             </div>
           </div>

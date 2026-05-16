@@ -33,6 +33,7 @@ const ContentManagement = () => {
 
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [notifyStudents, setNotifyStudents] = useState(true);
 
   useEffect(() => {
     fetchMaterials();
@@ -194,12 +195,13 @@ const ContentManagement = () => {
 
     try {
       const token = sessionStorage.getItem('adminToken');
+      const payload = { ...formData, notifyStudents };
       if (editingMaterial) {
-        await axios.put(`/api/admin/content/materials/${editingMaterial._id}`, formData, {
+        await axios.put(`/api/admin/content/materials/${editingMaterial._id}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        await axios.post('/api/admin/content/materials', formData, {
+        await axios.post('/api/admin/content/materials', payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -209,8 +211,12 @@ const ContentManagement = () => {
       setFormData({ title: '', description: '', category: 'Study Guide', fileUrl: '', fileType: 'pdf' });
       setSelectedFile(null);
       setSelectedIds([]);
+      setNotifyStudents(true);
       fetchMaterials();
-      showToast(editingMaterial ? 'Material updated successfully!' : 'New content saved and published!');
+      showToast(editingMaterial
+        ? `Material updated successfully!${notifyStudents ? ' Students will be notified.' : ''}`
+        : `New content saved and published!${notifyStudents ? ' Students will be notified.' : ''}`
+      );
     } catch {
       showToast('Failed to save material', 'error');
     }
@@ -227,6 +233,7 @@ const ContentManagement = () => {
     });
     setShowForm(true);
     setSelectedIds([]);
+    setNotifyStudents(true);
   };
 
   const handleDelete = async (id) => {
@@ -352,6 +359,24 @@ const ContentManagement = () => {
                   File uploaded successfully
                 </small>
               )}
+            </div>
+
+            {/* Notify Students Toggle */}
+            <div style={{ marginBottom: '14px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input
+                type="checkbox"
+                id="notifyStudents"
+                checked={notifyStudents}
+                onChange={(e) => setNotifyStudents(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+              />
+              <label htmlFor="notifyStudents" style={{ margin: 0, fontSize: '13px', fontWeight: 500, color: '#166534', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <i className="fas fa-bell" style={{ fontSize: '14px' }}></i>
+                Notify students via email &amp; push notification
+              </label>
+              <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#15803d', opacity: 0.8 }}>
+                {notifyStudents ? 'Enabled' : 'Disabled'}
+              </span>
             </div>
 
             <button type="submit" className="btn btn-primary">
