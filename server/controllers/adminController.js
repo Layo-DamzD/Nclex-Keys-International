@@ -335,7 +335,8 @@ const createQuestion = async (req, res) => {
       hotspotImageUrl: req.body?.hotspotImageUrl,
       hotspotTargets: req.body?.hotspotTargets,
       clozeTemplate: req.body?.clozeTemplate,
-      clozeBlanks: req.body?.clozeBlanks
+      clozeBlanks: req.body?.clozeBlanks,
+      uploadedBy: req.user?._id || null,
     };
 
     const question = new Question(payload);
@@ -874,6 +875,7 @@ const bulkImportQuestions = async (req, res) => {
           await Question.findByIdAndUpdate(existing._id, { $set: question }, { runValidators: true });
           updated += 1;
         } else {
+          question.uploadedBy = req.user?._id || null;
           await Question.create(question);
           inserted += 1;
         }
@@ -1072,6 +1074,7 @@ const importFromUrl = async (req, res) => {
           difficulty: 'medium',
           isDraft: true,
           source: q.source,
+          uploadedBy: req.user?._id || null,
         });
         const saved = await question.save();
         savedDrafts.push(saved._id);
@@ -2853,7 +2856,7 @@ const getUploadCounts = async (req, res) => {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-    const [todayCount, monthCount, yearCount, totalDrafts, totalPublished, last30Days] = await Promise.all([
+    const [todayCount, monthCount, yearCount, totalDrafts, totalPublished, last30Days, adminBreakdown] = await Promise.all([
       // Today (published only)
       Question.countDocuments({
         createdAt: { $gte: startOfDay },
@@ -2891,6 +2894,32 @@ const getUploadCounts = async (req, res) => {
         },
         { $sort: { _id: 1 } },
       ]),
+      // Per-admin breakdown: today, this month, this year, total
+      Question.aggregate([
+        {
+          $match: { uploadedBy: { $exists: true, $ne: null } },
+        },
+        {
+          $facet: {
+            today: [
+              { $match: { createdAt: { $gte: startOfDay }, isDraft: { $ne: true } } },
+              { $group: { _id: '$uploadedBy', count: { $sum: 1 } } },
+            ],
+            thisMonth: [
+              { $match: { createdAt: { $gte: startOfMonth }, isDraft: { $ne: true } } },
+              { $group: { _id: '$uploadedBy', count: { $sum: 1 } } },
+            ],
+            thisYear: [
+              { $match: { createdAt: { $gte: startOfYear }, isDraft: { $ne: true } } },
+              { $group: { _id: '$uploadedBy', count: { $sum: 1 } } },
+            ],
+            total: [
+              { $match: { isDraft: { $ne: true } } },
+              { $group: { _id: '$uploadedBy', count: { $sum: 1 } } },
+            ],
+          },
+        },
+      ]),
     ]);
 
     // Build daily map for easy lookup
@@ -2912,6 +2941,28 @@ const getUploadCounts = async (req, res) => {
       });
     }
 
+    // Build per-admin stats map: { adminId: { today, thisMonth, thisYear, total } }
+    const perAdminStats = {};
+    if (adminBreakdown && adminBreakdown.length > 0) {
+      const facet = adminBreakdown[0];
+      const mergeFacet = (arr) => {
+        (arr || []).forEach((entry) => {
+          const id = String(entry._id);
+          if (!perAdminStats[id]) perAdminStats[id] = { today: 0, thisMonth: 0, thisYear: 0, total: 0 };
+        });
+      };
+      // Pre-create all entries
+      mergeFacet(facet.today);
+      mergeFacet(facet.thisMonth);
+      mergeFacet(facet.thisYear);
+      mergeFacet(facet.total);
+      // Fill counts
+      (facet.today || []).forEach((e) => { perAdminStats[String(e._id)].today = e.count; });
+      (facet.thisMonth || []).forEach((e) => { perAdminStats[String(e._id)].thisMonth = e.count; });
+      (facet.thisYear || []).forEach((e) => { perAdminStats[String(e._id)].thisYear = e.count; });
+      (facet.total || []).forEach((e) => { perAdminStats[String(e._id)].total = e.count; });
+    }
+
     res.json({
       today: todayCount,
       thisMonth: monthCount,
@@ -2919,6 +2970,7 @@ const getUploadCounts = async (req, res) => {
       totalPublished,
       totalDrafts,
       dailyBreakdown,
+      perAdminStats,
     });
   } catch (error) {
     console.error('Error fetching upload counts:', error);

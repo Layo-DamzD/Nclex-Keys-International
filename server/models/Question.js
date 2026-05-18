@@ -92,6 +92,9 @@ const questionSchema = new mongoose.Schema({
   
   // Draft status - allows saving incomplete questions
   isDraft: { type: Boolean, default: false },
+
+  // Track which admin uploaded this question
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   
   // Usage statistics
   timesUsed: { type: Number, default: 0 },

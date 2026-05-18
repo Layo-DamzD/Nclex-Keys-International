@@ -402,6 +402,7 @@ const AdminApproval = () => {
               <th>Email</th>
               <th>Role</th>
               <th>Status</th>
+              <th>Uploaded</th>
               <th>Access Code</th>
               <th>Your Students</th>
               <th>Joined</th>
@@ -411,13 +412,18 @@ const AdminApproval = () => {
           <tbody>
             {admins.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                <td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>
                   No admins found
                 </td>
               </tr>
             ) : (
               admins.map((admin) => {
                 const isCurrentAdmin = String(admin._id) === String(currentAdminId || '');
+                const adminStats = uploadCounts?.perAdminStats?.[String(admin._id)];
+                const todayCount = adminStats?.today || 0;
+                const monthCount = adminStats?.thisMonth || 0;
+                const yearCount = adminStats?.thisYear || 0;
+                const totalAdminCount = adminStats?.total || 0;
 
                 return (
                   <tr key={admin._id}>
@@ -438,6 +444,23 @@ const AdminApproval = () => {
                       ) : (
                         <span className="badge badge-warning">Pending</span>
                       )}
+                    </td>
+                    <td>
+                      <div style={{ minWidth: '110px' }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b' }}>
+                            {totalAdminCount.toLocaleString()}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>total</span>
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: 1.5 }}>
+                          <span title="Today" style={{ cursor: 'default' }}>D: <strong>{todayCount}</strong></span>
+                          {' · '}
+                          <span title="This Month" style={{ cursor: 'default' }}>M: <strong>{monthCount}</strong></span>
+                          {' · '}
+                          <span title="This Year" style={{ cursor: 'default' }}>Y: <strong>{yearCount}</strong></span>
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
