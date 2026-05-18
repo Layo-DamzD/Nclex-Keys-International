@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 
 const AdminApproval = () => {
@@ -16,6 +16,10 @@ const AdminApproval = () => {
   const [scopeStudents, setScopeStudents] = useState([]);
   const [scopeSelectedIds, setScopeSelectedIds] = useState([]);
 
+  // Upload counts state
+  const [uploadCounts, setUploadCounts] = useState(null);
+  const [uploadCountsLoading, setUploadCountsLoading] = useState(true);
+
   const isSecretVisible = (adminId, field) => Boolean(visibleSecrets[`${adminId}:${field}`]);
   const toggleSecretVisibility = (adminId, field) => {
     const key = `${adminId}:${field}`;
@@ -30,13 +34,28 @@ const AdminApproval = () => {
 
   useEffect(() => {
     fetchAdmins();
+    fetchUploadCounts();
   }, []);
+
+  const fetchUploadCounts = async () => {
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.get('/api/admin/upload-counts', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUploadCounts(response.data);
+    } catch (err) {
+      console.error('Error fetching upload counts:', err);
+    } finally {
+      setUploadCountsLoading(false);
+    }
+  };
 
   const fetchAdmins = async () => {
     try {
       const token = sessionStorage.getItem('adminToken');
       const response = await axios.get('/api/admin/users/admins', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setAdmins(response.data);
     } catch (err) {
@@ -47,15 +66,28 @@ const AdminApproval = () => {
     }
   };
 
+  // Chart data derived from dailyBreakdown
+  const chartData = useMemo(() => {
+    if (!uploadCounts?.dailyBreakdown) return [];
+    return uploadCounts.dailyBreakdown;
+  }, [uploadCounts]);
+
+  const maxChartValue = useMemo(() => {
+    if (!chartData.length) return 1;
+    return Math.max(...chartData.map((d) => d.count), 1);
+  }, [chartData]);
+
   const handleApprove = async (adminId) => {
     try {
       const token = sessionStorage.getItem('adminToken');
       await axios.put(`/api/admin/approve/${adminId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setAdmins((prev) => prev.map((admin) =>
-        admin._id === adminId ? { ...admin, approved: true } : admin
-      ));
+      setAdmins((prev) =>
+        prev.map((admin) =>
+          admin._id === adminId ? { ...admin, approved: true } : admin
+        )
+      );
     } catch {
       alert('Failed to approve admin');
     }
@@ -66,7 +98,7 @@ const AdminApproval = () => {
     try {
       const token = sessionStorage.getItem('adminToken');
       await axios.delete(`/api/admin/users/${adminId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setAdmins((prev) => prev.filter((admin) => admin._id !== adminId));
     } catch (err) {
@@ -86,7 +118,7 @@ const AdminApproval = () => {
 
       const token = sessionStorage.getItem('adminToken');
       const response = await axios.get(`/api/admin/users/${admin._id}/student-scope`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setScopeStudents(Array.isArray(response.data?.students) ? response.data.students : []);
@@ -158,6 +190,210 @@ const AdminApproval = () => {
         <p style={{ color: '#64748b' }}>Manage and approve administrator accounts</p>
       </div>
 
+      {/* ─── Upload Counters ─── */}
+      <div style={{ marginBottom: '24px' }}>
+        {uploadCountsLoading ? (
+          <div style={{
+            display: 'flex', gap: '16px', flexWrap: 'wrap',
+          }}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} style={{
+                background: '#f1f5f9', borderRadius: '14px', padding: '20px 24px',
+                minWidth: '180px', flex: 1, height: '110px',
+              }}>
+                <div style={{ width: '40%', height: '10px', background: '#e2e8f0', borderRadius: '4px', marginBottom: '10px' }} />
+                <div style={{ width: '60%', height: '24px', background: '#e2e8f0', borderRadius: '4px' }} />
+              </div>
+            ))}
+          </div>
+        ) : uploadCounts ? (
+          <>
+            {/* Stats Cards Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px', marginBottom: '18px' }}>
+              {/* Today */}
+              <div style={{
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                borderRadius: '14px', padding: '18px 20px', border: '1px solid #bfdbfe',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '10px',
+                    background: '#3b82f6', color: '#fff', display: 'grid', placeItems: 'center',
+                    fontSize: '1rem',
+                  }}>
+                    <i className="fas fa-calendar-day" />
+                  </div>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e40af' }}>Today</span>
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#1e40af', lineHeight: 1 }}>
+                  {uploadCounts.today}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '2px' }}>questions uploaded</div>
+              </div>
+
+              {/* This Month */}
+              <div style={{
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                borderRadius: '14px', padding: '18px 20px', border: '1px solid #bbf7d0',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '10px',
+                    background: '#16a34a', color: '#fff', display: 'grid', placeItems: 'center',
+                    fontSize: '1rem',
+                  }}>
+                    <i className="fas fa-calendar-alt" />
+                  </div>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#166534' }}>This Month</span>
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#166534', lineHeight: 1 }}>
+                  {uploadCounts.thisMonth}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '2px' }}>questions uploaded</div>
+              </div>
+
+              {/* This Year */}
+              <div style={{
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '14px', padding: '18px 20px', border: '1px solid #fcd34d',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '10px',
+                    background: '#d97706', color: '#fff', display: 'grid', placeItems: 'center',
+                    fontSize: '1rem',
+                  }}>
+                    <i className="fas fa-calendar" />
+                  </div>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#92400e' }}>This Year</span>
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#92400e', lineHeight: 1 }}>
+                  {uploadCounts.thisYear}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#d97706', marginTop: '2px' }}>questions uploaded</div>
+              </div>
+
+              {/* Total Published */}
+              <div style={{
+                background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+                borderRadius: '14px', padding: '18px 20px', border: '1px solid #ddd6fe',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '10px',
+                    background: '#7c3aed', color: '#fff', display: 'grid', placeItems: 'center',
+                    fontSize: '1rem',
+                  }}>
+                    <i className="fas fa-database" />
+                  </div>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5b21b6' }}>Total Published</span>
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#5b21b6', lineHeight: 1 }}>
+                  {uploadCounts.totalPublished?.toLocaleString()}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#7c3aed', marginTop: '2px' }}>questions in bank</div>
+              </div>
+
+              {/* Drafts */}
+              <div style={{
+                background: 'linear-gradient(135deg, #fff1f2 0%, #fecdd3 100%)',
+                borderRadius: '14px', padding: '18px 20px', border: '1px solid #fda4af',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '10px',
+                    background: '#dc2626', color: '#fff', display: 'grid', placeItems: 'center',
+                    fontSize: '1rem',
+                  }}>
+                    <i className="fas fa-file-pen" />
+                  </div>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#991b1b' }}>Drafts</span>
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#991b1b', lineHeight: 1 }}>
+                  {uploadCounts.totalDrafts?.toLocaleString()}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '2px' }}>unfinished questions</div>
+              </div>
+            </div>
+
+            {/* Mini Bar Chart: Last 30 Days */}
+            {chartData.length > 0 && (
+              <div style={{
+                background: '#fff',
+                borderRadius: '14px',
+                padding: '18px 20px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h6 style={{ margin: 0, fontWeight: 700, color: '#334155', fontSize: '0.9rem' }}>
+                    <i className="fas fa-chart-bar me-2" style={{ color: '#6366f1' }}></i>
+                    Upload Activity — Last 30 Days
+                  </h6>
+                  <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                    Total: {chartData.reduce((sum, d) => sum + d.count, 0)} questions
+                  </span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  gap: '2px',
+                  height: '100px',
+                  padding: '0 2px',
+                }}>
+                  {chartData.map((day, i) => {
+                    const heightPercent = maxChartValue > 0 ? (day.count / maxChartValue) * 100 : 0;
+                    const isToday = i === chartData.length - 1;
+                    return (
+                      <div
+                        key={day.date}
+                        title={`${day.label}: ${day.count} question${day.count !== 1 ? 's' : ''}`}
+                        style={{
+                          flex: 1,
+                          minWidth: '0',
+                          height: `${Math.max(heightPercent, 2)}%`,
+                          background: isToday
+                            ? 'linear-gradient(180deg, #6366f1 0%, #818cf8 100%)'
+                            : day.count > 0
+                              ? 'linear-gradient(180deg, #a5b4fc 0%, #c7d2fe 100%)'
+                              : '#f1f5f9',
+                          borderRadius: '3px 3px 0 0',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer',
+                          position: 'relative',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.opacity = '0.75';
+                          e.currentTarget.style.transform = 'scaleY(1.05)';
+                          e.currentTarget.style.transformOrigin = 'bottom';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                          e.currentTarget.style.transform = 'scaleY(1)';
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                {/* Date labels */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '6px',
+                  fontSize: '0.68rem',
+                  color: '#94a3b8',
+                }}>
+                  <span>{chartData[0]?.label}</span>
+                  <span>{chartData[Math.floor(chartData.length / 2)]?.label}</span>
+                  <span style={{ fontWeight: 600, color: '#6366f1' }}>{chartData[chartData.length - 1]?.label} (Today)</span>
+                </div>
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
+
+      {/* ─── Admin Table ─── */}
       <div className="form-card">
         <table className="data-table">
           <thead>
@@ -260,6 +496,7 @@ const AdminApproval = () => {
         </table>
       </div>
 
+      {/* Student Scope Modal */}
       {scopeModalOpen && (
         <div
           style={{
@@ -270,7 +507,7 @@ const AdminApproval = () => {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1200,
-            padding: '20px'
+            padding: '20px',
           }}
         >
           <div className="form-card" style={{ width: '100%', maxWidth: '720px', maxHeight: '85vh', overflowY: 'auto' }}>

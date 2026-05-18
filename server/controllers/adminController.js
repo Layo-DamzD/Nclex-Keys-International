@@ -2833,8 +2833,102 @@ const sendExamSupportMessageAdmin = async (req, res) => {
   }
 };
 
+// ─── Upload Counts: daily, monthly, yearly ───
+const getUploadCounts = async (req, res) => {
+  try {
+    const Question = require('../models/Question');
+    const now = new Date();
+
+    // Start of today (midnight)
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Start of this month
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Start of this year
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    // Also get last 30 days daily breakdown for the mini chart
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    const [todayCount, monthCount, yearCount, totalDrafts, totalPublished, last30Days] = await Promise.all([
+      // Today (published only)
+      Question.countDocuments({
+        createdAt: { $gte: startOfDay },
+        isDraft: { $ne: true },
+      }),
+      // This month (published only)
+      Question.countDocuments({
+        createdAt: { $gte: startOfMonth },
+        isDraft: { $ne: true },
+      }),
+      // This year (published only)
+      Question.countDocuments({
+        createdAt: { $gte: startOfYear },
+        isDraft: { $ne: true },
+      }),
+      // Total drafts
+      Question.countDocuments({ isDraft: true }),
+      // Total published
+      Question.countDocuments({ isDraft: { $ne: true } }),
+      // Daily breakdown for last 30 days (published only)
+      Question.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: thirtyDaysAgo },
+            isDraft: { $ne: true },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    // Build daily map for easy lookup
+    const dailyMap = {};
+    last30Days.forEach((d) => {
+      dailyMap[d._id] = d.count;
+    });
+
+    // Fill in missing days with 0
+    const dailyBreakdown = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      dailyBreakdown.push({
+        date: key,
+        label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        count: dailyMap[key] || 0,
+      });
+    }
+
+    res.json({
+      today: todayCount,
+      thisMonth: monthCount,
+      thisYear: yearCount,
+      totalPublished,
+      totalDrafts,
+      dailyBreakdown,
+    });
+  } catch (error) {
+    console.error('Error fetching upload counts:', error);
+    res.status(500).json({ message: 'Failed to fetch upload counts' });
+  }
+};
+
 module.exports = {
   getAdminStats,
+  getUploadCounts,
   exportQuestions,
   getQuestions,
   getQuestionById,

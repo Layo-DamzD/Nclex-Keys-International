@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, adminOnly, superAdminOnly } = require('../middleware/authMiddleware');
 const {
   getAdminStats,
+  getUploadCounts,
   exportQuestions,
   getQuestions,
   getQuestionById,
@@ -70,6 +71,7 @@ const upload = multer({
 
 // Dashboard stats
 router.get('/stats', protect, adminOnly, getAdminStats);
+router.get('/upload-counts', protect, adminOnly, getUploadCounts);
 
 // Question routes
 router.get('/questions/export', protect, adminOnly, exportQuestions);
