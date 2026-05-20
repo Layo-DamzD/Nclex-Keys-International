@@ -26,6 +26,7 @@ const {
   getStudentProgress,
   clearStudentDeviceHistory,
   removeStudentDevice,
+  recalculateTestScores,
   getTestResultForReview,
   getStudyMaterials,
   createStudyMaterial,
@@ -85,6 +86,9 @@ router.delete('/questions/:id', protect, adminOnly, deleteQuestion);
 router.post('/questions', protect, adminOnly, createQuestion);
 router.put('/questions/:id', protect, adminOnly, updateQuestion);
 router.post('/questions/bulk-import', protect, adminOnly, upload.single('file'), bulkImportQuestions);
+
+// Score recalculation
+router.post('/recalculate-scores', protect, adminOnly, recalculateTestScores);
 
 // Student management routes
 router.get('/students', protect, adminOnly, getStudents);

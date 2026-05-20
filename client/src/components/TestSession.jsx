@@ -1314,16 +1314,15 @@ const TestSession = () => {
     // Normalize correct answer (handle both array and string formats)
     const correct = [...new Set(parseAnswerToArray(correctAnswer))];
 
-    // Proportional scoring with negative marking:
-    // Score = max(0, correctPicked - wrongPicked) / totalCorrect
-    // e.g., 4 correct out of 5 with 0 wrong = 4/5 = 0.8 pts
-    // e.g., 4 correct out of 5 with 1 wrong = 3/5 = 0.6 pts
-    const totalMarks = 1;
+    // Per-option scoring: each correct option = 1 point
+    // totalMarks = number of correct options (e.g., 3 correct = 3 points max)
+    // earnedMarks = correctPicked - wrongPicked (capped at 0)
     const totalCorrect = correct.length || 1;
+    const totalMarks = totalCorrect;
     const correctPicked = user.filter((choice) => correct.includes(choice)).length;
     const wrongPicked = user.filter((choice) => !correct.includes(choice)).length;
-    const earnedMarks = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
-    const isCorrect = earnedMarks >= 1 ? true : (earnedMarks > 0 ? 'partial' : false);
+    const earnedMarks = Math.max(0, correctPicked - wrongPicked);
+    const isCorrect = earnedMarks >= totalCorrect ? true : (earnedMarks > 0 ? 'partial' : false);
 
     return {
       isCorrect,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
@@ -11,6 +11,9 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const searchTimerRef = useRef(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filters, setFilters] = useState({
     category: '',
     type: '',
@@ -39,8 +42,21 @@ const ManageQuestions = ({ onSectionChange }) => {
   }, [searchParams]);
 
   useEffect(() => {
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, []);
+
+  // Debounce search input (400ms)
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }, 400);
+  }, [searchInput]);
+
+  useEffect(() => {
     fetchQuestions();
-  }, [filters, pagination.page, pagination.perPage]);
+  }, [filters, pagination.page, pagination.perPage, debouncedSearch]);
 
   const fetchQuestions = async () => {
     setLoading(true);
@@ -55,6 +71,7 @@ const ManageQuestions = ({ onSectionChange }) => {
         ...(filters.uncategorized && { uncategorized: 'true' }),
         ...(!filters.uncategorized && filters.category && { category: filters.category }),
         ...(!filters.uncategorized && filters.type && { type: filters.type }),
+        ...(debouncedSearch.trim() && { search: debouncedSearch.trim() }),
       });
 
       const response = await axios.get(`/api/admin/questions?${params.toString()}`, {
@@ -471,6 +488,8 @@ const ManageQuestions = ({ onSectionChange }) => {
       .replace(/^[\uFEFF"'`\s]*\d+\s*[:.)-]\s*/i, '')
       .trim();
 
+  const getOptionLetter = (index) => String.fromCharCode(65 + index);
+
   const formatAnswerForPreview = (q) => {
     if (!q) return '';
     if (q.type === 'multiple-choice') {
@@ -496,13 +515,272 @@ const ManageQuestions = ({ onSectionChange }) => {
     return Array.isArray(q.correctAnswer) ? q.correctAnswer.join(', ') : String(q.correctAnswer || 'N/A');
   };
 
+  // ─── Test-like question renderer for preview ───
+  const renderTestLikePreview = (q) => {
+    if (!q) return null;
+    const isCorrectOption = (type, idx) => {
+      if (type === 'multiple-choice') {
+        const letter = getOptionLetter(idx);
+        return String(q.correctAnswer || '').trim() === letter;
+      }
+      if (type === 'sata') {
+        const letter = getOptionLetter(idx);
+        return Array.isArray(q.correctAnswer) && q.correctAnswer.includes(letter);
+      }
+      return false;
+    };
+
+    return (
+      <div style={{ maxWidth: '100%' }}>
+        {/* Question meta */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+          <span className={`badge ${getTypeBadge(q.type)}`} style={{ fontSize: '0.75rem' }}>{getTypeLabel(q.type)}</span>
+          <span className="badge" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.75rem' }}>{q.category}</span>
+          <span className="badge" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.75rem' }}>{q.subcategory}</span>
+          <span className={`badge ${getDifficultyBadge(q.difficulty)}`} style={{ fontSize: '0.75rem' }}>{q.difficulty}</span>
+        </div>
+
+        {/* Question text */}
+        <div style={{
+          fontSize: '1rem', fontWeight: 500, lineHeight: 1.7, marginBottom: '20px',
+          color: '#1e293b', whiteSpace: 'pre-line',
+        }}>
+          {cleanQuestionPrefix(q.questionText)}
+          {q.questionImageUrl && (
+            <div style={{ marginTop: '12px' }}>
+              <img src={q.questionImageUrl} alt="Question" style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+            </div>
+          )}
+        </div>
+
+        {/* Options - MC and SATA */}
+        {(q.type === 'multiple-choice' || q.type === 'sata') && Array.isArray(q.options) && q.options.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            {q.options.map((opt, idx) => {
+              const letter = getOptionLetter(idx);
+              const correct = isCorrectOption(q.type, idx);
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '12px',
+                    padding: '12px 16px', borderRadius: '10px',
+                    border: `2px solid ${correct ? '#22c55e' : '#e2e8f0'}`,
+                    background: correct ? '#f0fdf4' : '#fff',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{
+                    width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                    display: 'grid', placeItems: 'center',
+                    background: correct ? '#22c55e' : '#f1f5f9',
+                    color: correct ? '#fff' : '#64748b',
+                    fontWeight: 700, fontSize: '0.85rem',
+                    border: correct ? 'none' : '2px solid #cbd5e1',
+                  }}>
+                    {letter}
+                  </div>
+                  <div style={{ flex: 1, paddingTop: '4px', fontSize: '0.92rem', color: '#334155', lineHeight: 1.5 }}>
+                    {opt}
+                  </div>
+                  {correct && (
+                    <i className="fas fa-check-circle" style={{ color: '#22c55e', fontSize: '1.1rem', marginTop: '4px', flexShrink: 0 }} />
+                  )}
+                </div>
+              );
+            })}
+            {q.type === 'sata' && (
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', marginTop: '-4px' }}>
+                Select All That Apply — {Array.isArray(q.correctAnswer) ? q.correctAnswer.length : 0} correct option(s)
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Fill-blank */}
+        {q.type === 'fill-blank' && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{
+              display: 'inline-block', padding: '10px 16px', borderRadius: '8px',
+              border: '2px solid #e2e8f0', background: '#f8fafc',
+              fontSize: '0.95rem', color: '#334155', minWidth: '200px',
+            }}>
+              {q.correctAnswer || 'N/A'}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '6px' }}>
+              Correct answer: <strong>{q.correctAnswer || 'N/A'}</strong>
+            </div>
+          </div>
+        )}
+
+        {/* Matrix */}
+        {q.type === 'matrix' && Array.isArray(q.matrixRows) && Array.isArray(q.matrixColumns) && (
+          <div style={{ marginBottom: '20px', overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '10px 14px', background: '#f1f5f9', border: '1px solid #e2e8f0', textAlign: 'left', fontSize: '0.85rem', fontWeight: 600 }}>Row</th>
+                  {q.matrixColumns.map((col, ci) => (
+                    <th key={ci} style={{ padding: '10px 14px', background: '#f1f5f9', border: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600 }}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {q.matrixRows.map((row, ri) => (
+                  <tr key={ri}>
+                    <td style={{ padding: '10px 14px', border: '1px solid #e2e8f0', fontWeight: 500, fontSize: '0.9rem' }}>{row.rowText}</td>
+                    {q.matrixColumns.map((_, ci) => {
+                      const correctCols = Array.isArray(row.correctColumns) && row.correctColumns.length > 0
+                        ? row.correctColumns : (row.correctColumn !== undefined ? [row.correctColumn] : []);
+                      const isCorrect = correctCols.includes(ci);
+                      return (
+                        <td key={ci} style={{
+                          padding: '10px 14px', border: '1px solid #e2e8f0', textAlign: 'center',
+                          background: isCorrect ? '#dcfce7' : '#fff',
+                        }}>
+                          {isCorrect && <i className="fas fa-check" style={{ color: '#22c55e', fontWeight: 700 }} />}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Hotspot */}
+        {q.type === 'hotspot' && q.hotspotImageUrl && (
+          <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <img src={q.hotspotImageUrl} alt="Hotspot" style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+              {Array.isArray(q.hotspotTargets) && q.hotspotTargets.map((t, i) => {
+                const isCorrect = String(q.correctAnswer || '').trim() === String(t.id || '').trim();
+                return (
+                  <div key={i} style={{
+                    position: 'absolute', left: `${t.x}%`, top: `${t.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                    width: `${t.radius * 2}%`, height: `${t.radius * 2}%`,
+                    borderRadius: '50%',
+                    border: `3px solid ${isCorrect ? '#22c55e' : '#94a3b8'}`,
+                    background: isCorrect ? 'rgba(34,197,94,0.25)' : 'rgba(148,163,184,0.15)',
+                  }} title={`${t.label || t.id}${isCorrect ? ' (Correct)' : ''}`} />
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Cloze dropdown */}
+        {q.type === 'cloze-dropdown' && q.clozeTemplate && (
+          <div style={{ marginBottom: '20px', fontSize: '1rem', lineHeight: 1.8, color: '#334155' }}>
+            {q.clozeTemplate.split(/(\{\{[^}]+\}\})/).map((part, i) => {
+              const match = part.match(/^\{\{(.+?)\}\}$/);
+              if (match) {
+                const key = match[1];
+                const answer = q.correctAnswer?.[key] || '?';
+                return (
+                  <span key={i} style={{
+                    display: 'inline-block', padding: '2px 10px', margin: '0 2px',
+                    background: '#dcfce7', border: '1px solid #22c55e', borderRadius: '6px',
+                    fontWeight: 600, color: '#166534', fontSize: '0.9rem',
+                  }}>
+                    {answer}
+                  </span>
+                );
+              }
+              return <span key={i}>{part}</span>;
+            })}
+          </div>
+        )}
+
+        {/* Drag-drop */}
+        {q.type === 'drag-drop' && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '8px', fontWeight: 600 }}>Correct Order:</div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {(String(q.correctAnswer || '').split('|').filter(Boolean)).map((item, i) => (
+                <span key={i} style={{
+                  padding: '8px 14px', background: '#eff6ff', border: '1px solid #93c5fd',
+                  borderRadius: '8px', fontSize: '0.88rem', color: '#1e40af', fontWeight: 500,
+                }}>
+                  {i + 1}. {item.trim()}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Highlight */}
+        {q.type === 'highlight' && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '8px', fontWeight: 600 }}>Highlight Answer:</div>
+            <div style={{
+              padding: '12px 16px', background: '#fffbeb', border: '1px solid #fcd34d',
+              borderRadius: '8px', fontSize: '0.9rem', color: '#92400e',
+            }}>
+              {q.correctAnswer || 'N/A'}
+            </div>
+          </div>
+        )}
+
+        {/* Rationale */}
+        <div style={{
+          marginTop: '20px', padding: '16px', borderRadius: '10px',
+          background: 'linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%)',
+          border: '1px solid #bfdbfe',
+        }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e40af', marginBottom: '6px' }}>
+            <i className="fas fa-lightbulb me-1" style={{ color: '#f59e0b' }}></i> Rationale
+          </div>
+          <div style={{ fontSize: '0.88rem', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+            {q.rationale || 'No rationale provided'}
+          </div>
+          {q.rationaleImageUrl && (
+            <div style={{ marginTop: '10px' }}>
+              <img src={q.rationaleImageUrl} alt="Rationale" style={{ maxWidth: '100%', borderRadius: '6px' }} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) return <div className="text-center py-5">Loading questions...</div>;
 
   return (
     <div className="manage-questions">
       <div className="header" style={{ marginBottom: '20px' }}>
         <h1>Manage Questions</h1>
-        <div className="manage-questions-filter-row" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+        <div className="manage-questions-filter-row" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'relative', width: 'min(280px, 100%)' }}>
+            <i className="fas fa-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.85rem' }} />
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search questions by text..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              style={{ paddingLeft: '36px', width: '100%' }}
+            />
+            {searchInput && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => {
+                  setSearchInput('');
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                style={{
+                  position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', color: '#94a3b8', padding: '2px 6px', cursor: 'pointer', fontSize: '0.8rem',
+                }}
+                aria-label="Clear search"
+              >
+                <i className="fas fa-times" />
+              </button>
+            )}
+          </div>
           <select
             name="category"
             value={filters.uncategorized ? '__uncategorized__' : filters.category}
@@ -955,65 +1233,61 @@ const ManageQuestions = ({ onSectionChange }) => {
 
       {previewQuestion && (
         <div className="modal fade show d-block" tabIndex="-1" role="dialog" aria-modal="true" style={{ background: 'rgba(2,6,23,0.6)' }}>
-          <div className="modal-dialog modal-lg modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Question Preview</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  aria-label="Close"
-                  onClick={() => {
-                    setPreviewQuestion(null);
-                    setPreviewIndex(-1);
-                  }}
-                />
+          <div className="modal-dialog modal-lg modal-dialog-centered" style={{ maxWidth: '800px' }}>
+            <div className="modal-content" style={{ borderRadius: '16px', border: 'none', overflow: 'hidden' }}>
+              <div className="modal-header" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '14px 20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <h5 className="modal-title" style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: '#334155' }}>
+                    <i className="fas fa-eye me-2" style={{ color: '#6366f1' }}></i>
+                    Question Preview
+                    <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 400, marginLeft: '8px' }}>
+                      ({previewIndex + 1} of {questions.length})
+                    </span>
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    aria-label="Close"
+                    onClick={() => {
+                      setPreviewQuestion(null);
+                      setPreviewIndex(-1);
+                    }}
+                  />
+                </div>
               </div>
-              <div className="modal-body">
-                <p><strong>Type:</strong> {previewQuestion.type}</p>
-                <p><strong>Category:</strong> {previewQuestion.category} / {previewQuestion.subcategory}</p>
-                <p><strong>Question:</strong> {cleanQuestionPrefix(previewQuestion.questionText)}</p>
-                {Array.isArray(previewQuestion.options) && previewQuestion.options.length > 0 && (
-                  <div>
-                    <strong>Options:</strong>
-                    <ol type="A">
-                      {previewQuestion.options.map((opt, idx) => (
-                        <li key={`${previewQuestion._id}-opt-${idx}`}>{opt}</li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-                <p><strong>Correct Answer:</strong> {formatAnswerForPreview(previewQuestion)}</p>
-                <p style={{ whiteSpace: 'pre-line' }}><strong>Rationale:</strong> {previewQuestion.rationale || 'N/A'}</p>
+              <div className="modal-body" style={{ padding: '24px', maxHeight: '65vh', overflowY: 'auto' }}>
+                {renderTestLikePreview(previewQuestion)}
               </div>
-              <div className="modal-footer d-flex justify-content-between align-items-center w-100">
+              <div className="modal-footer d-flex justify-content-between align-items-center w-100" style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: '12px 20px' }}>
                 <div className="d-flex align-items-center gap-2">
                   <button
                     type="button"
-                    className="btn btn-outline-primary"
+                    className="btn btn-outline-primary btn-sm"
                     onClick={() => navigatePreview(-1)}
                     disabled={previewLoading || previewIndex <= 0}
                   >
-                    Previous
+                    <i className="fas fa-chevron-left me-1"></i> Previous
                   </button>
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-primary btn-sm"
                     onClick={() => navigatePreview(1)}
                     disabled={previewLoading || previewIndex < 0 || previewIndex >= questions.length - 1}
                   >
-                    Next
+                    Next <i className="fas fa-chevron-right ms-1"></i>
                   </button>
                 </div>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn btn-warning btn-sm"
                   onClick={() => {
+                    const q = previewQuestion;
                     setPreviewQuestion(null);
                     setPreviewIndex(-1);
+                    handleEdit(q);
                   }}
                 >
-                  Close
+                  <i className="fas fa-pen me-1"></i> Edit Question
                 </button>
               </div>
             </div>

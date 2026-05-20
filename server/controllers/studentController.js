@@ -215,16 +215,14 @@ const submitTest = async (req, res) => {
           return resolved || serverNormalizeToLetter(v);
         }).filter(Boolean) : parseToArray(userAnswer, true))];
         const correctArr = [...new Set(parseToArray(correctAnswer, true))];
-        // Proportional scoring with negative marking:
-        // Score = max(0, correctPicked - wrongPicked) / totalCorrect
-        // e.g., 4 correct out of 5 with 0 wrong = 4/5 = 0.8 pts
-        // e.g., 4 correct out of 5 with 1 wrong = 3/5 = 0.6 pts
-        const totalMarks = 1;
-        const totalCorrect = correctArr.length || 1;
+        // Per-option scoring: each correct option = 1 point
+        // totalMarks = number of correct options
+        // earnedMarks = correctPicked - wrongPicked (capped at 0)
+        const totalMarks = correctArr.length || 1;
         const correctPicked = userArr.filter(c => correctArr.includes(c)).length;
         const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
-        const earnedMarks = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
-        const isCorrect = earnedMarks >= 1 ? true : (earnedMarks > 0 ? 'partial' : false);
+        const earnedMarks = Math.max(0, correctPicked - wrongPicked);
+        const isCorrect = earnedMarks >= totalMarks ? true : (earnedMarks > 0 ? 'partial' : false);
         return { isCorrect, earnedMarks, totalMarks };
       }
 
@@ -1474,22 +1472,22 @@ const evaluateCATAnswer = (question, answer, scoringConfig = {}) => {
       else wrongPicked++;
     }
 
-    const totalMarks = 1;
-    const totalCorrect = correctSet.size || 1;
+    // Per-option scoring: each correct option = 1 point
+    const totalMarks = correctSet.size || 1;
     let earnedMarks;
 
     if (sataMode === 'all_or_nothing') {
-      // Must pick ALL correct and NO wrong
-      earnedMarks = (correctPicked === totalCorrect && wrongPicked === 0) ? 1 : 0;
+      // Must pick ALL correct and NO wrong — all or nothing on total points
+      earnedMarks = (correctPicked === totalMarks && wrongPicked === 0) ? totalMarks : 0;
     } else if (sataMode === 'partial_only') {
-      // Score = correctPicked / totalCorrect (no penalty for wrong)
-      earnedMarks = correctPicked / totalCorrect;
+      // No penalty for wrong: each correct = 1 point
+      earnedMarks = correctPicked;
     } else {
-      // partial_negative (default): max(0, correct - wrong) / totalCorrect
-      earnedMarks = Math.max(0, correctPicked - wrongPicked) / totalCorrect;
+      // partial_negative (default): max(0, correct - wrong)
+      earnedMarks = Math.max(0, correctPicked - wrongPicked);
     }
 
-    const isCorrect = earnedMarks >= 1 ? true : (earnedMarks > 0 ? 'partial' : false);
+    const isCorrect = earnedMarks >= totalMarks ? true : (earnedMarks > 0 ? 'partial' : false);
     return { isCorrect, earnedMarks, totalMarks };
   }
 
@@ -3326,10 +3324,13 @@ const exitTestSession = async (req, res) => {
               };
               const userArr = [...new Set(parseArr(userAnswer))];
               const correctArr = [...new Set(parseArr(subQ.correctAnswer))];
+              const totalMarks = correctArr.length || 1;
+              const correctPicked = userArr.filter(c => correctArr.includes(c)).length;
               const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
-              const totalCorrect = correctArr.length || 1;
-              const earned = Math.max(0, userArr.length - wrongPicked) / totalCorrect;
-              if (earned >= 1) isCorrect = true;
+              const earned = Math.max(0, correctPicked - wrongPicked);
+              const sataEarnedMarks = earned;
+              const sataTotalMarks = totalMarks;
+              if (earned >= totalMarks) isCorrect = true;
               else if (earned > 0) isCorrect = 'partial';
               else isCorrect = false;
             } else if (subQ.type === 'fill-blank') {
@@ -3370,8 +3371,10 @@ const exitTestSession = async (req, res) => {
             }
           }
 
-          const earnedMarks = isCorrect === true ? 1 : (isCorrect === 'partial' ? 0.5 : 0);
-          const totalMarks = 1;
+          const sataCaseEarned = (subQ?.type === 'sata') ? sataEarnedMarks : undefined;
+          const sataCaseTotal = (subQ?.type === 'sata') ? sataTotalMarks : undefined;
+          const earnedMarks = sataCaseEarned !== undefined ? sataCaseEarned : (isCorrect === true ? 1 : (isCorrect === 'partial' ? 0.5 : 0));
+          const totalMarks = sataCaseTotal !== undefined ? sataCaseTotal : 1;
 
           allResults.push({
             questionId: subQ._id,
@@ -3422,10 +3425,13 @@ const exitTestSession = async (req, res) => {
             };
             const userArr = [...new Set(parseArr(userAnswer))];
             const correctArr = [...new Set(parseArr(q.correctAnswer))];
+            const totalMarks = correctArr.length || 1;
+            const correctPicked = userArr.filter(c => correctArr.includes(c)).length;
             const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
-            const totalCorrect = correctArr.length || 1;
-            const earned = Math.max(0, userArr.length - wrongPicked) / totalCorrect;
-            if (earned >= 1) isCorrect = true;
+            const earned = Math.max(0, correctPicked - wrongPicked);
+            const sataEarnedMarks = earned;
+            const sataTotalMarks = totalMarks;
+            if (earned >= totalMarks) isCorrect = true;
             else if (earned > 0) isCorrect = 'partial';
             else isCorrect = false;
           } else if (q.type === 'fill-blank') {
@@ -3465,8 +3471,10 @@ const exitTestSession = async (req, res) => {
           }
         }
 
-        const earnedMarks = isCorrect === true ? 1 : (isCorrect === 'partial' ? 0.5 : 0);
-        const totalMarks = 1;
+        const sataStandaloneEarned = (q?.type === 'sata') ? sataEarnedMarks : undefined;
+        const sataStandaloneTotal = (q?.type === 'sata') ? sataTotalMarks : undefined;
+        const earnedMarks = sataStandaloneEarned !== undefined ? sataStandaloneEarned : (isCorrect === true ? 1 : (isCorrect === 'partial' ? 0.5 : 0));
+        const totalMarks = sataStandaloneTotal !== undefined ? sataStandaloneTotal : 1;
 
         allResults.push({
           questionId: q._id,

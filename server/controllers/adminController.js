@@ -183,7 +183,7 @@ const exportQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getQuestions = async (req, res) => {
   try {
-    const { category, subcategory, type, difficulty, clientNeed, uncategorized, isDraft } = req.query;
+    const { category, subcategory, type, difficulty, clientNeed, uncategorized, isDraft, search } = req.query;
     const rawPage = Number(req.query.page || 1);
     const rawLimit = String(req.query.limit || '10').trim().toLowerCase();
     const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
@@ -198,6 +198,10 @@ const getQuestions = async (req, res) => {
     if (clientNeed) filter.clientNeed = clientNeed;
     if (isDraft !== undefined && isDraft !== '') {
       filter.isDraft = isDraft === 'true';
+    }
+    // Text search on questionText
+    if (search && String(search).trim()) {
+      filter.questionText = { $regex: String(search).trim(), $options: 'i' };
     }
 
     // Handle uncategorized filter: return questions not matching any
@@ -3029,5 +3033,159 @@ module.exports = {
   updateAdminPasswordSettings,
   clearAdminDeviceSettings,
   clearStudentDeviceHistory,
-  removeStudentDevice
+  removeStudentDevice,
+  recalculateTestScores,
+};
+
+// ─── Recalculate all test scores with updated SATA scoring ───
+const recalculateTestScores = async (req, res) => {
+  try {
+    const TestResult = require('../models/testResult');
+    const Question = require('../models/Question');
+
+    // Fetch all completed or exited test results
+    const results = await TestResult.find({
+      status: { $in: ['completed', 'exited'] },
+    }).lean();
+
+    if (!results.length) {
+      return res.json({ message: 'No test results found to recalculate.', updated: 0 });
+    }
+
+    // Gather all question IDs for batch lookup
+    const questionIds = new Set();
+    for (const result of results) {
+      if (Array.isArray(result.answers)) {
+        for (const ans of result.answers) {
+          if (ans.questionId) questionIds.add(String(ans.questionId));
+        }
+      }
+    }
+
+    // Batch fetch questions
+    const questions = await Question.find({
+      _id: { $in: Array.from(questionIds) },
+    }).lean();
+    const questionMap = new Map();
+    for (const q of questions) {
+      questionMap.set(String(q._id), q);
+    }
+
+    // Helper: normalize answer to letter
+    const norm = (v) => {
+      if (!v) return '';
+      const s = String(v).trim().toUpperCase();
+      if (/^[A-Z]$/.test(s)) return s;
+      const m = s.match(/^(\d+)$/);
+      if (m && parseInt(m[1], 10) >= 1 && parseInt(m[1], 10) <= 26) return String.fromCharCode(64 + parseInt(m[1], 10));
+      return s;
+    };
+
+    // Helper: resolve text to option letter
+    const resolveToLetter = (val, opts) => {
+      if (!val || !Array.isArray(opts)) return null;
+      const trimmed = String(val).trim();
+      for (let i = 0; i < opts.length; i++) {
+        if (String(opts[i] || '').trim().toLowerCase() === trimmed.toLowerCase()) {
+          return String.fromCharCode(65 + i);
+        }
+      }
+      return null;
+    };
+
+    // Helper: parse answer to array of letters
+    const parseToArray = (answer, opts) => {
+      if (!answer) return [];
+      if (Array.isArray(answer)) return answer.map(v => resolveToLetter(v, opts) || norm(v)).filter(Boolean);
+      const s = String(answer).trim();
+      if (s.includes(',')) return s.split(',').map(v => { const r = resolveToLetter(v.trim(), opts); return r || norm(v.trim()); }).filter(Boolean);
+      if (/^[A-Za-z]+$/.test(s) && s.length <= 26) return s.toUpperCase().split('').filter(c => /[A-Z]/.test(c));
+      if (s.includes(';')) return s.split(';').map(v => { const r = resolveToLetter(v.trim(), opts); return r || norm(v.trim()); }).filter(Boolean);
+      const r = resolveToLetter(s, opts);
+      return r ? [r] : (norm(s) ? [norm(s)] : []);
+    };
+
+    // Re-evaluate a single answer
+    const reEvaluate = (ans, q) => {
+      if (!ans || !q) return { earnedMarks: ans.earnedMarks ?? 0, totalMarks: ans.totalMarks ?? 1, isCorrect: ans.isCorrect };
+      const type = ans.type || q.type;
+      const correctAnswer = ans.correctAnswer || q.correctAnswer;
+      const opts = ans.options || q.options || [];
+
+      if (type === 'sata') {
+        const userArr = [...new Set(parseToArray(ans.userAnswer, opts))];
+        const correctArr = [...new Set(parseToArray(correctAnswer, opts))];
+        const totalMarks = correctArr.length || 1;
+        const correctPicked = userArr.filter(c => correctArr.includes(c)).length;
+        const wrongPicked = userArr.filter(c => !correctArr.includes(c)).length;
+        const earnedMarks = Math.max(0, correctPicked - wrongPicked);
+        const isCorrect = earnedMarks >= totalMarks ? true : (earnedMarks > 0 ? 'partial' : false);
+        return { earnedMarks, totalMarks, isCorrect };
+      }
+
+      // For non-SATA, keep original scoring
+      return { earnedMarks: ans.earnedMarks ?? 0, totalMarks: ans.totalMarks ?? 1, isCorrect: ans.isCorrect };
+    };
+
+    let updated = 0;
+    let changed = 0;
+
+    for (const result of results) {
+      if (!Array.isArray(result.answers) || !result.answers.length) continue;
+
+      let earnedTotal = 0;
+      let possibleTotal = 0;
+      let answersChanged = false;
+
+      for (let i = 0; i < result.answers.length; i++) {
+        const ans = result.answers[i];
+        const q = questionMap.get(String(ans.questionId));
+        const oldEarned = ans.earnedMarks ?? 0;
+        const oldTotal = ans.totalMarks ?? 1;
+
+        const evaluation = reEvaluate(ans, q);
+        result.answers[i].earnedMarks = evaluation.earnedMarks;
+        result.answers[i].totalMarks = evaluation.totalMarks;
+        result.answers[i].isCorrect = evaluation.isCorrect;
+
+        earnedTotal += evaluation.earnedMarks;
+        possibleTotal += evaluation.totalMarks;
+
+        if (evaluation.earnedMarks !== oldEarned || evaluation.totalMarks !== oldTotal) {
+          answersChanged = true;
+        }
+      }
+
+      if (!answersChanged) continue;
+
+      const percentage = possibleTotal > 0 ? Math.round((earnedTotal / possibleTotal) * 100) : 0;
+      const passed = possibleTotal > 0 && (earnedTotal / possibleTotal) >= 0.7;
+
+      await TestResult.updateOne(
+        { _id: result._id },
+        {
+          $set: {
+            answers: result.answers,
+            earnedPoints: Number(earnedTotal.toFixed(2)),
+            totalPoints: Math.round(possibleTotal),
+            percentage,
+            passed,
+            score: Number(earnedTotal.toFixed(2)),
+          },
+        }
+      );
+      updated++;
+      changed++;
+    }
+
+    res.json({
+      message: `Recalculated ${updated} test result(s). ${changed} had score changes.`,
+      total: results.length,
+      updated,
+      changed,
+    });
+  } catch (error) {
+    console.error('Error recalculating test scores:', error);
+    res.status(500).json({ message: 'Failed to recalculate test scores' });
+  }
 };
