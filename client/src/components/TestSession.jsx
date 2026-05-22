@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useReducer, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import RationaleContent from '../utils/RationaleContent';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { resolveMediaCandidates } from '../utils/imageUpload';
@@ -483,9 +484,11 @@ const TestSession = () => {
           </span>
         </div>
         {q.rationale && (
-          <div style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.5', borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
-            <strong>Rationale:</strong> {q.rationale}
-          </div>
+          <RationaleContent
+            text={q.rationale}
+            label="Rationale:"
+            style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.5', borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}
+          />
         )}
       </div>
     );

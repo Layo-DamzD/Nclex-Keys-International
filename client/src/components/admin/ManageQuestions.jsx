@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
+import RationaleContent from '../../utils/RationaleContent';
 
 const ManageQuestions = ({ onSectionChange }) => {
   const navigate = useNavigate();
@@ -733,8 +734,8 @@ const ManageQuestions = ({ onSectionChange }) => {
           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e40af', marginBottom: '6px' }}>
             <i className="fas fa-lightbulb me-1" style={{ color: '#f59e0b' }}></i> Rationale
           </div>
-          <div style={{ fontSize: '0.88rem', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-            {q.rationale || 'No rationale provided'}
+          <div style={{ fontSize: '0.88rem', color: '#334155', lineHeight: 1.6 }}>
+            <RationaleContent text={q.rationale} />
           </div>
           {q.rationaleImageUrl && (
             <div style={{ marginTop: '10px' }}>
