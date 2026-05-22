@@ -333,16 +333,43 @@ const deleteQuestion = async (req, res) => {
 // @access  Private (admin only)
 const createQuestion = async (req, res) => {
   try {
+    const { type, correctAnswer, options, rationale } = req.body || {};
+
+    // Validate correctAnswer format for MC/SATA before saving (non-draft)
+    if (!req.body.isDraft && (type === 'multiple-choice' || type === 'sata')) {
+      if (!correctAnswer || (typeof correctAnswer === 'string' && correctAnswer.trim() === '')) {
+        return res.status(400).json({ message: 'correctAnswer is required for published questions' });
+      }
+      if (type === 'multiple-choice') {
+        const s = String(correctAnswer).trim();
+        if (!/^[A-Z]$/i.test(s)) {
+          return res.status(400).json({ message: `Invalid correctAnswer for multiple-choice: expected a single letter (A-Z), got "${s.substring(0, 40)}"` });
+        }
+      }
+      if (type === 'sata') {
+        if (!Array.isArray(correctAnswer) || correctAnswer.length === 0) {
+          return res.status(400).json({ message: 'SATA correctAnswer must be a non-empty array of letters' });
+        }
+        const allValid = correctAnswer.every(a => /^[A-Z]$/i.test(String(a).trim()));
+        if (!allValid) {
+          return res.status(400).json({ message: 'SATA correctAnswer must contain only single letters (A-Z)' });
+        }
+      }
+      if (!rationale || rationale.trim() === '') {
+        return res.status(400).json({ message: 'Rationale is required for published questions' });
+      }
+    }
+
     const payload = {
-      type: req.body?.type,
+      type,
       category: req.body?.category,
       subcategory: req.body?.subcategory,
       questionText: req.body?.questionText,
       questionImageUrl: req.body?.questionImageUrl,
-      options: req.body?.options,
+      options,
       optionImages: req.body?.optionImages,
-      correctAnswer: req.body?.correctAnswer,
-      rationale: req.body?.rationale,
+      correctAnswer,
+      rationale,
       rationaleImageUrl: req.body?.rationaleImageUrl,
       difficulty: req.body?.difficulty,
       highlightStart: req.body?.highlightStart,
@@ -372,14 +399,33 @@ const createQuestion = async (req, res) => {
 const updateQuestion = async (req, res) => {
   try {
     const updates = req.body;
-    const question = await Question.findByIdAndUpdate(
-      req.params.id,
-      updates,
-      { new: true, runValidators: true }
-    );
+
+    // Validate correctAnswer format when publishing (isDraft → false) for MC/SATA
+    if (updates.isDraft === false || updates.isDraft === 'false') {
+      const { type, correctAnswer, rationale } = updates;
+      if (type === 'multiple-choice') {
+        const s = String(correctAnswer || '').trim();
+        if (!/^[A-Z]$/i.test(s)) {
+          return res.status(400).json({ message: `Cannot publish: MC correctAnswer must be a single letter (A-Z), got "${s.substring(0, 40)}"` });
+        }
+      }
+      if (type === 'sata') {
+        if (!Array.isArray(correctAnswer) || correctAnswer.length === 0 || !correctAnswer.every(a => /^[A-Z]$/i.test(String(a).trim()))) {
+          return res.status(400).json({ message: 'Cannot publish: SATA correctAnswer must be a non-empty array of letters (A-Z)' });
+        }
+      }
+      if (!rationale || rationale.trim() === '') {
+        return res.status(400).json({ message: 'Cannot publish: rationale is required' });
+      }
+    }
+
+    // Use findOneAndUpdate + save() to trigger pre-save middleware
+    const question = await Question.findById(req.params.id);
     if (!question) {
       return res.status(404).json({ message: 'Question not found' });
     }
+    Object.assign(question, updates);
+    await question.save();
     res.json(question);
   } catch (error) {
     console.error(error);

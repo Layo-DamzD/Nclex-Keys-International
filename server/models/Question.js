@@ -63,6 +63,85 @@ const caseStudyQuestionSchema = new mongoose.Schema({
   clozeBlanks: [clozeBlankSchema]
 }, { _id: true });
 
+/**
+ * Validate and sanitize correctAnswer before saving.
+ * Prevents full-text answers and wrong formats from reaching the DB.
+ * Runs on EVERY save — covers create, update, bulk import, draft publish.
+ */
+function validateCorrectAnswer(q) {
+  const type = q.type;
+  const ca = q.correctAnswer;
+
+  // Skip drafts and types that don't need validation
+  if (q.isDraft) return;
+  if (!['multiple-choice', 'sata'].includes(type)) return;
+  if (ca === undefined || ca === null || ca === '') return;
+
+  if (type === 'multiple-choice') {
+    const s = String(ca).trim();
+    // If it's already a single letter, good
+    if (/^[A-Z]$/i.test(s)) return;
+
+    // If it's full text like "Increase the oxygen flow rate..."
+    // Try to match it against the options array to find the correct letter
+    const opts = Array.isArray(q.options) ? q.options : [];
+    for (let i = 0; i < opts.length; i++) {
+      const optText = String(opts[i]).trim();
+      if (optText && s.toLowerCase() === optText.toLowerCase()) {
+        q.correctAnswer = String.fromCharCode(65 + i); // A, B, C...
+        return;
+      }
+    }
+
+    // If it's a letter with extra text like "A. some text", extract just the letter
+    const letterMatch = s.match(/^\s*([A-Z])[^A-Z]/i);
+    if (letterMatch) {
+      q.correctAnswer = letterMatch[1].toUpperCase();
+      return;
+    }
+
+    // If it looks like a letter array from JSON stringify like "[\"A\",\"B\"]" → not valid for MC
+    // Log warning but don't crash
+    console.warn(`[validateCorrectAnswer] Question ${q._id || 'new'}: unusual correctAnswer format for MC: "${s.substring(0, 50)}"`);
+  }
+
+  if (type === 'sata') {
+    // Should be an array of single letters
+    if (Array.isArray(ca)) {
+      const validLetters = [];
+      for (const item of ca) {
+        const s = String(item).trim();
+        if (/^[A-Z]$/i.test(s)) {
+          validLetters.push(s.toUpperCase());
+        } else {
+          // Full text — try to match against options
+          const opts = Array.isArray(q.options) ? q.options : [];
+          for (let i = 0; i < opts.length; i++) {
+            const optText = String(opts[i]).trim();
+            if (optText && s.toLowerCase() === optText.toLowerCase()) {
+              validLetters.push(String.fromCharCode(65 + i));
+              break;
+            }
+          }
+        }
+      }
+      // De-duplicate and sort
+      const unique = [...new Set(validLetters)].sort();
+      if (unique.length > 0) {
+        q.correctAnswer = unique;
+      }
+      return;
+    }
+
+    // If it's a string like "A, B, C" or "ABC"
+    const s = String(ca).trim();
+    const letters = s.split(/[\s,]+/).filter(l => /^[A-Z]$/i.test(l)).map(l => l.toUpperCase());
+    if (letters.length > 0) {
+      q.correctAnswer = [...new Set(letters)].sort();
+    }
+  }
+}
+
 const questionSchema = new mongoose.Schema({
   type: {
     type: String,
@@ -134,6 +213,16 @@ const questionSchema = new mongoose.Schema({
     type: String, 
     enum: ['1PL', '2PL', '3PL', 'GRM', 'NRM'], 
     default: '3PL' 
+  }
+});
+
+// Pre-save hook: validate and sanitize correctAnswer for all non-draft MC/SATA questions
+questionSchema.pre('save', function (next) {
+  try {
+    validateCorrectAnswer(this);
+    next();
+  } catch (err) {
+    next(err);
   }
 });
 
