@@ -199,9 +199,22 @@ const getQuestions = async (req, res) => {
     if (isDraft !== undefined && isDraft !== '') {
       filter.isDraft = isDraft === 'true';
     }
-    // Text search on questionText
+    // Text search on questionText OR _id (UID)
     if (search && String(search).trim()) {
-      filter.questionText = { $regex: String(search).trim(), $options: 'i' };
+      const term = String(search).trim();
+      // If the search looks like a MongoDB ObjectId (24 hex chars), also search by _id
+      if (/^[0-9a-fA-F]{24}$/.test(term)) {
+        filter.$or = [
+          { questionText: { $regex: term, $options: 'i' } },
+          { _id: term },
+        ];
+      } else {
+        // Partial ID match or text search
+        filter.$or = [
+          { questionText: { $regex: term, $options: 'i' } },
+          { _id: { $regex: term, $options: 'i' } },
+        ];
+      }
     }
 
     // Handle uncategorized filter: return questions not matching any

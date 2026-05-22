@@ -759,7 +759,7 @@ const ManageQuestions = ({ onSectionChange }) => {
             <input
               type="text"
               className="form-control"
-              placeholder="Search questions by text..."
+              placeholder="Search by text or question ID..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               style={{ paddingLeft: '36px', width: '100%' }}
