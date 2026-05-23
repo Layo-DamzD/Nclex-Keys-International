@@ -147,6 +147,8 @@ router.put('/settings/profile', protect, adminOnly, updateAdminProfileSettings);
 router.put('/settings/password', protect, adminOnly, updateAdminPasswordSettings);
 router.delete('/settings/devices', protect, adminOnly, clearAdminDeviceSettings);
 
-
+// Question flags management
+router.get('/flags', protect, adminOnly, getQuestionFlags);
+router.put('/flags/:id/resolve', protect, adminOnly, resolveQuestionFlag);
 
 module.exports = router;

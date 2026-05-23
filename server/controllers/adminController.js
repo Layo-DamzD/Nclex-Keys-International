@@ -2644,6 +2644,56 @@ const deleteAdmin = async (req, res) => {
 // @desc    Get current admin settings
 // @route   GET /api/admin/settings
 // @access  Private (admin only)
+// ─── Question Flags Management ───
+const getQuestionFlags = async (req, res) => {
+  try {
+    const QuestionFlag = require('../models/QuestionFlag');
+    const { resolved, page = 1, limit = 25 } = req.query;
+    const filter = {};
+    if (resolved === 'true') filter.resolved = true;
+    else if (resolved === 'false') filter.resolved = false;
+
+    const [flags, total] = await Promise.all([
+      QuestionFlag.find(filter)
+        .populate('questionId', 'questionText type category subcategory questionId')
+        .populate('studentId', 'name email')
+        .populate('resolvedBy', 'name')
+        .sort({ createdAt: -1 })
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .limit(parseInt(limit))
+        .lean(),
+      QuestionFlag.countDocuments(filter),
+    ]);
+
+    res.json({ flags, total, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) });
+  } catch (error) {
+    console.error('Error fetching question flags:', error);
+    res.status(500).json({ message: 'Failed to fetch question flags' });
+  }
+};
+
+const resolveQuestionFlag = async (req, res) => {
+  try {
+    const QuestionFlag = require('../models/QuestionFlag');
+    const { adminNote } = req.body;
+    const flag = await QuestionFlag.findByIdAndUpdate(
+      req.params.id,
+      {
+        resolved: true,
+        resolvedAt: new Date(),
+        resolvedBy: req.user._id,
+        adminNote: adminNote || '',
+      },
+      { new: true }
+    );
+    if (!flag) return res.status(404).json({ message: 'Flag not found' });
+    res.json({ message: 'Flag resolved', flag });
+  } catch (error) {
+    console.error('Error resolving flag:', error);
+    res.status(500).json({ message: 'Failed to resolve flag' });
+  }
+};
+
 const getAdminSettings = async (req, res) => {
   try {
     const admin = await User.findById(req.user.id)
@@ -3208,6 +3258,8 @@ module.exports = {
   updateAdminStudentScope,
   deleteAdmin,
   getAdminSettings,
+  getQuestionFlags,
+  resolveQuestionFlag,
   updateAdminProfileSettings,
   updateAdminPasswordSettings,
   clearAdminDeviceSettings,

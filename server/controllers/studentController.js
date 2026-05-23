@@ -3673,6 +3673,50 @@ const exitCATSession = async (req, res) => {
   }
 };
 
+// ─── Flag a question during review ───
+const flagQuestion = async (req, res) => {
+  try {
+    const { questionId, reason, comment, testResultId } = req.body;
+    const studentId = req.user._id;
+
+    if (!questionId || !reason) {
+      return res.status(400).json({ message: 'questionId and reason are required' });
+    }
+
+    const QuestionFlag = require('../models/QuestionFlag');
+
+    // Check if already flagged by this student
+    const existing = await QuestionFlag.findOne({ questionId, studentId });
+    if (existing) {
+      return res.status(409).json({ message: 'You have already flagged this question', flag: existing });
+    }
+
+    const flag = new QuestionFlag({ questionId, studentId, reason, comment, testResultId });
+    await flag.save();
+    res.status(201).json({ message: 'Question flagged successfully', flag });
+  } catch (error) {
+    console.error('Error flagging question:', error);
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'You have already flagged this question' });
+    }
+    res.status(500).json({ message: 'Failed to flag question' });
+  }
+};
+
+// ─── Get flags by a student ───
+const getStudentFlags = async (req, res) => {
+  try {
+    const QuestionFlag = require('../models/QuestionFlag');
+    const flags = await QuestionFlag.find({ studentId: req.user._id })
+      .populate('questionId', 'questionText type category subcategory')
+      .sort({ createdAt: -1 });
+    res.json(flags);
+  } catch (error) {
+    console.error('Error fetching student flags:', error);
+    res.status(500).json({ message: 'Failed to fetch flags' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getRecentTests,
@@ -3717,4 +3761,6 @@ module.exports = {
   resumeTestSession,
   exitTestSession,
   exitCATSession,
+  flagQuestion,
+  getStudentFlags,
 };

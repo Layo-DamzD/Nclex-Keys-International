@@ -282,6 +282,59 @@ const AdminApproval = () => {
               </div>
             </div>
           )}
+
+          {/* ─── Per-Admin Upload Progress Cards ─── */}
+          {admins.length > 0 && uploadCounts && (
+            <div style={{
+              background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px',
+              padding: '16px', marginBottom: '16px',
+            }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '12px' }}>
+                <i className="fas fa-users me-1"></i> Admin Upload Progress
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+                {admins.map((admin) => {
+                  const info = getAdminUploadInfo(admin._id) || { today: 0, thisMonth: 0, thisYear: 0, total: 0 };
+                  const maxUpload = Math.max(...admins.map(a => {
+                    const s = getAdminUploadInfo(a._id);
+                    return s ? (s.thisMonth || 0) : 0;
+                  }), 1);
+                  const monthPercent = Math.round(((info.thisMonth || 0) / maxUpload) * 100);
+                  return (
+                    <div key={admin._id} style={{
+                      background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
+                      padding: '12px 14px',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#1e293b' }}>
+                          {admin.name}
+                          {admin.role === 'superadmin' && <span className="badge badge-info ms-1" style={{ fontSize: '0.65rem' }}>Super</span>}
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#6366f1' }}>
+                          {info.total || 0}
+                        </div>
+                      </div>
+                      {/* Monthly progress bar */}
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b', marginBottom: '3px' }}>
+                          <span>This Month: {info.thisMonth || 0}</span>
+                          <span>{monthPercent}%</span>
+                        </div>
+                        <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${monthPercent}%`, background: 'linear-gradient(90deg, #6366f1, #818cf8)', borderRadius: '3px', transition: 'width 0.3s' }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '0.72rem', color: '#64748b' }}>
+                        <span><i className="fas fa-calendar-day me-1"></i>Today: <strong style={{ color: '#1e40af' }}>{info.today || 0}</strong></span>
+                        <span><i className="fas fa-calendar me-1"></i>Month: <strong style={{ color: '#166534' }}>{info.thisMonth || 0}</strong></span>
+                        <span><i className="fas fa-calendar-check me-1"></i>Year: <strong style={{ color: '#92400e' }}>{info.thisYear || 0}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
 

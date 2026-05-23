@@ -322,6 +322,11 @@ const TestReviewExamView = ({
   const [activeSummaryTab, setActiveSummaryTab] = useState('results');
   const [answerFilter, setAnswerFilter] = useState('all');
   const [showNavigatorDropdown, setShowNavigatorDropdown] = useState(false);
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [flagReason, setFlagReason] = useState('');
+  const [flagComment, setFlagComment] = useState('');
+  const [flagSubmitting, setFlagSubmitting] = useState(false);
+  const [flagMessage, setFlagMessage] = useState('');
 
   useEffect(() => {
     const blockEvent = (event) => {
@@ -964,6 +969,19 @@ const TestReviewExamView = ({
           <button
             type="button"
             className="exam-toolbar-btn"
+            onClick={() => {
+              setShowFlagModal(true);
+              setFlagReason('');
+              setFlagComment('');
+            }}
+            style={{ color: '#f59e0b' }}
+            title="Report this question"
+          >
+            <i className="fas fa-flag"></i> Flag
+          </button>
+          <button
+            type="button"
+            className="exam-toolbar-btn"
             onClick={() => setActiveQuestionIndex((prev) => Math.max(0, prev - 1))}
             disabled={activeQuestionIndex === 0}
           >
@@ -981,6 +999,80 @@ const TestReviewExamView = ({
             Next <i className="fas fa-arrow-right"></i>
           </button>
         </div>
+
+        {/* Flag Question Modal */}
+        {showFlagModal && (() => {
+          const active = answers[activeQuestionIndex];
+          const handleFlagSubmit = async () => {
+            if (!flagReason) { setFlagMessage('Please select a reason'); return; }
+            try {
+              setFlagSubmitting(true);
+              setFlagMessage('');
+              const token = sessionStorage.getItem('token');
+              await axios.post('/api/student/flag-question', {
+                questionId: active.questionId,
+                reason: flagReason,
+                comment: flagComment,
+                testResultId: testResult?._id,
+              }, { headers: { Authorization: `Bearer ${token}` } });
+              setFlagMessage('Question flagged successfully. Thank you!');
+              setTimeout(() => { setShowFlagModal(false); setFlagMessage(''); }, 1500);
+            } catch (err) {
+              setFlagMessage(err.response?.data?.message || 'Failed to flag question');
+            } finally {
+              setFlagSubmitting(false);
+            }
+          };
+          return (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }}>
+              <div style={{ background: '#fff', borderRadius: '14px', width: '100%', maxWidth: '440px', padding: '24px', margin: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h5 style={{ margin: 0, fontWeight: 700 }}><i className="fas fa-flag me-2" style={{ color: '#f59e0b' }}></i>Flag Question</h5>
+                  <button className="btn btn-sm btn-outline-secondary" onClick={() => { setShowFlagModal(false); setFlagMessage(''); }}>
+                    <i className="fas fa-times"></i>
+                  </button>
+                </div>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '14px' }}>
+                  Help us improve by reporting issues with this question.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                  {[
+                    { value: 'wrong_answer', label: 'Wrong answer marked as correct' },
+                    { value: 'unclear_question', label: 'Question is unclear or confusing' },
+                    { value: 'typo_error', label: 'Typo or formatting error' },
+                    { value: 'missing_image', label: 'Missing or broken image' },
+                    { value: 'incorrect_options', label: 'Options are incorrect or duplicated' },
+                    { value: 'other', label: 'Other issue' },
+                  ].map(r => (
+                    <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', padding: '6px 8px', borderRadius: '6px', border: `1px solid ${flagReason === r.value ? '#3b82f6' : '#e2e8f0'}`, background: flagReason === r.value ? '#eff6ff' : '#fff' }}>
+                      <input type="radio" name="flagReason" value={r.value} checked={flagReason === r.value} onChange={(e) => setFlagReason(e.target.value)} />
+                      {r.label}
+                    </label>
+                  ))}
+                </div>
+                <textarea
+                  placeholder="Additional details (optional)..."
+                  value={flagComment}
+                  onChange={(e) => setFlagComment(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.88rem', resize: 'vertical', marginBottom: '14px' }}
+                />
+                {flagMessage && (
+                  <div style={{ fontSize: '0.82rem', padding: '8px 12px', borderRadius: '6px', marginBottom: '10px', background: flagMessage.includes('success') ? '#f0fdf4' : '#fef2f2', color: flagMessage.includes('success') ? '#166534' : '#991b1b', border: `1px solid ${flagMessage.includes('success') ? '#bbf7d0' : '#fecaca'}` }}>
+                    {flagMessage}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button className="btn btn-sm btn-outline-secondary" onClick={() => { setShowFlagModal(false); setFlagMessage(''); }} disabled={flagSubmitting}>Cancel</button>
+                  <button className="btn btn-sm btn-warning" onClick={handleFlagSubmit} disabled={flagSubmitting || !flagReason}>
+                    {flagSubmitting ? <><i className="fas fa-spinner fa-spin me-1"></i>Submitting...</> : <><i className="fas fa-flag me-1"></i>Submit Flag</>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Question Navigator Dropdown */}
         {showNavigatorDropdown && (

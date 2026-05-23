@@ -45,6 +45,8 @@ const {
   resumeTestSession,
   exitTestSession,
   exitCATSession,
+  flagQuestion,
+  getStudentFlags,
 } = require('../controllers/studentController');
 
 router.get('/dashboard/stats', protect, getDashboardStats);
@@ -90,5 +92,7 @@ router.post('/save-test-progress', protect, saveTestProgress);
 router.get('/resume-test/:id', protect, resumeTestSession);
 router.post('/exit-test/:id', protect, exitTestSession);
 router.post('/cat/exit', protect, exitCATSession);
+router.post('/flag-question', protect, flagQuestion);
+router.get('/flags', protect, getStudentFlags);
 
 module.exports = router;
