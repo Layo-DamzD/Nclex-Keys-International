@@ -17,6 +17,22 @@ const CASE_STUDY_TYPE_MAP = {
   'trend': 'trend',
 };
 
+// Sanitize questions before syncing to linked Question document.
+// The Question model has rowText: { required: true } on matrixRows, but the
+// CaseStudy model does not.  Empty placeholder rows (from the editor defaults)
+// must be stripped so the linked Question save doesn't blow up with validation.
+const sanitizeQuestionsForLinkedDoc = (questions) =>
+  (Array.isArray(questions) ? questions : []).map((q) => {
+    const sanitized = { ...q };
+    // Only keep matrix rows that actually have text
+    if (Array.isArray(sanitized.matrixRows)) {
+      sanitized.matrixRows = sanitized.matrixRows
+        .filter((r) => r.rowText && r.rowText.trim())
+        .map((r) => ({ ...r, rowText: r.rowText.trim() }));
+    }
+    return sanitized;
+  });
+
 const buildLinkedQuestionPayload = (caseStudyDoc) => ({
   type: 'case-study',
   category: caseStudyDoc.category,
@@ -28,7 +44,7 @@ const buildLinkedQuestionPayload = (caseStudyDoc) => ({
   difficulty: 'medium',
   scenario: caseStudyDoc.scenario,
   sections: Array.isArray(caseStudyDoc.sections) ? caseStudyDoc.sections : [],
-  questions: Array.isArray(caseStudyDoc.questions) ? caseStudyDoc.questions : [],
+  questions: sanitizeQuestionsForLinkedDoc(caseStudyDoc.questions),
   caseStudyId: caseStudyDoc._id,
   caseStudyType: CASE_STUDY_TYPE_MAP[caseStudyDoc.type] || 'layered'
 });
@@ -141,27 +157,39 @@ const updateCaseStudy = async (req, res) => {
     const nextSubcategory = req.body.subcategory || caseStudy.subcategory;
     const nextQuestions = normalizeCaseStudyQuestions(req.body.questions, nextCategory, nextSubcategory);
 
-    Object.assign(caseStudy, {
-      ...req.body,
-      category: nextCategory,
-      subcategory: nextSubcategory,
-      questions: nextQuestions
+    // Only allow safe fields — never let frontend overwrite _id, linkedQuestionId,
+    // createdBy, createdAt etc.
+    const safeFields = [
+      'title', 'category', 'subcategory', 'scenario', 'type', 'sections',
+      'questions', 'isActive', 'clientNeed', 'clientNeedSubcategory'
+    ];
+    safeFields.forEach((field) => {
+      if (field === 'category') caseStudy.category = nextCategory;
+      else if (field === 'subcategory') caseStudy.subcategory = nextSubcategory;
+      else if (field === 'questions') caseStudy.questions = nextQuestions;
+      else if (req.body[field] !== undefined) caseStudy[field] = req.body[field];
     });
     await caseStudy.save();
 
-    const linkedPayload = buildLinkedQuestionPayload(caseStudy);
-    if (caseStudy.linkedQuestionId) {
-      await Question.findByIdAndUpdate(caseStudy.linkedQuestionId, linkedPayload, { runValidators: true });
-    } else {
-      const existingLinked = await Question.findOne({ caseStudyId: caseStudy._id, type: 'case-study' });
-      if (existingLinked) {
-        await Question.findByIdAndUpdate(existingLinked._id, linkedPayload, { runValidators: true });
-        caseStudy.linkedQuestionId = existingLinked._id;
+    // Sync linked Question — wrapped in try/catch so a validation error
+    // on the linked doc does NOT crash the whole case-study update.
+    try {
+      const linkedPayload = buildLinkedQuestionPayload(caseStudy);
+      if (caseStudy.linkedQuestionId) {
+        await Question.findByIdAndUpdate(caseStudy.linkedQuestionId, linkedPayload, { runValidators: true });
       } else {
-        const created = await Question.create(linkedPayload);
-        caseStudy.linkedQuestionId = created._id;
+        const existingLinked = await Question.findOne({ caseStudyId: caseStudy._id, type: 'case-study' });
+        if (existingLinked) {
+          await Question.findByIdAndUpdate(existingLinked._id, linkedPayload, { runValidators: true });
+          caseStudy.linkedQuestionId = existingLinked._id;
+        } else {
+          const created = await Question.create(linkedPayload);
+          caseStudy.linkedQuestionId = created._id;
+        }
+        await caseStudy.save();
       }
-      await caseStudy.save();
+    } catch (linkedError) {
+      console.error('Linked question sync failed (case study saved without sync):', linkedError.message);
     }
 
     res.json(caseStudy);
