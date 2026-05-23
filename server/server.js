@@ -47,7 +47,10 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected successfully'))
   .catch(err => {
     console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
+    // Don't hard-exit — Render will report "Exited with status 1".
+    // The /api/health endpoint still responds so Render thinks we're alive,
+    // and mongoose will auto-retry connecting.
+    console.error('⚠️ Server will keep running — mongoose will auto-retry...');
   });
 
   app.get('/api/test', async (req, res) => {

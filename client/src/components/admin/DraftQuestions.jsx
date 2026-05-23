@@ -32,13 +32,19 @@ const DraftQuestions = () => {
     }
   };
 
-  const handleEdit = (question) => {
-    navigate('/admin/dashboard', {
-      state: {
-        section: 'upload',
-        question: question
-      }
-    });
+  const handleEdit = async (question) => {
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.get(`/api/admin/questions/${question._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      navigate('/admin/dashboard?section=upload', {
+        state: { question: response.data }
+      });
+    } catch (error) {
+      console.error('Error loading question for edit:', error);
+      alert('Failed to load question for editing');
+    }
   };
 
   const handleDelete = async (id) => {
