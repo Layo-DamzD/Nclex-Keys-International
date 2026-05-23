@@ -783,14 +783,17 @@ const TestCustomization = () => {
           </div>
 
           {/* QUESTION TYPES (horizontal scrollable pills — multi-select) */}
-          <div className="tc-section-title">QUESTION TYPES</div>
-          <div className="tc-filter-pills">
-            {questionTypePills.map((pill) => (
-              <div
-                key={pill.key}
-                className={`tc-filter-pill ${pill.key === 'all'
-                  ? questionTypeFilter.length === 0
-                  : questionTypeFilter.includes(pill.key)
+          {/* Only show SATA/Unfolding/Standalone filters in NGN or mixed mode */}
+          {examMode !== 'classic' && (
+            <>
+              <div className="tc-section-title">QUESTION TYPES</div>
+              <div className="tc-filter-pills">
+                {questionTypePills.map((pill) => (
+                  <div
+                    key={pill.key}
+                    className={`tc-filter-pill ${pill.key === 'all'
+                      ? questionTypeFilter.length === 0
+                      : questionTypeFilter.includes(pill.key)
                   ? 'tc-filter-pill--active' : ''}`}
                 onClick={() => {
                   if (pill.key === 'all') {
@@ -809,6 +812,8 @@ const TestCustomization = () => {
               </div>
             ))}
           </div>
+            </>
+          )}
 
           {/* Status Filter */}
           <div className="tc-status-list">

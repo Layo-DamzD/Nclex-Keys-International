@@ -2926,12 +2926,36 @@ const getQuestionStatusCounts = async (req, res) => {
 
       if (isCaseStudy) {
         caseStudyQuestionIds.push(qId);
-        // Unfolding = layered with multiple sub-questions (6-question case study)
-        if (q.caseStudyType === 'layered' && Array.isArray(q.questions) && q.questions.length > 1) {
+
+        // Determine sub-question count from questions array (may be unpopulated)
+        const subQCount = Array.isArray(q.questions) ? q.questions.length : 0;
+
+        // Classify case studies into unfolding vs standalone
+        if (q.caseStudyType === 'layered') {
+          // Layered = unfolding (6-question case study) — count regardless of questions array
           unfoldingQuestionIds.push(qId);
         } else if (q.caseStudyType === 'trend' || q.caseStudyType === 'bowtie') {
-          // Standalone = only trend and bowtie (single-question case studies)
+          // Bowtie / trend = standalone NGN
           standaloneQuestionIds.push(qId);
+        } else if (q.caseStudyType === 'matrix') {
+          // Matrix case studies — not classified as unfolding or standalone
+        } else if (!q.caseStudyType) {
+          // No caseStudyType set — classify by sub-question count
+          if (subQCount > 1) {
+            unfoldingQuestionIds.push(qId);
+          } else if (subQCount === 1) {
+            standaloneQuestionIds.push(qId);
+          }
+          // If 0 sub-questions, skip — can't classify
+        }
+
+        // Also count SATA sub-questions inside case studies for SATA total
+        if (Array.isArray(q.questions)) {
+          for (const subQ of q.questions) {
+            if (subQ.type === 'sata') {
+              sataQuestionIds.push(qId); // Use parent ID for status tracking
+            }
+          }
         }
 
         // Also count case studies under their subject/category as NGN
@@ -3027,7 +3051,7 @@ const getQuestionStatusCounts = async (req, res) => {
       byType: {
         sata: {
           ...computeCounts(sataQuestionIds),
-          total: sataQuestionIds.length
+          total: [...new Set(sataQuestionIds)].length
         },
         unfolding: {
           ...computeCounts(unfoldingQuestionIds),
@@ -3039,6 +3063,9 @@ const getQuestionStatusCounts = async (req, res) => {
         }
       }
     });
+
+    // Debug log for counter verification
+    console.log(`[question-status-counts] Total: ${allQuestions.length}, CaseStudies: ${caseStudyQuestionIds.length}, SATA: ${[...new Set(sataQuestionIds)].length}, Unfolding: ${unfoldingQuestionIds.length}, Standalone: ${standaloneQuestionIds.length}`);
   } catch (error) {
     console.error('Error fetching question status counts:', error);
     res.status(500).json({ message: 'Server error' });
