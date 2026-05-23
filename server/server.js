@@ -201,7 +201,8 @@ app.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') {
     return res.status(413).json({ message: 'Request too large. Reduce image size or use file upload URL mode.' });
   }
-  return next(err);
+  console.error('Unhandled error:', err);
+  res.status(500).json({ message: err?.message || 'Internal server error' });
 });
 
 app.listen(PORT, () => {
