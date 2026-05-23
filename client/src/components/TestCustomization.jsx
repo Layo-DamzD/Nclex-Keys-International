@@ -633,7 +633,6 @@ const TestCustomization = () => {
   // Unfolding = Layered Case Study (6 questions), Standalone = Bowtie + Trend
   const questionTypePills = [
     { key: 'all', label: `All (${totalQuestionBank})` },
-    { key: 'sata', label: `SATA (${typeCounts.sata.total || 0})` },
     { key: 'unfolding', label: `Unfolding (${typeCounts.unfolding.total || 0})` },
     { key: 'standalone', label: `Standalone (${typeCounts.standalone.total || 0})` },
   ];

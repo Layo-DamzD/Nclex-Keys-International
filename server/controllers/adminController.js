@@ -202,18 +202,15 @@ const getQuestions = async (req, res) => {
     // Text search on questionText OR _id (UID)
     if (search && String(search).trim()) {
       const term = String(search).trim();
-      // If the search looks like a MongoDB ObjectId (24 hex chars), also search by _id
+      // If the search looks like a MongoDB ObjectId (24 hex chars), search by _id
       if (/^[0-9a-fA-F]{24}$/.test(term)) {
         filter.$or = [
           { questionText: { $regex: term, $options: 'i' } },
           { _id: term },
         ];
       } else {
-        // Partial ID match or text search
-        filter.$or = [
-          { questionText: { $regex: term, $options: 'i' } },
-          { _id: { $regex: term, $options: 'i' } },
-        ];
+        // Text search only — do NOT use $regex on ObjectId field (crashes)
+        filter.questionText = { $regex: term, $options: 'i' };
       }
     }
 
