@@ -3016,68 +3016,12 @@ const getUploadCounts = async (req, res) => {
   }
 };
 
-module.exports = {
-  getAdminStats,
-  getUploadCounts,
-  exportQuestions,
-  getQuestions,
-  getQuestionById,
-  bulkDeleteQuestions,
-  getRecentQuestions,
-  deleteQuestion,
-  updateQuestion,
-  createQuestion,
-  bulkImportQuestions,
-  importFromUrl,
-  checkDuplicate,
-  getStudents,
-  createStudentByAdmin,
-  createAdminTest,
-  toggleStudentStatus,
-  updateStudentPaymentDate,
-  sendNotification,
-  deleteStudent,
-  getStudentList,
-  getStudentProgress,
-  getTestResultForReview,
-  getStudyMaterials,
-  createStudyMaterial,
-  updateStudyMaterial,
-  deleteStudyMaterial,
-  uploadFile,
-  getInstructors,
-  createInstructor,
-  updateInstructor,
-  toggleInstructorStatus,
-  deleteInstructor,
-  getSystemLogs,
-  getFeedback,
-  updateFeedback,
-  deleteFeedback,
-  getExamSupportConversations,
-  getExamSupportMessagesAdmin,
-  sendExamSupportMessageAdmin,
-  approveAdmin,
-  getAllAdmins,
-  getAdminStudentScope,
-  updateAdminStudentScope,
-  deleteAdmin,
-  getAdminSettings,
-  updateAdminProfileSettings,
-  updateAdminPasswordSettings,
-  clearAdminDeviceSettings,
-  clearStudentDeviceHistory,
-  removeStudentDevice,
-  recalculateTestScores,
-};
-
 // ─── Recalculate all test scores with updated SATA scoring ───
 const recalculateTestScores = async (req, res) => {
   try {
     const TestResult = require('../models/testResult');
     const Question = require('../models/Question');
 
-    // Fetch all completed or exited test results
     const results = await TestResult.find({
       status: { $in: ['completed', 'exited'] },
     }).lean();
@@ -3086,7 +3030,6 @@ const recalculateTestScores = async (req, res) => {
       return res.json({ message: 'No test results found to recalculate.', updated: 0 });
     }
 
-    // Gather all question IDs for batch lookup
     const questionIds = new Set();
     for (const result of results) {
       if (Array.isArray(result.answers)) {
@@ -3096,7 +3039,6 @@ const recalculateTestScores = async (req, res) => {
       }
     }
 
-    // Batch fetch questions
     const questions = await Question.find({
       _id: { $in: Array.from(questionIds) },
     }).lean();
@@ -3105,7 +3047,6 @@ const recalculateTestScores = async (req, res) => {
       questionMap.set(String(q._id), q);
     }
 
-    // Helper: normalize answer to letter
     const norm = (v) => {
       if (!v) return '';
       const s = String(v).trim().toUpperCase();
@@ -3115,7 +3056,6 @@ const recalculateTestScores = async (req, res) => {
       return s;
     };
 
-    // Helper: resolve text to option letter
     const resolveToLetter = (val, opts) => {
       if (!val || !Array.isArray(opts)) return null;
       const trimmed = String(val).trim();
@@ -3127,7 +3067,6 @@ const recalculateTestScores = async (req, res) => {
       return null;
     };
 
-    // Helper: parse answer to array of letters
     const parseToArray = (answer, opts) => {
       if (!answer) return [];
       if (Array.isArray(answer)) return answer.map(v => resolveToLetter(v, opts) || norm(v)).filter(Boolean);
@@ -3139,7 +3078,6 @@ const recalculateTestScores = async (req, res) => {
       return r ? [r] : (norm(s) ? [norm(s)] : []);
     };
 
-    // Re-evaluate a single answer
     const reEvaluate = (ans, q) => {
       if (!ans || !q) return { earnedMarks: ans.earnedMarks ?? 0, totalMarks: ans.totalMarks ?? 1, isCorrect: ans.isCorrect };
       const type = ans.type || q.type;
@@ -3157,7 +3095,6 @@ const recalculateTestScores = async (req, res) => {
         return { earnedMarks, totalMarks, isCorrect };
       }
 
-      // For non-SATA, keep original scoring
       return { earnedMarks: ans.earnedMarks ?? 0, totalMarks: ans.totalMarks ?? 1, isCorrect: ans.isCorrect };
     };
 
@@ -3222,4 +3159,59 @@ const recalculateTestScores = async (req, res) => {
     console.error('Error recalculating test scores:', error);
     res.status(500).json({ message: 'Failed to recalculate test scores' });
   }
+};
+
+module.exports = {
+  getAdminStats,
+  getUploadCounts,
+  exportQuestions,
+  getQuestions,
+  getQuestionById,
+  bulkDeleteQuestions,
+  getRecentQuestions,
+  deleteQuestion,
+  updateQuestion,
+  createQuestion,
+  bulkImportQuestions,
+  importFromUrl,
+  checkDuplicate,
+  getStudents,
+  createStudentByAdmin,
+  createAdminTest,
+  toggleStudentStatus,
+  updateStudentPaymentDate,
+  sendNotification,
+  deleteStudent,
+  getStudentList,
+  getStudentProgress,
+  getTestResultForReview,
+  getStudyMaterials,
+  createStudyMaterial,
+  updateStudyMaterial,
+  deleteStudyMaterial,
+  uploadFile,
+  getInstructors,
+  createInstructor,
+  updateInstructor,
+  toggleInstructorStatus,
+  deleteInstructor,
+  getSystemLogs,
+  getFeedback,
+  updateFeedback,
+  deleteFeedback,
+  getExamSupportConversations,
+  getExamSupportMessagesAdmin,
+  sendExamSupportMessageAdmin,
+  approveAdmin,
+  getAllAdmins,
+  getAdminStudentScope,
+  updateAdminStudentScope,
+  deleteAdmin,
+  getAdminSettings,
+  updateAdminProfileSettings,
+  updateAdminPasswordSettings,
+  clearAdminDeviceSettings,
+  clearStudentDeviceHistory,
+  removeStudentDevice,
+  recalculateTestScores,
 };
