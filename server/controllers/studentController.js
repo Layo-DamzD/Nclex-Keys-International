@@ -2876,6 +2876,62 @@ const getQuestionStatusCounts = async (req, res) => {
     const studentId = req.user.id;
     const user = await User.findById(studentId);
 
+    // ── Auto-repair: fix case-study questions missing caseStudyType ──
+    // This ensures counters are always accurate even if backfill hasn't run
+    try {
+      const CaseStudy = require('../models/CaseStudy');
+      const TYPE_MAP = { '6-question': 'layered', matrix: 'matrix', bowtie: 'bowtie', trend: 'trend' };
+      const broken = await Question.find({ type: 'case-study', $or: [{ caseStudyType: null }, { caseStudyType: '' }, { caseStudyType: { $exists: false } }] }).select('_id caseStudyType caseStudyId').lean();
+      if (broken.length > 0) {
+        console.log(`[backfill] Found ${broken.length} case-study questions missing caseStudyType, repairing...`);
+        for (const q of broken) {
+          // Find matching CaseStudy by linkedQuestionId or caseStudyId
+          const cs = await CaseStudy.findOne({ $or: [{ linkedQuestionId: q._id }, { _id: q.caseStudyId }] }).select('type linkedQuestionId title category subcategory scenario sections questions clientNeed clientNeedSubcategory').lean();
+          if (cs) {
+            const mapped = TYPE_MAP[cs.type] || 'layered';
+            await Question.findByIdAndUpdate(q._id, { $set: { caseStudyType: mapped } });
+          }
+        }
+        console.log(`[backfill] Repair complete`);
+      }
+
+      // Also create missing linked questions for case studies that have no linkedQuestionId
+      const orphanedCS = await CaseStudy.find({
+        $or: [{ linkedQuestionId: null }, { linkedQuestionId: { $exists: false } }]
+      }).lean();
+      if (orphanedCS.length > 0) {
+        console.log(`[backfill] Found ${orphanedCS.length} case studies without linked questions, creating...`);
+        for (const cs of orphanedCS) {
+          const mapped = TYPE_MAP[cs.type] || 'layered';
+          const payload = {
+            type: 'case-study',
+            category: cs.category || '',
+            subcategory: cs.subcategory || '',
+            clientNeed: cs.clientNeed || '',
+            clientNeedSubcategory: cs.clientNeedSubcategory || '',
+            questionText: cs.title || '',
+            rationale: cs.scenario || '',
+            difficulty: 'medium',
+            scenario: cs.scenario || '',
+            sections: Array.isArray(cs.sections) ? cs.sections : [],
+            questions: Array.isArray(cs.questions) ? cs.questions : [],
+            caseStudyId: cs._id,
+            caseStudyType: mapped,
+            isDraft: false,
+          };
+          try {
+            const linked = await Question.create(payload);
+            await CaseStudy.findByIdAndUpdate(cs._id, { linkedQuestionId: linked._id });
+            console.log(`[backfill] Created linked question for "${cs.title}" (${mapped})`);
+          } catch (createErr) {
+            console.error(`[backfill] Failed to create linked question for "${cs.title}":`, createErr.message);
+          }
+        }
+      }
+    } catch (bfErr) {
+      console.error('[backfill] Auto-repair failed (non-blocking):', bfErr.message);
+    }
+
     // Get all questions with fields needed to determine which "tab" they belong to
     const allQuestions = await Question.find(
       { isDraft: { $ne: true } },
