@@ -53,7 +53,9 @@ const {
   getAdminSettings,
   updateAdminProfileSettings,
   updateAdminPasswordSettings,
-  clearAdminDeviceSettings
+  clearAdminDeviceSettings,
+  getQuestionFlags,
+  resolveQuestionFlag
 } = require('../controllers/adminController');
 const {
   getLandingPageConfig,
