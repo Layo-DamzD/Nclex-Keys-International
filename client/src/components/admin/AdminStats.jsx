@@ -40,10 +40,31 @@ const AdminStats = ({ onSectionChange }) => {
       <div className={`stat-card border-top-primary`} style={{ textAlign: 'center' }}>
         <h3>Total Questions</h3>
         <div className="stat-number">{stats.totalQuestions}</div>
-        <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '8px', lineHeight: '1.5', margin: '8px 4px 0' }}>
-          <strong>{stats.totalQuestions}</strong> questions are currently available in your QBank.
-          Categorized breakdowns are being finalized — thank you for your patience.
-        </p>
+        <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <span><i className="fas fa-book-medical" style={{ marginRight: '4px', color: '#6366f1' }}></i>{stats.subjectQuestions || 0} Subjects</span>
+          <span><i className="fas fa-clipboard-list" style={{ marginRight: '4px', color: '#0891b2' }}></i>{stats.clientNeedQuestions || 0} Client Needs</span>
+          {(stats.caseStudyQuestions || 0) > 0 && (
+            <span><i className="fas fa-layer-group" style={{ marginRight: '4px', color: '#7c3aed' }}></i>{stats.caseStudyQuestions} Case Studies</span>
+          )}
+          {(stats.uncategorized || 0) > 0 && (
+            <span
+              onClick={() => {
+                if (onSectionChange) {
+                  onSectionChange('questions');
+                  // URL param is picked up by ManageQuestions via useSearchParams
+                  setTimeout(() => {
+                    window.history.pushState({}, '', '/admin/dashboard?section=questions&uncategorized=true');
+                    window.dispatchEvent(new Event('popstate'));
+                  }, 100);
+                }
+              }}
+              style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '2px' }}
+              title="Click to view uncategorized questions"
+            >
+              <i className="fas fa-exclamation-triangle" style={{ marginRight: '4px', color: '#f59e0b' }}></i>{stats.uncategorized} Uncategorized
+            </span>
+          )}
+        </div>
       </div>
       {statCards.map((stat, idx) => (
         <div key={idx} className={`stat-card border-top-${stat.color}`}>
