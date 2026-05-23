@@ -348,6 +348,10 @@ const createQuestion = async (req, res) => {
       type,
       category: req.body?.category,
       subcategory: req.body?.subcategory,
+      clientNeed: req.body?.clientNeed,
+      clientNeedSubcategory: req.body?.clientNeedSubcategory,
+      isNextGen: req.body?.isNextGen,
+      isDraft: req.body?.isDraft,
       questionText: req.body?.questionText,
       questionImageUrl: req.body?.questionImageUrl,
       options,
@@ -358,6 +362,8 @@ const createQuestion = async (req, res) => {
       difficulty: req.body?.difficulty,
       highlightStart: req.body?.highlightStart,
       highlightEnd: req.body?.highlightEnd,
+      highlightSelectableWords: req.body?.highlightSelectableWords,
+      highlightCorrectWords: req.body?.highlightCorrectWords,
       matrixColumns: req.body?.matrixColumns,
       matrixRows: req.body?.matrixRows,
       hotspotImageUrl: req.body?.hotspotImageUrl,
@@ -372,8 +378,11 @@ const createQuestion = async (req, res) => {
     await question.save();
     res.status(201).json(question);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('createQuestion error:', error);
+    const msg = error?.errors
+      ? Object.values(error.errors).map(e => e.message).join('; ')
+      : (error?.message || 'Server error');
+    res.status(500).json({ message: msg });
   }
 };
 
@@ -403,8 +412,11 @@ const updateQuestion = async (req, res) => {
     await question.save();
     res.json(question);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('updateQuestion error:', error);
+    const msg = error?.errors
+      ? Object.values(error.errors).map(e => e.message).join('; ')
+      : (error?.message || 'Server error');
+    res.status(500).json({ message: msg });
   }
 };
 
