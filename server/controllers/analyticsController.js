@@ -241,7 +241,8 @@ const getMostUsedQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getCategoryStats = async (req, res) => {
   try {
-    const questions = await Question.find().lean();
+    // Exclude drafts — same filter used everywhere else in the app
+    const questions = await Question.find({ isDraft: { $ne: true } }).lean();
     const testResults = await TestResult.find().populate('answers.questionId');
 
     const categoryStats = {};
@@ -367,6 +368,7 @@ const getClientNeedsStats = async (req, res) => {
   try {
     const questions = await Question.find(
       {
+        isDraft: { $ne: true },
         $or: [
           { clientNeed: { $exists: true, $ne: null, $ne: '' } },
           { clientNeedSubcategory: { $exists: true, $ne: null, $ne: '' } }

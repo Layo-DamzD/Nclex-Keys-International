@@ -43,6 +43,9 @@ const AdminStats = ({ onSectionChange }) => {
         <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <span><i className="fas fa-book-medical" style={{ marginRight: '4px', color: '#6366f1' }}></i>{stats.subjectQuestions || 0} Subjects</span>
           <span><i className="fas fa-clipboard-list" style={{ marginRight: '4px', color: '#0891b2' }}></i>{stats.clientNeedQuestions || 0} Client Needs</span>
+          {(stats.caseStudyQuestions || 0) > 0 && (
+            <span><i className="fas fa-layer-group" style={{ marginRight: '4px', color: '#7c3aed' }}></i>{stats.caseStudyQuestions} Case Studies</span>
+          )}
           {(stats.uncategorized || 0) > 0 && (
             <span
               onClick={() => {

@@ -862,7 +862,10 @@ const getDashboardStats = async (req, res) => {
     const studentId = req.user.id;
     const user = await User.findById(studentId).select('seenQuestions');
     const testResults = await TestResult.find({ student: studentId }).select('percentage');
-    const totalQuestionBank = await Question.countDocuments();
+
+    // Use the SAME counting as getQuestionStatusCounts (excludes drafts)
+    const bankCounts = await countQuestionBank();
+    const totalQuestionBank = bankCounts.total;
 
     const totalTests = testResults.length;
     const avgScore = totalTests

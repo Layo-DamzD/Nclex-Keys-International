@@ -77,33 +77,43 @@ const isStudentSubscriptionExpired = (student) => {
 // @access  Private (admin only)
 const getAdminStats = async (req, res) => {
   try {
-    // Total = every question in the DB. Automatically picks up new questions.
-    const totalQuestions = await Question.countDocuments();
-
-    // Count how many are categorized as subjects or client needs
+    // Use the SAME counting logic as the student dashboard.
+    // Exclude drafts, exclude case-study type (they have their own tab),
+    // and count subjects and client needs independently (a question can be both).
     const allQuestions = await Question.find(
-      {},
-      '_id category subcategory clientNeed clientNeedSubcategory'
+      { isDraft: { $ne: true } },
+      '_id category subcategory clientNeed clientNeedSubcategory type'
     ).lean();
 
     const subjectIds = new Set();
     const clientNeedIds = new Set();
+    const caseStudyIds = new Set();
+
     for (const q of allQuestions) {
       const qId = String(q._id);
-      // Check client needs FIRST — it takes priority
-      const cnMatches = getClientNeedMatches(q);
-      if (cnMatches.size > 0) {
-        clientNeedIds.add(qId);
-        continue; // Don't also count under subjects
+
+      // Case-study type questions have their own counter
+      if (q.type === 'case-study') {
+        caseStudyIds.add(qId);
+        continue;
       }
+
+      // Subjects: canonical category + subcategory match
       const canonicalCat = matchCategory(q.category);
       const canonicalSub = canonicalCat ? matchSubcategory(canonicalCat, q.subcategory) : null;
       if (canonicalCat && canonicalSub && CATEGORIES[canonicalCat] && CATEGORIES[canonicalCat].includes(canonicalSub)) {
         subjectIds.add(qId);
       }
+
+      // Client needs: at least one match to a predefined NCLEX client need
+      const cnMatches = getClientNeedMatches(q);
+      if (cnMatches.size > 0) {
+        clientNeedIds.add(qId);
+      }
     }
 
-    const unionIds = new Set([...subjectIds, ...clientNeedIds]);
+    const totalQuestions = allQuestions.length;
+    const unionIds = new Set([...subjectIds, ...clientNeedIds, ...caseStudyIds]);
     const uncategorized = totalQuestions - unionIds.size;
 
     const totalStudents = await User.countDocuments({ role: 'student' });
@@ -118,6 +128,7 @@ const getAdminStats = async (req, res) => {
       totalQuestions,
       subjectQuestions: subjectIds.size,
       clientNeedQuestions: clientNeedIds.size,
+      caseStudyQuestions: caseStudyIds.size,
       uncategorized,
       totalStudents,
       totalUsage,
