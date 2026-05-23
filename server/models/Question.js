@@ -217,13 +217,9 @@ const questionSchema = new mongoose.Schema({
 });
 
 // Pre-save hook: validate and sanitize correctAnswer for all non-draft MC/SATA questions
-questionSchema.pre('save', function (next) {
-  try {
-    validateCorrectAnswer(this);
-    next();
-  } catch (err) {
-    next(err);
-  }
+// Mongoose 9+ requires async middleware — do NOT use callback-style function(next)
+questionSchema.pre('save', async function () {
+  validateCorrectAnswer(this);
 });
 
 module.exports = mongoose.model('Question', questionSchema);
