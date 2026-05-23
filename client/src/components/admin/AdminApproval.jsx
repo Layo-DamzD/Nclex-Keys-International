@@ -1,5 +1,77 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+const UploadChart = ({ chartData }) => {
+  const data = useMemo(() => ({
+    labels: chartData.map(d => d.label),
+    datasets: [{
+      label: 'Questions Uploaded',
+      data: chartData.map(d => d.value),
+      backgroundColor: chartData.map(d => d.isToday ? '#6366f1' : 'rgba(99, 102, 241, 0.25)'),
+      borderColor: chartData.map(d => d.isToday ? '#4f46e5' : 'rgba(99, 102, 241, 0.5)'),
+      borderWidth: 1,
+      borderRadius: 4,
+    }],
+  }), [chartData]);
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        cornerRadius: 8,
+        padding: 10,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { stepSize: 1, color: '#64748b', font: { size: 11 } },
+        grid: { color: '#f1f5f9' },
+        title: { display: true, text: 'Questions', color: '#64748b', font: { size: 12, weight: 500 } },
+      },
+      x: {
+        ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 45 },
+        grid: { display: false },
+      },
+    },
+  }), []);
+
+  return (
+    <div className="form-card" style={{ marginBottom: '30px' }}>
+      <h4 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <i className="fas fa-chart-line" style={{ color: '#6366f1' }}></i>
+        Upload Activity (Last 30 Days)
+      </h4>
+      <div style={{ height: '280px' }}>
+        <Bar data={data} options={options} />
+      </div>
+    </div>
+  );
+};
 
 const AdminApproval = () => {
   const currentAdmin = JSON.parse(sessionStorage.getItem('adminUser') || '{}');
@@ -220,79 +292,51 @@ const AdminApproval = () => {
         <p style={{ color: '#64748b' }}>Manage and approve administrator accounts</p>
       </div>
 
-      {/* ─── Upload Stats Cards ─── */}
+      {/* ─── Upload Stats Section (styled like Progress Report) ─── */}
       {!uploadCountsLoading && uploadCounts && (
         <>
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '12px', marginBottom: '16px',
-          }}>
-            {[
-              { label: 'Today', value: uploadCounts.today, icon: 'fa-calendar-day', bg: '#eff6ff', border: '#bfdbfe', color: '#1e40af' },
-              { label: 'This Month', value: uploadCounts.thisMonth, icon: 'fa-calendar', bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' },
-              { label: 'This Year', value: uploadCounts.thisYear, icon: 'fa-calendar-check', bg: '#fef3c7', border: '#fde68a', color: '#92400e' },
-              { label: 'Total Published', value: uploadCounts.totalPublished, icon: 'fa-database', bg: '#f5f3ff', border: '#ede9fe', color: '#5b21b6' },
-              { label: 'Drafts', value: uploadCounts.totalDrafts, icon: 'fa-file-pen', bg: '#fff1f2', border: '#fecdd3', color: '#991b1b' },
-            ].map((card) => (
-              <div key={card.label} style={{
-                background: card.bg, border: `1px solid ${card.border}`, borderRadius: '10px',
-                padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px',
-              }}>
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '8px', background: card.border,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: card.color, fontSize: '0.9rem',
+          {/* Summary Stats Cards */}
+          <div className="form-card" style={{ marginBottom: '30px' }}>
+            <h4 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="fas fa-chart-bar" style={{ color: '#6366f1' }}></i>
+              Upload Summary
+            </h4>
+            <div className="progress-report-stats-grid" style={{
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px',
+            }}>
+              {[
+                { label: 'Today', value: uploadCounts.today, icon: 'fa-calendar-day', color: '#1e40af', bg: '#eff6ff' },
+                { label: 'This Month', value: uploadCounts.thisMonth, icon: 'fa-calendar', color: '#166534', bg: '#f0fdf4' },
+                { label: 'This Year', value: uploadCounts.thisYear, icon: 'fa-calendar-check', color: '#92400e', bg: '#fef3c7' },
+                { label: 'Total Published', value: uploadCounts.totalPublished, icon: 'fa-database', color: '#5b21b6', bg: '#f5f3ff' },
+                { label: 'Drafts', value: uploadCounts.totalDrafts, icon: 'fa-file-pen', color: '#991b1b', bg: '#fff1f2' },
+              ].map((card) => (
+                <div key={card.label} className="stat-card text-center" style={{
+                  background: card.bg, borderRadius: '12px', padding: '20px 16px', border: '1px solid transparent',
                 }}>
-                  <i className={`fas ${card.icon}`}></i>
-                </div>
-                <div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 700, color: card.color, lineHeight: 1.2 }}>
+                  <i className={`fas ${card.icon}`} style={{ fontSize: '1.4rem', color: card.color, marginBottom: '8px' }}></i>
+                  <div className="stat-number" style={{ fontSize: '2rem', fontWeight: 700, color: card.color, lineHeight: 1.2 }}>
                     {card.value.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>{card.label}</div>
+                  <h4 style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginTop: '4px' }}>{card.label}</h4>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* ─── 30-Day Mini Chart ─── */}
+          {/* Upload Activity Chart */}
           {chartData.length > 0 && (
-            <div style={{
-              background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px',
-              padding: '14px 16px', marginBottom: '16px',
-            }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '10px' }}>
-                Upload Activity (Last 30 Days)
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '60px' }}>
-                {chartData.map((d, i) => (
-                  <div
-                    key={i}
-                    title={`${d.label}: ${d.value} questions`}
-                    style={{
-                      flex: 1, minHeight: '2px',
-                      height: `${Math.max(2, (d.value / maxChartValue) * 100)}%`,
-                      background: d.isToday ? '#6366f1' : '#c7d2fe',
-                      borderRadius: '2px 2px 0 0',
-                      transition: 'height 0.2s',
-                      cursor: 'pointer',
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+            <UploadChart chartData={chartData} />
           )}
 
-          {/* ─── Per-Admin Upload Progress Cards ─── */}
+          {/* Per-Admin Upload Progress */}
           {admins.length > 0 && uploadCounts && (
-            <div style={{
-              background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px',
-              padding: '16px', marginBottom: '16px',
-            }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '12px' }}>
-                <i className="fas fa-users me-1"></i> Admin Upload Progress
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+            <div className="form-card" style={{ marginBottom: '30px' }}>
+              <h4 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <i className="fas fa-users" style={{ color: '#6366f1' }}></i>
+                Admin Upload Progress
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                 {admins.map((admin) => {
                   const info = getAdminUploadInfo(admin._id) || { today: 0, thisMonth: 0, thisYear: 0, total: 0 };
                   const maxUpload = Math.max(...admins.map(a => {
@@ -302,32 +346,46 @@ const AdminApproval = () => {
                   const monthPercent = Math.round(((info.thisMonth || 0) / maxUpload) * 100);
                   return (
                     <div key={admin._id} style={{
-                      background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
-                      padding: '12px 14px',
+                      background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px',
+                      padding: '16px 18px', transition: 'box-shadow 0.2s',
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#1e293b' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b' }}>
                           {admin.name}
-                          {admin.role === 'superadmin' && <span className="badge badge-info ms-1" style={{ fontSize: '0.65rem' }}>Super</span>}
+                          {admin.role === 'superadmin' && <span className="badge badge-info ms-2" style={{ fontSize: '0.65rem', verticalAlign: 'middle' }}>Super</span>}
                         </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#6366f1' }}>
+                        <div style={{
+                          fontSize: '1.3rem', fontWeight: 800, color: '#6366f1',
+                          background: '#eff6ff', padding: '4px 12px', borderRadius: '8px',
+                        }}>
                           {info.total || 0}
                         </div>
                       </div>
                       {/* Monthly progress bar */}
-                      <div style={{ marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b', marginBottom: '3px' }}>
-                          <span>This Month: {info.thisMonth || 0}</span>
+                      <div style={{ marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748b', marginBottom: '4px' }}>
+                          <span>This Month: <strong>{info.thisMonth || 0}</strong></span>
                           <span>{monthPercent}%</span>
                         </div>
-                        <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${monthPercent}%`, background: 'linear-gradient(90deg, #6366f1, #818cf8)', borderRadius: '3px', transition: 'width 0.3s' }} />
+                        <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${monthPercent}%`, background: 'linear-gradient(90deg, #6366f1, #818cf8)', borderRadius: '4px', transition: 'width 0.3s' }} />
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '12px', fontSize: '0.72rem', color: '#64748b' }}>
-                        <span><i className="fas fa-calendar-day me-1"></i>Today: <strong style={{ color: '#1e40af' }}>{info.today || 0}</strong></span>
-                        <span><i className="fas fa-calendar me-1"></i>Month: <strong style={{ color: '#166534' }}>{info.thisMonth || 0}</strong></span>
-                        <span><i className="fas fa-calendar-check me-1"></i>Year: <strong style={{ color: '#92400e' }}>{info.thisYear || 0}</strong></span>
+                      <div style={{ display: 'flex', gap: '16px', fontSize: '0.82rem', color: '#475569', padding: '10px 12px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ flex: 1, textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: '2px' }}>Today</div>
+                          <strong style={{ color: '#1e40af', fontSize: '1rem' }}>{info.today || 0}</strong>
+                        </span>
+                        <span style={{ width: '1px', background: '#e2e8f0' }}></span>
+                        <span style={{ flex: 1, textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: '2px' }}>This Month</div>
+                          <strong style={{ color: '#166534', fontSize: '1rem' }}>{info.thisMonth || 0}</strong>
+                        </span>
+                        <span style={{ width: '1px', background: '#e2e8f0' }}></span>
+                        <span style={{ flex: 1, textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: '2px' }}>This Year</div>
+                          <strong style={{ color: '#92400e', fontSize: '1rem' }}>{info.thisYear || 0}</strong>
+                        </span>
                       </div>
                     </div>
                   );
