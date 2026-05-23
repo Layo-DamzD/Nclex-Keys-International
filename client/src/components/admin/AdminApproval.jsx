@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 
 const AdminApproval = () => {
@@ -16,9 +16,41 @@ const AdminApproval = () => {
   const [scopeStudents, setScopeStudents] = useState([]);
   const [scopeSelectedIds, setScopeSelectedIds] = useState([]);
 
+  const [uploadCounts, setUploadCounts] = useState(null);
+  const [uploadCountsLoading, setUploadCountsLoading] = useState(true);
+
   const isSuperAdmin = String(currentAdmin?.role || '').trim().toLowerCase() === 'superadmin';
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [recalcMessage, setRecalcMessage] = useState('');
+
+  // 30-day chart data
+  const chartData = useMemo(() => {
+    if (!uploadCounts?.dailyBreakdown) return [];
+    return uploadCounts.dailyBreakdown.map((d) => ({
+      label: d.label,
+      value: d.count,
+      isToday: d.date === new Date().toISOString().split('T')[0],
+    }));
+  }, [uploadCounts]);
+
+  const maxChartValue = useMemo(() => {
+    if (!chartData.length) return 1;
+    return Math.max(...chartData.map((d) => d.value), 1);
+  }, [chartData]);
+
+  const fetchUploadCounts = async () => {
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const res = await axios.get('/api/admin/upload-counts', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUploadCounts(res.data);
+    } catch (err) {
+      console.error('Failed to load upload counts', err);
+    } finally {
+      setUploadCountsLoading(false);
+    }
+  };
 
   const handleRecalculateScores = async () => {
     if (!window.confirm('This will recalculate scores for ALL past test results using the new scoring system (1 correct option = 1 point for SATA). Continue?')) return;
@@ -51,6 +83,7 @@ const AdminApproval = () => {
 
   useEffect(() => {
     fetchAdmins();
+    fetchUploadCounts();
   }, []);
 
   const fetchAdmins = async () => {
@@ -169,6 +202,14 @@ const AdminApproval = () => {
     }
   };
 
+  const perAdminStats = uploadCounts?.perAdminStats || {};
+
+  const getAdminUploadInfo = (adminId) => {
+    const stats = perAdminStats[String(adminId)] || perAdminStats[adminId];
+    if (!stats) return null;
+    return stats;
+  };
+
   if (loading) return <div>Loading admins...</div>;
   if (error) return <div className="alert alert-danger">{error}</div>;
 
@@ -178,6 +219,71 @@ const AdminApproval = () => {
         <h1>Admin Approval</h1>
         <p style={{ color: '#64748b' }}>Manage and approve administrator accounts</p>
       </div>
+
+      {/* ─── Upload Stats Cards ─── */}
+      {!uploadCountsLoading && uploadCounts && (
+        <>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: '12px', marginBottom: '16px',
+          }}>
+            {[
+              { label: 'Today', value: uploadCounts.today, icon: 'fa-calendar-day', bg: '#eff6ff', border: '#bfdbfe', color: '#1e40af' },
+              { label: 'This Month', value: uploadCounts.thisMonth, icon: 'fa-calendar', bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' },
+              { label: 'This Year', value: uploadCounts.thisYear, icon: 'fa-calendar-check', bg: '#fef3c7', border: '#fde68a', color: '#92400e' },
+              { label: 'Total Published', value: uploadCounts.totalPublished, icon: 'fa-database', bg: '#f5f3ff', border: '#ede9fe', color: '#5b21b6' },
+              { label: 'Drafts', value: uploadCounts.totalDrafts, icon: 'fa-file-pen', bg: '#fff1f2', border: '#fecdd3', color: '#991b1b' },
+            ].map((card) => (
+              <div key={card.label} style={{
+                background: card.bg, border: `1px solid ${card.border}`, borderRadius: '10px',
+                padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px',
+              }}>
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '8px', background: card.border,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: card.color, fontSize: '0.9rem',
+                }}>
+                  <i className={`fas ${card.icon}`}></i>
+                </div>
+                <div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 700, color: card.color, lineHeight: 1.2 }}>
+                    {card.value.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>{card.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ─── 30-Day Mini Chart ─── */}
+          {chartData.length > 0 && (
+            <div style={{
+              background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px',
+              padding: '14px 16px', marginBottom: '16px',
+            }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '10px' }}>
+                Upload Activity (Last 30 Days)
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '60px' }}>
+                {chartData.map((d, i) => (
+                  <div
+                    key={i}
+                    title={`${d.label}: ${d.value} questions`}
+                    style={{
+                      flex: 1, minHeight: '2px',
+                      height: `${Math.max(2, (d.value / maxChartValue) * 100)}%`,
+                      background: d.isToday ? '#6366f1' : '#c7d2fe',
+                      borderRadius: '2px 2px 0 0',
+                      transition: 'height 0.2s',
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* ─── Recalculate Scores ─── */}
       {isSuperAdmin && (
@@ -224,6 +330,7 @@ const AdminApproval = () => {
               <th>Email</th>
               <th>Role</th>
               <th>Status</th>
+              <th>Uploaded</th>
               <th>Access Code</th>
               <th>Your Students</th>
               <th>Joined</th>
@@ -233,7 +340,7 @@ const AdminApproval = () => {
           <tbody>
             {admins.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                <td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>
                   No admins found
                 </td>
               </tr>
@@ -260,6 +367,20 @@ const AdminApproval = () => {
                       ) : (
                         <span className="badge badge-warning">Pending</span>
                       )}
+                    </td>
+                    <td>
+                      {(() => {
+                        const info = getAdminUploadInfo(admin._id);
+                        if (!info) return <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>0</span>;
+                        return (
+                          <div style={{ fontSize: '0.78rem', lineHeight: 1.4 }}>
+                            <div style={{ fontWeight: 600 }}>{(info.total || 0).toLocaleString()}</div>
+                            <div style={{ color: '#64748b' }}>
+                              D:{info.today || 0} &middot; M:{info.thisMonth || 0} &middot; Y:{info.thisYear || 0}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
