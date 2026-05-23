@@ -335,28 +335,12 @@ const createQuestion = async (req, res) => {
   try {
     const { type, correctAnswer, options, rationale } = req.body || {};
 
-    // Validate correctAnswer format for MC/SATA before saving (non-draft)
+    // For published MC/SATA questions, only check that correctAnswer exists (not empty).
+    // Format conversion (full-text → letter) is handled silently by the pre-save hook in Question.js.
+    // This avoids blocking uploaders — they can paste any format and it gets auto-fixed.
     if (!req.body.isDraft && (type === 'multiple-choice' || type === 'sata')) {
       if (!correctAnswer || (typeof correctAnswer === 'string' && correctAnswer.trim() === '')) {
         return res.status(400).json({ message: 'correctAnswer is required for published questions' });
-      }
-      if (type === 'multiple-choice') {
-        const s = String(correctAnswer).trim();
-        if (!/^[A-Z]$/i.test(s)) {
-          return res.status(400).json({ message: `Invalid correctAnswer for multiple-choice: expected a single letter (A-Z), got "${s.substring(0, 40)}"` });
-        }
-      }
-      if (type === 'sata') {
-        if (!Array.isArray(correctAnswer) || correctAnswer.length === 0) {
-          return res.status(400).json({ message: 'SATA correctAnswer must be a non-empty array of letters' });
-        }
-        const allValid = correctAnswer.every(a => /^[A-Z]$/i.test(String(a).trim()));
-        if (!allValid) {
-          return res.status(400).json({ message: 'SATA correctAnswer must contain only single letters (A-Z)' });
-        }
-      }
-      if (!rationale || rationale.trim() === '') {
-        return res.status(400).json({ message: 'Rationale is required for published questions' });
       }
     }
 
@@ -400,22 +384,13 @@ const updateQuestion = async (req, res) => {
   try {
     const updates = req.body;
 
-    // Validate correctAnswer format when publishing (isDraft → false) for MC/SATA
+    // When publishing, only check that correctAnswer is not empty.
+    // Format conversion (full-text → letter) is handled silently by the pre-save hook.
     if (updates.isDraft === false || updates.isDraft === 'false') {
-      const { type, correctAnswer, rationale } = updates;
-      if (type === 'multiple-choice') {
-        const s = String(correctAnswer || '').trim();
-        if (!/^[A-Z]$/i.test(s)) {
-          return res.status(400).json({ message: `Cannot publish: MC correctAnswer must be a single letter (A-Z), got "${s.substring(0, 40)}"` });
-        }
-      }
-      if (type === 'sata') {
-        if (!Array.isArray(correctAnswer) || correctAnswer.length === 0 || !correctAnswer.every(a => /^[A-Z]$/i.test(String(a).trim()))) {
-          return res.status(400).json({ message: 'Cannot publish: SATA correctAnswer must be a non-empty array of letters (A-Z)' });
-        }
-      }
-      if (!rationale || rationale.trim() === '') {
-        return res.status(400).json({ message: 'Cannot publish: rationale is required' });
+      const { correctAnswer } = updates;
+      if (!correctAnswer || (typeof correctAnswer === 'string' && correctAnswer.trim() === '') ||
+          (Array.isArray(correctAnswer) && correctAnswer.length === 0)) {
+        return res.status(400).json({ message: 'Cannot publish: correctAnswer is required' });
       }
     }
 
