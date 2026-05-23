@@ -816,6 +816,13 @@ const TestCustomization = () => {
 
           {/* Status Filter */}
           <div className="tc-status-list">
+            <div style={{ padding: '12px 14px', borderRadius: '10px', background: 'linear-gradient(135deg, #eef2ff, #e0f2fe)', border: '1px solid #c7d2fe' }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#4338ca' }}>{totalQuestionBank}</div>
+              <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '4px', lineHeight: '1.45' }}>
+                questions currently available in your QBank. Categorized breakdowns are being updated — thank you for your patience.
+              </div>
+            </div>
+            {/* Hidden status filters still active for test generation logic */}
             {[
               { key: 'unused', label: 'Unused', count: showNormalCount ? (activeStatusCounts.unused || 0) : 0, ngnCount: showNgnCount ? (activeNgnStatusCounts?.unused || 0) : 0 },
               { key: 'marked', label: 'Marked', count: showNormalCount ? (activeStatusCounts.marked || 0) : 0, ngnCount: showNgnCount ? (activeNgnStatusCounts?.marked || 0) : 0 },
@@ -834,6 +841,7 @@ const TestCustomization = () => {
                     setStatusFilters(prev => ({ ...prev, [status.key]: !prev[status.key] }));
                   }
                 }}
+                style={{ display: 'none' }}
               >
                 {renderRadioCircle(statusFilters[status.key === 'all' ? 'unused' : status.key])}
                 <span className="tc-radio-text">{status.label}</span>
