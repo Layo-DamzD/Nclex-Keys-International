@@ -3219,12 +3219,43 @@ const saveTestProgress = async (req, res) => {
       return res.status(400).json({ message: 'No questions provided' });
     }
 
+    // Sanitize answers: for cloze-dropdown questions, strip any entries that
+    // accidentally match the correctAnswer (prevents correct answer pre-fill on restore)
+    const sanitizeClozeAnswers = (ansObj, qList) => {
+      if (!ansObj || typeof ansObj !== 'object') return ansObj || {};
+      const cleaned = { ...ansObj };
+      for (const q of qList) {
+        const checkCloze = (question, id) => {
+          if (question.type === 'cloze-dropdown' && question.correctAnswer
+              && typeof question.correctAnswer === 'object' && cleaned[id]) {
+            const userAns = cleaned[id];
+            if (typeof userAns === 'object' && userAns !== null) {
+              const filtered = {};
+              let hasReal = false;
+              for (const [k, v] of Object.entries(userAns)) {
+                if (v !== '' && v !== question.correctAnswer[k]) {
+                  filtered[k] = v;
+                  hasReal = true;
+                }
+              }
+              cleaned[id] = hasReal ? filtered : undefined;
+            }
+          }
+        };
+        checkCloze(q, q._id);
+        if (q.type === 'case-study' && Array.isArray(q.questions)) {
+          for (const subQ of q.questions) checkCloze(subQ, subQ._id);
+        }
+      }
+      return cleaned;
+    };
+
     const sessionData = {
       questions,
       settings,
       currentIndex: currentIndex || 0,
-      answers: answers || {},
-      caseAnswers: caseAnswers || {},
+      answers: sanitizeClozeAnswers(answers, questions),
+      caseAnswers: sanitizeClozeAnswers(caseAnswers, questions),
       caseIndex: caseIndex || 0,
       timeLeft: timeLeft ?? null,
       questionTimeSpent: questionTimeSpent || {},

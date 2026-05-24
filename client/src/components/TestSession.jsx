@@ -326,7 +326,31 @@ const TestSession = () => {
   const testType = restoredState?.testType || locationTestType;
   const dashboardReturnPath = restoredState?.dashboardReturnPath || settings?.returnTo || '/dashboard';
   const [currentIndex, setCurrentIndex] = useState(restoredState?.currentIndex || 0);
-  const [answers, setAnswers] = useState(restoredState?.answers || {});
+  const [answers, setAnswers] = useState(() => {
+    const raw = restoredState?.answers || {};
+    // Sanitize: for cloze-dropdown questions, strip any answers that
+    // accidentally leaked from correctAnswer (e.g. corrupted restore data)
+    const qList = restoredState?.questions || [];
+    const sanitized = { ...raw };
+    for (const q of qList) {
+      if (q.type === 'cloze-dropdown' && q.correctAnswer && typeof q.correctAnswer === 'object' && sanitized[q._id]) {
+        const userAns = sanitized[q._id];
+        if (typeof userAns === 'object' && userAns !== null) {
+          // Only keep keys where the value differs from correctAnswer
+          const cleaned = {};
+          let hasUserInput = false;
+          for (const [k, v] of Object.entries(userAns)) {
+            if (v !== '' && v !== q.correctAnswer[k]) {
+              cleaned[k] = v;
+              hasUserInput = true;
+            }
+          }
+          sanitized[q._id] = hasUserInput ? cleaned : undefined;
+        }
+      }
+    }
+    return sanitized;
+  });
   // Timer: 85 seconds per question
   const [timeLeft, setTimeLeft] = useState(() => {
     if (restoredState?.timeLeft !== undefined && restoredState?.timeLeft !== null) {
@@ -356,7 +380,32 @@ const TestSession = () => {
   const [chatLoading, setChatLoading] = useState(false);
   // Case study state
   const [caseIndex, setCaseIndex] = useState(restoredState?.caseIndex || 0);
-  const [caseAnswers, setCaseAnswers] = useState(restoredState?.caseAnswers || {});
+  const [caseAnswers, setCaseAnswers] = useState(() => {
+    const raw = restoredState?.caseAnswers || {};
+    const qList = restoredState?.questions || [];
+    const sanitized = { ...raw };
+    for (const q of qList) {
+      if (q.type === 'case-study' && Array.isArray(q.questions)) {
+        for (const subQ of q.questions) {
+          if (subQ.type === 'cloze-dropdown' && subQ.correctAnswer && typeof subQ.correctAnswer === 'object' && sanitized[subQ._id]) {
+            const userAns = sanitized[subQ._id];
+            if (typeof userAns === 'object' && userAns !== null) {
+              const cleaned = {};
+              let hasUserInput = false;
+              for (const [k, v] of Object.entries(userAns)) {
+                if (v !== '' && v !== subQ.correctAnswer[k]) {
+                  cleaned[k] = v;
+                  hasUserInput = true;
+                }
+              }
+              sanitized[subQ._id] = hasUserInput ? cleaned : undefined;
+            }
+          }
+        }
+      }
+    }
+    return sanitized;
+  });
 
   // Highlight ref
   const highlightRef = useRef(null);
@@ -2206,22 +2255,24 @@ const TestSession = () => {
                       if (!match) return <span key={`txt-${idx}`}>{chunk}</span>;
                       const key = match[1].trim();
                       const blank = (subQ.clozeBlanks || []).find((b) => b.key === key);
-                      const value = caseAnswers[subQId]?.[key] || '';
+                      // Only use stored answer if it's a non-empty user selection
+                      const storedVal = caseAnswers[subQId]?.[key];
+                      const value = (storedVal !== undefined && storedVal !== null && storedVal !== '') ? storedVal : '';
                       return (
                         <select
                           key={`sel-${key}-${idx}`}
                           className="form-select form-select-sm d-inline-block mx-1"
                           style={{ width: 'auto', minWidth: 170 }}
                           disabled={isPaused}
-                          value={value}
+                          value={String(value)}
                           onChange={(e) => {
                             const current = caseAnswers[subQId] || {};
                             handleCaseAnswer(subQId, { ...current, [key]: e.target.value });
                           }}
                         >
-                          <option value="">Select...</option>
+                          <option value="" disabled={!value}>-- Select --</option>
                           {(blank?.options || []).map((opt) => (
-                            <option key={`${key}-${opt}`} value={opt}>{opt}</option>
+                            <option key={`${key}-${opt}`} value={String(opt)}>{String(opt)}</option>
                           ))}
                         </select>
                       );
@@ -2800,22 +2851,24 @@ const TestSession = () => {
                 if (!match) return <span key={`txt-${idx}`}>{chunk}</span>;
                 const key = match[1].trim();
                 const blank = (currentQ.clozeBlanks || []).find((b) => b.key === key);
-                const value = answers[currentQ._id]?.[key] || '';
+                // Only use stored answer if it's a non-empty user selection
+                const storedVal = answers[currentQ._id]?.[key];
+                const value = (storedVal !== undefined && storedVal !== null && storedVal !== '') ? storedVal : '';
                 return (
                   <select
                     key={`sel-${key}-${idx}`}
                     className="form-select form-select-sm d-inline-block mx-1"
                     style={{ width: 'auto', minWidth: 170 }}
                     disabled={isPaused}
-                    value={value}
+                    value={String(value)}
                     onChange={(e) => {
                       const current = answers[currentQ._id] || {};
                       handleAnswer(currentQ._id, { ...current, [key]: e.target.value });
                     }}
                   >
-                    <option value="">Select...</option>
+                    <option value="" disabled={!value}>-- Select --</option>
                     {(blank?.options || []).map((opt) => (
-                      <option key={`${key}-${opt}`} value={opt}>{opt}</option>
+                      <option key={`${key}-${opt}`} value={String(opt)}>{String(opt)}</option>
                     ))}
                   </select>
                 );
