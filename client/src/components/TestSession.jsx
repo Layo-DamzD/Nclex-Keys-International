@@ -2007,7 +2007,11 @@ const TestSession = () => {
                   >
                     {(() => {
                       const words = (subQ.questionText || '').split(/\s+/).filter(w => w.trim());
-                      const selectableIndices = subQ.highlightSelectableWords || [];
+                      // If highlightSelectableWords is empty/missing, make ALL words clickable (fallback)
+                      let selectableIndices = subQ.highlightSelectableWords || [];
+                      if (!Array.isArray(selectableIndices) || selectableIndices.length === 0) {
+                        selectableIndices = words.map((_, idx) => idx);
+                      }
                       const currentAnswer = caseAnswers[subQId];
                       
                       return words.map((word, idx) => {
@@ -2530,7 +2534,11 @@ const TestSession = () => {
             >
               {(() => {
                 const words = (currentQ.questionText || '').split(/\s+/).filter(w => w.trim());
-                const selectableIndices = currentQ.highlightSelectableWords || [];
+                // If highlightSelectableWords is empty/missing, make ALL words clickable (fallback)
+                let selectableIndices = currentQ.highlightSelectableWords || [];
+                if (!Array.isArray(selectableIndices) || selectableIndices.length === 0) {
+                  selectableIndices = words.map((_, idx) => idx);
+                }
                 const currentAnswer = answers[currentQ._id];
                 
                 return words.map((word, idx) => {

@@ -573,10 +573,84 @@ const bulkImportQuestions = async (req, res) => {
         continue;
       }
 
+      // ── AUTO-DETECT QUESTION TYPE ──
+      // Normalize the type value from CSV to match our enum
+      const rawType = String(row.type).trim().toLowerCase();
+      const typeAliases = {
+        'fill-in-the-blank': 'fill-blank',
+        'fill in the blank': 'fill-blank',
+        'fill in blank': 'fill-blank',
+        'fill-blank': 'fill-blank',
+        'fillblank': 'fill-blank',
+        'fill_the_blank': 'fill-blank',
+        'fitb': 'fill-blank',
+        'fib': 'fill-blank',
+        'highlight': 'highlight',
+        'hot-spot': 'hotspot',
+        'hot spot': 'hotspot',
+        'hotspot': 'hotspot',
+        'drag-and-drop': 'drag-drop',
+        'drag and drop': 'drag-drop',
+        'drag drop': 'drag-drop',
+        'drag-drop': 'drag-drop',
+        'dragdrop': 'drag-drop',
+        'multiple-choice': 'multiple-choice',
+        'multiple choice': 'multiple-choice',
+        'mcq': 'multiple-choice',
+        'mc': 'multiple-choice',
+        'sata': 'sata',
+        'select all that apply': 'sata',
+        'select-all-that-apply': 'sata',
+        'multiple-answer': 'sata',
+        'cloze-dropdown': 'cloze-dropdown',
+        'cloze dropdown': 'cloze-dropdown',
+        'cloze': 'cloze-dropdown',
+        'matrix': 'matrix',
+        'case-study': 'case-study',
+        'case study': 'case-study',
+      };
+      let questionType = typeAliases[rawType] || rawType;
+      // Validate final type against enum
+      const validTypes = ['multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
+      if (!validTypes.includes(questionType)) {
+        console.warn(`\u26a0\ufe0f Row ${i + 1}: Unknown type "${row.type}" auto-detected as "${questionType}". Using 'multiple-choice' as fallback.`);
+        questionType = 'multiple-choice';
+      }
+
       // Parse options (semicolon separated)
       let options = [];
       if (row.options) {
-        options = row.options.split(';').map(o => o.trim());
+        options = row.options.split(';').map(o => o.trim()).
+        filter(o => o.length > 0);
+      }
+
+      // ── AUTO-CORRECT: If type is fill-blank but options exist with "fill in the blank" text, clear them ──
+      if (questionType === 'fill-blank') {
+        // Remove options that look like fill-blank placeholder text
+        options = options.filter(o => {
+          const lower = o.toLowerCase();
+          return !lower.includes('fill in the blank') &&
+                 !lower.includes('fill-in-the-blank') &&
+                 !lower.includes('type your answer') &&
+                 !lower.includes('type answer here');
+        });
+      }
+
+      // ── AUTO-CORRECT: If options contain only "fill in the blank" text, change type to fill-blank ──
+      if (questionType === 'multiple-choice' && options.length > 0) {
+        const allFillBlank = options.every(o => {
+          const lower = o.toLowerCase().trim();
+          return lower === 'fill in the blank' ||
+                 lower === 'fill-in-the-blank' ||
+                 lower === 'type your answer' ||
+                 lower === 'type answer here' ||
+                 lower === '';
+        });
+        if (allFillBlank) {
+          console.log(`\u2705 Row ${i + 1}: Auto-corrected type from 'multiple-choice' to 'fill-blank' (detected fill-blank placeholder options)`);
+          questionType = 'fill-blank';
+          options = [];
+        }
       }
 
       const toOptionLetter = (value) => {
@@ -590,7 +664,7 @@ const bulkImportQuestions = async (req, res) => {
 
       // Parse correctAnswer
       let correctAnswer = row.correctanswer || '';
-      if (row.type === 'sata') {
+      if (questionType === 'sata') {
         const sataParts = String(correctAnswer)
           .split(/[,;]+/)
           .map(c => c.trim())
@@ -602,7 +676,7 @@ const bulkImportQuestions = async (req, res) => {
         }
         correctAnswer = mappedSata;
       }
-      if (row.type === 'multiple-choice') {
+      if (questionType === 'multiple-choice') {
         const mappedMc = toOptionLetter(correctAnswer);
         if (!mappedMc) {
           errors.push(`Row ${i + 1}: multiple-choice correctAnswer must match an option letter or option text`);
@@ -610,12 +684,12 @@ const bulkImportQuestions = async (req, res) => {
         }
         correctAnswer = mappedMc;
       }
-      if (row.type === 'drag-drop' && (!correctAnswer || !String(correctAnswer).trim()) && options.length > 0) {
+      if (questionType === 'drag-drop' && (!correctAnswer || !String(correctAnswer).trim()) && options.length > 0) {
         correctAnswer = options.map((_, idx) => String.fromCharCode(65 + idx)).join(',');
       }
 
       const question = {
-        type: row.type,
+        type: questionType,
         category: row.category,
         subcategory: row.subcategory,
         clientNeed: String(row.clientneed || '').trim(),
@@ -627,7 +701,7 @@ const bulkImportQuestions = async (req, res) => {
         difficulty: row.difficulty || 'medium',
       };
 
-      if (row.type === 'highlight') {
+      if (questionType === 'highlight') {
         const start = Number(row.highlightstart);
         const end = Number(row.highlightend);
         if (!Number.isNaN(start)) question.highlightStart = start;
