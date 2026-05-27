@@ -951,7 +951,13 @@ const TestReviewExamView = ({
           <div className="exam-review-runtime-explanation-column">
             <div className="exam-review-runtime-explanation-tab">Explanation</div>
             <div className="exam-review-rationale-box exam-review-rationale-runtime">
-              {active.rationale && (<div className="rationale-text-block"><RationaleContent text={active.rationale} label="Rationale:" /></div>)}
+              {active.rationale && active.rationale.trim() ? (
+                <div className="rationale-text-block"><RationaleContent text={active.rationale} label="Rationale:" /></div>
+              ) : (
+                <div style={{ color: '#94a3b8', fontStyle: 'italic', padding: '8px 0' }}>
+                  <i className="fas fa-info-circle me-2"></i>No rationale available for this question.
+                </div>
+              )}
               {active.rationaleImageUrl && (
                 <div className="mt-2">
                   <img src={firstMediaUrl(active.rationaleImageUrl)} data-raw-src={active.rationaleImageUrl} data-fallback-index="0" onError={handleImageFallback} alt="Rationale visual" style={{ maxWidth: '320px', width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
