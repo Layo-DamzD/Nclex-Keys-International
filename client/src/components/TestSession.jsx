@@ -1777,8 +1777,8 @@ const TestSession = () => {
                 </div>
               )}
               <p className="question-text">
-                {subQ.type === 'cloze-dropdown' && subQ.clozeTemplate
-                  ? subQ.clozeTemplate.replace(/\{\{[^}]+\}\}/g, '_____').replace(/Complete the following sentence.*?\n\n?/s, '').trim()
+                {subQ.type === 'cloze-dropdown'
+                  ? null
                   : subQ.questionText}
               </p>
               {subQ.questionImageUrl && (
@@ -2418,8 +2418,8 @@ const TestSession = () => {
 
       <div className="question-container exam-runtime-question-panel">
         <p className="question-text">
-          {currentQ.type === 'cloze-dropdown' && currentQ.clozeTemplate
-            ? currentQ.clozeTemplate.replace(/\{\{[^}]+\}\}/g, '_____').replace(/Complete the following sentence.*?\n\n?/s, '').trim()
+          {currentQ.type === 'cloze-dropdown'
+            ? null
             : currentQ.questionText}
         </p>
         {currentQ.questionImageUrl && (

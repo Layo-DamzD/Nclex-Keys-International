@@ -130,7 +130,11 @@ const letterToOptionText = (letter, options = []) => {
   if (!letter || typeof letter !== 'string') return String(letter ?? '');
   const idx = letter.charCodeAt(0) - 65;
   const text = options?.[idx];
-  return text ? `${letter}. ${text}` : letter;
+  if (!text) return letter;
+  // If the option text is just a single letter matching the input (e.g. options=["A","B","C"]),
+  // return only the letter to avoid showing "A. A" / "B. B"
+  if (/^[A-Za-z]$/.test(text) && text.toUpperCase() === letter.toUpperCase()) return letter;
+  return `${letter}. ${text}`;
 };
 
 const isUnansweredValue = (value) => {
@@ -726,7 +730,7 @@ const TestReviewExamView = ({
                   })}
                 </div>
               </div>
-            ) : Array.isArray(active.options) && active.options.length > 0 ? (
+            ) : Array.isArray(active.options) && active.options.length > 0 && !['fill-blank', 'highlight', 'drag-drop', 'cloze-dropdown', 'hotspot', 'matrix', 'bowtie'].includes(active.type) ? (
               <div className="exam-review-runtime-option-list">
                 {active.options.map((opt, idx) => {
                   const letter = String.fromCharCode(65 + idx);
@@ -903,6 +907,73 @@ const TestReviewExamView = ({
               </div>
             )}
 
+            {active.type === 'fill-blank' && (
+              <div className="mt-3">
+                <div className="label mb-1">Fill in the Blank</div>
+                <div style={{ fontSize: '0.9em' }}>
+                  <div style={{ marginBottom: '6px' }}>
+                    <span style={{ color: '#6b7280', fontWeight: 500 }}>Your answer: </span>
+                    <span style={{
+                      background: active.isCorrect ? '#dcfce7' : '#fee2e2',
+                      color: active.isCorrect ? '#166534' : '#dc2626',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontWeight: 600,
+                      border: `1px solid ${active.isCorrect ? '#86efac' : '#fca5a5'}`,
+                    }}>{active.userAnswer || '(empty)'}</span>
+                  </div>
+                  {!active.isCorrect && active.correctAnswer && (
+                    <div>
+                      <span style={{ color: '#6b7280', fontWeight: 500 }}>Correct answer: </span>
+                      <span style={{
+                        background: '#dcfce7',
+                        color: '#166534',
+                        padding: '4px 12px',
+                        borderRadius: '6px',
+                        fontWeight: 600,
+                        border: '1px solid #86efac',
+                      }}>
+                        {typeof active.correctAnswer === 'string' && active.correctAnswer.includes(';')
+                          ? active.correctAnswer.split(';').map(s => s.trim()).join(' or ')
+                          : active.correctAnswer}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {active.type === 'cloze-dropdown' && active.clozeBlanks && active.clozeBlanks.length > 0 && (
+              <div className="mt-3">
+                <div className="label mb-1">Cloze Dropdown Answers</div>
+                <div style={{ fontSize: '0.9em' }}>
+                  {(active.clozeBlanks || []).map((blank) => {
+                    const userVal = active.userAnswer?.[blank.key] || '';
+                    const correctVal = active.correctAnswer?.[blank.key] || '';
+                    const isMatch = String(userVal).trim() === String(correctVal).trim();
+                    return (
+                      <div key={blank.key} style={{
+                        marginBottom: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: isMatch ? '#dcfce7' : '#fee2e2',
+                        border: `1px solid ${isMatch ? '#22c55e' : '#ef4444'}`
+                      }}>
+                        <div style={{ fontSize: '0.8em', fontWeight: 600, color: '#64748b', marginBottom: '4px', textTransform: 'capitalize' }}>
+                          {blank.key.replace(/blank/i, 'Blank ')}
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 500 }}>Your answer:</span>{' '}
+                          <span style={{ color: isMatch ? '#166534' : '#dc2626', fontWeight: 600 }}>{userVal || '(empty)'}</span>
+                          {!isMatch && <><br /><span style={{ fontWeight: 500 }}>Correct:</span> <span style={{ color: '#166534', fontWeight: 600 }}>{correctVal}</span></>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {active.type === 'highlight' && (
               <div className="mt-3">
                 <div className="label mb-1">Highlight Selection</div>
@@ -928,13 +999,6 @@ const TestReviewExamView = ({
                     </>
                   )}
                 </div>
-              </div>
-            )}
-
-            {active.type === 'cloze-dropdown' && (
-              <div className="mt-3">
-                <div className="label mb-1">Cloze Responses</div>
-                <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
               </div>
             )}
 

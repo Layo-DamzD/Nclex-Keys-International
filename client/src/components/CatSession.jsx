@@ -2088,10 +2088,9 @@ const CatSession = () => {
                 <span style={{ color: '#9ca3af', fontSize: '12px' }}>{getShortId(subQ._id)}</span>
                 <span style={{ color: '#9ca3af', fontSize: '12px' }}>{getTypeLabel(subQ.type)}</span>
               </div>
+              {/* Hide raw question text for cloze-dropdown — the interactive dropdown component shows it */}
               <p className="question-text">
-                {subQ.type === 'cloze-dropdown' && subQ.clozeTemplate
-                  ? subQ.clozeTemplate.replace(/\{\{[^}]+\}\}/g, '_____').replace(/Complete the following sentence.*?\n\n?/s, '').trim()
-                  : subQ.questionText}
+                {subQ.type === 'cloze-dropdown' ? null : subQ.questionText}
               </p>
               {subQ.questionImageUrl && (
                 <div className="mb-3">
@@ -2300,9 +2299,10 @@ const CatSession = () => {
           <span style={{ color: '#9ca3af', fontSize: '12px' }}>{shortId}</span>
         </div>
 
+        {/* Hide raw question text for cloze-dropdown — the interactive dropdown component shows it */}
         <p className="question-text">
-          {currentQuestion.type === 'cloze-dropdown' && currentQuestion.clozeTemplate
-            ? currentQuestion.clozeTemplate.replace(/\{\{[^}]+\}\}/g, '_____').replace(/Complete the following sentence.*?\n\n?/s, '').trim()
+          {currentQuestion.type === 'cloze-dropdown'
+            ? null
             : currentQuestion.questionText}
         </p>
         {currentQuestion.questionImageUrl && (
