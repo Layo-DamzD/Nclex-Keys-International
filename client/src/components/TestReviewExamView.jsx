@@ -946,12 +946,34 @@ const TestReviewExamView = ({
                 </div>
               ))}
             </div>
+
+            {/* Explicit Your Answer / Correct Answer display */}
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{
+                flex: 1, minWidth: '200px', padding: '10px 14px', borderRadius: '8px',
+                background: '#f1f5f9', border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Your Answer</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 500, color: active.isCorrect === true ? '#166534' : active.isCorrect === 'partial' ? '#92400e' : '#dc2626' }}>
+                  {formatAnswerValue(active, active.userAnswer)}
+                </div>
+              </div>
+              <div style={{
+                flex: 1, minWidth: '200px', padding: '10px 14px', borderRadius: '8px',
+                background: '#f0fdf4', border: '1px solid #bbf7d0'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#166534', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Correct Answer</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#166534' }}>
+                  {formatCorrectAnswer(active)}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="exam-review-runtime-explanation-column">
             <div className="exam-review-runtime-explanation-tab">Explanation</div>
             <div className="exam-review-rationale-box exam-review-rationale-runtime">
-              {active.rationale && active.rationale.trim() ? (
+              {active.rationale && typeof active.rationale === 'string' && active.rationale.trim() ? (
                 <div className="rationale-text-block"><RationaleContent text={active.rationale} label="Rationale:" /></div>
               ) : (
                 <div style={{ color: '#94a3b8', fontStyle: 'italic', padding: '8px 0' }}>
@@ -1622,7 +1644,7 @@ const TestReviewExamView = ({
               </div>
             <div className="exam-review-report-metric">
               <span>Score</span>
-              <strong>{score}/{totalQuestions}</strong>
+              <strong>{summary.correct}/{totalQuestions}</strong>
             </div>
             <div className="exam-review-report-metric">
               <span>Time Taken</span>

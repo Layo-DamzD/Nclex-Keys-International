@@ -369,18 +369,20 @@ const submitTest = async (req, res) => {
       sum + Number(row?.totalMarks ?? 1)
     ), 0) || Math.max(enrichedAnswers.length, 1);
     const computedPercentage = Math.round((earnedScore / possibleScore) * 100);
+    const correctAnswerCount = enrichedAnswers.filter(r => r.isCorrect === true).length;
 
     // 1 answer = 1 point: totalQuestions is the actual number of answer entries (including sub-questions)
     const actualAnswerCount = enrichedAnswers.length;
 
     // Save test result with full answer details
     let testResult;
+    const now = new Date();
     if (req._existingInProgressResult) {
       // Update the existing in_progress record
       testResult = req._existingInProgressResult;
       testResult.testId = testId ? mongoose.Types.ObjectId(testId) : undefined;
       testResult.testName = testName;
-      testResult.score = Number(earnedScore.toFixed(2));
+      testResult.score = correctAnswerCount;
       testResult.totalQuestions = actualAnswerCount;
       testResult.totalPoints = Math.round(possibleScore);
       testResult.earnedPoints = Number(earnedScore.toFixed(2));
@@ -390,6 +392,8 @@ const submitTest = async (req, res) => {
       testResult.answers = enrichedAnswers;
       testResult.proctoring = proctoring;
       testResult.status = 'completed';
+      testResult.startTime = testResult.startTime || testResult.createdAt;
+      testResult.endTime = now;
       testResult.testSessionData = undefined; // Clear session data
       await testResult.save();
     } else {
@@ -397,8 +401,10 @@ const submitTest = async (req, res) => {
         student: studentId,
         testId: testId ? mongoose.Types.ObjectId(testId) : undefined,
         testName,
-        date: new Date(),
-        score: Number(earnedScore.toFixed(2)),
+        date: now,
+        startTime: now,
+        endTime: now,
+        score: correctAnswerCount,
         totalQuestions: actualAnswerCount,
         totalPoints: Math.round(possibleScore),
         earnedPoints: Number(earnedScore.toFixed(2)),
@@ -2051,7 +2057,7 @@ const startCATSession = async (req, res) => {
 const submitCATAnswer = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const { questionId, answer, subQuestionId, subQuestionAnswers, proctoring } = req.body;
+    const { questionId, answer, subQuestionId, subQuestionAnswers, proctoring, timeSpentSeconds } = req.body;
     
     // Get session — try in-memory first, fall back to DB (server restart resilience)
     let session = catSessions.get(studentId);
@@ -2160,7 +2166,8 @@ const submitCATAnswer = async (req, res) => {
             totalMarks: sub.totalMarks,
             isCorrect: sub.isCorrect,
             questionType: sub.questionType,
-            scenario: question.scenario
+            scenario: question.scenario,
+            timeSpentSeconds: timeSpentSeconds || 0
           });
         }
       } else {
@@ -2174,7 +2181,8 @@ const submitCATAnswer = async (req, res) => {
           totalMarks: evaluation.totalMarks,
           isCorrect: evaluation.isCorrect,
           questionType: effectiveQuestion.type,
-          scenario: question.type === 'case-study' ? question.scenario : undefined
+          scenario: question.type === 'case-study' ? question.scenario : undefined,
+          timeSpentSeconds: timeSpentSeconds || 0
         });
       }
       session.administered.push(questionId);
@@ -2252,9 +2260,11 @@ const submitCATAnswer = async (req, res) => {
           totalMarks: detail.totalMarks,
           correctAnswer: questionData?.correctAnswer,
           questionText: questionData?.questionText,
+          questionImageUrl: questionData?.questionImageUrl,
           options: questionData?.options,
           type: questionData?.type || detail.questionType,
           rationale: questionData?.rationale,
+          rationaleImageUrl: questionData?.rationaleImageUrl,
           scenario: detail.scenario,
           matrixRows: questionData?.matrixRows,
           matrixColumns: questionData?.matrixColumns,
@@ -2262,23 +2272,31 @@ const submitCATAnswer = async (req, res) => {
           hotspotTargets: questionData?.hotspotTargets,
           clozeTemplate: questionData?.clozeTemplate,
           clozeBlanks: questionData?.clozeBlanks,
+          highlightStart: questionData?.highlightStart,
+          highlightEnd: questionData?.highlightEnd,
           category: questionData?.category,
           subcategory: questionData?.subcategory,
+          parentCaseStudyId: detail.subQuestionId ? detail.questionId : undefined,
+          parentCaseStudyType: detail.subQuestionId ? (questionPool.find(d => String(d._id) === String(detail.questionId))?.caseStudyType || 'layered') : undefined,
+          timeSpentSeconds: detail.timeSpentSeconds || session.questionTimeSpent?.[detail.subQuestionId || detail.questionId] || 0,
         };
       });
 
       const totalQuestionsCount = answers.length;
 
+      const endTime = new Date();
       const testResult = new TestResult({
         student: studentId,
         testName,
         testType: session.testType,
-        date: new Date(),
-        score: totalEarned,
+        date: endTime,
+        startTime: session.startTime instanceof Date ? session.startTime : new Date(session.startTime),
+        endTime,
+        score: answers.filter(a => a.isCorrect === true).length,
         totalQuestions: totalQuestionsCount, // actual answer count (includes sub-questions)
         totalPoints: totalPossible,
         earnedPoints: totalEarned,
-        timeTaken: (new Date() - session.startTime) / 60000,
+        timeTaken: (endTime - session.startTime) / 60000,
         percentage,
         passed,
         theta: session.theta,
@@ -3713,7 +3731,13 @@ const exitCATSession = async (req, res) => {
     }).sort({ date: -1 });
 
     if (inProgressResult && catSession.answerDetails?.length > 0) {
-      // Build answers array from CAT session data
+      // Fetch full question data from DB to include rationale, options, etc.
+      const Question = require('../models/Question');
+      const questionIds = catSession.administered.filter(id => id);
+      const dbQuestions = await Question.find({ _id: { $in: questionIds } }).lean();
+      const questionMap = new Map(dbQuestions.map(q => [String(q._id), q]));
+
+      // Build answers array from CAT session data, enriched with DB question data
       const answers = [];
       let earnedTotal = 0;
       let possibleTotal = 0;
@@ -3723,16 +3747,33 @@ const exitCATSession = async (req, res) => {
         const detail = catSession.answerDetails[i];
         if (!detail) continue;
 
+        const dbQ = questionMap.get(String(qId));
+
         answers.push({
           questionId: qId,
           userAnswer: detail.userAnswer,
           isCorrect: detail.isCorrect,
           earnedMarks: catSession.earnedMarks?.[i] ?? (detail.isCorrect === true ? 1 : 0),
           totalMarks: catSession.totalMarks?.[i] ?? 1,
-          correctAnswer: detail.correctAnswer,
-          questionText: detail.questionText || '',
-          type: detail.questionType || '',
-          scenario: detail.scenario || '',
+          correctAnswer: detail.correctAnswer || dbQ?.correctAnswer || '',
+          questionText: detail.questionText || dbQ?.questionText || '',
+          questionImageUrl: detail.questionImageUrl || dbQ?.questionImageUrl || '',
+          options: detail.options || dbQ?.options || [],
+          type: detail.questionType || dbQ?.type || '',
+          rationale: dbQ?.rationale || '',
+          rationaleImageUrl: dbQ?.rationaleImageUrl || '',
+          category: dbQ?.category || '',
+          subcategory: dbQ?.subcategory || '',
+          scenario: detail.scenario || dbQ?.scenario || '',
+          highlightStart: dbQ?.highlightStart,
+          highlightEnd: dbQ?.highlightEnd,
+          highlightSelectableWords: dbQ?.highlightSelectableWords,
+          matrixColumns: dbQ?.matrixColumns,
+          matrixRows: dbQ?.matrixRows,
+          hotspotImageUrl: dbQ?.hotspotImageUrl,
+          hotspotTargets: dbQ?.hotspotTargets,
+          clozeTemplate: dbQ?.clozeTemplate,
+          clozeBlanks: dbQ?.clozeBlanks,
         });
 
         earnedTotal += Number(catSession.earnedMarks?.[i] ?? (detail.isCorrect === true ? 1 : 0));

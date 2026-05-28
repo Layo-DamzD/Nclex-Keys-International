@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer } from 'react';
+import React, { useState, useEffect, useReducer, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { resolveMediaCandidates } from '../utils/imageUpload';
@@ -291,6 +291,7 @@ const CatSession = () => {
 
   // Timer: 85 seconds per question (resets on each new question)
   const [timeLeft, setTimeLeft] = useState(restoredState?.timeLeft || 85);
+  const questionStartTimeRef = useRef(Date.now());
 
   // Answer state for all question types
   const [answer, setAnswer] = useState(restoredState?.answer ?? null);
@@ -596,6 +597,9 @@ const CatSession = () => {
   const submitAnswerWithCurrent = async () => {
     if (!currentQuestion) return;
 
+    // Calculate time spent on this question
+    const timeSpentSeconds = Math.round((Date.now() - questionStartTimeRef.current) / 1000);
+
     setLoading(true);
     setError('');
 
@@ -611,7 +615,8 @@ const CatSession = () => {
 
         const response = await axios.post('/api/student/cat/answer', {
           questionId: currentQuestion._id,
-          subQuestionAnswers
+          subQuestionAnswers,
+          timeSpentSeconds
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -642,6 +647,7 @@ const CatSession = () => {
           setTheta(response.data.theta);
           setSe(response.data.se);
           if (response.data.confidence) setConfidence(response.data.confidence);
+          questionStartTimeRef.current = Date.now(); // Reset per-question timer
           setLoading(false);
         }
       } else {
@@ -649,6 +655,7 @@ const CatSession = () => {
         const response = await axios.post('/api/student/cat/answer', {
           questionId: currentQuestion._id,
           answer: userAnswer,
+          timeSpentSeconds,
           proctoring: {
             violations: proctorViolations,
             warnings: proctorWarnings
@@ -848,6 +855,7 @@ const CatSession = () => {
       setTheta(response.data.theta);
       setSe(response.data.se);
       if (response.data.confidence) setConfidence(response.data.confidence);
+      questionStartTimeRef.current = Date.now(); // Reset per-question timer
     }
 
     setLoading(false);
@@ -1442,7 +1450,11 @@ const CatSession = () => {
       ? (v) => handleCaseAnswer(q._id, v)
       : (v) => setHighlightAnswer(v);
     const words = (q.questionText || '').split(/\s+/).filter(w => w.trim());
-    const selectableIndices = q.highlightSelectableWords || [];
+    let selectableIndices = q.highlightSelectableWords || [];
+    // Fallback: if no selectable words defined, make all words clickable
+    if (!Array.isArray(selectableIndices) || selectableIndices.length === 0) {
+      selectableIndices = words.map((_, idx) => idx);
+    }
     return (
       <div className="highlight-container">
         <p className="text-muted mb-3">

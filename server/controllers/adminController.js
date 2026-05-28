@@ -688,16 +688,34 @@ const bulkImportQuestions = async (req, res) => {
         correctAnswer = options.map((_, idx) => String.fromCharCode(65 + idx)).join(',');
       }
 
+      // ── Validate required fields ──
+      const rawQuestionText = normalizeImportedText(row.questiontext);
+      const rawRationale = normalizeImportedText(row.rationale);
+      const rawCorrectAnswer = String(row.correctanswer || '').trim();
+
+      if (!rawQuestionText) {
+        errors.push(`Row ${i + 1}: questionText is required`);
+        continue;
+      }
+      if (!rawRationale) {
+        errors.push(`Row ${i + 1}: rationale is required and cannot be blank`);
+        continue;
+      }
+      if (!rawCorrectAnswer && questionType !== 'drag-drop') {
+        errors.push(`Row ${i + 1}: correctAnswer is required for ${questionType} questions`);
+        continue;
+      }
+
       const question = {
         type: questionType,
         category: row.category,
         subcategory: row.subcategory,
         clientNeed: String(row.clientneed || '').trim(),
         clientNeedSubcategory: String(row.clientneedsubcategory || '').trim(),
-        questionText: normalizeImportedText(row.questiontext),
+        questionText: rawQuestionText,
         options,
         correctAnswer,
-        rationale: normalizeImportedText(row.rationale),
+        rationale: rawRationale,
         difficulty: row.difficulty || 'medium',
       };
 
