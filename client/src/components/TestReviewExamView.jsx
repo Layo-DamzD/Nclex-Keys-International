@@ -693,7 +693,13 @@ const TestReviewExamView = ({
               </div>
             )}
 
-            <p className="question-text">{active.questionText || 'No question text'}</p>
+            {/* Hide raw question text for cloze-dropdown — the cloze answer card below shows it */}
+            {active.type === 'cloze-dropdown'
+              ? (active.clozeTemplate
+                ? <p className="question-text">{active.clozeTemplate.replace(/\{\{[^}]+\}\}/g, '_____').replace(/Complete the following sentence.*?\n\n?/s, '').trim()}</p>
+                : <p className="question-text">{active.questionText || 'No question text'}</p>)
+              : <p className="question-text">{active.questionText || 'No question text'}</p>
+            }
 
             {/* Bowtie-specific review display */}
             {active.type === 'bowtie' && typeof active.correctAnswer === 'object' && active.correctAnswer !== null ? (
@@ -815,7 +821,7 @@ const TestReviewExamView = ({
             {active.type === 'matrix' && (
               <div className="mt-3">
                 <div className="label mb-1">Matrix Answer</div>
-                {Array.isArray(active.matrixRows) && active.matrixRows.length > 0 && (
+                {Array.isArray(active.matrixRows) && active.matrixRows.length > 0 && Array.isArray(active.matrixColumns) && active.matrixColumns.length > 0 ? (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.9em' }}>
                       <thead>
@@ -866,6 +872,28 @@ const TestReviewExamView = ({
                         })}
                       </tbody>
                     </table>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.9em' }}>
+                    <div style={{ marginBottom: '6px' }}>
+                      <span style={{ color: '#6b7280', fontWeight: 500 }}>Your answer: </span>
+                      <span style={{
+                        background: active.isCorrect === true ? '#dcfce7' : '#fee2e2',
+                        color: active.isCorrect === true ? '#166534' : '#dc2626',
+                        padding: '4px 12px', borderRadius: '6px', fontWeight: 600,
+                        border: `1px solid ${active.isCorrect === true ? '#86efac' : '#fca5a5'}`,
+                      }}>{active.userAnswer ? JSON.stringify(active.userAnswer) : '(empty)'}</span>
+                    </div>
+                    {!active.isCorrect && active.correctAnswer && (
+                      <div>
+                        <span style={{ color: '#6b7280', fontWeight: 500 }}>Correct answer: </span>
+                        <span style={{
+                          background: '#dcfce7', color: '#166534',
+                          padding: '4px 12px', borderRadius: '6px', fontWeight: 600,
+                          border: '1px solid #86efac',
+                        }}>{typeof active.correctAnswer === 'object' ? JSON.stringify(active.correctAnswer) : active.correctAnswer}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
