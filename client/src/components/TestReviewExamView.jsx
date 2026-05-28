@@ -1036,7 +1036,7 @@ const TestReviewExamView = ({
             try {
               setFlagSubmitting(true);
               setFlagMessage('');
-              const token = sessionStorage.getItem('token');
+              const token = localStorage.getItem('token');
               await axios.post('/api/student/flag-question', {
                 questionId: active.questionId,
                 reason: flagReason,

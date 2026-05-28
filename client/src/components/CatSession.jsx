@@ -1451,9 +1451,19 @@ const CatSession = () => {
       : (v) => setHighlightAnswer(v);
     const words = (q.questionText || '').split(/\s+/).filter(w => w.trim());
     let selectableIndices = q.highlightSelectableWords || [];
+<<<<<<< HEAD
     // Fallback: if no selectable words defined, make all words clickable
     if (!Array.isArray(selectableIndices) || selectableIndices.length === 0) {
       selectableIndices = words.map((_, idx) => idx);
+=======
+    // If no selectable words specified, use correctAnswer words to determine which are clickable
+    if (selectableIndices.length === 0 && q.correctAnswer) {
+      const correctWords = String(q.correctAnswer).split('|').map(w => w.trim().toLowerCase());
+      selectableIndices = words
+        .map((w, idx) => ({ idx, word: w.trim().toLowerCase() }))
+        .filter(({ word }) => correctWords.some(cw => cw === word))
+        .map(({ idx }) => idx);
+>>>>>>> e8ae6ab1 (Fix 7 critical bugs: flag logout, highlight, cloze, drag-drop, CAT stopping, progress bar, question count)
     }
     return (
       <div className="highlight-container">
@@ -2078,7 +2088,11 @@ const CatSession = () => {
                 <span style={{ color: '#9ca3af', fontSize: '12px' }}>{getShortId(subQ._id)}</span>
                 <span style={{ color: '#9ca3af', fontSize: '12px' }}>{getTypeLabel(subQ.type)}</span>
               </div>
-              <p className="question-text">{subQ.questionText}</p>
+              <p className="question-text">
+                {subQ.type === 'cloze-dropdown' && subQ.clozeTemplate
+                  ? subQ.clozeTemplate.replace(/\{\{[^}]+\}\}/g, '_____').replace(/Complete the following sentence.*?\n\n?/s, '').trim()
+                  : subQ.questionText}
+              </p>
               {subQ.questionImageUrl && (
                 <div className="mb-3">
                   <img
@@ -2261,7 +2275,7 @@ const CatSession = () => {
         gap: '12px',
       }}>
         <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-          Question {questionNumber}{testType === 'assessment' ? '' : '/85 (min)'}
+          Question {questionNumber}
         </span>
         <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{ width: `${progressPercent}%`, height: '100%', background: '#34d399', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
@@ -2286,7 +2300,11 @@ const CatSession = () => {
           <span style={{ color: '#9ca3af', fontSize: '12px' }}>{shortId}</span>
         </div>
 
-        <p className="question-text">{currentQuestion.questionText}</p>
+        <p className="question-text">
+          {currentQuestion.type === 'cloze-dropdown' && currentQuestion.clozeTemplate
+            ? currentQuestion.clozeTemplate.replace(/\{\{[^}]+\}\}/g, '_____').replace(/Complete the following sentence.*?\n\n?/s, '').trim()
+            : currentQuestion.questionText}
+        </p>
         {currentQuestion.questionImageUrl && (
           <div className="mb-3">
             <img

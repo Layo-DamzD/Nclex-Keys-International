@@ -2293,7 +2293,8 @@ const submitCATAnswer = async (req, res) => {
         startTime: session.startTime instanceof Date ? session.startTime : new Date(session.startTime),
         endTime,
         score: answers.filter(a => a.isCorrect === true).length,
-        totalQuestions: totalQuestionsCount, // actual answer count (includes sub-questions)
+        totalQuestions: session.administered.length, // number of questions actually shown to student
+        totalAnswerEntries: totalQuestionsCount, // includes sub-questions from case studies
         totalPoints: totalPossible,
         earnedPoints: totalEarned,
         timeTaken: (endTime - session.startTime) / 60000,
