@@ -775,7 +775,7 @@ const TestReviewExamView = ({
                       className={`exam-review-runtime-option-row ${selected ? 'selected' : ''} ${correct ? 'correct' : ''} ${isWrong ? 'wrong' : ''}`}
                       style={bgStyle}
                     >
-                      <span className="exam-review-runtime-option-indicator" />
+                      <span className="exam-review-runtime-option-indicator" style={selected ? { backgroundColor: '#000', borderColor: '#000' } : {}} />
                       <span className="exam-review-runtime-option-number">{letter}.</span>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                         <span
@@ -811,7 +811,7 @@ const TestReviewExamView = ({
             {active.type === 'matrix' && (
               <div className="mt-3">
                 <div className="label mb-1">Matrix Answer</div>
-                {Array.isArray(active.matrixRows) && active.matrixRows.length > 0 && (
+                {Array.isArray(active.matrixRows) && active.matrixRows.length > 0 ? (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.9em' }}>
                       <thead>
@@ -820,12 +820,10 @@ const TestReviewExamView = ({
                           {(active.matrixColumns || []).map((col, ci) => (
                             <th key={ci} style={{ border: '1px solid #e2e8f0', padding: '6px 10px', background: '#f1f5f9', textAlign: 'center' }}>{col || `Col ${ci+1}`}</th>
                           ))}
-                          <th style={{ border: '1px solid #e2e8f0', padding: '6px 10px', background: '#f1f5f9', textAlign: 'center' }}>Your Answer</th>
                         </tr>
                       </thead>
                       <tbody>
                         {active.matrixRows.map((row, ri) => {
-                          // Support both old (correctColumn) and new (correctColumns) formats
                           let correctCols = [];
                           if (Array.isArray(row.correctColumns) && row.correctColumns.length > 0) {
                             correctCols = row.correctColumns;
@@ -836,32 +834,52 @@ const TestReviewExamView = ({
                           const correctPicked = userCols.filter(c => correctCols.includes(c));
                           const wrongPicked = userCols.filter(c => !correctCols.includes(c));
                           const isRowCorrect = correctPicked.length === correctCols.length && wrongPicked.length === 0;
-                          const isRowPartial = correctPicked.length > 0 && !isRowCorrect;
                           return (
                             <tr key={ri}>
-                              <td style={{ border: '1px solid #e2e8f0', padding: '6px 10px' }}>{row.rowText || `Row ${ri+1}`}</td>
-                              {(active.matrixColumns || []).map((_, ci) => (
-                                <td key={ci} style={{
-                                  border: '1px solid #e2e8f0', padding: '6px 10px', textAlign: 'center',
-                                  background: correctCols.includes(ci) ? '#dcfce7' : 'transparent'
-                                }}>
-                                  {correctCols.includes(ci) ? '✓' : ''}
-                                </td>
-                              ))}
-                              <td style={{
-                                border: '1px solid #e2e8f0', padding: '6px 10px', textAlign: 'center',
-                                fontWeight: 600,
-                                color: isRowCorrect ? '#166534' : (isRowPartial ? '#92400e' : '#dc2626'),
-                                background: isRowCorrect ? '#dcfce7' : (isRowPartial ? '#fffbeb' : '#fee2e2')
-                              }}>
-                                {userCols.length > 0 ? userCols.map(c => active.matrixColumns?.[c] || `Col ${c+1}`).join(', ') : '(empty)'}
-                                {isRowPartial && <span style={{ fontSize: '0.8em', color: '#d97706' }}> (partial)</span>}
-                              </td>
+                              <td style={{ border: '1px solid #e2e8f0', padding: '6px 10px', fontWeight: isRowCorrect ? 600 : 400, color: isRowCorrect ? '#166534' : (wrongPicked.length > 0 ? '#dc2626' : '#0f172a') }}>{row.rowText || `Row ${ri+1}`}</td>
+                              {(active.matrixColumns || []).map((_, ci) => {
+                                const userPicked = userCols.includes(ci);
+                                const isCorrect = correctCols.includes(ci);
+                                let cellStyle = { border: '1px solid #e2e8f0', padding: '6px 10px', textAlign: 'center' };
+                                let cellContent = '';
+                                if (userPicked && isCorrect) {
+                                  // User selected correct column — green
+                                  cellStyle = { ...cellStyle, background: '#dcfce7', color: '#166534', fontWeight: 600 };
+                                  cellContent = '✓';
+                                } else if (userPicked && !isCorrect) {
+                                  // User selected wrong column — red
+                                  cellStyle = { ...cellStyle, background: '#fee2e2', color: '#dc2626', fontWeight: 600 };
+                                  cellContent = '✗';
+                                } else if (isCorrect) {
+                                  // Correct column but user missed it — light green outline
+                                  cellStyle = { ...cellStyle, background: '#f0fdf4', border: '1px dashed #22c55e' };
+                                  cellContent = '○';
+                                }
+                                return <td key={ci} style={cellStyle}>{cellContent}</td>;
+                              })}
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
+                  </div>
+                ) : (
+                  // Fallback when matrixRows data is missing
+                  <div style={{ padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    {active.userAnswer ? (
+                      <div>
+                        <span style={{ color: '#6b7280', fontWeight: 500 }}>Your answer: </span>
+                        <span style={{ fontWeight: 600 }}>{formatAnswerValue(active, active.userAnswer)}</span>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>Not answered</span>
+                    )}
+                    {active.correctAnswer && (
+                      <div style={{ marginTop: '4px' }}>
+                        <span style={{ color: '#6b7280', fontWeight: 500 }}>Correct answer: </span>
+                        <span style={{ fontWeight: 600, color: '#166534' }}>{formatAnswerValue(active, active.correctAnswer)}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
