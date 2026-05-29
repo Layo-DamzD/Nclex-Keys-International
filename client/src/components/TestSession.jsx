@@ -326,31 +326,7 @@ const TestSession = () => {
   const testType = restoredState?.testType || locationTestType;
   const dashboardReturnPath = restoredState?.dashboardReturnPath || settings?.returnTo || '/dashboard';
   const [currentIndex, setCurrentIndex] = useState(restoredState?.currentIndex || 0);
-  const [answers, setAnswers] = useState(() => {
-    const raw = restoredState?.answers || {};
-    // Sanitize: for cloze-dropdown questions, strip any answers that
-    // accidentally leaked from correctAnswer (e.g. corrupted restore data)
-    const qList = restoredState?.questions || [];
-    const sanitized = { ...raw };
-    for (const q of qList) {
-      if (q.type === 'cloze-dropdown' && q.correctAnswer && typeof q.correctAnswer === 'object' && sanitized[q._id]) {
-        const userAns = sanitized[q._id];
-        if (typeof userAns === 'object' && userAns !== null) {
-          // Only keep keys where the value differs from correctAnswer
-          const cleaned = {};
-          let hasUserInput = false;
-          for (const [k, v] of Object.entries(userAns)) {
-            if (v !== '' && v !== q.correctAnswer[k]) {
-              cleaned[k] = v;
-              hasUserInput = true;
-            }
-          }
-          sanitized[q._id] = hasUserInput ? cleaned : undefined;
-        }
-      }
-    }
-    return sanitized;
-  });
+  const [answers, setAnswers] = useState(restoredState?.answers || {});
   // Timer: 85 seconds per question
   const [timeLeft, setTimeLeft] = useState(() => {
     if (restoredState?.timeLeft !== undefined && restoredState?.timeLeft !== null) {
@@ -380,32 +356,7 @@ const TestSession = () => {
   const [chatLoading, setChatLoading] = useState(false);
   // Case study state
   const [caseIndex, setCaseIndex] = useState(restoredState?.caseIndex || 0);
-  const [caseAnswers, setCaseAnswers] = useState(() => {
-    const raw = restoredState?.caseAnswers || {};
-    const qList = restoredState?.questions || [];
-    const sanitized = { ...raw };
-    for (const q of qList) {
-      if (q.type === 'case-study' && Array.isArray(q.questions)) {
-        for (const subQ of q.questions) {
-          if (subQ.type === 'cloze-dropdown' && subQ.correctAnswer && typeof subQ.correctAnswer === 'object' && sanitized[subQ._id]) {
-            const userAns = sanitized[subQ._id];
-            if (typeof userAns === 'object' && userAns !== null) {
-              const cleaned = {};
-              let hasUserInput = false;
-              for (const [k, v] of Object.entries(userAns)) {
-                if (v !== '' && v !== subQ.correctAnswer[k]) {
-                  cleaned[k] = v;
-                  hasUserInput = true;
-                }
-              }
-              sanitized[subQ._id] = hasUserInput ? cleaned : undefined;
-            }
-          }
-        }
-      }
-    }
-    return sanitized;
-  });
+  const [caseAnswers, setCaseAnswers] = useState(restoredState?.caseAnswers || {});
 
   // Highlight ref
   const highlightRef = useRef(null);
@@ -1776,7 +1727,11 @@ const TestSession = () => {
                   Item {caseIndex + 1} of {currentQ.questions.length}
                 </div>
               )}
-              <p className="question-text">{subQ.questionText}</p>
+              <p className="question-text">
+                {subQ.type === 'cloze-dropdown'
+                  ? null
+                  : subQ.questionText}
+              </p>
               {subQ.questionImageUrl && (
                 <div className="mb-3">
                   <img src={subQ.questionImageUrl} alt="Question visual" style={{ maxWidth: '420px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
@@ -2007,10 +1962,18 @@ const TestSession = () => {
                   >
                     {(() => {
                       const words = (subQ.questionText || '').split(/\s+/).filter(w => w.trim());
-                      // If highlightSelectableWords is empty/missing, make ALL words clickable (fallback)
+                      // If highlightSelectableWords is empty/missing, use correctAnswer words as selectable
                       let selectableIndices = subQ.highlightSelectableWords || [];
                       if (!Array.isArray(selectableIndices) || selectableIndices.length === 0) {
-                        selectableIndices = words.map((_, idx) => idx);
+                        if (subQ.correctAnswer) {
+                          const correctWords = String(subQ.correctAnswer).split('|').map(w => w.trim().toLowerCase());
+                          selectableIndices = words
+                            .map((w, idx) => ({ idx, word: w.trim().toLowerCase() }))
+                            .filter(({ word }) => correctWords.some(cw => cw === word))
+                            .map(({ idx }) => idx);
+                        } else {
+                          selectableIndices = words.map((_, idx) => idx);
+                        }
                       }
                       const currentAnswer = caseAnswers[subQId];
                       
@@ -2405,7 +2368,11 @@ const TestSession = () => {
       </div>
 
       <div className="question-container exam-runtime-question-panel">
-        <p className="question-text">{currentQ.questionText}</p>
+        <p className="question-text">
+          {currentQ.type === 'cloze-dropdown'
+            ? null
+            : currentQ.questionText}
+        </p>
         {currentQ.questionImageUrl && (
           <div className="mb-3">
             <img src={currentQ.questionImageUrl} alt="Question visual" style={{ maxWidth: '420px', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
@@ -2534,10 +2501,18 @@ const TestSession = () => {
             >
               {(() => {
                 const words = (currentQ.questionText || '').split(/\s+/).filter(w => w.trim());
-                // If highlightSelectableWords is empty/missing, make ALL words clickable (fallback)
+                // If highlightSelectableWords is empty/missing, use correctAnswer words as selectable
                 let selectableIndices = currentQ.highlightSelectableWords || [];
                 if (!Array.isArray(selectableIndices) || selectableIndices.length === 0) {
-                  selectableIndices = words.map((_, idx) => idx);
+                  if (currentQ.correctAnswer) {
+                    const correctWords = String(currentQ.correctAnswer).split('|').map(w => w.trim().toLowerCase());
+                    selectableIndices = words
+                      .map((w, idx) => ({ idx, word: w.trim().toLowerCase() }))
+                      .filter(({ word }) => correctWords.some(cw => cw === word))
+                      .map(({ idx }) => idx);
+                  } else {
+                    selectableIndices = words.map((_, idx) => idx);
+                  }
                 }
                 const currentAnswer = answers[currentQ._id];
                 
