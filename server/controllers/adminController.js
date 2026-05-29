@@ -1491,7 +1491,7 @@ const getStudents = async (req, res) => {
     }
 
     const students = await User.find(filter)
-      .select('name email program status createdAt')
+      .select('name email program status createdAt subscriptionStartDate')
       .sort({ createdAt: -1 });
 
     res.json(students);
