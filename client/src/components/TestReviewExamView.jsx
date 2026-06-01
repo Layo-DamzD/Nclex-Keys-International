@@ -130,7 +130,11 @@ const letterToOptionText = (letter, options = []) => {
   if (!letter || typeof letter !== 'string') return String(letter ?? '');
   const idx = letter.charCodeAt(0) - 65;
   const text = options?.[idx];
-  return text ? `${letter}. ${text}` : letter;
+  if (!text) return letter;
+  // If the option text is just a single letter matching the input (e.g. options=["A","B","C"]),
+  // return only the letter to avoid showing "A. A" / "B. B"
+  if (/^[A-Za-z]$/.test(text) && text.toUpperCase() === letter.toUpperCase()) return letter;
+  return `${letter}. ${text}`;
 };
 
 const isUnansweredValue = (value) => {
@@ -689,7 +693,13 @@ const TestReviewExamView = ({
               </div>
             )}
 
-            <p className="question-text">{active.questionText || 'No question text'}</p>
+            {/* Hide raw question text for cloze-dropdown — the cloze answer card below shows it */}
+            {active.type === 'cloze-dropdown'
+              ? (active.clozeTemplate
+                ? <p className="question-text">{active.clozeTemplate.replace(/\{\{[^}]+\}\}/g, '_____').replace(/Complete the following sentence.*?\n\n?/s, '').trim()}</p>
+                : <p className="question-text">{active.questionText || 'No question text'}</p>)
+              : <p className="question-text">{active.questionText || 'No question text'}</p>
+            }
 
             {/* Bowtie-specific review display */}
             {active.type === 'bowtie' && typeof active.correctAnswer === 'object' && active.correctAnswer !== null ? (
@@ -726,7 +736,7 @@ const TestReviewExamView = ({
                   })}
                 </div>
               </div>
-            ) : Array.isArray(active.options) && active.options.length > 0 ? (
+            ) : Array.isArray(active.options) && active.options.length > 0 && !['fill-blank', 'highlight', 'drag-drop', 'cloze-dropdown', 'hotspot', 'matrix', 'bowtie'].includes(active.type) ? (
               <div className="exam-review-runtime-option-list">
                 {active.options.map((opt, idx) => {
                   const letter = String.fromCharCode(65 + idx);
@@ -811,7 +821,7 @@ const TestReviewExamView = ({
             {active.type === 'matrix' && (
               <div className="mt-3">
                 <div className="label mb-1">Matrix Answer</div>
-                {Array.isArray(active.matrixRows) && active.matrixRows.length > 0 ? (
+                {Array.isArray(active.matrixRows) && active.matrixRows.length > 0 && Array.isArray(active.matrixColumns) && active.matrixColumns.length > 0 ? (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.9em' }}>
                       <thead>
@@ -864,20 +874,24 @@ const TestReviewExamView = ({
                     </table>
                   </div>
                 ) : (
-                  // Fallback when matrixRows data is missing
-                  <div style={{ padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    {active.userAnswer ? (
+                  <div style={{ fontSize: '0.9em' }}>
+                    <div style={{ marginBottom: '6px' }}>
+                      <span style={{ color: '#6b7280', fontWeight: 500 }}>Your answer: </span>
+                      <span style={{
+                        background: active.isCorrect === true ? '#dcfce7' : '#fee2e2',
+                        color: active.isCorrect === true ? '#166534' : '#dc2626',
+                        padding: '4px 12px', borderRadius: '6px', fontWeight: 600,
+                        border: `1px solid ${active.isCorrect === true ? '#86efac' : '#fca5a5'}`,
+                      }}>{active.userAnswer ? JSON.stringify(active.userAnswer) : '(empty)'}</span>
+                    </div>
+                    {!active.isCorrect && active.correctAnswer && (
                       <div>
-                        <span style={{ color: '#6b7280', fontWeight: 500 }}>Your answer: </span>
-                        <span style={{ fontWeight: 600 }}>{formatAnswerValue(active, active.userAnswer)}</span>
-                      </div>
-                    ) : (
-                      <span style={{ color: '#9ca3af' }}>Not answered</span>
-                    )}
-                    {active.correctAnswer && (
-                      <div style={{ marginTop: '4px' }}>
                         <span style={{ color: '#6b7280', fontWeight: 500 }}>Correct answer: </span>
-                        <span style={{ fontWeight: 600, color: '#166534' }}>{formatAnswerValue(active, active.correctAnswer)}</span>
+                        <span style={{
+                          background: '#dcfce7', color: '#166534',
+                          padding: '4px 12px', borderRadius: '6px', fontWeight: 600,
+                          border: '1px solid #86efac',
+                        }}>{typeof active.correctAnswer === 'object' ? JSON.stringify(active.correctAnswer) : active.correctAnswer}</span>
                       </div>
                     )}
                   </div>
@@ -921,6 +935,73 @@ const TestReviewExamView = ({
               </div>
             )}
 
+            {active.type === 'fill-blank' && (
+              <div className="mt-3">
+                <div className="label mb-1">Fill in the Blank</div>
+                <div style={{ fontSize: '0.9em' }}>
+                  <div style={{ marginBottom: '6px' }}>
+                    <span style={{ color: '#6b7280', fontWeight: 500 }}>Your answer: </span>
+                    <span style={{
+                      background: active.isCorrect ? '#dcfce7' : '#fee2e2',
+                      color: active.isCorrect ? '#166534' : '#dc2626',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontWeight: 600,
+                      border: `1px solid ${active.isCorrect ? '#86efac' : '#fca5a5'}`,
+                    }}>{active.userAnswer || '(empty)'}</span>
+                  </div>
+                  {!active.isCorrect && active.correctAnswer && (
+                    <div>
+                      <span style={{ color: '#6b7280', fontWeight: 500 }}>Correct answer: </span>
+                      <span style={{
+                        background: '#dcfce7',
+                        color: '#166534',
+                        padding: '4px 12px',
+                        borderRadius: '6px',
+                        fontWeight: 600,
+                        border: '1px solid #86efac',
+                      }}>
+                        {typeof active.correctAnswer === 'string' && active.correctAnswer.includes(';')
+                          ? active.correctAnswer.split(';').map(s => s.trim()).join(' or ')
+                          : active.correctAnswer}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {active.type === 'cloze-dropdown' && active.clozeBlanks && active.clozeBlanks.length > 0 && (
+              <div className="mt-3">
+                <div className="label mb-1">Cloze Dropdown Answers</div>
+                <div style={{ fontSize: '0.9em' }}>
+                  {(active.clozeBlanks || []).map((blank) => {
+                    const userVal = active.userAnswer?.[blank.key] || '';
+                    const correctVal = active.correctAnswer?.[blank.key] || '';
+                    const isMatch = String(userVal).trim() === String(correctVal).trim();
+                    return (
+                      <div key={blank.key} style={{
+                        marginBottom: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: isMatch ? '#dcfce7' : '#fee2e2',
+                        border: `1px solid ${isMatch ? '#22c55e' : '#ef4444'}`
+                      }}>
+                        <div style={{ fontSize: '0.8em', fontWeight: 600, color: '#64748b', marginBottom: '4px', textTransform: 'capitalize' }}>
+                          {blank.key.replace(/blank/i, 'Blank ')}
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 500 }}>Your answer:</span>{' '}
+                          <span style={{ color: isMatch ? '#166534' : '#dc2626', fontWeight: 600 }}>{userVal || '(empty)'}</span>
+                          {!isMatch && <><br /><span style={{ fontWeight: 500 }}>Correct:</span> <span style={{ color: '#166534', fontWeight: 600 }}>{correctVal}</span></>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {active.type === 'highlight' && (
               <div className="mt-3">
                 <div className="label mb-1">Highlight Selection</div>
@@ -949,13 +1030,6 @@ const TestReviewExamView = ({
               </div>
             )}
 
-            {active.type === 'cloze-dropdown' && (
-              <div className="mt-3">
-                <div className="label mb-1">Cloze Responses</div>
-                <div className="value">{formatAnswerValue(active, active.userAnswer)}</div>
-              </div>
-            )}
-
             <div className="exam-review-runtime-stats">
               {reviewStats.map((item) => (
                 <div key={item.label} className="exam-review-runtime-stat-card">
@@ -964,12 +1038,34 @@ const TestReviewExamView = ({
                 </div>
               ))}
             </div>
+
+            {/* Explicit Your Answer / Correct Answer display */}
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{
+                flex: 1, minWidth: '200px', padding: '10px 14px', borderRadius: '8px',
+                background: '#f1f5f9', border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Your Answer</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 500, color: active.isCorrect === true ? '#166534' : active.isCorrect === 'partial' ? '#92400e' : '#dc2626' }}>
+                  {formatAnswerValue(active, active.userAnswer)}
+                </div>
+              </div>
+              <div style={{
+                flex: 1, minWidth: '200px', padding: '10px 14px', borderRadius: '8px',
+                background: '#f0fdf4', border: '1px solid #bbf7d0'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#166534', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Correct Answer</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#166534' }}>
+                  {formatCorrectAnswer(active)}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="exam-review-runtime-explanation-column">
             <div className="exam-review-runtime-explanation-tab">Explanation</div>
             <div className="exam-review-rationale-box exam-review-rationale-runtime">
-              {active.rationale && active.rationale.trim() ? (
+              {active.rationale && typeof active.rationale === 'string' && active.rationale.trim() ? (
                 <div className="rationale-text-block"><RationaleContent text={active.rationale} label="Rationale:" /></div>
               ) : (
                 <div style={{ color: '#94a3b8', fontStyle: 'italic', padding: '8px 0' }}>
@@ -1032,7 +1128,7 @@ const TestReviewExamView = ({
             try {
               setFlagSubmitting(true);
               setFlagMessage('');
-              const token = sessionStorage.getItem('token');
+              const token = localStorage.getItem('token');
               await axios.post('/api/student/flag-question', {
                 questionId: active.questionId,
                 reason: flagReason,
@@ -1640,7 +1736,7 @@ const TestReviewExamView = ({
               </div>
             <div className="exam-review-report-metric">
               <span>Score</span>
-              <strong>{score}/{totalQuestions}</strong>
+              <strong>{summary.correct}/{totalQuestions}</strong>
             </div>
             <div className="exam-review-report-metric">
               <span>Time Taken</span>

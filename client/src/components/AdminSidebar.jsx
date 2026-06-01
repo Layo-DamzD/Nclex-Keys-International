@@ -48,6 +48,7 @@ const AdminSidebar = ({
       title: 'System',
       items: [
         { id: 'admin-approval', icon: 'user-check', label: 'Admin Approval' },
+        { id: 'flagged-questions', icon: 'flag', label: 'Flagged Questions' },
         { id: 'logs', icon: 'history', label: 'System Logs' },
         { id: 'student-feedback', icon: 'comment-dots', label: 'Student Feedback' },
         { id: 'settings', icon: 'cog', label: 'Settings' }
@@ -79,7 +80,10 @@ const AdminSidebar = ({
     },
     {
       title: 'System',
-      items: [{ id: 'settings', icon: 'cog', label: 'Settings' }]
+      items: [
+        { id: 'flagged-questions', icon: 'flag', label: 'Flagged Questions' },
+        { id: 'settings', icon: 'cog', label: 'Settings' }
+      ]
     }
   ];
 

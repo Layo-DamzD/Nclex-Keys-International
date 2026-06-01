@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer } from 'react';
+import React, { useState, useEffect, useReducer, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { resolveMediaCandidates } from '../utils/imageUpload';
@@ -291,6 +291,7 @@ const CatSession = () => {
 
   // Timer: 85 seconds per question (resets on each new question)
   const [timeLeft, setTimeLeft] = useState(restoredState?.timeLeft || 85);
+  const questionStartTimeRef = useRef(Date.now());
 
   // Answer state for all question types
   const [answer, setAnswer] = useState(restoredState?.answer ?? null);
@@ -596,6 +597,9 @@ const CatSession = () => {
   const submitAnswerWithCurrent = async () => {
     if (!currentQuestion) return;
 
+    // Calculate time spent on this question
+    const timeSpentSeconds = Math.round((Date.now() - questionStartTimeRef.current) / 1000);
+
     setLoading(true);
     setError('');
 
@@ -611,7 +615,8 @@ const CatSession = () => {
 
         const response = await axios.post('/api/student/cat/answer', {
           questionId: currentQuestion._id,
-          subQuestionAnswers
+          subQuestionAnswers,
+          timeSpentSeconds
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -642,6 +647,7 @@ const CatSession = () => {
           setTheta(response.data.theta);
           setSe(response.data.se);
           if (response.data.confidence) setConfidence(response.data.confidence);
+          questionStartTimeRef.current = Date.now(); // Reset per-question timer
           setLoading(false);
         }
       } else {
@@ -649,6 +655,7 @@ const CatSession = () => {
         const response = await axios.post('/api/student/cat/answer', {
           questionId: currentQuestion._id,
           answer: userAnswer,
+          timeSpentSeconds,
           proctoring: {
             violations: proctorViolations,
             warnings: proctorWarnings
@@ -848,6 +855,7 @@ const CatSession = () => {
       setTheta(response.data.theta);
       setSe(response.data.se);
       if (response.data.confidence) setConfidence(response.data.confidence);
+      questionStartTimeRef.current = Date.now(); // Reset per-question timer
     }
 
     setLoading(false);
@@ -1442,7 +1450,15 @@ const CatSession = () => {
       ? (v) => handleCaseAnswer(q._id, v)
       : (v) => setHighlightAnswer(v);
     const words = (q.questionText || '').split(/\s+/).filter(w => w.trim());
-    const selectableIndices = q.highlightSelectableWords || [];
+    let selectableIndices = q.highlightSelectableWords || [];
+    // If no selectable words specified, use correctAnswer words to determine which are clickable
+    if (selectableIndices.length === 0 && q.correctAnswer) {
+      const correctWords = String(q.correctAnswer).split('|').map(w => w.trim().toLowerCase());
+      selectableIndices = words
+        .map((w, idx) => ({ idx, word: w.trim().toLowerCase() }))
+        .filter(({ word }) => correctWords.some(cw => cw === word))
+        .map(({ idx }) => idx);
+    }
     return (
       <div className="highlight-container">
         <p className="text-muted mb-3">
@@ -2066,7 +2082,10 @@ const CatSession = () => {
                 <span style={{ color: '#9ca3af', fontSize: '12px' }}>{getShortId(subQ._id)}</span>
                 <span style={{ color: '#9ca3af', fontSize: '12px' }}>{getTypeLabel(subQ.type)}</span>
               </div>
-              <p className="question-text">{subQ.questionText}</p>
+              {/* Hide raw question text for cloze-dropdown — the interactive dropdown component shows it */}
+              <p className="question-text">
+                {subQ.type === 'cloze-dropdown' ? null : subQ.questionText}
+              </p>
               {subQ.questionImageUrl && (
                 <div className="mb-3">
                   <img
@@ -2249,7 +2268,7 @@ const CatSession = () => {
         gap: '12px',
       }}>
         <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-          Question {questionNumber}{testType === 'assessment' ? '' : '/85 (min)'}
+          Question {questionNumber}
         </span>
         <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{ width: `${progressPercent}%`, height: '100%', background: '#34d399', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
@@ -2274,7 +2293,12 @@ const CatSession = () => {
           <span style={{ color: '#9ca3af', fontSize: '12px' }}>{shortId}</span>
         </div>
 
-        <p className="question-text">{currentQuestion.questionText}</p>
+        {/* Hide raw question text for cloze-dropdown — the interactive dropdown component shows it */}
+        <p className="question-text">
+          {currentQuestion.type === 'cloze-dropdown'
+            ? null
+            : currentQuestion.questionText}
+        </p>
         {currentQuestion.questionImageUrl && (
           <div className="mb-3">
             <img
