@@ -688,16 +688,34 @@ const bulkImportQuestions = async (req, res) => {
         correctAnswer = options.map((_, idx) => String.fromCharCode(65 + idx)).join(',');
       }
 
+      // ── Validate required fields ──
+      const rawQuestionText = normalizeImportedText(row.questiontext);
+      const rawRationale = normalizeImportedText(row.rationale);
+      const rawCorrectAnswer = String(row.correctanswer || '').trim();
+
+      if (!rawQuestionText) {
+        errors.push(`Row ${i + 1}: questionText is required`);
+        continue;
+      }
+      if (!rawRationale) {
+        errors.push(`Row ${i + 1}: rationale is required and cannot be blank`);
+        continue;
+      }
+      if (!rawCorrectAnswer && questionType !== 'drag-drop') {
+        errors.push(`Row ${i + 1}: correctAnswer is required for ${questionType} questions`);
+        continue;
+      }
+
       const question = {
         type: questionType,
         category: row.category,
         subcategory: row.subcategory,
         clientNeed: String(row.clientneed || '').trim(),
         clientNeedSubcategory: String(row.clientneedsubcategory || '').trim(),
-        questionText: normalizeImportedText(row.questiontext),
+        questionText: rawQuestionText,
         options,
         correctAnswer,
-        rationale: normalizeImportedText(row.rationale),
+        rationale: rawRationale,
         difficulty: row.difficulty || 'medium',
       };
 
@@ -1491,7 +1509,7 @@ const getStudents = async (req, res) => {
     }
 
     const students = await User.find(filter)
-      .select('name email program status createdAt')
+      .select('name email program status createdAt subscriptionStartDate')
       .sort({ createdAt: -1 });
 
     res.json(students);
@@ -2064,25 +2082,38 @@ const notifyStudentsMaterialUpdate = async ({ materialTitle, materialDescription
       }
     }
 
-    // 3. Email notifications (fire-and-forget, one per student)
-    const emailPromises = activeStudents.map((student) =>
-      sendStudyMaterialUpdateEmail({
-        to: student.email,
-        name: student.name,
-        materialTitle,
-        materialDescription: materialDescription || '',
-        materialCategory: materialCategory || 'Study Guide',
-        action
-      }).catch((err) => {
-        console.error(`Failed to send material update email to ${student.email}:`, err.message);
-      })
-    );
+    // 3. Email notifications (batched to avoid SMTP rate limits)
+    const BATCH_SIZE = 5;
+    const BATCH_DELAY_MS = 2000; // 2 seconds between batches
+    let sentCount = 0;
+    let failCount = 0;
 
-    // Don't block the response — let emails send in the background
-    Promise.all(emailPromises).then((results) => {
-    const sentCount = results.filter((r) => r && r.sent).length;
-    console.log(`Material update email results: ${sentCount}/${activeStudents.length} sent`);
-    });
+    for (let i = 0; i < activeStudents.length; i += BATCH_SIZE) {
+      const batch = activeStudents.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map((student) =>
+          sendStudyMaterialUpdateEmail({
+            to: student.email,
+            name: student.name,
+            materialTitle,
+            materialDescription: materialDescription || '',
+            materialCategory: materialCategory || 'Study Guide',
+            action
+          })
+        )
+      );
+      results.forEach((r) => {
+        if (r.status === 'fulfilled' && r.value?.sent) sentCount++;
+        else failCount++;
+      });
+
+      // Delay between batches (skip delay for the last batch)
+      if (i + BATCH_SIZE < activeStudents.length) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+      }
+    }
+
+    console.log(`Material update email results: ${sentCount}/${activeStudents.length} sent, ${failCount} failed`);
 
     console.log(`Study material notification sent to ${activeStudents.length} students: ${materialTitle} (${action})`);
   } catch (err) {

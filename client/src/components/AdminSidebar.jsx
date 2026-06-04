@@ -48,6 +48,7 @@ const AdminSidebar = ({
       title: 'System',
       items: [
         { id: 'admin-approval', icon: 'user-check', label: 'Admin Approval' },
+        { id: 'flagged-questions', icon: 'flag', label: 'Flagged Questions' },
         { id: 'logs', icon: 'history', label: 'System Logs' },
         { id: 'flagged-questions', icon: 'flag', label: 'Flagged Questions' },
         { id: 'reviewed-questions', icon: 'check-double', label: 'Reviewed Questions' },

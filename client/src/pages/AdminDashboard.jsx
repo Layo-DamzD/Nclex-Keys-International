@@ -408,6 +408,12 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {activeSection === 'flagged-questions' && (
+          <div className="section active">
+            <FlaggedQuestions />
+          </div>
+        )}
+
         {activeSection === 'logs' && userRole === 'superadmin' && (
           <div className="section active">
             <SystemLogs />
