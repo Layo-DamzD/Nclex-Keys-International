@@ -2788,6 +2788,66 @@ const resolveQuestionFlag = async (req, res) => {
   }
 };
 
+// @desc    Toggle question reviewed status
+// @route   PUT /api/admin/questions/:id/reviewed
+// @access  Private (admin only)
+const toggleQuestionReviewed = async (req, res) => {
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    question.reviewed = !question.reviewed;
+    if (question.reviewed) {
+      question.reviewedAt = new Date();
+      question.reviewedBy = req.user.id;
+    } else {
+      question.reviewedAt = null;
+      question.reviewedBy = null;
+    }
+
+    await question.save();
+    res.json({ reviewed: question.reviewed, questionId: question._id });
+  } catch (error) {
+    console.error('Toggle reviewed error:', error);
+    res.status(500).json({ message: 'Failed to toggle reviewed status' });
+  }
+};
+
+// @desc    Get reviewed questions list
+// @route   GET /api/admin/reviewed-questions
+// @access  Private (admin only)
+const getReviewedQuestions = async (req, res) => {
+  try {
+    const { page = 1, limit = 25, search, category } = req.query;
+    const filter = { reviewed: true };
+
+    if (search) {
+      filter.$or = [
+        { questionText: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (category) {
+      filter.category = category;
+    }
+
+    const total = await Question.countDocuments(filter);
+    const questions = await Question.find(filter)
+      .select('questionText type category subcategory reviewedAt reviewedBy difficulty isNextGen')
+      .populate('reviewedBy', 'name')
+      .sort({ reviewedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    res.json({ questions, total, page: Number(page), totalPages: Math.ceil(total / limit) });
+  } catch (error) {
+    console.error('Get reviewed questions error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 const getAdminSettings = async (req, res) => {
   try {
     const admin = await User.findById(req.user.id)
@@ -3354,6 +3414,8 @@ module.exports = {
   getAdminSettings,
   getQuestionFlags,
   resolveQuestionFlag,
+  toggleQuestionReviewed,
+  getReviewedQuestions,
   updateAdminProfileSettings,
   updateAdminPasswordSettings,
   clearAdminDeviceSettings,

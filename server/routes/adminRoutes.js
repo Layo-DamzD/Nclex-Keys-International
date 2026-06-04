@@ -55,7 +55,9 @@ const {
   updateAdminPasswordSettings,
   clearAdminDeviceSettings,
   getQuestionFlags,
-  resolveQuestionFlag
+  resolveQuestionFlag,
+  toggleQuestionReviewed,
+  getReviewedQuestions
 } = require('../controllers/adminController');
 const {
   getLandingPageConfig,
@@ -152,5 +154,8 @@ router.delete('/settings/devices', protect, adminOnly, clearAdminDeviceSettings)
 // Question flags management
 router.get('/flags', protect, adminOnly, getQuestionFlags);
 router.put('/flags/:id/resolve', protect, adminOnly, resolveQuestionFlag);
+// Question review management
+router.put('/questions/:id/reviewed', protect, adminOnly, toggleQuestionReviewed);
+router.get('/reviewed-questions', protect, adminOnly, getReviewedQuestions);
 
 module.exports = router;

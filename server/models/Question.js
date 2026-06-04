@@ -209,11 +209,16 @@ const questionSchema = new mongoose.Schema({
   irtGuessing: { type: Number, default: 0.2 },        // c-parameter (for MC)
   
   // IRT Model type
-  irtModel: { 
-    type: String, 
-    enum: ['1PL', '2PL', '3PL', 'GRM', 'NRM'], 
-    default: '3PL' 
-  }
+  irtModel: {
+    type: String,
+    enum: ['1PL', '2PL', '3PL', 'GRM', 'NRM'],
+    default: '3PL'
+  },
+
+  // Admin review tracking
+  reviewed: { type: Boolean, default: false },
+  reviewedAt: { type: Date },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
 // Pre-save hook: validate and sanitize correctAnswer for all non-draft MC/SATA questions
