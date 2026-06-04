@@ -22,7 +22,6 @@ import AdminApproval from '../components/admin/AdminApproval';
 import ExamSupportChat from '../components/admin/ExamSupportChat';
 import AdminSettings from '../components/admin/AdminSettings';
 import FlaggedQuestions from '../components/admin/FlaggedQuestions';
-import ReviewedQuestions from '../components/admin/ReviewedQuestions';
 import PwaInstallButton from '../components/PwaInstallButton';
 import { useAppTheme } from '../context/AppThemeContext';
 import './AdminDashboard.css';
@@ -429,12 +428,6 @@ const AdminDashboard = () => {
         {activeSection === 'flagged-questions' && (
           <div className="section active">
             <FlaggedQuestions onSectionChange={handleSectionChange} />
-          </div>
-        )}
-
-        {activeSection === 'reviewed-questions' && (
-          <div className="section active">
-            <ReviewedQuestions />
           </div>
         )}
 

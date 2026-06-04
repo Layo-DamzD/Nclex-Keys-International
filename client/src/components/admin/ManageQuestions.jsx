@@ -29,58 +29,9 @@ const ManageQuestions = ({ onSectionChange }) => {
   const [duplicateScan, setDuplicateScan] = useState({ scanning: false, results: null, error: null, actionLoading: null });
   const [individualScanId, setIndividualScanId] = useState(null);
   const [mergeModal, setMergeModal] = useState({ open: false, original: null, match: null, fullOriginal: null, fullMatch: null, loading: false });
-  const [reviewMode, setReviewMode] = useState({ open: false, index: 0, loading: false, question: null });
-  const [reviewedIds, setReviewedIds] = useState(new Set());
-  const [markingReviewedId, setMarkingReviewedId] = useState(null);
-
-  const handleMarkReviewed = async (questionId) => {
-    setMarkingReviewedId(questionId);
-    try {
-      const token = sessionStorage.getItem('adminToken');
-      await axios.put(`/api/admin/questions/${questionId}/reviewed`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setReviewedIds((prev) => new Set([...prev, questionId]));
-    } catch (err) {
-      console.error('Failed to mark reviewed:', err);
-      alert(err.response?.data?.message || 'Failed to mark as reviewed');
-    } finally {
-      setMarkingReviewedId(null);
-    }
-  };
-
-  const handleOpenReviewMode = async (index) => {
-    if (!questions.length) return;
-    setReviewMode({ open: true, index: Math.max(0, Math.min(index, questions.length - 1)), loading: true, question: null });
-    try {
-      const q = questions[Math.max(0, Math.min(index, questions.length - 1))];
-      if (!q?._id) return;
-      const fullQuestion = await fetchFullQuestion(q._id);
-      setReviewMode((prev) => ({ ...prev, question: fullQuestion, loading: false }));
-    } catch (err) {
-      alert('Failed to load question for review.');
-      setReviewMode({ open: false, index: 0, loading: false, question: null });
-    }
-  };
-
-  const handleReviewNavigate = async (direction) => {
-    const nextIndex = reviewMode.index + direction;
-    if (nextIndex < 0 || nextIndex >= questions.length) return;
-    setReviewMode((prev) => ({ ...prev, index: nextIndex, loading: true }));
-    try {
-      const q = questions[nextIndex];
-      if (!q?._id) return;
-      const fullQuestion = await fetchFullQuestion(q._id);
-      setReviewMode((prev) => ({ ...prev, question: fullQuestion, loading: false }));
-    } catch (err) {
-      alert('Failed to load question.');
-      setReviewMode((prev) => ({ ...prev, loading: false }));
-    }
-  };
-
-  const handleCloseReviewMode = () => {
-    setReviewMode({ open: false, index: 0, loading: false, question: null });
-  };
+  const [viewTab, setViewTab] = useState('all');
+  const [reviewedQuestions, setReviewedQuestions] = useState([]);
+  const [reviewedLoading, setReviewedLoading] = useState(false);
 
   const categories = ['__uncategorized__', '', ...Object.keys(CATEGORIES).filter((cat) => cat !== 'Standalone NGN' && cat !== 'Unfolding NGN')];
   const types = ['', 'multiple-choice', 'sata', 'fill-blank', 'highlight', 'drag-drop', 'matrix', 'hotspot', 'cloze-dropdown', 'case-study'];
@@ -483,6 +434,43 @@ const ManageQuestions = ({ onSectionChange }) => {
     }
   };
 
+  const fetchReviewedQuestions = async () => {
+    setReviewedLoading(true);
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.get('/api/admin/reviewed-questions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setReviewedQuestions(response.data?.questions || []);
+    } catch (error) {
+      console.error('Error fetching reviewed questions:', error);
+      setReviewedQuestions([]);
+    } finally {
+      setReviewedLoading(false);
+    }
+  };
+
+  const handleUnmarkReviewed = async (questionId) => {
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      await axios.put(`/api/admin/questions/${questionId}/reviewed`, {
+        reviewed: false,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setReviewedQuestions((prev) => prev.filter((q) => q._id !== questionId));
+    } catch (error) {
+      console.error('Error unmarking reviewed:', error);
+      alert(error.response?.data?.message || 'Failed to unmark reviewed');
+    }
+  };
+
+  useEffect(() => {
+    if (viewTab === 'reviewed') {
+      fetchReviewedQuestions();
+    }
+  }, [viewTab]);
+
   const getTypeLabel = (type) => {
     const labels = {
       'multiple-choice': 'MC',
@@ -805,6 +793,38 @@ const ManageQuestions = ({ onSectionChange }) => {
     <div className="manage-questions">
       <div className="header" style={{ marginBottom: '20px' }}>
         <h1>Manage Questions</h1>
+        <div style={{ display: 'flex', gap: '24px', borderBottom: '2px solid #e2e8f0' }}>
+          <button
+            type="button"
+            onClick={() => setViewTab('all')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '8px 4px', fontSize: '0.95rem', fontWeight: 600,
+              color: '#16a34a',
+              borderBottom: viewTab === 'all' ? '2px solid #16a34a' : '2px solid transparent',
+              marginBottom: '-2px',
+            }}
+          >
+            All Questions
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewTab('reviewed')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '8px 4px', fontSize: '0.95rem', fontWeight: 600,
+              color: viewTab === 'reviewed' ? '#16a34a' : '#64748b',
+              borderBottom: viewTab === 'reviewed' ? '2px solid #16a34a' : '2px solid transparent',
+              marginBottom: '-2px',
+            }}
+          >
+            Reviewed Questions
+          </button>
+        </div>
+      </div>
+
+      {viewTab === 'all' && (
+        <>
         <div className="manage-questions-filter-row" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ position: 'relative', width: 'min(280px, 100%)' }}>
             <i className="fas fa-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.85rem' }} />
@@ -879,17 +899,7 @@ const ManageQuestions = ({ onSectionChange }) => {
             <i className="fas fa-copy me-1"></i>
             {duplicateScan.scanning ? 'Scanning...' : 'Scan Duplicates'}
           </button>
-          <button
-            type="button"
-            className="btn btn-outline-success"
-            disabled={questions.length === 0}
-            onClick={() => handleOpenReviewMode(0)}
-          >
-            <i className="fas fa-eye me-1"></i>
-            Review Mode
-          </button>
         </div>
-      </div>
 
       {filters.uncategorized && (
         <div
@@ -1132,7 +1142,7 @@ const ManageQuestions = ({ onSectionChange }) => {
                 <td className="mq-id-cell">
                   <span className="mq-id-text">{q._id?.substring(0, 8)}</span>
                 </td>
-                <td className="mq-question-cell" style={{ position: 'relative' }}>
+                <td className="mq-question-cell">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {q.isDraft && (
                       <span 
@@ -1157,29 +1167,6 @@ const ManageQuestions = ({ onSectionChange }) => {
                       })()}
                     </span>
                   </div>
-                  {reviewedIds.has(q._id) && (
-                    <div style={{
-                      position: 'absolute', top: '0', left: '0', right: '0', bottom: '0',
-                      overflow: 'hidden', pointerEvents: 'none', borderRadius: '0',
-                    }}>
-                      <div style={{
-                        position: 'absolute', top: '-6px', left: '4px',
-                        transform: 'rotate(-45deg)',
-                        transformOrigin: 'top left',
-                        background: 'rgba(22, 163, 74, 0.12)',
-                        color: 'rgba(22, 163, 74, 0.35)',
-                        padding: '2px 32px',
-                        fontSize: '2.5rem',
-                        fontWeight: 'bold',
-                        letterSpacing: '0.1em',
-                        lineHeight: 1,
-                        whiteSpace: 'nowrap',
-                        pointerEvents: 'none',
-                      }}>
-                        REVIEWED
-                      </div>
-                    </div>
-                  )}
                 </td>
                 <td>
                   <span className={`badge ${getTypeBadge(q.type)}`}>
@@ -1241,30 +1228,6 @@ const ManageQuestions = ({ onSectionChange }) => {
                   >
                     Edit
                   </button>
-                  {!reviewedIds.has(q._id) && (
-                    <button
-                      className="btn btn-sm btn-outline-success"
-                      style={{ marginRight: isSuperAdmin ? '8px' : '0' }}
-                      onClick={() => handleMarkReviewed(q._id)}
-                      disabled={markingReviewedId === q._id}
-                      title="Mark as reviewed"
-                      type="button"
-                    >
-                      {markingReviewedId === q._id ? '...' : <i className="fas fa-check-double"></i>}
-                    </button>
-                  )}
-                  {reviewedIds.has(q._id) && (
-                    <span
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                        padding: '2px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 600,
-                        background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0',
-                        marginRight: isSuperAdmin ? '8px' : '0',
-                      }}
-                    >
-                      <i className="fas fa-check"></i> Reviewed
-                    </span>
-                  )}
                   {isSuperAdmin && (
                     <button className="btn btn-sm btn-danger" onClick={() => handleDelete(q._id)} type="button">
                       Delete
@@ -1337,6 +1300,58 @@ const ManageQuestions = ({ onSectionChange }) => {
           >
             Next
           </button>
+        </div>
+      )}
+
+        </>
+      )}
+
+      {viewTab === 'reviewed' && (
+        <div style={{ marginTop: '12px' }}>
+          {reviewedLoading ? (
+            <div className="text-center py-4">Loading reviewed questions...</div>
+          ) : reviewedQuestions.length === 0 ? (
+            <div className="text-center py-4" style={{ color: '#94a3b8' }}>
+              <i className="fas fa-check-double" style={{ fontSize: '2rem', display: 'block', marginBottom: '10px' }}></i>
+              <div style={{ fontSize: '1rem', fontWeight: 500 }}>No reviewed questions yet</div>
+              <div style={{ fontSize: '0.85rem', marginTop: '4px' }}>Mark questions as reviewed from the "All Questions" tab to see them here.</div>
+            </div>
+          ) : (
+            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '12px' }}>
+              {reviewedQuestions.length} reviewed question{reviewedQuestions.length !== 1 ? 's' : ''}
+            </div>
+          )}
+          {reviewedQuestions.map((q) => (
+            <div key={q._id} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '12px 16px', borderBottom: '1px solid #e2e8f0',
+              background: '#f0fdf4', position: 'relative', overflow: 'hidden'
+            }}>
+              <div style={{
+                position: 'absolute', top: '-10px', left: '30px', fontSize: '2.5rem', fontWeight: 700,
+                color: 'rgba(22,163,74,0.15)', transform: 'rotate(-20deg)', pointerEvents: 'none',
+                textTransform: 'uppercase', letterSpacing: '4px', lineHeight: 1, zIndex: 0
+              }}>REVIEWED</div>
+              <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 500, color: '#0f172a', marginBottom: '4px' }}>
+                  {(q.questionText || '').substring(0, 120)}{(q.questionText || '').length > 120 ? '...' : ''}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '0.75rem' }}>
+                  <span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px' }}>{q.type || 'MC'}</span>
+                  <span style={{ background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '4px' }}>{q.category}</span>
+                  {q.subcategory && <span style={{ background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '4px' }}>{q.subcategory}</span>}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '4px' }}>
+                  Reviewed {q.reviewedAt ? new Date(q.reviewedAt).toLocaleDateString() : 'unknown'} by {q.reviewedBy?.name || 'admin'}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', zIndex: 1 }}>
+                <button className="btn btn-sm btn-outline-danger" type="button" onClick={() => handleUnmarkReviewed(q._id)}>
+                  Unmark
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -1533,110 +1548,6 @@ const ManageQuestions = ({ onSectionChange }) => {
                   >
                     <i className="fas fa-exchange-alt me-1"></i>Keep Match
                   </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Review Mode Modal */}
-      {reviewMode.open && (
-        <div className="modal fade show d-block" tabIndex="-1" role="dialog" aria-modal="true" style={{ background: 'rgba(2,6,23,0.7)' }}>
-          <div className="modal-dialog modal-lg modal-dialog-centered" style={{ maxWidth: '860px' }}>
-            <div className="modal-content" style={{ borderRadius: '16px', border: 'none', overflow: 'hidden' }}>
-              <div className="modal-header" style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', borderBottom: '1px solid #bbf7d0', padding: '14px 20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <h5 className="modal-title" style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: '#166534' }}>
-                    <i className="fas fa-eye me-2"></i>
-                    Review Mode
-                    <span style={{ fontSize: '0.78rem', color: '#4ade80', fontWeight: 400, marginLeft: '8px' }}>
-                      ({reviewMode.index + 1} of {questions.length})
-                    </span>
-                  </h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    aria-label="Close"
-                    onClick={handleCloseReviewMode}
-                  />
-                </div>
-              </div>
-              <div className="modal-body" style={{ padding: '24px', maxHeight: '65vh', overflowY: 'auto' }}>
-                {reviewMode.loading ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-                    <i className="fas fa-spinner fa-spin me-2"></i>Loading question...
-                  </div>
-                ) : reviewMode.question ? (
-                  renderTestLikePreview(reviewMode.question)
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>No question available</div>
-                )}
-              </div>
-              <div className="modal-footer d-flex justify-content-between align-items-center w-100" style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: '12px 20px', flexWrap: 'wrap', gap: '8px' }}>
-                <div className="d-flex align-items-center gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-outline-primary btn-sm"
-                    onClick={() => handleReviewNavigate(-1)}
-                    disabled={reviewMode.loading || reviewMode.index <= 0}
-                  >
-                    <i className="fas fa-chevron-left me-1"></i> Previous
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleReviewNavigate(1)}
-                    disabled={reviewMode.loading || reviewMode.index >= questions.length - 1}
-                  >
-                    Next <i className="fas fa-chevron-right ms-1"></i>
-                  </button>
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                  {reviewMode.question && !reviewedIds.has(reviewMode.question._id) && (
-                    <button
-                      type="button"
-                      className="btn btn-success btn-sm"
-                      onClick={() => handleMarkReviewed(reviewMode.question._id)}
-                      disabled={markingReviewedId === reviewMode.question._id}
-                    >
-                      {markingReviewedId === reviewMode.question._id ? '...' : <><i className="fas fa-check-double me-1"></i>Mark as Reviewed</>}
-                    </button>
-                  )}
-                  {reviewMode.question && reviewedIds.has(reviewMode.question._id) && (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '4px',
-                      padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600,
-                      background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0',
-                    }}>
-                      <i className="fas fa-check"></i> Reviewed
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="btn btn-warning btn-sm"
-                    onClick={() => {
-                      const q = reviewMode.question;
-                      handleCloseReviewMode();
-                      if (q) handleEdit(q);
-                    }}
-                    disabled={!reviewMode.question}
-                  >
-                    <i className="fas fa-pen me-1"></i> Edit
-                  </button>
-                  {isSuperAdmin && reviewMode.question && (
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      onClick={() => {
-                        const q = reviewMode.question;
-                        handleCloseReviewMode();
-                        if (q) handleDelete(q._id);
-                      }}
-                    >
-                      <i className="fas fa-trash me-1"></i> Delete
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
