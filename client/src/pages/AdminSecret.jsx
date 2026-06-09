@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import './AdminSecret.css';
 
 const AdminSecret = () => {
   return (
     <div className="admin-secret-page">
+      <SEO noIndex />
       <div className="secret-container">
         <div className="security-header">
           <div className="security-icon">🔐</div>

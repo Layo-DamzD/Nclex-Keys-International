@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import SEO from '../components/SEO';
 
 const Contact = () => {
   const contactInfo = {
@@ -12,6 +13,7 @@ const Contact = () => {
 
   return (
     <>
+      <SEO title="Contact Us" description="Get in touch with NCLEX KEYS International Academy. Reach us via email, phone, or WhatsApp for NCLEX exam preparation inquiries." canonicalPath="/contact" />
       <Navbar />
       
       {/* Hero Section */}

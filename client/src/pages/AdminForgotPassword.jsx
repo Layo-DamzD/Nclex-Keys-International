@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const AdminForgotPassword = () => {
   const sendForm = useForm();
@@ -36,6 +37,7 @@ const AdminForgotPassword = () => {
         background: '#f0f4ff'
       }}
     >
+      <SEO title="Admin Forgot Password" noIndex />
       <div
         className="forgot-card app-auth-lite-card"
         style={{

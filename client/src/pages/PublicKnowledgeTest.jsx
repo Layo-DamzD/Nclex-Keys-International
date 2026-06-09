@@ -3,6 +3,7 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
+import SEO from '../components/SEO';
 
 const RAW_QUESTIONS = [
   {
@@ -512,6 +513,7 @@ const PublicKnowledgeTest = () => {
 
   return (
     <>
+      <SEO title="Test Your NCLEX Knowledge" description="Try free NCLEX practice questions. Test your nursing knowledge with sample NCLEX-RN and NCLEX-PN questions with instant feedback." canonicalPath="/test-your-knowledge" />
       <Navbar />
       <main className="public-test-page public-test-no-copy" onDragStart={(e) => e.preventDefault()}>
         <div className="container public-test-wrap">

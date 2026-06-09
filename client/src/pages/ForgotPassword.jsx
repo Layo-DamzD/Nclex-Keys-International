@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const sanitizeOtpMessage = (value) => {
   const text = String(value || '').trim();
@@ -82,6 +83,7 @@ const ForgotPassword = () => {
 
   return (
     <div className="forgot-password-container app-auth-lite-shell" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: '#f0f4ff' }}>
+      <SEO title="Forgot Password" noIndex />
       <div className="forgot-card app-auth-lite-card" style={{ maxWidth: '450px', width: '100%', background: 'white', borderRadius: '20px', padding: '40px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
         <h2 className="text-center mb-4">Forgot Password</h2>
         <p className="text-muted text-center mb-4">

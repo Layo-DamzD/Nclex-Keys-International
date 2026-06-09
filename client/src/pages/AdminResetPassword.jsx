@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const AdminResetPassword = () => {
   const { token } = useParams();
@@ -41,6 +42,7 @@ const AdminResetPassword = () => {
         background: '#f0f4ff'
       }}
     >
+      <SEO title="Admin Reset Password" noIndex />
       <div
         className="reset-card app-auth-lite-card"
         style={{

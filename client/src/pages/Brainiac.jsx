@@ -4,6 +4,7 @@ import Footer from '../components/Footer';
 import LandingLayoutRenderer from '../components/LandingLayoutRenderer';
 import useLandingPageContent from '../hooks/useLandingPageContent';
 import BrainiacSection from '../components/BrainiacSection';
+import SEO from '../components/SEO';
 
 const Brainiac = () => {
   const { config, hasSavedConfig, loading } = useLandingPageContent('brainiac');
@@ -13,6 +14,7 @@ const Brainiac = () => {
 
   return (
     <div className="brainiac-page">
+      <SEO title="Brainiac AI - NCLEX Study Assistant" description="Meet Brainiac, our AI-powered NCLEX study assistant. Get instant answers to nursing questions, study recommendations, and exam prep guidance." canonicalPath="/brainiac" />
       <Navbar />
       <main className="brainiac-page-main">
         {loading ? (

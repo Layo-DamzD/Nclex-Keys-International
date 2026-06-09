@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useUser } from '../context/UserContext';
+import SEO from '../components/SEO';
 
 const DEVICE_STORAGE_KEY = 'nclexkeys:student-device-id';
 
@@ -88,6 +89,7 @@ const StudentLogin = () => {
 
   return (
     <div className={`lamp-login-page ${lampOn ? 'lamp-on' : 'lamp-off'} ${introDismissed ? 'intro-dismissed' : ''}`}>
+      <SEO title="Student Login" description="Log in to your NCLEX KEYS International student account to access practice tests, study materials, and AI-powered study tools." canonicalPath="/login" />
       <div className="lamp-login-bg-noise" aria-hidden="true" />
       <div className="lamp-login-vignette" aria-hidden="true" />
 

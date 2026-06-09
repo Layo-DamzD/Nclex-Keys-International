@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 import './AdminAuth.css';
 
 const ADMIN_DEVICE_STORAGE_KEY = 'nclexkeys:admin-device-id';
@@ -65,6 +66,7 @@ const AdminLogin = () => {
 
   return (
     <div className="admin-auth-page">
+      <SEO title="Admin Login" noIndex />
       <div className="admin-login-container">
         <div className="admin-login-card">
           <div className="admin-login-header">

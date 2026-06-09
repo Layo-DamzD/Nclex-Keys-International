@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import SEO from '../components/SEO';
 
 const About = () => {
   return (
     <>
+      <SEO title="About Us" description="Learn about NCLEX KEYS International Academy - our mission, expert tutors, and comprehensive approach to NCLEX-RN and NCLEX-PN exam preparation." canonicalPath="/about" />
       <Navbar />
       
       {/* Hero Section */}

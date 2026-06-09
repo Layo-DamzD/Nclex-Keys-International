@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const AdminForgotAccessCode = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
@@ -45,6 +46,7 @@ const AdminForgotAccessCode = () => {
         background: '#f0f4ff'
       }}
     >
+      <SEO title="Admin Forgot Access Code" noIndex />
       <div
         className="forgot-card app-auth-lite-card"
         style={{

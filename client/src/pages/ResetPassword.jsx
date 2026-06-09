@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const ResetPassword = () => {
   const { token } = useParams();
@@ -30,6 +31,7 @@ const ResetPassword = () => {
 
   return (
     <div className="reset-password-container app-auth-lite-shell" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: '#f0f4ff' }}>
+      <SEO title="Reset Password" noIndex />
       <div className="reset-card app-auth-lite-card" style={{ maxWidth: '450px', width: '100%', background: 'white', borderRadius: '20px', padding: '40px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
         <h2 className="text-center mb-4">Reset Password</h2>
         {message && <div className="alert alert-success">{message}</div>}

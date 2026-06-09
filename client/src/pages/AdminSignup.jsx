@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 import './AdminAuth.css';
 
 const AdminSignup = () => {
@@ -67,6 +68,7 @@ const AdminSignup = () => {
 
   return (
     <div className="admin-auth-page">
+      <SEO title="Admin Signup" noIndex />
       <div className="admin-signup-container">
         <div className="admin-signup-card">
           <div className="admin-signup-header">

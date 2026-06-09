@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { COUNTRIES } from '../constants/Countries';
+import SEO from '../components/SEO';
 
 const DEVICE_STORAGE_KEY = 'nclexkeys:student-device-id';
 const getOrCreateDeviceId = () => {
@@ -286,6 +287,7 @@ const StudentSignup = () => {
 
   return (
     <div className="signup-clean-page">
+      <SEO title="Sign Up - Join NCLEX KEYS" description="Create your NCLEX KEYS International student account. Get access to comprehensive NCLEX-RN and NCLEX-PN exam preparation resources." canonicalPath="/signup" />
       <div className="signup-clean-card-shell">
         <div className="signup-clean-card">
           <div className="signup-clean-header">
