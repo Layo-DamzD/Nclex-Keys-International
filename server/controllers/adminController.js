@@ -194,7 +194,7 @@ const exportQuestions = async (req, res) => {
 // @access  Private (admin only)
 const getQuestions = async (req, res) => {
   try {
-    const { category, subcategory, type, difficulty, clientNeed, uncategorized, isDraft, search } = req.query;
+    const { category, subcategory, type, difficulty, clientNeed, uncategorized, isDraft, search, excludeReviewed } = req.query;
     const rawPage = Number(req.query.page || 1);
     const rawLimit = String(req.query.limit || '10').trim().toLowerCase();
     const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
@@ -209,6 +209,9 @@ const getQuestions = async (req, res) => {
     if (clientNeed) filter.clientNeed = clientNeed;
     if (isDraft !== undefined && isDraft !== '') {
       filter.isDraft = isDraft === 'true';
+    }
+    if (excludeReviewed === 'true') {
+      filter.reviewed = { $ne: true };
     }
     // Text search on questionText OR _id (UID)
     if (search && String(search).trim()) {
@@ -230,7 +233,7 @@ const getQuestions = async (req, res) => {
     if (uncategorized === 'true') {
       const allQuestions = await Question.find(
         {},
-        '_id category subcategory clientNeed clientNeedSubcategory questionText type difficulty timesUsed correctAttempts incorrectAttempts caseStudyId'
+        '_id category subcategory clientNeed clientNeedSubcategory questionText type difficulty timesUsed correctAttempts incorrectAttempts caseStudyId isDraft reviewed'
       ).sort({ createdAt: -1 }).lean();
 
       const matchedIds = new Set();
@@ -242,7 +245,7 @@ const getQuestions = async (req, res) => {
         if (isSubject || isClientNeed) matchedIds.add(String(q._id));
       }
 
-      const filtered = allQuestions.filter(q => !matchedIds.has(String(q._id)));
+      const filtered = allQuestions.filter(q => !matchedIds.has(String(q._id)) && (excludeReviewed !== 'true' || !q.reviewed));
       const total = filtered.length;
       const paged = includeAll ? filtered : filtered.slice((page - 1) * limit, page * limit);
 
@@ -257,7 +260,7 @@ const getQuestions = async (req, res) => {
     const total = await Question.countDocuments(filter);
     let query = Question.find(filter)
       .sort({ createdAt: -1 })
-      .select('questionText type category subcategory difficulty timesUsed correctAttempts incorrectAttempts caseStudyId isDraft');
+      .select('questionText type category subcategory difficulty timesUsed correctAttempts incorrectAttempts caseStudyId isDraft reviewed');
 
     if (!includeAll) {
       query = query.limit(limit).skip((page - 1) * limit);
@@ -2837,8 +2840,10 @@ const toggleQuestionReviewed = async (req, res) => {
       return res.status(404).json({ message: 'Question not found' });
     }
 
-    question.reviewed = !question.reviewed;
-    if (question.reviewed) {
+    // Use explicit value from request body if provided, otherwise toggle
+    const newReviewed = typeof req.body?.reviewed === 'boolean' ? req.body.reviewed : !question.reviewed;
+    question.reviewed = newReviewed;
+    if (newReviewed) {
       question.reviewedAt = new Date();
       question.reviewedBy = req.user.id;
     } else {
