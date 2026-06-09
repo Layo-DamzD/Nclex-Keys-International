@@ -63,26 +63,39 @@ const FlaggedQuestions = ({ onSectionChange }) => {
     }
   };
 
-  const handleEditQuestion = (flag) => {
-    const questionId = flag.questionId || flag.question?._id;
+  const handleEditQuestion = async (flag) => {
+    // questionId may be populated (object) or a plain ObjectId string
+    const questionId = flag.questionId?._id || flag.questionId || flag.question?._id;
     if (!questionId) return;
-    navigate('/admin/dashboard', {
-      state: { section: 'questions', editQuestionId: questionId },
-    });
-    if (onSectionChange) onSectionChange('questions');
+    try {
+      const token = sessionStorage.getItem('adminToken');
+      const response = await axios.get(`/api/admin/questions/${questionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const fullQuestion = response.data;
+      navigate('/admin/dashboard', {
+        state: { section: 'upload', question: fullQuestion },
+      });
+      if (onSectionChange) onSectionChange('upload');
+    } catch (err) {
+      console.error('Error loading question for edit:', err);
+      alert(err.response?.data?.message || 'Failed to load question for editing');
+    }
   };
 
   const handleDeleteQuestion = async (flag) => {
-    const questionId = flag.questionId || flag.question?._id;
+    // questionId may be populated (object) or a plain ObjectId string
+    const questionId = flag.questionId?._id || flag.questionId || flag.question?._id;
     if (!questionId) return;
     if (!window.confirm('Are you sure you want to permanently delete this question? This cannot be undone.')) return;
     try {
       const token = sessionStorage.getItem('adminToken');
-      await axios.delete(`/api/admin/questions/${questionId}`, {
+      await axios.delete(`/api/admin/questions/${String(questionId)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchFlags();
     } catch (err) {
+      console.error('Delete question error:', err);
       alert(err.response?.data?.message || 'Failed to delete question');
     }
   };

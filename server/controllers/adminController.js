@@ -324,14 +324,22 @@ const getQuestionById = async (req, res) => {
 // @access  Private (admin only)
 const deleteQuestion = async (req, res) => {
   try {
-    const question = await Question.findById(req.params.id);
+    const questionId = req.params.id;
+    const question = await Question.findById(questionId);
     if (!question) {
       return res.status(404).json({ message: 'Question not found' });
     }
     await question.deleteOne();
+    // Also clean up any flags referencing this question
+    try {
+      const QuestionFlag = require('../models/QuestionFlag');
+      await QuestionFlag.deleteMany({ questionId });
+    } catch (cleanupErr) {
+      console.warn('Warning: could not clean up flags for deleted question:', cleanupErr.message);
+    }
     res.json({ message: 'Question deleted successfully' });
   } catch (error) {
-    console.error(error);
+    console.error('Delete question error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

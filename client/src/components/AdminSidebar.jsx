@@ -26,6 +26,7 @@ const AdminSidebar = ({
       items: [
         { id: 'dashboard', icon: 'tachometer-alt', label: 'Dashboard' },
         { id: 'questions', icon: 'question-circle', label: 'Manage Questions' },
+        { id: 'reviewed-questions', icon: 'check-double', label: 'Reviewed Questions' },
         { id: 'upload', icon: 'cloud-upload-alt', label: 'Upload Questions' },
         { id: 'draft-questions', icon: 'save', label: 'Draft Questions' },
         { id: 'case-studies', icon: 'folder-open', label: 'Case Studies' },
@@ -63,6 +64,7 @@ const AdminSidebar = ({
       items: [
         { id: 'dashboard', icon: 'tachometer-alt', label: 'Dashboard' },
         { id: 'questions', icon: 'question-circle', label: 'Manage Questions' },
+        { id: 'reviewed-questions', icon: 'check-double', label: 'Reviewed Questions' },
         { id: 'upload', icon: 'cloud-upload-alt', label: 'Upload Questions' },
         { id: 'draft-questions', icon: 'save', label: 'Draft Questions' },
         { id: 'case-studies', icon: 'folder-open', label: 'Case Studies' },
