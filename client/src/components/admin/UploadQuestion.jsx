@@ -4,6 +4,7 @@ import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
 import { NCLEX_CLIENT_NEEDS_CATEGORIES } from '../../constants/ClientNeeds';
 import { resolveMediaCandidates, withCacheBust } from '../../utils/imageUpload';
+import MarkdownToolbar from '../../utils/MarkdownToolbar';
 
 const QUESTION_TYPES = [
   { value: 'multiple-choice', label: 'Multiple Choice', icon: 'fas fa-list-ul' },
@@ -141,6 +142,7 @@ const UploadQuestion = () => {
   // ── Unsaved changes detection & localStorage backup ──
   const DRAFT_KEY = 'nclex_upload_draft_backup';
   const hasSavedRef = useRef(false);
+  const rationaleRef = useRef(null);
 
   const getCurrentFormData = useCallback(() => ({
     type, category, subcategory, clientNeed, clientNeedSubcategory, isNextGen,
@@ -2014,7 +2016,16 @@ const UploadQuestion = () => {
 
         <div className="form-group">
           <label className="form-label">Rationale/Explanation</label>
-          <textarea className="form-control" rows="3" value={rationale} onChange={(e) => setRationale(e.target.value)} required />
+          <MarkdownToolbar textareaRef={rationaleRef} onChange={(val) => setRationale(val)} />
+          <textarea
+            ref={rationaleRef}
+            className="form-control"
+            rows="5"
+            value={rationale}
+            onChange={(e) => setRationale(e.target.value)}
+            required
+            style={{ borderRadius: '0 0 8px 8px', borderTop: '1px solid #e2e8f0' }}
+          />
           <div className="mt-2" style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <label className="form-label">
               <i className="fas fa-image me-2" style={{ color: '#6366f1' }}></i>
