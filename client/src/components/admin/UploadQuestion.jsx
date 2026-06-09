@@ -31,6 +31,7 @@ const UploadQuestion = () => {
   const [questionImageUrl, setQuestionImageUrl] = useState('');
   const [options, setOptions] = useState(['', '', '', '']);
   const [optionImages, setOptionImages] = useState(['', '', '', '']);
+  const [optionUrlInputs, setOptionUrlInputs] = useState({});
   const [correctAnswer, setCorrectAnswer] = useState('');
   const [rationale, setRationale] = useState('');
   const [rationaleImageUrl, setRationaleImageUrl] = useState('');
@@ -1190,7 +1191,7 @@ const UploadQuestion = () => {
               <button type="button" className="btn btn-sm btn-primary" onClick={addOption}>Add Option</button>
             </div>
             <small className="text-muted d-block mb-3">
-              Each option can have text, an image, or both. Use the image button to attach an image to any option.
+              Each option can have text, an image, or both. Use the <i className="fas fa-image"></i> button to upload from device, or the <i className="fas fa-link"></i> button to paste an image URL.
             </small>
             <div className="option-list">
               {options.map((opt, idx) => (
@@ -1213,9 +1214,18 @@ const UploadQuestion = () => {
                         if (input) input.click();
                       }}
                       style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#6366f1', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer' }}
-                      title="Attach image to this option"
+                      title="Upload image from device"
                     >
                       <i className="fas fa-image"></i>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => setOptionUrlInputs(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                      style={{ background: optionUrlInputs[idx] ? '#eef2ff' : '#f1f5f9', border: '1px solid #cbd5e1', color: '#6366f1', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer' }}
+                      title="Paste image URL"
+                    >
+                      <i className="fas fa-link"></i>
                     </button>
                     <input
                       id={`option-image-input-${idx}`}
@@ -1250,6 +1260,41 @@ const UploadQuestion = () => {
                     <small className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '40px' }}>
                       <i className="fas fa-spinner fa-spin"></i> Uploading image...
                     </small>
+                  )}
+                  {optionUrlInputs[idx] && (
+                    <div style={{ paddingLeft: '40px', display: 'flex', gap: '6px', alignItems: 'center', marginTop: '4px' }}>
+                      <input
+                        type="text"
+                        className="form-control form-control-sm"
+                        placeholder="Paste image URL here..."
+                        value={optionImages[idx] || ''}
+                        onChange={(e) => {
+                          const url = e.target.value.trim();
+                          setOptionImages(prev => {
+                            const updated = [...prev];
+                            while (updated.length <= idx) updated.push('');
+                            updated[idx] = url;
+                            return updated;
+                          });
+                        }}
+                        style={{ flex: 1, fontSize: '0.82rem' }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => {
+                          setOptionImages(prev => {
+                            const updated = [...prev];
+                            updated[idx] = '';
+                            return updated;
+                          });
+                        }}
+                        title="Clear URL"
+                        style={{ padding: '4px 8px' }}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
                   )}
                   {optionImages[idx] && (
                     <div style={{ paddingLeft: '40px', position: 'relative', display: 'inline-block' }}>

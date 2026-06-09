@@ -80,6 +80,7 @@ const ManageQuestions = ({ onSectionChange }) => {
 
       const response = await axios.get(`/api/admin/questions?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
+        timeout: 60000, // 60s timeout for large queries (50/75/100/all)
       });
 
       setQuestions(response.data?.questions || []);
