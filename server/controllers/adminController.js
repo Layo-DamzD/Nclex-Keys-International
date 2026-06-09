@@ -234,7 +234,7 @@ const getQuestions = async (req, res) => {
       const allQuestions = await Question.find(
         {},
         '_id category subcategory clientNeed clientNeedSubcategory questionText type difficulty timesUsed correctAttempts incorrectAttempts caseStudyId isDraft reviewed'
-      ).sort({ createdAt: -1 }).lean();
+      ).sort({ createdAt: -1 }).lean().maxTimeMS(30000);
 
       const matchedIds = new Set();
       for (const q of allQuestions) {
@@ -257,13 +257,17 @@ const getQuestions = async (req, res) => {
       });
     }
 
-    const total = await Question.countDocuments(filter);
+    const total = await Question.countDocuments(filter).maxTimeMS(15000);
     let query = Question.find(filter)
       .sort({ createdAt: -1 })
-      .select('questionText type category subcategory difficulty timesUsed correctAttempts incorrectAttempts caseStudyId isDraft reviewed');
+      .select('questionText type category subcategory difficulty timesUsed correctAttempts incorrectAttempts caseStudyId isDraft reviewed')
+      .maxTimeMS(30000);
 
     if (!includeAll) {
       query = query.limit(limit).skip((page - 1) * limit);
+    } else {
+      // Cap at 500 to prevent memory/response issues on large collections
+      query = query.limit(500);
     }
 
     const questions = await query;

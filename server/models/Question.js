@@ -221,6 +221,11 @@ const questionSchema = new mongoose.Schema({
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
+// Indexes for faster admin queries (getQuestions, getReviewedQuestions)
+questionSchema.index({ isDraft: 1, reviewed: 1, createdAt: -1 });
+questionSchema.index({ reviewed: 1, createdAt: -1 });
+questionSchema.index({ isDraft: 1, createdAt: -1 });
+
 // Pre-save hook: validate and sanitize correctAnswer for all non-draft MC/SATA questions
 // Mongoose 9+ requires async middleware — do NOT use callback-style function(next)
 questionSchema.pre('save', async function () {
