@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { CATEGORIES } from '../../constants/Categories';
 import RationaleContent from '../../utils/RationaleContent';
+import OptionContent from '../../utils/OptionContent';
 
 const ManageQuestions = ({ onSectionChange }) => {
   const navigate = useNavigate();
@@ -613,7 +614,7 @@ const ManageQuestions = ({ onSectionChange }) => {
                     {letter}
                   </div>
                   <div style={{ flex: 1, paddingTop: '4px', fontSize: '0.92rem', color: '#334155', lineHeight: 1.5 }}>
-                    {opt}
+                    <OptionContent text={opt} optionImage={q.optionImages?.[idx]} />
                   </div>
                   {correct && (
                     <i className="fas fa-check-circle" style={{ color: '#22c55e', fontSize: '1.1rem', marginTop: '4px', flexShrink: 0 }} />

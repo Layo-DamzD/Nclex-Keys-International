@@ -2,6 +2,7 @@ import React, { useState, useEffect, useReducer, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { resolveMediaCandidates } from '../utils/imageUpload';
+import OptionContent from '../utils/OptionContent';
 
 const firstMediaUrl = (rawUrl) => resolveMediaCandidates(rawUrl)[0] || '';
 
@@ -1348,7 +1349,7 @@ const CatSession = () => {
   // ========================
   // RENDER MCQ OPTIONS (shared between case-study sub-questions and regular)
   // ========================
-  const renderMCQOptions = (options, questionId, currentAns, isCase) => {
+  const renderMCQOptions = (options, questionId, currentAns, isCase, q) => {
     return (
       <div className="options">
         {options.map((opt, idx) => {
@@ -1370,7 +1371,7 @@ const CatSession = () => {
               }}
             >
               <span className="option-letter">{letter}</span>
-              {opt}
+              <OptionContent text={opt} optionImage={q?.optionImages?.[idx]} />
             </div>
           );
         })}
@@ -1381,7 +1382,7 @@ const CatSession = () => {
   // ========================
   // RENDER SATA OPTIONS
   // ========================
-  const renderSATAOptions = (options, questionId, isCase) => {
+  const renderSATAOptions = (options, questionId, isCase, q) => {
     return (
       <div className="options">
         {options.map((opt, idx) => {
@@ -1411,7 +1412,7 @@ const CatSession = () => {
               }}
             >
               <span className="option-letter">{letter}</span>
-              {opt}
+              <OptionContent text={opt} optionImage={q?.optionImages?.[idx]} />
             </div>
           );
         })}
@@ -1863,9 +1864,9 @@ const CatSession = () => {
     switch (q.type) {
       case 'multiple-choice':
       case 'mcq':
-        return renderMCQOptions(q.options, q._id, answer, isCase);
+        return renderMCQOptions(q.options, q._id, answer, isCase, q);
       case 'sata':
-        return renderSATAOptions(q.options, q._id, isCase);
+        return renderSATAOptions(q.options, q._id, isCase, q);
       case 'fill-blank':
         return renderFillBlank(q, isCase);
       case 'highlight':
@@ -1883,7 +1884,7 @@ const CatSession = () => {
       default:
         // Fallback: try MCQ if options exist
         if (q.options && q.options.length > 0) {
-          return renderMCQOptions(q.options, q._id, answer, isCase);
+          return renderMCQOptions(q.options, q._id, answer, isCase, q);
         }
         return <p style={{ color: '#6b7280' }}>Unsupported question type: {q.type}</p>;
     }

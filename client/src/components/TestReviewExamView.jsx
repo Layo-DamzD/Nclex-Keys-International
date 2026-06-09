@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import RationaleContent from '../utils/RationaleContent';
 import AssessmentSpeedometer from './AssessmentSpeedometer';
+import OptionContent from '../utils/OptionContent';
 
 const normalizeToLetter = (answer) => {
   if (answer === null || answer === undefined) return '';
@@ -792,13 +793,9 @@ const TestReviewExamView = ({
                           className="exam-review-runtime-option-text"
                           style={isWrong ? { textDecoration: 'line-through', color: '#dc2626' } : correct ? { color: '#166534', fontWeight: 600 } : {}}
                         >
-                          {opt}{optionPercent(letter)}
+                          <OptionContent text={opt} optionImage={active.optionImages?.[idx]} />{optionPercent(letter)}
                           {correct && <span style={{ marginLeft: 8, fontSize: '0.85em' }}>✓</span>}
                         </span>
-                        {active.optionImages?.[idx] && (
-                          <img src={active.optionImages[idx]} alt={`Option ${letter}`}
-                            style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
-                        )}
                       </div>
                     </div>
                   );
