@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 
 /**
  * MarkdownToolbar — formatting toolbar that inserts markdown syntax at cursor
@@ -14,6 +14,8 @@ import React, { useRef } from 'react';
  *   style        — optional wrapper style
  */
 const MarkdownToolbar = ({ textareaRef, onChange, style }) => {
+  const [tableMenuOpen, setTableMenuOpen] = useState(false);
+  const tableMenuRef = useRef(null);
 
   const insert = (before, after = '', placeholder = '') => {
     const ta = textareaRef?.current;
@@ -61,6 +63,27 @@ const MarkdownToolbar = ({ textareaRef, onChange, style }) => {
     ta.setRangeText(prefixed, lineStart, lineEnd, 'end');
     if (onChange) onChange(ta.value);
   };
+
+  const insertTable = (cols) => {
+    const header = Array.from({ length: cols }, (_, i) => ` Column ${i + 1} `).join('|');
+    const separator = Array.from({ length: cols }, () => ' --- ').join('|');
+    const row1 = Array.from({ length: cols }, (_, i) => ` Cell ${i + 1} `).join('|');
+    const row2 = Array.from({ length: cols }, (_, i) => ` Cell ${cols + i + 1} `).join('|');
+    const table = `\n|${header}|\n|${separator}|\n|${row1}|\n|${row2}|\n`;
+    insert(table, '', '');
+  };
+
+  // Close table menu when clicking outside
+  React.useEffect(() => {
+    if (!tableMenuOpen) return;
+    const handleClick = (e) => {
+      if (tableMenuRef.current && !tableMenuRef.current.contains(e.target)) {
+        setTableMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [tableMenuOpen]);
 
   const btnStyle = (active) => ({
     display: 'inline-flex',
@@ -140,14 +163,67 @@ const MarkdownToolbar = ({ textareaRef, onChange, style }) => {
         <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>H</span>
       </button>
 
-      {/* Table */}
-      <button type="button" style={btnStyle()} onClick={() => insert(
-        '\n| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n| Cell 1 | Cell 2 | Cell 3 |\n| Cell 4 | Cell 5 | Cell 6 |\n',
-        '',
-        ''
-      )} title="Insert table">
-        <i className="fas fa-table" style={{ fontSize: '0.78rem' }}></i>
-      </button>
+      {/* Table with column picker */}
+      <div style={{ position: 'relative' }} ref={tableMenuRef}>
+        <button
+          type="button"
+          style={{ ...btnStyle(tableMenuOpen), width: 'auto', padding: '0 8px', gap: '4px', display: 'inline-flex', alignItems: 'center' }}
+          onClick={() => setTableMenuOpen(prev => !prev)}
+          title="Insert table"
+        >
+          <i className="fas fa-table" style={{ fontSize: '0.78rem' }}></i>
+          <i className="fas fa-caret-down" style={{ fontSize: '0.65rem', marginLeft: '2px' }}></i>
+        </button>
+        {tableMenuOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              marginTop: '4px',
+              background: '#fff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              zIndex: 100,
+              padding: '6px',
+              minWidth: '160px',
+            }}
+          >
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '2px 6px 6px', fontWeight: 600 }}>
+              Number of columns
+            </div>
+            {[2, 3, 4, 5, 6].map((cols) => (
+              <button
+                key={cols}
+                type="button"
+                onClick={() => {
+                  insertTable(cols);
+                  setTableMenuOpen(false);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '6px 10px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  color: '#334155',
+                  transition: 'background 0.1s',
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+              >
+                <i className="fas fa-table me-2" style={{ fontSize: '0.72rem', color: '#6366f1' }}></i>
+                {cols} column{cols > 1 ? 's' : ''}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div style={separatorStyle} />
 
