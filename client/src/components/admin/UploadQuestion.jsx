@@ -5,6 +5,7 @@ import { CATEGORIES } from '../../constants/Categories';
 import { NCLEX_CLIENT_NEEDS_CATEGORIES } from '../../constants/ClientNeeds';
 import { resolveMediaCandidates, withCacheBust } from '../../utils/imageUpload';
 import MarkdownToolbar from '../../utils/MarkdownToolbar';
+import RationaleContent from '../../utils/RationaleContent';
 
 const QUESTION_TYPES = [
   { value: 'multiple-choice', label: 'Multiple Choice', icon: 'fas fa-list-ul' },
@@ -143,6 +144,7 @@ const UploadQuestion = () => {
   const DRAFT_KEY = 'nclex_upload_draft_backup';
   const hasSavedRef = useRef(false);
   const rationaleRef = useRef(null);
+  const [rationalePreview, setRationalePreview] = useState(false);
 
   const getCurrentFormData = useCallback(() => ({
     type, category, subcategory, clientNeed, clientNeedSubcategory, isNextGen,
@@ -2015,17 +2017,81 @@ const UploadQuestion = () => {
         )}
 
         <div className="form-group">
-          <label className="form-label">Rationale/Explanation</label>
-          <MarkdownToolbar textareaRef={rationaleRef} onChange={(val) => setRationale(val)} />
-          <textarea
-            ref={rationaleRef}
-            className="form-control"
-            rows="5"
-            value={rationale}
-            onChange={(e) => setRationale(e.target.value)}
-            required
-            style={{ borderRadius: '0 0 8px 8px', borderTop: '1px solid #e2e8f0' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+            <label className="form-label" style={{ marginBottom: 0 }}>Rationale/Explanation</label>
+            <div style={{ display: 'flex', gap: '0', borderRadius: '6px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+              <button
+                type="button"
+                onClick={() => setRationalePreview(false)}
+                style={{
+                  padding: '4px 12px',
+                  fontSize: '0.78rem',
+                  border: 'none',
+                  background: !rationalePreview ? '#4f46e5' : '#fff',
+                  color: !rationalePreview ? '#fff' : '#475569',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <i className="fas fa-pen me-1" style={{ fontSize: '0.7rem' }}></i>Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => setRationalePreview(true)}
+                style={{
+                  padding: '4px 12px',
+                  fontSize: '0.78rem',
+                  border: 'none',
+                  borderLeft: '1px solid #e2e8f0',
+                  background: rationalePreview ? '#4f46e5' : '#fff',
+                  color: rationalePreview ? '#fff' : '#475569',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <i className="fas fa-eye me-1" style={{ fontSize: '0.7rem' }}></i>Preview
+              </button>
+            </div>
+          </div>
+          {!rationalePreview ? (
+            <>
+              <MarkdownToolbar textareaRef={rationaleRef} onChange={(val) => setRationale(val)} />
+              <textarea
+                ref={rationaleRef}
+                className="form-control"
+                rows="5"
+                value={rationale}
+                onChange={(e) => setRationale(e.target.value)}
+                required
+                style={{ borderRadius: '0 0 8px 8px', borderTop: '1px solid #e2e8f0' }}
+              />
+            </>
+          ) : (
+            <div
+              style={{
+                minHeight: '120px',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                padding: '14px 16px',
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+              onClick={() => setRationalePreview(false)}
+              title="Click to switch back to edit mode"
+            >
+              {rationale.trim() ? (
+                <RationaleContent text={rationale} />
+              ) : (
+                <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.88rem' }}>
+                  Start typing to see preview...
+                </span>
+              )}
+            </div>
+          )}
           <div className="mt-2" style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <label className="form-label">
               <i className="fas fa-image me-2" style={{ color: '#6366f1' }}></i>
