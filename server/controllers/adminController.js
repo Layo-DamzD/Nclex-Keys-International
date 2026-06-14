@@ -82,15 +82,19 @@ const getAdminStats = async (req, res) => {
     // and count subjects and client needs independently (a question can be both).
     const allQuestions = await Question.find(
       { isDraft: { $ne: true } },
-      '_id category subcategory clientNeed clientNeedSubcategory type'
+      '_id category subcategory clientNeed clientNeedSubcategory type reviewed'
     ).lean();
 
     const subjectIds = new Set();
     const clientNeedIds = new Set();
     const caseStudyIds = new Set();
+    let reviewedCount = 0;
 
     for (const q of allQuestions) {
       const qId = String(q._id);
+
+      // Count reviewed questions
+      if (q.reviewed) reviewedCount++;
 
       // Case-study type questions have their own counter
       if (q.type === 'case-study') {
@@ -118,11 +122,17 @@ const getAdminStats = async (req, res) => {
 
     const totalStudents = await User.countDocuments({ role: 'student' });
 
-    const testResults = await TestResult.find();
-    const totalUsage = testResults.reduce((sum, t) => sum + t.totalQuestions, 0);
-    const totalCorrect = testResults.reduce((sum, t) => sum + t.score, 0);
-    const totalAnswered = testResults.reduce((sum, t) => sum + t.totalQuestions, 0);
-    const successRate = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
+    // Aggregate test results safely — skip docs with missing/invalid fields
+    const testResults = await TestResult.find().lean();
+    let totalUsage = 0;
+    let totalCorrect = 0;
+    for (const t of testResults) {
+      const answered = Number(t.totalQuestions) || 0;
+      const score = Number(t.score) || 0;
+      totalUsage += answered;
+      totalCorrect += score;
+    }
+    const successRate = totalUsage > 0 ? Math.round((totalCorrect / totalUsage) * 100) : 0;
 
     res.json({
       totalQuestions,
@@ -130,6 +140,7 @@ const getAdminStats = async (req, res) => {
       clientNeedQuestions: clientNeedIds.size,
       caseStudyQuestions: caseStudyIds.size,
       uncategorized,
+      reviewedQuestions: reviewedCount,
       totalStudents,
       totalUsage,
       successRate

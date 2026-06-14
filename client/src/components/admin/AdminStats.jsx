@@ -6,7 +6,8 @@ const AdminStats = ({ onSectionChange }) => {
     totalQuestions: 0,
     totalStudents: 0,
     totalUsage: 0,
-    successRate: 0
+    successRate: 0,
+    reviewedQuestions: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -46,12 +47,14 @@ const AdminStats = ({ onSectionChange }) => {
           {(stats.caseStudyQuestions || 0) > 0 && (
             <span><i className="fas fa-layer-group" style={{ marginRight: '4px', color: '#7c3aed' }}></i>{stats.caseStudyQuestions} Case Studies</span>
           )}
+          {(stats.reviewedQuestions || 0) > 0 && (
+            <span><i className="fas fa-check-double" style={{ marginRight: '4px', color: '#16a34a' }}></i>{stats.reviewedQuestions} Reviewed</span>
+          )}
           {(stats.uncategorized || 0) > 0 && (
             <span
               onClick={() => {
                 if (onSectionChange) {
                   onSectionChange('questions');
-                  // URL param is picked up by ManageQuestions via useSearchParams
                   setTimeout(() => {
                     window.history.pushState({}, '', '/admin/dashboard?section=questions&uncategorized=true');
                     window.dispatchEvent(new Event('popstate'));
